@@ -33,6 +33,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useLocation } from "wouter";
 
 type Session = {
   time: string;
@@ -106,6 +107,7 @@ function BrandMark() {
 }
 
 function App() {
+  const [, navigate] = useLocation();
   const [query, setQuery] = useState("");
   const [branch, setBranch] = useState(branches[0]);
   const [branchMenuOpen, setBranchMenuOpen] = useState(false);
@@ -187,7 +189,7 @@ function App() {
             <LayoutDashboard size={19} />
             <span>الرئيسية</span>
           </button>
-          <button className="nav-link" onClick={() => showComingSoon("الطلاب")}>
+          <button className="nav-link" onClick={() => navigate("/students")}>
             <Users size={19} />
             <span>الطلاب</span>
             <span className="nav-count">{studentCount}</span>
