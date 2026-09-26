@@ -1,26 +1,37 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
+import { lazy, Suspense } from "react";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
-import Students from "./pages/Students";
-import Schedule from "./pages/Schedule";
-import Classes from "./pages/Classes";
-
-
+const Home = lazy(() => import("./pages/Home"));
+const Students = lazy(() => import("./pages/Students"));
+const Schedule = lazy(() => import("./pages/Schedule"));
+const Classes = lazy(() => import("./pages/Classes"));
+const Finance = lazy(() => import("./pages/Finance"));
+const Team = lazy(() => import("./pages/Team"));
+const Approvals = lazy(() => import("./pages/Approvals"));
+const Reports = lazy(() => import("./pages/Reports"));
 function Router() {
   return (
-    <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/students"} component={Students} />
-      <Route path={"/schedule"} component={Schedule} />
-      <Route path={"/classes"} component={Classes} />
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
-      <Route component={NotFound} />
-    </Switch>
+    <Suspense
+      fallback={<div className="route-loading">جارٍ تحميل الصفحة…</div>}
+    >
+      <Switch>
+        <Route path={"/"} component={Home} />
+        <Route path={"/students"} component={Students} />
+        <Route path={"/schedule"} component={Schedule} />
+        <Route path={"/classes"} component={Classes} />
+        <Route path={"/finance"} component={Finance} />
+        <Route path={"/team"} component={Team} />
+        <Route path={"/approvals"} component={Approvals} />
+        <Route path={"/reports"} component={Reports} />
+        <Route path={"/404"} component={NotFound} />
+        {/* Final fallback route */}
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 
