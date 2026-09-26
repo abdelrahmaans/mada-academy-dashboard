@@ -198,7 +198,7 @@ function App() {
             <CalendarDays size={19} />
             <span>الجدول</span>
           </button>
-          <button className="nav-link" onClick={() => showComingSoon("الحصص والكورسات")}>
+          <button className="nav-link" onClick={() => navigate("/classes")}>
             <BookOpen size={19} />
             <span>الحصص والكورسات</span>
           </button>
