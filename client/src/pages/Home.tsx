@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   AlertCircle,
   ArrowDownLeft,
@@ -14,7 +14,6 @@ import {
   ChevronLeft,
   CircleHelp,
   Clock3,
-  Download,
   FileText,
   GraduationCap,
   LayoutDashboard,
@@ -89,8 +88,6 @@ const attendance = [
   { day: "الجمعة", value: 80 },
 ];
 
-const branches = ["فرع مدينة نصر", "فرع المعادي", "فرع الشيخ زايد"];
-
 function BrandMark() {
   return (
     <div className="brand-lockup" aria-label="مدى">
@@ -121,8 +118,7 @@ function BrandMark() {
 function App() {
   const [, navigate] = useLocation();
   const [query, setQuery] = useState("");
-  const [branch, setBranch] = useState(branches[0]);
-  const [branchMenuOpen, setBranchMenuOpen] = useState(false);
+  const branch = "فرع مدينة نصر";
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [studentDialogOpen, setStudentDialogOpen] = useState(false);
@@ -130,6 +126,33 @@ function App() {
   const [parentPhone, setParentPhone] = useState("");
   const [studentCount, setStudentCount] = useState(248);
   const [leadCount, setLeadCount] = useState(3);
+  const todayLabel = new Intl.DateTimeFormat("ar-EG", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date());
+
+  useEffect(() => {
+    const handleSearchShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        const search =
+          document.querySelector<HTMLInputElement>(".top-search input");
+        search?.focus();
+        search?.select();
+      }
+      if (
+        event.key === "Escape" &&
+        document.activeElement?.matches(".top-search input")
+      ) {
+        setQuery("");
+        (document.activeElement as HTMLElement).blur();
+      }
+    };
+    document.addEventListener("keydown", handleSearchShortcut);
+    return () => document.removeEventListener("keydown", handleSearchShortcut);
+  }, []);
 
   const filteredSessions = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -287,45 +310,25 @@ function App() {
             >
               <Menu size={21} />
             </button>
-            <div className="branch-select-wrap">
-              <button
-                className={`branch-select ${branchMenuOpen ? "is-open" : ""}`}
-                onClick={() => setBranchMenuOpen(open => !open)}
-                aria-expanded={branchMenuOpen}
-              >
-                <span className="branch-icon">
-                  <MapPin size={17} />
-                </span>
-                <span>{branch}</span>
-                <ChevronDown size={15} />
-              </button>
-              {branchMenuOpen && (
-                <div className="branch-menu">
-                  {branches.map(item => (
-                    <button
-                      key={item}
-                      className={item === branch ? "selected" : ""}
-                      onClick={() => {
-                        setBranch(item);
-                        setBranchMenuOpen(false);
-                      }}
-                    >
-                      <MapPin size={15} />
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              )}
+            <div
+              className="branch-select assigned-branch"
+              aria-label={`النطاق: ${branch}`}
+            >
+              <span className="branch-icon">
+                <MapPin size={17} />
+              </span>
+              <span>{branch}</span>
             </div>
             <label className="top-search">
               <Search size={18} />
               <input
                 value={query}
                 onChange={event => setQuery(event.target.value)}
-                placeholder="ابحث عن حصة أو كوتش..."
-                aria-label="ابحث عن حصة أو كوتش"
+                placeholder="ابحث عن حصة أو مدرب..."
+                aria-label="ابحث عن حصة أو مدرب، اختصار Ctrl أو Command K"
+                aria-keyshortcuts="Control+K Meta+K"
               />
-              <kbd>⌘ K</kbd>
+              <kbd>Ctrl / ⌘ K</kbd>
             </label>
           </div>
 
@@ -346,7 +349,13 @@ function App() {
                     <strong>الإشعارات</strong>
                     <span>2 جديد</span>
                   </div>
-                  <div className="notification-item">
+                  <button
+                    className="notification-item notification-action"
+                    onClick={() => {
+                      setNotificationsOpen(false);
+                      navigate("/finance");
+                    }}
+                  >
                     <span className="notice-icon notice-amber">
                       <Wallet size={16} />
                     </span>
@@ -354,8 +363,14 @@ function App() {
                       <strong>أقساط تحتاج متابعة</strong>
                       <small>12 قسطًا مستحقًا في الفرع</small>
                     </div>
-                  </div>
-                  <div className="notification-item">
+                  </button>
+                  <button
+                    className="notification-item notification-action"
+                    onClick={() => {
+                      setNotificationsOpen(false);
+                      navigate("/students");
+                    }}
+                  >
                     <span className="notice-icon notice-teal">
                       <UserPlus size={16} />
                     </span>
@@ -363,7 +378,7 @@ function App() {
                       <strong>طلبات تسجيل جديدة</strong>
                       <small>{leadCount} طلبات بانتظار التواصل</small>
                     </div>
-                  </div>
+                  </button>
                   <button
                     className="popover-footer"
                     onClick={() => showComingSoon("مركز الإشعارات")}
@@ -392,7 +407,7 @@ function App() {
           <section className="welcome-row">
             <div className="welcome-copy">
               <div className="eyebrow">
-                <span className="eyebrow-dot" /> السبت، 26 سبتمبر 2026{" "}
+                <span className="eyebrow-dot" /> {todayLabel}{" "}
                 <span className="eyebrow-divider" /> الفصل الدراسي الأول
               </div>
               <h1>
@@ -403,13 +418,9 @@ function App() {
             <div className="welcome-actions">
               <button
                 className="button button-secondary"
-                onClick={() =>
-                  toast("جاري تجهيز التقرير", {
-                    description: "تنزيل التقارير سيُفعّل في المرحلة القادمة.",
-                  })
-                }
+                onClick={() => navigate("/reports")}
               >
-                <Download size={17} /> تنزيل التقرير
+                <BarChart3 size={17} /> عرض التقارير
               </button>
               <button
                 className="button button-primary"
@@ -439,7 +450,12 @@ function App() {
                 <span className="mini-bar">
                   <i style={{ width: "76%" }} />
                 </span>
-                <span>مقارنة بالشهر الماضي</span>
+                <button
+                  className="stat-link"
+                  onClick={() => navigate("/students")}
+                >
+                  عرض الطلاب <ChevronLeft size={12} />
+                </button>
               </div>
             </article>
 
@@ -461,7 +477,12 @@ function App() {
                 <span className="mini-bar">
                   <i style={{ width: "84%" }} />
                 </span>
-                <span>معدل الحضور 84%</span>
+                <button
+                  className="stat-link"
+                  onClick={() => navigate("/schedule")}
+                >
+                  فتح الجدول <ChevronLeft size={12} />
+                </button>
               </div>
             </article>
 
@@ -480,7 +501,12 @@ function App() {
                 <span className="stat-period">قسط</span>
               </div>
               <div className="stat-foot">
-                <span className="stat-hint">إجمالي المتأخرات</span>
+                <button
+                  className="stat-link"
+                  onClick={() => navigate("/finance")}
+                >
+                  عرض التحصيل <ChevronLeft size={12} />
+                </button>
                 <b className="stat-money">12,850 ج.م</b>
               </div>
             </article>
@@ -733,7 +759,7 @@ function App() {
                 </button>
                 <button
                   className="followup-item"
-                  onClick={() => showComingSoon("الأقساط المستحقة")}
+                  onClick={() => navigate("/finance")}
                 >
                   <span className="followup-icon followup-amber">
                     <Wallet size={17} />
@@ -759,9 +785,9 @@ function App() {
                 </button>
                 <button
                   className="panel-bottom-link"
-                  onClick={() => showComingSoon("كل المهام")}
+                  onClick={() => navigate("/approvals")}
                 >
-                  عرض كل المهام <ChevronLeft size={14} />
+                  إدارة الموافقات <ChevronLeft size={14} />
                 </button>
               </article>
 

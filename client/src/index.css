@@ -559,11 +559,29 @@ button:not(:disabled) {
   font-size: 10px;
 }
 .notification-item {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 12px 1px;
+  color: inherit;
+  text-align: right;
+  background: transparent;
   border-bottom: 1px solid #f1f4f7;
+}
+.notification-action {
+  border-inline: 0;
+  border-top: 0;
+  cursor: pointer;
+  transition: background-color 160ms ease-out;
+}
+.notification-action:hover {
+  background: #f8fbfc;
+}
+.notification-action:focus-visible,
+.stat-link:focus-visible {
+  outline: 2px solid var(--mada-brand-teal);
+  outline-offset: 2px;
 }
 .notice-icon {
   width: 33px;
@@ -892,6 +910,22 @@ button:not(:disabled) {
   height: 100%;
   background: var(--mada-brand-teal);
   border-radius: inherit;
+}
+.stat-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 0;
+  color: var(--mada-ui-teal-dark);
+  background: transparent;
+  border: 0;
+  font-size: 8px;
+  font-weight: 750;
+  white-space: nowrap;
+  transition: color 160ms ease-out;
+}
+.stat-link:hover {
+  color: #064e49;
 }
 .stat-hint {
   white-space: nowrap;
