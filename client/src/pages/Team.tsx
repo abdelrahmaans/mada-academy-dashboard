@@ -1000,6 +1000,16 @@ export default function Team() {
                 <ChevronLeft size={14} />
               </button>
             )}
+            {selectedRole.code === "R05" && (
+              <button
+                className="instructor-preview-link secretary-preview-link"
+                onClick={() => navigate("/secretary")}
+              >
+                <Users size={16} />
+                معاينة مساحة السكرتارية
+                <ChevronLeft size={14} />
+              </button>
+            )}
             <div className="dialog-info">
               <AlertCircle size={15} />
               <span>

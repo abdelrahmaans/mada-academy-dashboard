@@ -9437,3 +9437,2292 @@ button:not(:disabled) {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Secretary workspace — branch-scoped intake, family follow-up, and enrollment */
+.secretary-shell {
+  --sec-ink: #16253a;
+  --sec-muted: #78869a;
+  --sec-soft-muted: #9ca8b7;
+  --sec-line: #e9eef3;
+  --sec-paper: #fff;
+  --sec-page: #f4f7fa;
+  --sec-primary: #087e78;
+  --sec-primary-dark: #086a65;
+  --sec-blue: #4779b3;
+  --sec-shadow: 0 10px 30px rgb(20 36 58 / 5%);
+  display: flex;
+  min-height: 100vh;
+  color: var(--sec-ink);
+  background: var(--sec-page);
+  font-family: var(--mada-font-ar, "Cairo", sans-serif);
+}
+.secretary-shell *,
+.secretary-shell *::before,
+.secretary-shell *::after {
+  box-sizing: border-box;
+}
+.secretary-sidebar {
+  position: sticky;
+  top: 0;
+  z-index: 35;
+  display: flex;
+  flex: 0 0 252px;
+  flex-direction: column;
+  width: 252px;
+  height: 100vh;
+  padding: 23px 15px 16px;
+  color: #e8eff8;
+  background: #111d30;
+  box-shadow: -8px 0 28px rgb(15 23 42 / 6%);
+}
+.secretary-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 41px;
+  padding: 0 9px 20px;
+  color: white;
+  font-size: 24px;
+  font-weight: 850;
+  letter-spacing: -0.6px;
+}
+.secretary-brand-mark {
+  display: grid;
+  width: 31px;
+  color: #25b4a8;
+}
+.secretary-brand-mark svg {
+  width: 100%;
+}
+.secretary-brand small {
+  align-self: end;
+  margin: 0 2px 4px 0;
+  color: #91a0b4;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.secretary-role-badge {
+  display: grid;
+  grid-template-columns: 37px 1fr 15px;
+  align-items: center;
+  gap: 9px;
+  min-height: 62px;
+  padding: 9px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 13px;
+  background: rgb(255 255 255 / 4%);
+}
+.secretary-avatar,
+.secretary-profile i {
+  display: grid;
+  width: 35px;
+  height: 35px;
+  place-items: center;
+  color: #076c63;
+  background: #dff5f1;
+  border-radius: 11px;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 850;
+}
+.secretary-role-badge > span:nth-child(2) {
+  display: grid;
+  gap: 3px;
+  text-align: right;
+}
+.secretary-role-badge strong {
+  color: #f4f7fb;
+  font-size: 10px;
+}
+.secretary-role-badge small {
+  color: #93a2b6;
+  font-size: 9px;
+}
+.secretary-role-badge > svg {
+  color: #8292a8;
+}
+.secretary-nav-label {
+  padding: 28px 11px 10px;
+  color: #8292a8;
+  font-size: 9px;
+  font-weight: 750;
+}
+.secretary-nav {
+  display: grid;
+  gap: 4px;
+}
+.secretary-nav button {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 43px;
+  padding: 0 11px;
+  color: #b7c3d3;
+  text-align: right;
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 10px;
+  transition:
+    background 160ms ease-out,
+    color 160ms ease-out,
+    transform 160ms ease-out;
+}
+.secretary-nav button:hover {
+  color: #fff;
+  background: rgb(255 255 255 / 6%);
+}
+.secretary-nav button:active,
+.secretary-icon-button:active,
+.secretary-primary-button:active {
+  transform: scale(0.98);
+}
+.secretary-nav button.active {
+  color: white;
+  background: linear-gradient(110deg, #0d988d, #087b74);
+  box-shadow: 0 8px 20px rgb(13 148 136 / 22%);
+}
+.secretary-nav button > svg:first-child {
+  flex: 0 0 auto;
+}
+.secretary-nav button > span {
+  flex: 1;
+}
+.secretary-nav-count {
+  display: grid;
+  min-width: 23px;
+  height: 20px;
+  place-items: center;
+  color: #d5fff8;
+  background: rgb(255 255 255 / 13%);
+  border-radius: 7px;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+.secretary-sidebar-spacer {
+  flex: 1;
+  min-height: 25px;
+}
+.secretary-help {
+  display: grid;
+  grid-template-columns: 30px 1fr 14px;
+  align-items: center;
+  gap: 9px;
+  min-height: 58px;
+  margin-bottom: 13px;
+  padding: 8px 9px;
+  color: #dce6f2;
+  text-align: right;
+  background: rgb(255 255 255 / 4%);
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 12px;
+  font: inherit;
+}
+.secretary-help > span:first-child {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  place-items: center;
+  color: #90d8d1;
+  background: rgb(13 148 136 / 13%);
+  border: 1px solid rgb(13 148 136 / 22%);
+  border-radius: 9px;
+}
+.secretary-help > span:nth-child(2) {
+  display: grid;
+  gap: 3px;
+}
+.secretary-help strong {
+  font-size: 9px;
+}
+.secretary-help small {
+  color: #93a2b6;
+  font-size: 9px;
+}
+.secretary-back-admin {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 37px;
+  margin: 0 1px 12px;
+  padding: 0 9px;
+  color: #a9b8cb;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid rgb(255 255 255 / 7%);
+  font: inherit;
+  font-size: 9px;
+}
+.secretary-back-admin:hover {
+  color: #fff;
+}
+.secretary-sidebar-version {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  padding: 0 5px;
+  color: #718197;
+  font-size: 9px;
+}
+.secretary-sidebar-version span {
+  padding: 3px 6px;
+  color: #b1c4d6;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 5px;
+  font-size: 8px;
+}
+.secretary-main {
+  flex: 1;
+  min-width: 0;
+}
+.secretary-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 72px;
+  padding: 0 clamp(20px, 3.2vw, 46px);
+  background: rgb(255 255 255 / 94%);
+  border-bottom: 1px solid #edf1f4;
+  backdrop-filter: blur(16px);
+}
+.secretary-topbar-start,
+.secretary-topbar-end {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+.secretary-branch-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 11px;
+  color: #526277;
+  background: #fbfcfd;
+  border: 1px solid #edf0f3;
+  border-radius: 10px;
+  font-size: 9px;
+  font-weight: 650;
+}
+.secretary-branch-pill svg {
+  color: var(--sec-primary);
+}
+.secretary-live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #8995a4;
+  font-size: 9px;
+}
+.secretary-live-pill i,
+.secretary-eyebrow i {
+  width: 7px;
+  height: 7px;
+  background: #17a48e;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgb(23 164 142 / 11%);
+}
+.secretary-topbar-end {
+  gap: 13px;
+}
+.secretary-icon-button {
+  display: grid;
+  width: 35px;
+  height: 35px;
+  place-items: center;
+  color: #647286;
+  background: white;
+  border: 1px solid #edf0f3;
+  border-radius: 10px;
+  transition:
+    background 150ms ease-out,
+    transform 150ms ease-out;
+}
+.secretary-icon-button:hover {
+  color: var(--sec-primary);
+  background: #f2fbfa;
+}
+.secretary-topbar-divider {
+  width: 1px;
+  height: 28px;
+  background: #e8edf1;
+}
+.secretary-profile {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0;
+  color: var(--sec-ink);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  text-align: right;
+}
+.secretary-profile > span {
+  display: grid;
+  gap: 2px;
+}
+.secretary-profile strong {
+  font-size: 10px;
+}
+.secretary-profile small {
+  color: var(--sec-muted);
+  font-size: 9px;
+}
+.secretary-profile i {
+  width: 31px;
+  height: 31px;
+  border-radius: 9px;
+}
+.secretary-profile > svg {
+  color: #9aa5b3;
+}
+.secretary-content {
+  width: min(1440px, 100%);
+  margin-inline: auto;
+  padding: 23px clamp(18px, 3.2vw, 46px) 34px;
+}
+.secretary-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 22px;
+  color: #8996a6;
+  font-size: 9px;
+}
+.secretary-breadcrumb button {
+  padding: 0;
+  color: var(--sec-primary);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-weight: 700;
+}
+.secretary-welcome {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 9px 0 19px;
+}
+.secretary-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+  color: #7e8c9d;
+  font-size: 9px;
+  font-weight: 600;
+}
+.secretary-eyebrow i {
+  width: 6px;
+  height: 6px;
+}
+.secretary-welcome h1 {
+  margin: 0;
+  color: #16253a;
+  font-size: clamp(23px, 2.5vw, 31px);
+  font-weight: 850;
+  letter-spacing: -0.5px;
+  line-height: 1.35;
+}
+.secretary-welcome p {
+  margin: 5px 0 0;
+  color: #7c8998;
+  font-size: 11px;
+}
+.secretary-welcome-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 0 0 auto;
+}
+.secretary-date-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 37px;
+  padding: 0 10px;
+  color: #68778a;
+  background: white;
+  border: 1px solid var(--sec-line);
+  border-radius: 10px;
+  font-size: 9px;
+}
+.secretary-date-pill svg {
+  color: #7389a2;
+}
+.secretary-primary-button,
+.secretary-secondary-button,
+.secretary-copy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 37px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 750;
+  white-space: nowrap;
+  transition:
+    transform 150ms ease-out,
+    box-shadow 150ms ease-out,
+    background 150ms ease-out;
+}
+.secretary-primary-button {
+  color: white;
+  background: linear-gradient(115deg, #0a8a80, #08726d);
+  box-shadow: 0 5px 13px rgb(8 126 120 / 15%);
+}
+.secretary-primary-button:hover {
+  background: #08665f;
+  box-shadow: 0 8px 18px rgb(8 126 120 / 21%);
+}
+.secretary-primary-button:disabled,
+.secretary-secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.secretary-secondary-button {
+  color: #4f6277;
+  background: white;
+  border-color: #e7edf2;
+}
+.secretary-secondary-button:hover {
+  color: var(--sec-primary-dark);
+  background: #f5fbfa;
+  border-color: #cfe7e3;
+}
+.secretary-copy-button {
+  color: #59708b;
+  background: #f7f9fc;
+  border-color: #edf0f4;
+}
+.secretary-demo-note {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 39px;
+  margin-bottom: 17px;
+  padding: 8px 12px;
+  color: #65768a;
+  background: #f2f8f8;
+  border: 1px solid #dfefed;
+  border-radius: 9px;
+  font-size: 9px;
+}
+.secretary-demo-note > svg {
+  flex: 0 0 auto;
+  color: #488d88;
+}
+.secretary-demo-note > span {
+  flex: 1;
+}
+.secretary-demo-note b {
+  padding: 4px 7px;
+  color: #177b72;
+  background: #e1f3ef;
+  border-radius: 5px;
+  font-size: 8px;
+  letter-spacing: 0.7px;
+}
+.secretary-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 13px;
+  margin-bottom: 16px;
+}
+.secretary-stat-card {
+  position: relative;
+  display: grid;
+  min-height: 136px;
+  grid-template-columns: 1fr 40px;
+  grid-template-rows: auto auto 1fr;
+  align-items: center;
+  gap: 4px 7px;
+  padding: 16px;
+  text-align: right;
+  background: var(--sec-paper);
+  border: 1px solid #edf0f3;
+  border-radius: 14px;
+  box-shadow: var(--sec-shadow);
+  transition:
+    transform 170ms ease-out,
+    box-shadow 170ms ease-out,
+    border-color 170ms ease-out;
+}
+.secretary-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: #d4e8e5;
+  box-shadow: 0 15px 32px rgb(20 36 58 / 8%);
+}
+.secretary-stat-icon {
+  display: grid;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  width: 37px;
+  height: 37px;
+  place-items: center;
+  border-radius: 11px;
+}
+.stat-teal .secretary-stat-icon {
+  color: #0b877a;
+  background: #e3f6f1;
+}
+.stat-blue .secretary-stat-icon {
+  color: #4c7cad;
+  background: #ecf2fb;
+}
+.stat-amber .secretary-stat-icon {
+  color: #b27c17;
+  background: #fff5df;
+}
+.stat-violet .secretary-stat-icon {
+  color: #796cb1;
+  background: #f0edfc;
+}
+.secretary-stat-card > small {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: end;
+  color: #768599;
+  font-size: 9px;
+  font-weight: 650;
+}
+.secretary-stat-card > strong {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: start;
+  color: #18283d;
+  font-size: 30px;
+  font-weight: 850;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.secretary-stat-card > span:last-child {
+  grid-column: 1 / -1;
+  align-self: end;
+  padding-top: 8px;
+  color: #909baa;
+  font-size: 9px;
+}
+.secretary-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(270px, 0.8fr);
+  gap: 15px;
+  margin-bottom: 15px;
+}
+.secretary-panel {
+  min-width: 0;
+  padding: 16px;
+  background: var(--sec-paper);
+  border: 1px solid #edf0f3;
+  border-radius: 14px;
+  box-shadow: var(--sec-shadow);
+}
+.secretary-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.secretary-panel-heading > div {
+  min-width: 0;
+}
+.secretary-panel-kicker {
+  display: block;
+  margin-bottom: 4px;
+  color: #91a0b0;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+.secretary-panel-heading h2,
+.secretary-registration-summary h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  color: #203149;
+  font-size: 14px;
+  font-weight: 800;
+}
+.secretary-panel-heading h2 small {
+  color: #95a1af;
+  font-size: 9px;
+  font-weight: 600;
+}
+.secretary-text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 0;
+  color: var(--sec-primary-dark);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 750;
+}
+.secretary-text-link:hover,
+.secretary-panel-footer button:hover {
+  color: #034f4b;
+}
+.secretary-lead-preview-list {
+  display: grid;
+}
+.secretary-lead-preview-list > button {
+  display: grid;
+  grid-template-columns: 35px minmax(0, 1fr) auto 13px;
+  align-items: center;
+  gap: 9px;
+  min-height: 57px;
+  padding: 7px 2px;
+  color: inherit;
+  text-align: right;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #f0f2f5;
+  font: inherit;
+}
+.secretary-lead-preview-list > button:hover {
+  background: linear-gradient(90deg, transparent, #f8fbfb);
+}
+.secretary-lead-avatar {
+  display: grid;
+  flex: 0 0 auto;
+  width: 33px;
+  height: 33px;
+  place-items: center;
+  color: #49737c;
+  background: #edf5f4;
+  border-radius: 10px;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+}
+.secretary-lead-avatar.new {
+  color: #08786f;
+  background: #e0f4ef;
+}
+.secretary-lead-avatar.contacted {
+  color: #4774a4;
+  background: #eaf1fb;
+}
+.secretary-lead-avatar.interested {
+  color: #957126;
+  background: #fbf4df;
+}
+.secretary-lead-avatar.trial {
+  color: #6d60aa;
+  background: #f0edfc;
+}
+.secretary-lead-avatar.enrolled {
+  color: #228366;
+  background: #e5f5ea;
+}
+.secretary-lead-avatar.cold {
+  color: #738197;
+  background: #eef1f5;
+}
+.secretary-lead-avatar.lost {
+  color: #a66262;
+  background: #fbefef;
+}
+.secretary-lead-preview-list > button > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+.secretary-lead-preview-list strong {
+  overflow: hidden;
+  color: #33445a;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.secretary-lead-preview-list small {
+  overflow: hidden;
+  color: #9aa5b2;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.secretary-lead-preview-list > button > svg {
+  color: #aab4c0;
+}
+.secretary-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.secretary-status-pill.new {
+  color: #08786f;
+  background: #e7f7f3;
+}
+.secretary-status-pill.contacted {
+  color: #4774a4;
+  background: #edf3fb;
+}
+.secretary-status-pill.interested {
+  color: #997127;
+  background: #fbf4e2;
+}
+.secretary-status-pill.trial {
+  color: #6e62a9;
+  background: #f0eefb;
+}
+.secretary-status-pill.enrolled {
+  color: #237e61;
+  background: #e8f6ed;
+}
+.secretary-status-pill.cold {
+  color: #6c798a;
+  background: #edf0f4;
+}
+.secretary-status-pill.lost {
+  color: #a45b5b;
+  background: #fbefef;
+}
+.secretary-panel-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 12px;
+  color: #9aa5b1;
+  font-size: 9px;
+}
+.secretary-panel-footer > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.secretary-panel-footer button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 0;
+  color: var(--sec-primary-dark);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 750;
+}
+.secretary-pipeline-total {
+  padding: 4px 8px;
+  color: #78889c;
+  background: #f4f6f8;
+  border-radius: 6px;
+  font-size: 9px;
+  white-space: nowrap;
+}
+.secretary-pipeline-list {
+  display: grid;
+  gap: 2px;
+}
+.secretary-pipeline-list > button {
+  display: grid;
+  grid-template-columns: 8px minmax(65px, 1fr) 22px minmax(55px, 0.8fr);
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 4px 1px;
+  color: #6e7e91;
+  text-align: right;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #f2f4f6;
+  font: inherit;
+  font-size: 9px;
+}
+.secretary-pipeline-list > button:hover {
+  color: var(--sec-primary-dark);
+}
+.secretary-pipeline-list strong {
+  color: #465870;
+  font-size: 9px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.secretary-pipeline-dot,
+.lead-indicator {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.secretary-pipeline-dot.new,
+.lead-indicator.new {
+  background: #169c89;
+}
+.secretary-pipeline-dot.contacted {
+  background: #6a91c1;
+}
+.secretary-pipeline-dot.interested {
+  background: #d6a53e;
+}
+.secretary-pipeline-dot.trial,
+.lead-indicator.trial {
+  background: #8b7ac9;
+}
+.secretary-pipeline-dot.enrolled,
+.lead-indicator.enrolled {
+  background: #42a777;
+}
+.secretary-pipeline-dot.cold {
+  background: #a5afbc;
+}
+.secretary-pipeline-dot.lost {
+  background: #d48b8b;
+}
+.secretary-pipeline-list i {
+  height: 5px;
+  overflow: hidden;
+  background: #f0f3f5;
+  border-radius: 9px;
+}
+.secretary-pipeline-list i b {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #55b8a8, #128a7f);
+  border-radius: inherit;
+}
+.secretary-source-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: 11px;
+  padding: 9px;
+  color: #7e8998;
+  background: #f7f9fb;
+  border-radius: 8px;
+  font-size: 9px;
+  line-height: 1.65;
+}
+.secretary-source-note svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: #8b9bb0;
+}
+.secretary-quick-panel {
+  margin-bottom: 16px;
+}
+.secretary-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+.secretary-quick-grid > button {
+  position: relative;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 15px;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 3px 10px;
+  min-height: 73px;
+  padding: 12px;
+  color: inherit;
+  text-align: right;
+  background: #fbfcfd;
+  border: 1px solid #eef1f4;
+  border-radius: 10px;
+  font: inherit;
+  transition:
+    border-color 160ms ease-out,
+    background 160ms ease-out,
+    transform 160ms ease-out;
+}
+.secretary-quick-grid > button:hover {
+  background: #f5fbfa;
+  border-color: #d4e9e5;
+  transform: translateY(-1px);
+}
+.secretary-quick-icon {
+  display: grid;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  width: 35px;
+  height: 35px;
+  place-items: center;
+  border-radius: 10px;
+}
+.quick-teal {
+  color: #098176;
+  background: #e4f6f1;
+}
+.quick-blue {
+  color: #4d7db3;
+  background: #edf2fb;
+}
+.quick-violet {
+  color: #786cb2;
+  background: #f0eefb;
+}
+.secretary-quick-grid strong {
+  grid-column: 2;
+  align-self: end;
+  color: #3d4e63;
+  font-size: 9px;
+}
+.secretary-quick-grid small {
+  grid-column: 2;
+  align-self: start;
+  color: #9aa5b1;
+  font-size: 9px;
+}
+.secretary-quick-grid > button > svg:last-child {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  color: #9ca9b7;
+}
+.secretary-footer-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  color: #7f8b99;
+  background: #fffaf0;
+  border: 1px solid #f3ebd7;
+  border-radius: 9px;
+}
+.secretary-footer-note > span {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: #a58740;
+  background: #f8f0d9;
+  border-radius: 6px;
+}
+.secretary-footer-note p {
+  margin: 1px 0 0;
+  font-size: 9px;
+  line-height: 1.75;
+}
+.secretary-lead-kpis {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-bottom: 12px;
+}
+.secretary-lead-kpis > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 9px;
+  color: #748398;
+  background: #fff;
+  border: 1px solid #ecf0f3;
+  border-radius: 8px;
+  font-size: 9px;
+}
+.secretary-lead-kpis b {
+  color: #34465d;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.secretary-workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(310px, 0.75fr);
+  align-items: start;
+  gap: 14px;
+}
+.secretary-leads-table-panel {
+  overflow: hidden;
+  padding: 15px 0 0;
+}
+.secretary-leads-table-panel > .secretary-panel-heading,
+.secretary-filter-row,
+.secretary-table-footer {
+  margin-right: 15px;
+  margin-left: 15px;
+}
+.lead-table-heading {
+  margin-bottom: 13px;
+}
+.secretary-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 11px;
+}
+.secretary-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 160px;
+  min-height: 34px;
+  flex: 1;
+  padding: 0 9px;
+  color: #94a1b0;
+  background: #fbfcfd;
+  border: 1px solid #e9eef2;
+  border-radius: 8px;
+}
+.secretary-search:focus-within {
+  border-color: #8bcac2;
+  box-shadow: 0 0 0 3px rgb(13 148 136 / 8%);
+}
+.secretary-search input {
+  width: 100%;
+  min-width: 0;
+  color: #35465c;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font: inherit;
+  font-size: 9px;
+}
+.secretary-search input::placeholder {
+  color: #a0aab6;
+}
+.secretary-select-filter {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 34px;
+  padding: 0 7px;
+  color: #8492a3;
+  background: #fbfcfd;
+  border: 1px solid #e9eef2;
+  border-radius: 8px;
+}
+.secretary-select-filter select {
+  max-width: 116px;
+  min-width: 0;
+  color: #627287;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font: inherit;
+  font-size: 9px;
+}
+.secretary-leads-table-wrap {
+  width: 100%;
+  overflow: auto;
+  border-top: 1px solid #f0f2f5;
+}
+.secretary-leads-table {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+.secretary-leads-table th {
+  height: 37px;
+  padding: 0 9px;
+  color: #929eac;
+  background: #fafbfd;
+  font-size: 9px;
+  font-weight: 700;
+  text-align: right;
+}
+.secretary-leads-table th:first-child,
+.secretary-leads-table td:first-child {
+  padding-right: 15px;
+}
+.secretary-leads-table td {
+  height: 58px;
+  padding: 7px 9px;
+  color: #6f7f91;
+  border-top: 1px solid #f1f3f5;
+  font-size: 9px;
+}
+.secretary-leads-table tbody tr {
+  cursor: pointer;
+  outline: none;
+  transition: background 130ms ease-out;
+}
+.secretary-leads-table tbody tr:hover,
+.secretary-leads-table tbody tr:focus-visible {
+  background: #f8fbfb;
+}
+.secretary-leads-table tbody tr.selected {
+  background: #eff8f6;
+}
+.secretary-lead-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.secretary-lead-name > span {
+  display: grid;
+  gap: 2px;
+}
+.secretary-lead-name strong {
+  color: #34465a;
+  font-size: 9px;
+}
+.secretary-lead-name small {
+  color: #9aa6b2;
+  font-size: 8px;
+}
+.secretary-phone {
+  color: #54667d;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+.secretary-source-badge {
+  display: inline-block;
+  padding: 4px 6px;
+  color: #6e8295;
+  background: #f2f5f8;
+  border-radius: 5px;
+  font-size: 8px;
+}
+.secretary-table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  min-height: 39px;
+  color: #98a3b0;
+  font-size: 9px;
+}
+.secretary-lead-detail {
+  position: sticky;
+  top: 87px;
+  padding: 15px;
+}
+.secretary-detail-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.secretary-detail-top > div > small {
+  display: block;
+  color: #9aa6b2;
+  font-size: 9px;
+  direction: ltr;
+  text-align: right;
+}
+.secretary-detail-person {
+  display: grid;
+  justify-items: center;
+  padding: 12px 0 15px;
+  border-bottom: 1px solid #eff2f4;
+}
+.secretary-lead-avatar.large {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 6px;
+  border-radius: 15px;
+  font-size: 17px;
+}
+.secretary-detail-person h3 {
+  margin: 0;
+  color: #283b52;
+  font-size: 13px;
+  font-weight: 800;
+}
+.secretary-detail-person > span {
+  margin-top: 3px;
+  color: #919eac;
+  font-size: 9px;
+}
+.secretary-contact-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 34px;
+  border-bottom: 1px solid #f1f3f5;
+  font-size: 9px;
+}
+.secretary-contact-line > span {
+  color: #98a3b0;
+}
+.secretary-contact-line strong,
+.secretary-contact-line bdi {
+  max-width: 60%;
+  overflow: hidden;
+  color: #56677d;
+  font-size: 9px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.secretary-contact-line bdi {
+  font-variant-numeric: tabular-nums;
+}
+.secretary-stage-select {
+  display: grid;
+  gap: 5px;
+  margin-top: 11px;
+  color: #8290a0;
+  font-size: 9px;
+  font-weight: 700;
+}
+.secretary-stage-select select {
+  width: 100%;
+  height: 33px;
+  padding: 0 8px;
+  color: #52667c;
+  background: #fbfcfd;
+  border: 1px solid #e7edf1;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 9px;
+}
+.secretary-notes-block {
+  display: grid;
+  gap: 7px;
+  margin-top: 13px;
+  padding: 10px;
+  background: #f8fafb;
+  border-radius: 9px;
+}
+.secretary-notes-block > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+.secretary-notes-block > div strong {
+  color: #56677b;
+  font-size: 9px;
+}
+.secretary-notes-block > div small {
+  color: #9da8b4;
+  font-size: 8px;
+}
+.secretary-notes-block > p {
+  max-height: 82px;
+  overflow: auto;
+  margin: 0;
+  color: #7b8998;
+  font-size: 9px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+.secretary-note-composer {
+  display: flex;
+  align-items: center;
+  min-height: 31px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid #e8edf1;
+  border-radius: 7px;
+}
+.secretary-note-composer:focus-within {
+  border-color: #92c9c2;
+}
+.secretary-note-composer input {
+  width: 100%;
+  min-width: 0;
+  padding: 0 8px;
+  color: #455970;
+  background: transparent;
+  border: 0;
+  outline: none;
+  font: inherit;
+  font-size: 9px;
+}
+.secretary-note-composer input::placeholder {
+  color: #a3adb8;
+}
+.secretary-note-composer button {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: #fff;
+  background: var(--sec-primary);
+  border: 0;
+}
+.secretary-note-composer button:disabled {
+  color: #a9b4bf;
+  background: #edf1f3;
+  cursor: not-allowed;
+}
+.secretary-detail-actions {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+}
+.secretary-detail-actions > button {
+  width: 100%;
+  min-height: 34px;
+  font-size: 9px;
+}
+.secretary-converted-tag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 31px;
+  color: #327e5e;
+  background: #eff8f1;
+  border-radius: 7px;
+  font-size: 9px;
+  font-weight: 700;
+}
+.secretary-empty {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  min-height: 135px;
+  place-content: center;
+  color: #9aa5b1;
+  font-size: 9px;
+}
+.secretary-empty strong {
+  color: #758397;
+  font-size: 9px;
+}
+.secretary-empty button {
+  padding: 3px 0;
+  color: var(--sec-primary);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 700;
+}
+.secretary-registration-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 13px;
+  padding: 17px;
+  background: linear-gradient(115deg, #fff 58%, #f1faf8);
+  border: 1px solid #e9f0f1;
+  border-radius: 13px;
+  box-shadow: var(--sec-shadow);
+}
+.secretary-registration-summary h2 {
+  font-size: 17px;
+}
+.secretary-registration-summary p {
+  margin: 4px 0 0;
+  color: #8593a2;
+  font-size: 9px;
+}
+.secretary-registration-summary-stats {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+}
+.secretary-registration-summary-stats > span {
+  display: grid;
+  gap: 3px;
+  text-align: center;
+}
+.secretary-registration-summary-stats > span strong {
+  color: #243951;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.secretary-registration-summary-stats > span small {
+  color: #92a0af;
+  font-size: 8px;
+  white-space: nowrap;
+}
+.secretary-registrations-panel {
+  margin-bottom: 13px;
+}
+.registrations-search {
+  max-width: 310px;
+  flex: 0 1 310px;
+}
+.secretary-registration-cards {
+  display: grid;
+  gap: 8px;
+}
+.secretary-registration-card {
+  display: grid;
+  grid-template-columns:
+    36px minmax(125px, 1.1fr) minmax(145px, 1.25fr) minmax(115px, 1fr)
+    minmax(100px, 0.85fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 69px;
+  padding: 10px;
+  background: #fcfdfd;
+  border: 1px solid #eff2f4;
+  border-radius: 9px;
+  transition:
+    background 140ms ease-out,
+    border-color 140ms ease-out;
+}
+.secretary-registration-card:hover {
+  background: #f9fcfb;
+  border-color: #dfece9;
+}
+.secretary-registration-avatar {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  color: #4e8091;
+  background: #eaf3f5;
+  border-radius: 10px;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+}
+.secretary-registration-person,
+.secretary-registration-course > span {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+.secretary-registration-person strong,
+.secretary-registration-course strong {
+  overflow: hidden;
+  color: #34465d;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.secretary-registration-person small,
+.secretary-registration-course small {
+  overflow: hidden;
+  color: #97a3af;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.secretary-registration-course {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  color: var(--sec-primary);
+}
+.secretary-registration-parent {
+  display: grid;
+  gap: 4px;
+  color: #8795a4;
+  font-size: 8px;
+}
+.secretary-registration-parent bdi {
+  color: #536980;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+.secretary-registration-price {
+  display: grid;
+  gap: 4px;
+}
+.secretary-registration-price small {
+  color: #9da8b4;
+  font-size: 8px;
+}
+.secretary-registration-price strong {
+  color: #536d79;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+.secretary-registration-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 7px;
+  color: #398263;
+  background: #edf8f0;
+  border-radius: 6px;
+  font-size: 8px;
+  white-space: nowrap;
+}
+.secretary-registration-footnote {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 11px;
+  padding-top: 10px;
+  color: #919eac;
+  border-top: 1px solid #eff2f4;
+  font-size: 9px;
+}
+.secretary-registration-footnote > svg {
+  flex: 0 0 auto;
+  color: #a38c52;
+}
+.secretary-registration-footnote > span {
+  flex: 1;
+}
+.secretary-registration-footnote button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  padding: 3px;
+  color: var(--sec-primary-dark);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 700;
+}
+.secretary-offerings-panel {
+  margin-bottom: 13px;
+}
+.secretary-offerings-list {
+  display: grid;
+}
+.secretary-offerings-list article {
+  display: grid;
+  grid-template-columns:
+    34px minmax(140px, 1fr) minmax(70px, auto) minmax(65px, auto)
+    minmax(75px, auto) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 55px;
+  border-top: 1px solid #f0f2f5;
+}
+.secretary-offering-icon {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  color: #2e8b7f;
+  background: #eaf6f2;
+  border-radius: 9px;
+}
+.secretary-offerings-list article > div {
+  display: grid;
+  gap: 3px;
+}
+.secretary-offerings-list article > div strong {
+  color: #45576c;
+  font-size: 9px;
+}
+.secretary-offerings-list article > div small,
+.secretary-offerings-list article > span:not(.secretary-offering-icon) {
+  color: #98a4b1;
+  font-size: 8px;
+}
+.secretary-offerings-list article > span:not(.secretary-offering-icon) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.secretary-offerings-list article > b {
+  color: #536b77;
+  font-size: 9px;
+  white-space: nowrap;
+}
+.secretary-offerings-list article > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 29px;
+  padding: 0 8px;
+  color: var(--sec-primary-dark);
+  background: #f1f8f6;
+  border: 1px solid #e1efeb;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 700;
+}
+.secretary-offerings-list article > button:hover {
+  background: #e5f4ef;
+}
+.secretary-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: 18px;
+  background: rgb(13 24 40 / 48%);
+  backdrop-filter: blur(4px);
+  animation: secretary-fade-in 150ms ease-out both;
+}
+.secretary-dialog {
+  position: relative;
+  width: min(520px, 100%);
+  max-height: min(92vh, 800px);
+  overflow: auto;
+  padding: 19px;
+  background: #fff;
+  border: 1px solid rgb(255 255 255 / 70%);
+  border-radius: 15px;
+  box-shadow: 0 24px 70px rgb(12 24 40 / 22%);
+  animation: secretary-dialog-enter 180ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+.secretary-registration-dialog {
+  width: min(600px, 100%);
+}
+.secretary-dialog-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.secretary-dialog-top > span {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  color: var(--sec-primary);
+  background: #e7f6f2;
+  border-radius: 10px;
+}
+.secretary-dialog-top > button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  color: #7b8998;
+  background: #f7f9fb;
+  border: 0;
+  border-radius: 8px;
+}
+.secretary-dialog-kicker {
+  color: #8797a9;
+  font-size: 9px;
+  font-weight: 700;
+}
+.secretary-dialog h2 {
+  margin: 4px 0 3px;
+  color: #22344b;
+  font-size: 18px;
+  font-weight: 850;
+}
+.secretary-dialog > p {
+  margin: 0 0 14px;
+  color: #8693a1;
+  font-size: 9px;
+  line-height: 1.7;
+}
+.secretary-dialog form {
+  display: grid;
+  gap: 11px;
+}
+.secretary-field-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.secretary-field {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  color: #54667a;
+  font-size: 9px;
+  font-weight: 700;
+}
+.secretary-field > span b {
+  color: #be5d5d;
+}
+.secretary-field input,
+.secretary-field select,
+.secretary-field textarea {
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 9px;
+  color: #34485e;
+  background: #fcfdfd;
+  border: 1px solid #e6ebef;
+  border-radius: 8px;
+  outline: none;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 500;
+}
+.secretary-field textarea {
+  min-height: 74px;
+  resize: vertical;
+  line-height: 1.7;
+}
+.secretary-field input:focus,
+.secretary-field select:focus,
+.secretary-field textarea:focus {
+  border-color: #84c2bb;
+  box-shadow: 0 0 0 3px rgb(13 148 136 / 8%);
+}
+.secretary-field input::placeholder,
+.secretary-field textarea::placeholder {
+  color: #a8b1bb;
+}
+.secretary-field input[type="date"] {
+  color-scheme: light;
+}
+.secretary-form-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 8px 9px;
+  color: #7b8793;
+  background: #f4f8f8;
+  border-radius: 7px;
+  font-size: 9px;
+  line-height: 1.7;
+}
+.secretary-form-note > svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: #64938d;
+}
+.secretary-price-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 10px;
+  background: #f6faf9;
+  border: 1px solid #e7f1ee;
+  border-radius: 8px;
+}
+.secretary-price-summary > span {
+  display: grid;
+  gap: 4px;
+}
+.secretary-price-summary small {
+  color: #88978f;
+  font-size: 8px;
+}
+.secretary-price-summary strong {
+  color: #48685f;
+  font-size: 9px;
+}
+.secretary-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 2px;
+}
+.secretary-mobile-menu,
+.secretary-mobile-backdrop {
+  display: none;
+}
+.secretary-shell :focus-visible {
+  outline: 2px solid #4aa79d;
+  outline-offset: 2px;
+}
+@keyframes secretary-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes secretary-dialog-enter {
+  from {
+    opacity: 0;
+    transform: translateY(5px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (max-width: 1280px) {
+  .secretary-sidebar {
+    flex-basis: 225px;
+    width: 225px;
+  }
+  .secretary-content {
+    padding-right: 26px;
+    padding-left: 26px;
+  }
+  .secretary-stats-grid {
+    gap: 9px;
+  }
+  .secretary-stat-card {
+    padding: 13px;
+  }
+  .secretary-workspace-grid {
+    grid-template-columns: minmax(0, 1.35fr) minmax(285px, 0.8fr);
+  }
+  .secretary-registration-card {
+    grid-template-columns:
+      34px minmax(110px, 1fr) minmax(125px, 1.1fr) minmax(96px, 0.9fr)
+      auto;
+  }
+  .secretary-registration-price {
+    display: none;
+  }
+}
+@media (max-width: 1050px) {
+  .secretary-sidebar {
+    flex-basis: 210px;
+    width: 210px;
+  }
+  .secretary-content {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+  .secretary-overview-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .secretary-workspace-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .secretary-lead-detail {
+    position: static;
+  }
+  .secretary-leads-table-wrap {
+    max-height: 480px;
+  }
+  .secretary-registration-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .secretary-registration-summary-stats {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+@media (max-width: 740px) {
+  .secretary-sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(285px, 84vw);
+    height: 100dvh;
+    transform: translateX(105%);
+    transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
+    box-shadow: -16px 0 40px rgb(12 24 40 / 18%);
+  }
+  .secretary-sidebar.is-open {
+    transform: translateX(0);
+  }
+  .secretary-mobile-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 32;
+    display: block;
+    visibility: hidden;
+    background: rgb(15 28 44 / 35%);
+    opacity: 0;
+    transition:
+      opacity 160ms ease-out,
+      visibility 160ms ease-out;
+  }
+  .secretary-mobile-backdrop.is-open {
+    visibility: visible;
+    opacity: 1;
+  }
+  .secretary-mobile-menu {
+    display: grid;
+  }
+  .secretary-topbar {
+    min-height: 60px;
+    padding: 0 13px;
+  }
+  .secretary-topbar-start,
+  .secretary-topbar-end {
+    gap: 7px;
+  }
+  .secretary-live-pill {
+    display: none;
+  }
+  .secretary-branch-pill {
+    min-height: 31px;
+    padding: 0 8px;
+    font-size: 9px;
+  }
+  .secretary-topbar-divider {
+    display: none;
+  }
+  .secretary-profile {
+    gap: 5px;
+  }
+  .secretary-profile > span {
+    display: none;
+  }
+  .secretary-profile i {
+    width: 30px;
+    height: 30px;
+  }
+  .secretary-profile > svg {
+    display: none;
+  }
+  .secretary-content {
+    padding: 15px 13px 25px;
+  }
+  .secretary-breadcrumb {
+    font-size: 9px;
+  }
+  .secretary-welcome {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+    margin: 6px 0 13px;
+  }
+  .secretary-welcome h1 {
+    font-size: 23px;
+  }
+  .secretary-welcome p {
+    max-width: 42ch;
+    font-size: 10px;
+    line-height: 1.7;
+  }
+  .secretary-welcome-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .secretary-date-pill {
+    min-height: 34px;
+    padding: 0 8px;
+    font-size: 9px;
+  }
+  .secretary-primary-button,
+  .secretary-secondary-button,
+  .secretary-copy-button {
+    min-height: 34px;
+    padding: 0 9px;
+    font-size: 9px;
+  }
+  .secretary-demo-note {
+    align-items: flex-start;
+    min-height: 0;
+    padding: 9px;
+    font-size: 9px;
+    line-height: 1.7;
+  }
+  .secretary-demo-note b {
+    flex: 0 0 auto;
+  }
+  .secretary-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .secretary-stat-card {
+    min-height: 112px;
+    padding: 11px;
+    border-radius: 11px;
+  }
+  .secretary-stat-icon {
+    width: 31px;
+    height: 31px;
+    border-radius: 9px;
+  }
+  .secretary-stat-card > small {
+    font-size: 9px;
+  }
+  .secretary-stat-card > strong {
+    font-size: 26px;
+  }
+  .secretary-stat-card > span:last-child {
+    font-size: 8px;
+  }
+  .secretary-overview-grid {
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .secretary-panel {
+    padding: 12px;
+    border-radius: 11px;
+  }
+  .secretary-panel-heading {
+    gap: 8px;
+    margin-bottom: 9px;
+  }
+  .secretary-panel-heading h2 {
+    font-size: 13px;
+  }
+  .secretary-lead-preview-list > button {
+    grid-template-columns: 31px minmax(0, 1fr) auto 12px;
+    gap: 6px;
+    min-height: 54px;
+  }
+  .secretary-lead-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    font-size: 10px;
+  }
+  .secretary-lead-preview-list strong {
+    font-size: 9px;
+  }
+  .secretary-lead-preview-list small {
+    max-width: 150px;
+    font-size: 8px;
+  }
+  .secretary-status-pill {
+    min-height: 20px;
+    padding: 2px 5px;
+    font-size: 8px;
+  }
+  .secretary-pipeline-list > button {
+    grid-template-columns: 8px minmax(60px, 1fr) 19px minmax(62px, 0.8fr);
+    min-height: 31px;
+  }
+  .secretary-quick-panel {
+    margin-bottom: 10px;
+  }
+  .secretary-quick-grid {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+  .secretary-quick-grid > button {
+    min-height: 61px;
+    padding: 9px;
+  }
+  .secretary-footer-note {
+    margin-top: 10px;
+    padding: 8px;
+  }
+  .secretary-footer-note p {
+    font-size: 8px;
+  }
+  .secretary-lead-kpis {
+    gap: 5px;
+    margin-bottom: 8px;
+  }
+  .secretary-lead-kpis > span {
+    min-height: 27px;
+    gap: 4px;
+    padding: 0 7px;
+    font-size: 8px;
+  }
+  .secretary-lead-kpis b {
+    font-size: 10px;
+  }
+  .secretary-leads-table-panel {
+    padding-top: 12px;
+  }
+  .secretary-leads-table-panel > .secretary-panel-heading,
+  .secretary-filter-row,
+  .secretary-table-footer {
+    margin-right: 12px;
+    margin-left: 12px;
+  }
+  .secretary-filter-row {
+    flex-wrap: wrap;
+  }
+  .secretary-search {
+    min-width: 100%;
+    flex: 1 0 100%;
+  }
+  .secretary-select-filter {
+    flex: 1;
+  }
+  .secretary-select-filter select {
+    width: 100%;
+    max-width: none;
+  }
+  .secretary-leads-table-wrap {
+    overflow-x: auto;
+  }
+  .secretary-leads-table {
+    min-width: 680px;
+  }
+  .secretary-table-footer {
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 7px 0;
+  }
+  .secretary-lead-detail {
+    padding: 12px;
+  }
+  .secretary-registration-summary {
+    gap: 13px;
+    padding: 13px;
+  }
+  .secretary-registration-summary-stats {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .secretary-registration-summary-stats > span {
+    flex: 1;
+  }
+  .secretary-registration-summary-stats > button {
+    flex: 1 0 100%;
+  }
+  .secretary-registrations-panel .secretary-panel-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .registrations-search {
+    max-width: none;
+    flex-basis: auto;
+  }
+  .secretary-registration-cards {
+    gap: 7px;
+  }
+  .secretary-registration-card {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    gap: 7px;
+    padding: 9px;
+  }
+  .secretary-registration-avatar {
+    width: 30px;
+    height: 30px;
+  }
+  .secretary-registration-person {
+    grid-column: 2;
+  }
+  .secretary-registration-state {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .secretary-registration-course {
+    grid-column: 2 / span 2;
+    grid-row: 2;
+  }
+  .secretary-registration-parent {
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr auto;
+    padding-top: 7px;
+    border-top: 1px solid #edf1f2;
+  }
+  .secretary-registration-footnote {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .secretary-registration-footnote > button {
+    margin-right: auto;
+  }
+  .secretary-offerings-list article {
+    grid-template-columns: 31px minmax(0, 1fr) auto;
+    gap: 7px;
+    padding: 8px 0;
+  }
+  .secretary-offering-icon {
+    grid-row: 1 / span 2;
+    width: 29px;
+    height: 29px;
+  }
+  .secretary-offerings-list article > div {
+    grid-column: 2 / span 2;
+  }
+  .secretary-offerings-list article > span:nth-of-type(2) {
+    grid-column: 2;
+  }
+  .secretary-offerings-list article > span:nth-of-type(3) {
+    grid-column: 3;
+  }
+  .secretary-offerings-list article > b {
+    grid-column: 2;
+    grid-row: 3;
+  }
+  .secretary-offerings-list article > button {
+    grid-column: 3;
+    grid-row: 3;
+    justify-self: end;
+  }
+  .secretary-dialog-backdrop {
+    align-items: start;
+    padding: 10px;
+  }
+  .secretary-dialog {
+    max-height: calc(100dvh - 20px);
+    margin-block: auto;
+    padding: 14px;
+    border-radius: 12px;
+  }
+  .secretary-dialog h2 {
+    font-size: 16px;
+  }
+  .secretary-dialog form {
+    gap: 9px;
+  }
+  .secretary-field-row {
+    gap: 7px;
+  }
+  .secretary-field {
+    font-size: 8px;
+  }
+  .secretary-field input,
+  .secretary-field select,
+  .secretary-field textarea {
+    min-height: 34px;
+    padding: 7px;
+    font-size: 9px;
+  }
+  .secretary-field textarea {
+    min-height: 60px;
+  }
+  .secretary-dialog-actions {
+    position: sticky;
+    bottom: -1px;
+    padding: 7px 0 0;
+    background: #fff;
+  }
+}
+@media (max-width: 380px) {
+  .secretary-topbar {
+    padding: 0 9px;
+  }
+  .secretary-topbar-start {
+    gap: 5px;
+  }
+  .secretary-branch-pill {
+    max-width: 154px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .secretary-content {
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+  .secretary-welcome-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .secretary-date-pill,
+  .secretary-welcome-actions > .secretary-primary-button {
+    justify-content: center;
+    width: 100%;
+  }
+  .secretary-stat-card {
+    padding: 9px;
+  }
+  .secretary-lead-preview-list > button {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+  }
+  .secretary-lead-preview-list > button > svg {
+    display: none;
+  }
+  .secretary-lead-preview-list small {
+    max-width: 126px;
+  }
+  .secretary-field-row {
+    grid-template-columns: 1fr;
+  }
+  .secretary-price-summary {
+    grid-template-columns: 1fr;
+  }
+  .secretary-dialog-actions {
+    flex-wrap: wrap;
+  }
+  .secretary-dialog-actions > button {
+    flex: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .secretary-shell *,
+  .secretary-shell *::before,
+  .secretary-shell *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
