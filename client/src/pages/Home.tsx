@@ -194,7 +194,7 @@ function App() {
             <span>الطلاب</span>
             <span className="nav-count">{studentCount}</span>
           </button>
-          <button className="nav-link" onClick={() => showComingSoon("الجدول")}>
+          <button className="nav-link" onClick={() => navigate("/schedule")}>
             <CalendarDays size={19} />
             <span>الجدول</span>
           </button>
@@ -425,7 +425,7 @@ function App() {
                 </div>
                 <div className="schedule-footer">
                   <span><Clock3 size={14} /> آخر تحديث منذ دقيقتين</span>
-                  <button className="text-link" onClick={() => showComingSoon("الجدول الكامل")}>عرض الجدول الكامل <ChevronLeft size={14} /></button>
+                  <button className="text-link" onClick={() => navigate("/schedule")}>عرض الجدول الكامل <ChevronLeft size={14} /></button>
                 </div>
               </article>
 
@@ -494,7 +494,7 @@ function App() {
                 <div className="quick-actions">
                   <button onClick={() => setStudentDialogOpen(true)}><span className="quick-icon quick-teal"><UserPlus size={17} /></span><span>تسجيل طالب</span><ChevronLeft size={15} /></button>
                   <button onClick={() => showComingSoon("تسجيل تحصيل")}><span className="quick-icon quick-amber"><Wallet size={17} /></span><span>تسجيل تحصيل</span><ChevronLeft size={15} /></button>
-                  <button onClick={() => showComingSoon("إضافة حصة")}><span className="quick-icon quick-blue"><CalendarDays size={17} /></span><span>إضافة حصة للجدول</span><ChevronLeft size={15} /></button>
+                  <button onClick={() => navigate("/schedule")}><span className="quick-icon quick-blue"><CalendarDays size={17} /></span><span>إضافة حصة للجدول</span><ChevronLeft size={15} /></button>
                 </div>
               </article>
 

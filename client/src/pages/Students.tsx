@@ -159,7 +159,7 @@ function StudentPage() {
         <nav className="primary-nav" aria-label="القائمة الرئيسية">
           <button className="nav-link" onClick={() => setLocation("/")}><LayoutDashboard size={19} /><span>الرئيسية</span></button>
           <button className="nav-link active" aria-current="page"><Users size={19} /><span>الطلاب</span><span className="nav-count">{248 + students.length - initialStudents.length}</span></button>
-          <button className="nav-link" onClick={() => comingSoon("الجدول")}><CalendarDays size={19} /><span>الجدول</span></button>
+          <button className="nav-link" onClick={() => setLocation("/schedule")}><CalendarDays size={19} /><span>الجدول</span></button>
           <button className="nav-link" onClick={() => comingSoon("الحصص والكورسات")}><BookOpen size={19} /><span>الحصص والكورسات</span></button>
           <button className="nav-link" onClick={() => comingSoon("المسابقات")}><Sparkles size={19} /><span>المسابقات</span></button>
         </nav>
