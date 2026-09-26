@@ -990,6 +990,16 @@ export default function Team() {
                 </span>
               ))}
             </div>
+            {selectedRole.code === "R04" && (
+              <button
+                className="instructor-preview-link"
+                onClick={() => navigate("/instructor")}
+              >
+                <GraduationCap size={16} />
+                معاينة مساحة المدرب
+                <ChevronLeft size={14} />
+              </button>
+            )}
             <div className="dialog-info">
               <AlertCircle size={15} />
               <span>

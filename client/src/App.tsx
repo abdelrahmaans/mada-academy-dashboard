@@ -13,6 +13,7 @@ const Finance = lazy(() => import("./pages/Finance"));
 const Team = lazy(() => import("./pages/Team"));
 const Approvals = lazy(() => import("./pages/Approvals"));
 const Reports = lazy(() => import("./pages/Reports"));
+const Instructor = lazy(() => import("./pages/Instructor"));
 function Router() {
   return (
     <Suspense
@@ -27,6 +28,7 @@ function Router() {
         <Route path={"/team"} component={Team} />
         <Route path={"/approvals"} component={Approvals} />
         <Route path={"/reports"} component={Reports} />
+        <Route path={"/instructor"} component={Instructor} />
         <Route path={"/404"} component={NotFound} />
         {/* Final fallback route */}
         <Route component={NotFound} />
