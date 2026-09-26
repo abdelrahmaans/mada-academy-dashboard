@@ -14337,3 +14337,806 @@ button:not(:disabled) {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Head of Instructors: branch-wide roster and attendance approvals */
+.academic-approval-shortcut {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 13px;
+  padding: 12px 14px;
+  border: 1px solid #d8ebe7;
+  border-radius: 13px;
+  background: linear-gradient(110deg, #f1faf8, #fff 72%);
+}
+.academic-approval-shortcut-icon {
+  display: grid;
+  place-items: center;
+  width: 37px;
+  height: 37px;
+  flex: none;
+  border-radius: 11px;
+  color: var(--academic-teal-deep);
+  background: #e1f3ef;
+}
+.academic-approval-shortcut-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.academic-approval-shortcut-copy small {
+  color: #78899a;
+  font-size: 7px;
+  font-weight: 700;
+}
+.academic-approval-shortcut-copy strong {
+  color: #263c50;
+  font-size: 10px;
+  font-weight: 900;
+}
+.academic-approval-shortcut-copy > span {
+  overflow: hidden;
+  color: #8391a0;
+  font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.academic-approval-shortcut > button {
+  min-height: 33px;
+  flex: none;
+}
+.academic-approval-shortcut > button b {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--mada-brand-amber, #f59e0b);
+  font-size: 8px;
+}
+.academic-coach-overview-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.academic-coach-overview-item {
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid #edf0f3;
+  border-radius: 11px;
+  background: #fff;
+}
+.academic-coach-mini-profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: right;
+  cursor: pointer;
+}
+.academic-coach-mini-profile .academic-coach-avatar {
+  width: 31px;
+  height: 31px;
+  flex: none;
+  font-size: 9px;
+}
+.academic-coach-mini-profile .academic-coach-main {
+  flex: 1;
+}
+.academic-coach-mini-profile > svg {
+  color: #94a0af;
+}
+.academic-coach-compact-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 13px;
+  margin: 7px 0 0 39px;
+  color: #8290a0;
+  font-size: 6px;
+}
+.academic-coach-compact-metrics b {
+  color: #34495d;
+  font-size: 8px;
+}
+.academic-coach-overview-item .academic-group-chips {
+  margin: 7px 0 0 39px;
+  gap: 4px;
+}
+.academic-coach-overview-item .academic-group-chips > span {
+  max-width: 100%;
+  padding: 4px 6px;
+}
+.academic-approval-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding: 15px 17px;
+  border: 1px solid #e4eaed;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgb(15 23 42 / 3%);
+}
+.academic-approval-summary > div:first-child {
+  min-width: 0;
+}
+.academic-approval-summary h2 {
+  margin: 4px 0 3px;
+  color: #27384e;
+  font-size: 15px;
+  font-weight: 900;
+}
+.academic-approval-summary p {
+  max-width: 570px;
+  margin: 0;
+  color: #8190a0;
+  font-size: 8px;
+  line-height: 1.7;
+}
+.academic-approval-summary-stats {
+  display: flex;
+  gap: 7px;
+  flex: none;
+}
+.academic-approval-summary-stats > span {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  min-width: 74px;
+  padding: 8px;
+  border: 1px solid #edf0f3;
+  border-radius: 9px;
+  background: #fbfcfd;
+}
+.academic-approval-summary-stats strong {
+  color: #2b4054;
+  font-size: 16px;
+  font-weight: 900;
+}
+.academic-approval-summary-stats small {
+  color: #8693a2;
+  font-size: 6px;
+  text-align: center;
+}
+.academic-approval-summary-stats .waiting strong {
+  color: #a17724;
+}
+.academic-approval-summary-stats .approved strong {
+  color: #17877d;
+}
+.academic-approval-summary-stats .returned strong {
+  color: #9d6262;
+}
+.academic-approval-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.78fr) minmax(0, 1.5fr);
+  gap: 12px;
+  align-items: start;
+}
+.academic-approval-queue,
+.academic-approval-detail,
+.academic-approval-history-panel {
+  min-width: 0;
+  padding: 14px;
+}
+.academic-approval-queue > .academic-panel-heading {
+  margin-bottom: 10px;
+}
+.academic-approval-search {
+  margin-bottom: 9px;
+}
+.academic-approval-request-list {
+  display: grid;
+  gap: 6px;
+  max-height: 560px;
+  overflow: auto;
+  padding: 1px 1px 3px;
+}
+.academic-approval-request {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid #edf0f3;
+  border-radius: 10px;
+  color: inherit;
+  background: #fff;
+  text-align: right;
+  cursor: pointer;
+  transition:
+    border-color 0.14s ease,
+    background 0.14s ease,
+    transform 0.14s ease;
+}
+.academic-approval-request:hover {
+  border-color: #b9ddd7;
+  background: #f8fcfb;
+}
+.academic-approval-request:active {
+  transform: scale(0.99);
+}
+.academic-approval-request.selected {
+  border-color: #86c6bb;
+  background: #f0f9f7;
+  box-shadow: inset -2px 0 0 var(--mada-brand-teal, #0d9488);
+}
+.academic-approval-request-icon {
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  flex: none;
+  border-radius: 9px;
+  color: #9b762d;
+  background: #fff5df;
+}
+.academic-approval-request-main {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.academic-approval-request-main strong {
+  overflow: hidden;
+  color: #34465b;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.academic-approval-request-main small {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  overflow: hidden;
+  color: #8995a3;
+  font-size: 6px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.academic-approval-request-meta {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  flex: none;
+  color: #8d99a6;
+  font-size: 6px;
+}
+.academic-approval-request-meta b {
+  color: #617185;
+  font-size: 7px;
+}
+.academic-approval-request-meta i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mada-brand-amber, #f59e0b);
+}
+.academic-approval-empty {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 28px 10px;
+  color: #8392a1;
+  text-align: center;
+}
+.academic-approval-empty > svg {
+  color: var(--academic-teal-deep);
+}
+.academic-approval-empty strong {
+  color: #43556a;
+  font-size: 9px;
+}
+.academic-approval-empty span {
+  font-size: 7px;
+  line-height: 1.6;
+}
+.academic-approval-empty button {
+  border: 0;
+  color: var(--academic-teal-deep);
+  background: transparent;
+  font-size: 7px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.academic-approval-detail-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid #edf0f3;
+}
+.academic-approval-detail-top .academic-detail-icon {
+  flex: none;
+  margin: 0;
+}
+.academic-approval-detail-top > div:nth-child(2) {
+  min-width: 0;
+  flex: 1;
+}
+.academic-approval-detail-top h2 {
+  margin: 3px 0 2px;
+  color: #2e4055;
+  font-size: 11px;
+  font-weight: 900;
+}
+.academic-approval-detail-top p {
+  margin: 0;
+  color: #8b97a5;
+  font-size: 6px;
+  line-height: 1.6;
+}
+.academic-approval-detail-top > .academic-session-status {
+  flex: none;
+}
+.academic-approval-coach-note {
+  margin-top: 10px;
+  padding: 9px 10px;
+  border: 1px solid #e8eff0;
+  border-radius: 9px;
+  background: #f9fcfb;
+}
+.academic-approval-coach-note > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #718391;
+  font-size: 7px;
+  font-weight: 800;
+}
+.academic-approval-coach-note > span svg {
+  color: var(--academic-teal-deep);
+}
+.academic-approval-coach-note p {
+  margin: 5px 0 0;
+  color: #536477;
+  font-size: 7px;
+  line-height: 1.65;
+}
+.academic-approval-roster-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 12px 0 6px;
+}
+.academic-approval-roster-heading > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #3e5367;
+  font-size: 8px;
+  font-weight: 900;
+}
+.academic-approval-roster-heading > span svg {
+  color: var(--academic-teal-deep);
+}
+.academic-approval-roster-heading > strong {
+  color: #8995a2;
+  font-size: 6px;
+  font-weight: 700;
+  text-align: left;
+}
+.academic-approval-roster {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  max-height: 250px;
+  overflow: auto;
+}
+.academic-approval-student {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 43px;
+  padding: 6px 7px;
+  border: 1px solid #edf0f3;
+  border-radius: 8px;
+  background: #fff;
+}
+.academic-approval-student-avatar {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  flex: none;
+  border-radius: 8px;
+  color: #4e7583;
+  background: #edf5f5;
+  font-size: 8px;
+  font-weight: 900;
+}
+.academic-approval-student-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.academic-approval-student-main strong {
+  overflow: hidden;
+  color: #435469;
+  font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.academic-approval-student-main small {
+  overflow: hidden;
+  color: #939eaa;
+  font-size: 5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.academic-approval-attendance {
+  flex: none;
+  padding: 4px 5px;
+  border-radius: 6px;
+  font-size: 6px;
+  font-weight: 800;
+}
+.academic-approval-attendance.present {
+  color: #21776e;
+  background: #e9f6f2;
+}
+.academic-approval-attendance.late {
+  color: #916d22;
+  background: #fff5df;
+}
+.academic-approval-attendance.absent {
+  color: #a55d62;
+  background: #fff0ef;
+}
+.academic-approval-attendance.excused {
+  color: #657ba3;
+  background: #eff3fb;
+}
+.academic-approval-no-roster {
+  grid-column: 1 / -1;
+  padding: 18px;
+  color: #8a96a3;
+  font-size: 7px;
+  text-align: center;
+}
+.academic-approval-note-input {
+  display: grid;
+  gap: 5px;
+  margin-top: 11px;
+}
+.academic-approval-note-input > span {
+  color: #687a8c;
+  font-size: 7px;
+  font-weight: 800;
+}
+.academic-approval-note-input textarea {
+  width: 100%;
+  min-height: 57px;
+  resize: vertical;
+  padding: 8px 9px;
+  border: 1px solid #e4eaee;
+  border-radius: 8px;
+  outline: 0;
+  color: #34475a;
+  background: #fff;
+  font: inherit;
+  font-size: 7px;
+  line-height: 1.6;
+}
+.academic-approval-note-input textarea:focus {
+  border-color: #80bfb5;
+  box-shadow: 0 0 0 3px rgb(13 148 136 / 8%);
+}
+.academic-approval-actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 9px;
+}
+.academic-approval-actions > button {
+  justify-content: center;
+  min-height: 34px;
+  flex: 1;
+}
+.academic-approval-actions .return {
+  border-color: #eadcda;
+  color: #9b5f5e;
+  background: #fffafa;
+}
+.academic-approval-actions .return:hover {
+  background: #fff2f0;
+}
+.academic-approval-actions .return:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+.academic-approval-actions .approve {
+  color: #fff;
+  background: var(--mada-ui-teal-on-light, #0b746b);
+}
+.academic-approval-local-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin-top: 8px;
+  color: #8995a2;
+  font-size: 6px;
+  line-height: 1.5;
+}
+.academic-approval-local-note svg {
+  flex: none;
+  color: #ae8a45;
+}
+.academic-approval-no-selection {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  min-height: 300px;
+  padding: 24px;
+  text-align: center;
+}
+.academic-approval-no-selection > svg {
+  color: var(--academic-teal-deep);
+}
+.academic-approval-no-selection h2 {
+  margin: 10px 0 4px;
+  color: #34475b;
+  font-size: 11px;
+}
+.academic-approval-no-selection p {
+  color: #8794a1;
+  font-size: 7px;
+}
+.academic-approval-history-panel {
+  margin-top: 12px;
+}
+.academic-approval-history-panel > .academic-panel-heading {
+  align-items: center;
+}
+.academic-approval-history-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  color: #708178;
+  background: #f1f8f5;
+  font-size: 6px;
+  white-space: nowrap;
+}
+.academic-approval-history-list {
+  display: grid;
+}
+.academic-approval-history-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 9px 2px;
+  border-bottom: 1px solid #eff2f4;
+}
+.academic-approval-history-icon {
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  flex: none;
+  border-radius: 9px;
+}
+.academic-approval-history-icon.approved {
+  color: #197c71;
+  background: #eaf6f2;
+}
+.academic-approval-history-icon.returned {
+  color: #a15e5e;
+  background: #fff1ef;
+}
+.academic-approval-history-main {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.academic-approval-history-main > strong {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  color: #415368;
+  font-size: 7px;
+}
+.academic-approval-history-main > strong small {
+  overflow: hidden;
+  color: #687a8d;
+  font-size: 7px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.academic-approval-history-main > span,
+.academic-approval-history-main > p {
+  overflow: hidden;
+  margin: 0;
+  color: #8d99a6;
+  font-size: 6px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.academic-approval-history-row time {
+  flex: none;
+  color: #8d99a6;
+  font-size: 6px;
+}
+.academic-reopen-approval {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 27px;
+  flex: none;
+  padding: 0 7px;
+  border: 1px solid #dce9e6;
+  border-radius: 7px;
+  color: #287b72;
+  background: #f7fbfa;
+  font-size: 6px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.academic-reopen-approval:disabled {
+  border-color: #edf0f2;
+  color: #96a1ac;
+  background: #fafbfc;
+  cursor: default;
+}
+.academic-approval-history-empty {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 18px 5px;
+  color: #8a96a3;
+  font-size: 7px;
+}
+.academic-approval-history-empty svg {
+  color: #8899a7;
+}
+.academic-approval-history-panel > .academic-table-footer {
+  margin-top: 5px;
+}
+.academic-coach-team-block + .academic-coach-team-block {
+  margin-top: 14px;
+  padding-top: 13px;
+  border-top: 1px solid #e9edf1;
+}
+@media (max-width: 900px) {
+  .academic-approval-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .academic-approval-request-list {
+    max-height: 290px;
+  }
+}
+@media (max-width: 680px) {
+  .academic-approval-shortcut {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px;
+  }
+  .academic-approval-shortcut-copy {
+    min-width: calc(100% - 47px);
+  }
+  .academic-approval-shortcut-copy strong {
+    font-size: 8px;
+  }
+  .academic-approval-shortcut > button {
+    width: 100%;
+    justify-content: center;
+  }
+  .academic-coach-overview-item {
+    padding: 7px;
+  }
+  .academic-coach-mini-profile {
+    gap: 6px;
+  }
+  .academic-coach-mini-profile .academic-coach-online {
+    font-size: 5px;
+  }
+  .academic-coach-compact-metrics {
+    gap: 5px 9px;
+    margin-right: 36px;
+    margin-left: 0;
+  }
+  .academic-coach-overview-item .academic-group-chips {
+    margin-right: 36px;
+    margin-left: 0;
+  }
+  .academic-approval-summary {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+  }
+  .academic-approval-summary h2 {
+    font-size: 12px;
+  }
+  .academic-approval-summary p {
+    font-size: 7px;
+  }
+  .academic-approval-summary-stats {
+    width: 100%;
+  }
+  .academic-approval-summary-stats > span {
+    min-width: 0;
+    flex: 1;
+    padding: 6px 4px;
+  }
+  .academic-approval-summary-stats strong {
+    font-size: 13px;
+  }
+  .academic-approval-layout {
+    gap: 9px;
+  }
+  .academic-approval-queue,
+  .academic-approval-detail,
+  .academic-approval-history-panel {
+    padding: 11px;
+  }
+  .academic-approval-request-list {
+    max-height: 250px;
+  }
+  .academic-approval-request {
+    padding: 8px 7px;
+  }
+  .academic-approval-request-main strong {
+    font-size: 7px;
+  }
+  .academic-approval-detail-top {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .academic-approval-detail-top .academic-session-status {
+    margin-right: 48px;
+  }
+  .academic-approval-detail-top h2 {
+    font-size: 10px;
+  }
+  .academic-approval-roster-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .academic-approval-roster {
+    grid-template-columns: minmax(0, 1fr);
+    max-height: 310px;
+  }
+  .academic-approval-actions {
+    flex-direction: column-reverse;
+  }
+  .academic-approval-actions > button {
+    min-height: 38px;
+  }
+  .academic-approval-history-scope {
+    display: none;
+  }
+  .academic-approval-history-row {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .academic-approval-history-main {
+    min-width: calc(100% - 42px);
+  }
+  .academic-approval-history-row time {
+    margin-right: 36px;
+  }
+  .academic-reopen-approval {
+    margin-right: auto;
+  }
+  .academic-approval-history-main > strong {
+    flex-wrap: wrap;
+    gap: 2px 6px;
+  }
+}

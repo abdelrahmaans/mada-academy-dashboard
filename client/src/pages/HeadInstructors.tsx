@@ -41,7 +41,12 @@ import {
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 
-type WorkspaceView = "overview" | "team" | "sessions" | "evaluations";
+type WorkspaceView =
+  | "overview"
+  | "team"
+  | "sessions"
+  | "approvals"
+  | "evaluations";
 type SessionStatus =
   | "scheduled"
   | "completed"
@@ -49,6 +54,13 @@ type SessionStatus =
   | "cancelled"
   | "rescheduled";
 type EvaluationCardStatus = "pending" | "generating" | "ready";
+type AttendanceEntry = {
+  studentId: string;
+  student: string;
+  status: "present" | "absent" | "late" | "excused";
+  lateMinutes?: number;
+  note?: string;
+};
 type SessionRecord = {
   id: string;
   offeringId: string;
@@ -67,6 +79,19 @@ type SessionRecord = {
     late: number;
     excused: number;
   };
+  attendanceEntries?: AttendanceEntry[];
+  instructorNote?: string;
+};
+type AttendanceDecision = {
+  id: string;
+  sessionId: string;
+  courseName: string;
+  groupName: string;
+  instructor: string;
+  actor: string;
+  decision: "approved" | "returned";
+  note: string;
+  decidedAt: string;
 };
 type EvaluationRecord = {
   id: string;
@@ -99,6 +124,7 @@ const VIEW_NAMES: Record<WorkspaceView, string> = {
   overview: "ملخص الفريق",
   team: "فريق المدربين",
   sessions: "الحصص والحضور",
+  approvals: "اعتماد الحضور",
   evaluations: "تقييمات الطلاب",
 };
 const VIEW_VALUES = Object.keys(VIEW_NAMES) as WorkspaceView[];
@@ -132,18 +158,45 @@ const RUBRIC = [
   },
 ] as const;
 
-const COACH: Coach = {
-  id: "USR-0202",
-  name: "عمر سامح",
-  initials: "عس",
-  role: "مدرب · مدينة نصر",
-  phone: "01123456789",
-  groups: ["روبوتكس مستوى 2", "برمجة للمبتدئين", "أساسيات تصميم الروبوت"],
-  sessionsThisWeek: 6,
-  attendanceRate: 88,
-  evaluationRate: 83,
-  status: "active",
-};
+const COACHES: Coach[] = [
+  {
+    id: "USR-0202",
+    name: "عمر سامح",
+    initials: "عس",
+    role: `مدرب · ${BRANCH}`,
+    phone: "01123456789",
+    groups: ["روبوتكس مستوى 2", "برمجة للمبتدئين", "أساسيات تصميم الروبوت"],
+    sessionsThisWeek: 6,
+    attendanceRate: 88,
+    evaluationRate: 83,
+    status: "active",
+  },
+  {
+    id: "USR-0208",
+    name: "دينا مصطفى",
+    initials: "دم",
+    role: `مدربة · ${BRANCH}`,
+    phone: "01045678912",
+    groups: ["دوائر إلكترونية للمبتدئين", "برمجة ألعاب المستوى الأول"],
+    sessionsThisWeek: 5,
+    attendanceRate: 92,
+    evaluationRate: 86,
+    status: "active",
+  },
+  {
+    id: "USR-0209",
+    name: "كريم أشرف",
+    initials: "كأ",
+    role: `مدرب · ${BRANCH}`,
+    phone: "01267890123",
+    groups: ["روبوتكس متقدم", "أساسيات الذكاء الاصطناعي"],
+    sessionsThisWeek: 4,
+    attendanceRate: 85,
+    evaluationRate: 79,
+    status: "active",
+  },
+];
+const COACH = COACHES[0];
 
 const SESSIONS: SessionRecord[] = [
   {
@@ -173,6 +226,17 @@ const SESSIONS: SessionRecord[] = [
     status: "pending_approval",
     students: 8,
     attendance: { present: 7, absent: 1, late: 0, excused: 0 },
+    attendanceEntries: [
+      { studentId: "ST-0241", student: "آدم رامي", status: "present" },
+      { studentId: "ST-0242", student: "جنى حسام", status: "present" },
+      { studentId: "ST-0243", student: "سليم تامر", status: "present" },
+      { studentId: "ST-0244", student: "نور أحمد", status: "present" },
+      { studentId: "ST-0245", student: "ملك شريف", status: "present" },
+      { studentId: "ST-0246", student: "عمر خالد", status: "present" },
+      { studentId: "ST-0247", student: "فرح إيهاب", status: "present" },
+      { studentId: "ST-0249", student: "زياد مصطفى", status: "absent" },
+    ],
+    instructorNote: "تم تسجيل الغياب بعد التواصل مع المجموعة.",
   },
   {
     id: "SES-NSR-0926-08",
@@ -228,6 +292,101 @@ const SESSIONS: SessionRecord[] = [
     students: 6,
     attendance: { present: 5, absent: 0, late: 0, excused: 1 },
   },
+  {
+    id: "SES-NSR-0926-11",
+    offeringId: "GRP-046",
+    courseName: "دوائر إلكترونية للمبتدئين",
+    groupName: "المستوى التأسيسي · 9–11 سنة",
+    date: "2026-09-26",
+    dateLabel: "السبت 26 سبتمبر",
+    time: "01:00 – 02:30 م",
+    room: "معمل 3",
+    instructor: COACHES[1].name,
+    status: "pending_approval",
+    students: 7,
+    attendance: { present: 5, absent: 1, late: 1, excused: 0 },
+    attendanceEntries: [
+      { studentId: "ST-0311", student: "ليلى محمود", status: "present" },
+      { studentId: "ST-0312", student: "يوسف وائل", status: "present" },
+      { studentId: "ST-0313", student: "مريم عادل", status: "present" },
+      { studentId: "ST-0314", student: "علي شادي", status: "present" },
+      { studentId: "ST-0315", student: "رنا أحمد", status: "present" },
+      {
+        studentId: "ST-0316",
+        student: "كريم سامي",
+        status: "late",
+        lateMinutes: 12,
+      },
+      {
+        studentId: "ST-0317",
+        student: "سيف طارق",
+        status: "absent",
+        note: "تم التواصل مع ولي الأمر",
+      },
+    ],
+    instructorNote: "تم تسجيل تأخر طالب واحد، مع توثيق الغياب في نهاية الحصة.",
+  },
+  {
+    id: "SES-NSR-0926-12",
+    offeringId: "GRP-048",
+    courseName: "أساسيات الذكاء الاصطناعي",
+    groupName: "المستوى التأسيسي · 12–14 سنة",
+    date: "2026-09-26",
+    dateLabel: "السبت 26 سبتمبر",
+    time: "04:00 – 05:30 م",
+    room: "معمل 2",
+    instructor: COACHES[2].name,
+    status: "pending_approval",
+    students: 6,
+    attendance: { present: 4, absent: 2, late: 0, excused: 0 },
+    attendanceEntries: [
+      { studentId: "ST-0321", student: "يحيى حسام", status: "present" },
+      { studentId: "ST-0322", student: "تاليا عمرو", status: "present" },
+      { studentId: "ST-0323", student: "عمر أسامة", status: "present" },
+      { studentId: "ST-0324", student: "نور كريم", status: "present" },
+      {
+        studentId: "ST-0325",
+        student: "مالك محمود",
+        status: "absent",
+        note: "لم يحضر",
+      },
+      {
+        studentId: "ST-0326",
+        student: "جود ياسر",
+        status: "absent",
+        note: "تم التواصل مع ولي الأمر",
+      },
+    ],
+    instructorNote: "غياب طالبان؛ تم التواصل مع ولي الأمر حسب الإجراء المعتاد.",
+  },
+  {
+    id: "SES-NSR-0925-07",
+    offeringId: "GRP-047",
+    courseName: "برمجة ألعاب المستوى الأول",
+    groupName: "المستوى التأسيسي · 10–12 سنة",
+    date: "2026-09-25",
+    dateLabel: "الجمعة 25 سبتمبر",
+    time: "02:00 – 03:30 م",
+    room: "معمل 3",
+    instructor: COACHES[1].name,
+    status: "completed",
+    students: 8,
+    attendance: { present: 7, absent: 1, late: 0, excused: 0 },
+  },
+  {
+    id: "SES-NSR-0925-09",
+    offeringId: "GRP-047",
+    courseName: "روبوتكس متقدم",
+    groupName: "المستوى المتقدم · 13–15 سنة",
+    date: "2026-09-25",
+    dateLabel: "الجمعة 25 سبتمبر",
+    time: "05:00 – 06:30 م",
+    room: "معمل الروبوتات",
+    instructor: COACHES[2].name,
+    status: "completed",
+    students: 5,
+    attendance: { present: 4, absent: 0, late: 1, excused: 0 },
+  },
 ];
 
 const EVALUATIONS: EvaluationRecord[] = [
@@ -275,6 +434,51 @@ const EVALUATIONS: EvaluationRecord[] = [
     cardStatus: "generating",
     scores: { understanding: 5, practice: 4, collaboration: 4 },
     comment: "مستوى متميز في تحليل المشكلة وتجربة أكثر من مسار للحل.",
+  },
+  {
+    id: "EVAL-2421",
+    student: "كريم سامي",
+    studentId: "ST-0316",
+    courseName: "دوائر إلكترونية للمبتدئين",
+    instructor: COACHES[1].name,
+    sessionDate: "2026-09-25",
+    cardStatus: "ready",
+    scores: { understanding: 4, practice: 4, collaboration: 3 },
+    comment:
+      "فهم توصيل الدائرة بسرعة، ويحتاج مراجعة ترتيب المكونات قبل التشغيل.",
+  },
+  {
+    id: "EVAL-2422",
+    student: "تاليا عمرو",
+    studentId: "ST-0322",
+    courseName: "أساسيات الذكاء الاصطناعي",
+    instructor: COACHES[2].name,
+    sessionDate: "2026-09-24",
+    cardStatus: "pending",
+    scores: { understanding: 3, practice: 4, collaboration: 5 },
+    comment: "مشاركة قوية في النقاش؛ نوصي بمتابعة شرح خطوات بناء النموذج.",
+  },
+  {
+    id: "EVAL-2423",
+    student: "رنا أحمد",
+    studentId: "ST-0315",
+    courseName: "برمجة ألعاب المستوى الأول",
+    instructor: COACHES[1].name,
+    sessionDate: "2026-09-23",
+    cardStatus: "generating",
+    scores: { understanding: 5, practice: 4, collaboration: 4 },
+    comment: "أنجزت حركة الشخصية وربطت الأوامر بتسلسل منطقي.",
+  },
+  {
+    id: "EVAL-2424",
+    student: "يحيى حسام",
+    studentId: "ST-0321",
+    courseName: "روبوتكس متقدم",
+    instructor: COACHES[2].name,
+    sessionDate: "2026-09-22",
+    cardStatus: "ready",
+    scores: { understanding: 4, practice: 5, collaboration: 4 },
+    comment: "أظهر استقلالية جيدة في اختبار المستشعرات والعمل مع الفريق.",
   },
 ];
 const ATTENDANCE_TREND = [
@@ -382,7 +586,17 @@ export default function HeadInstructors() {
       : "overview";
   });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [decisionHistory, setDecisionHistory] = useState<AttendanceDecision[]>(
+    []
+  );
+  const [resolvedAttendanceIds, setResolvedAttendanceIds] = useState<string[]>(
+    []
+  );
   const [selectedSessionId, setSelectedSessionId] = useState(SESSIONS[0].id);
+  const [selectedApprovalId, setSelectedApprovalId] = useState(
+    SESSIONS.find(session => session.status === "pending_approval")?.id ??
+      SESSIONS[0].id
+  );
   const [sessionQuery, setSessionQuery] = useState("");
   const [sessionStatusFilter, setSessionStatusFilter] = useState("all");
   const [evaluationQuery, setEvaluationQuery] = useState("");
@@ -397,14 +611,33 @@ export default function HeadInstructors() {
   const selectedEvaluation = EVALUATIONS.find(
     evaluation => evaluation.id === selectedEvaluationId
   );
-  const completedSessions = SESSIONS.filter(
+  const approvedAttendanceIds = useMemo(
+    () =>
+      decisionHistory
+        .filter(decision => decision.decision === "approved")
+        .map(decision => decision.sessionId),
+    [decisionHistory]
+  );
+  const visibleSessions = useMemo(
+    () =>
+      SESSIONS.map(session =>
+        approvedAttendanceIds.includes(session.id) &&
+        session.status === "pending_approval"
+          ? { ...session, status: "completed" as const }
+          : session
+      ),
+    [approvedAttendanceIds]
+  );
+  const completedSessions = visibleSessions.filter(
     session => session.status === "completed"
   );
-  const todaySessions = SESSIONS.filter(
+  const todaySessions = visibleSessions.filter(
     session => session.date === "2026-09-26"
   );
-  const pendingReviewSessions = SESSIONS.filter(
-    session => session.status === "pending_approval"
+  const pendingReviewSessions = visibleSessions.filter(
+    session =>
+      session.status === "pending_approval" &&
+      !resolvedAttendanceIds.includes(session.id)
   );
   const readyEvaluationCount = EVALUATIONS.filter(
     evaluation => evaluation.cardStatus === "ready"
@@ -422,25 +655,27 @@ export default function HeadInstructors() {
 
   const filteredSessions = useMemo(() => {
     const needle = sessionQuery.trim().toLocaleLowerCase("ar");
-    return SESSIONS.filter(session => {
-      const matchesSearch = [
-        session.courseName,
-        session.instructor,
-        session.room,
-        session.offeringId,
-        session.id,
-      ].some(value => value.toLocaleLowerCase("ar").includes(needle));
-      return (
-        matchesSearch &&
-        (sessionStatusFilter === "all" ||
-          session.status === sessionStatusFilter)
+    return visibleSessions
+      .filter(session => {
+        const matchesSearch = [
+          session.courseName,
+          session.instructor,
+          session.room,
+          session.offeringId,
+          session.id,
+        ].some(value => value.toLocaleLowerCase("ar").includes(needle));
+        return (
+          matchesSearch &&
+          (sessionStatusFilter === "all" ||
+            session.status === sessionStatusFilter)
+        );
+      })
+      .sort((first, second) =>
+        `${first.date} ${first.time}`.localeCompare(
+          `${second.date} ${second.time}`
+        )
       );
-    }).sort((first, second) =>
-      `${first.date} ${first.time}`.localeCompare(
-        `${second.date} ${second.time}`
-      )
-    );
-  }, [sessionQuery, sessionStatusFilter]);
+  }, [visibleSessions, sessionQuery, sessionStatusFilter]);
   const filteredEvaluations = useMemo(() => {
     const needle = evaluationQuery.trim().toLocaleLowerCase("ar");
     return EVALUATIONS.filter(evaluation => {
@@ -494,6 +729,47 @@ export default function HeadInstructors() {
     setSelectedEvaluationId(null);
     toast.success("تم تسجيل الاطلاع في المعاينة المحلية", {
       description: "الحالة لا تُحفظ خارج هذه الجلسة.",
+    });
+  };
+  const recordAttendanceDecision = (
+    session: SessionRecord,
+    decision: AttendanceDecision["decision"],
+    note: string
+  ) => {
+    const decidedAt = new Intl.DateTimeFormat("ar-EG", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date());
+    setDecisionHistory(current => [
+      {
+        id: `DEC-${Date.now()}`,
+        sessionId: session.id,
+        courseName: session.courseName,
+        groupName: session.groupName,
+        instructor: session.instructor,
+        actor: HEAD_OF_INSTRUCTORS,
+        decision,
+        note: note.trim(),
+        decidedAt,
+      },
+      ...current,
+    ]);
+    setResolvedAttendanceIds(current =>
+      current.includes(session.id) ? current : [...current, session.id]
+    );
+    toast.success(
+      decision === "approved"
+        ? "تم اعتماد الحضور في المعاينة"
+        : "تمت إعادة التسجيل للمدرب",
+      { description: "القرار والسجل محليان ولا يُحفظان خارج هذه الجلسة." }
+    );
+  };
+  const reopenAttendanceReview = (sessionId: string) => {
+    setResolvedAttendanceIds(current => current.filter(id => id !== sessionId));
+    toast.success("أُعيد الطلب إلى قائمة المراجعة المحلية", {
+      description: "احتفظنا بقرار المراجعة السابق في السجل.",
     });
   };
   const onSessionKeyDown = (
@@ -550,6 +826,14 @@ export default function HeadInstructors() {
           >
             <CalendarDays size={17} />
             <span>الحصص والحضور</span>
+            <b>{pendingReviewSessions.length}</b>
+          </button>
+          <button
+            className={view === "approvals" ? "active" : ""}
+            onClick={() => goToView("approvals")}
+          >
+            <CheckCircle2 size={17} />
+            <span>اعتماد الحضور</span>
             <b>{pendingReviewSessions.length}</b>
           </button>
           <button
@@ -693,6 +977,7 @@ export default function HeadInstructors() {
               completedSessions={completedSessions}
               todaySessions={todaySessions}
               pendingReviewSessions={pendingReviewSessions}
+              decisionHistory={decisionHistory}
               averageScore={averageScore}
               readyEvaluationCount={readyEvaluationCount}
               followUpEvaluationCount={followUpEvaluationCount}
@@ -707,10 +992,23 @@ export default function HeadInstructors() {
               statusFilter={sessionStatusFilter}
               setStatusFilter={setSessionStatusFilter}
               sessions={filteredSessions}
+              summarySessions={visibleSessions}
               selectedSessionId={selectedSessionId}
               selectedSession={selectedSession}
               onSelectSession={setSelectedSessionId}
               onKeyDown={onSessionKeyDown}
+            />
+          )}
+          {view === "approvals" && (
+            <AttendanceApprovalsView
+              sessions={pendingReviewSessions}
+              allSessions={visibleSessions}
+              history={decisionHistory}
+              resolvedIds={resolvedAttendanceIds}
+              selectedSessionId={selectedApprovalId}
+              onSelectSession={setSelectedApprovalId}
+              onDecision={recordAttendanceDecision}
+              onReopen={reopenAttendanceReview}
             />
           )}
           {view === "evaluations" && (
@@ -837,6 +1135,7 @@ function OverviewView({
   completedSessions,
   todaySessions,
   pendingReviewSessions,
+  decisionHistory,
   averageScore,
   readyEvaluationCount,
   followUpEvaluationCount,
@@ -847,6 +1146,7 @@ function OverviewView({
   completedSessions: SessionRecord[];
   todaySessions: SessionRecord[];
   pendingReviewSessions: SessionRecord[];
+  decisionHistory: AttendanceDecision[];
   averageScore: string;
   readyEvaluationCount: number;
   followUpEvaluationCount: number;
@@ -857,10 +1157,17 @@ function OverviewView({
       0
     ) / Math.max(1, completedSessions.length)
   );
+  const activeCoachCount = COACHES.filter(
+    coach => coach.status === "active"
+  ).length;
+  const groupCount = COACHES.reduce(
+    (total, coach) => total + coach.groups.length,
+    0
+  );
   const stats = [
     {
       label: "مدربون نشطون",
-      value: "1",
+      value: String(activeCoachCount),
       note: "ضمن نطاق الفرع",
       icon: Users,
       tone: "teal",
@@ -868,7 +1175,7 @@ function OverviewView({
     },
     {
       label: "مجموعات أتابعها",
-      value: "3",
+      value: String(groupCount),
       note: "مجموعات توضيحية",
       icon: BookOpen,
       tone: "blue",
@@ -914,6 +1221,34 @@ function OverviewView({
             </button>
           );
         })}
+      </section>
+      <section className="academic-approval-shortcut">
+        <span className="academic-approval-shortcut-icon">
+          <ClipboardCheck size={18} />
+        </span>
+        <div className="academic-approval-shortcut-copy">
+          <small>مراجعة تسجيل الحضور</small>
+          <strong>
+            {pendingReviewSessions.length
+              ? `${pendingReviewSessions.length} حصص بانتظار الاعتماد`
+              : "لا توجد طلبات حضور معلقة"}
+          </strong>
+          <span>
+            {decisionHistory[0]
+              ? `آخر قرار: ${decisionHistory[0].decision === "approved" ? "اعتماد" : "إعادة للمدرب"} · ${decisionHistory[0].courseName}`
+              : "افحص سجل الطلاب والملاحظات قبل اتخاذ القرار."}
+          </span>
+        </div>
+        <button
+          className="academic-secondary-button"
+          onClick={() => onNavigate("approvals")}
+        >
+          فتح قائمة الاعتماد
+          {pendingReviewSessions.length > 0 && (
+            <b>{pendingReviewSessions.length}</b>
+          )}
+          <ChevronLeft size={14} />
+        </button>
       </section>
 
       <div className="academic-overview-grid">
@@ -985,42 +1320,47 @@ function OverviewView({
               عرض الفريق <ChevronLeft size={14} />
             </button>
           </div>
-          <button
-            className="academic-coach-card"
-            onClick={() => onNavigate("team")}
-          >
-            <span className="academic-coach-avatar">{COACH.initials}</span>
-            <span className="academic-coach-main">
-              <strong>{COACH.name}</strong>
-              <small>
-                {COACH.role} · {COACH.groups.length} مجموعات
-              </small>
-            </span>
-            <span className="academic-coach-online">
-              <i /> نشط
-            </span>
-            <ChevronLeft size={14} />
-          </button>
-          <div className="academic-coach-metrics">
-            <div>
-              <span>الحصص هذا الأسبوع</span>
-              <strong>{COACH.sessionsThisWeek}</strong>
-            </div>
-            <div>
-              <span>انتظام الحضور</span>
-              <strong>{COACH.attendanceRate}%</strong>
-            </div>
-            <div>
-              <span>اكتمال التقييم</span>
-              <strong>{COACH.evaluationRate}%</strong>
-            </div>
-          </div>
-          <div className="academic-group-chips">
-            {COACH.groups.map(group => (
-              <span key={group}>
-                <BookOpen size={12} />
-                {group}
-              </span>
+          <div className="academic-coach-overview-list">
+            {COACHES.map(coach => (
+              <article className="academic-coach-overview-item" key={coach.id}>
+                <button
+                  className="academic-coach-mini-profile"
+                  onClick={() => onNavigate("team")}
+                >
+                  <span className="academic-coach-avatar">
+                    {coach.initials}
+                  </span>
+                  <span className="academic-coach-main">
+                    <strong>{coach.name}</strong>
+                    <small>
+                      {coach.role} · {coach.groups.length} مجموعات
+                    </small>
+                  </span>
+                  <span className="academic-coach-online">
+                    <i /> {coach.status === "active" ? "نشط" : "في إجازة"}
+                  </span>
+                  <ChevronLeft size={14} />
+                </button>
+                <div className="academic-coach-compact-metrics">
+                  <span>
+                    <b>{coach.sessionsThisWeek}</b> حصص هذا الأسبوع
+                  </span>
+                  <span>
+                    <b>{coach.attendanceRate}%</b> انتظام الحضور
+                  </span>
+                  <span>
+                    <b>{coach.evaluationRate}%</b> اكتمال التقييم
+                  </span>
+                </div>
+                <div className="academic-group-chips">
+                  {coach.groups.map(group => (
+                    <span key={group}>
+                      <BookOpen size={12} />
+                      {group}
+                    </span>
+                  ))}
+                </div>
+              </article>
             ))}
           </div>
         </section>
@@ -1068,7 +1408,7 @@ function OverviewView({
           </div>
           <div className="academic-panel-footer">
             <span>
-              <Users size={13} /> مدرب واحد في المعاينة
+              <Users size={13} /> {COACHES.length} مدربين في المعاينة
             </span>
             <span>بيانات محلية</span>
           </div>
@@ -1168,8 +1508,10 @@ function TeamView({
           </p>
         </div>
         <div className="academic-team-total">
-          <strong>1</strong>
-          <span>مدرب نشط</span>
+          <strong>
+            {COACHES.filter(coach => coach.status === "active").length}
+          </strong>
+          <span>مدربون نشطون</span>
         </div>
       </section>
       <section className="academic-panel academic-team-table-panel">
@@ -1179,7 +1521,7 @@ function TeamView({
               الأعضاء المرتبطون بدور رئيس المدربين
             </span>
             <h2>
-              فريق العمل الأكاديمي <small>1 عضو</small>
+              فريق العمل الأكاديمي <small>{COACHES.length} أعضاء</small>
             </h2>
           </div>
           <button
@@ -1189,70 +1531,72 @@ function TeamView({
             <CalendarCheck size={15} /> تغطية الحصص
           </button>
         </div>
-        <div className="academic-coach-profile-card">
-          <span className="academic-coach-avatar large">{COACH.initials}</span>
-          <div className="academic-coach-profile-main">
-            <strong>{COACH.name}</strong>
-            <small>
-              {COACH.role} · رقم الموظف <bdi dir="ltr">{COACH.id}</bdi>
-            </small>
-            <span className="academic-coach-online">
-              <i /> {COACH.status === "active" ? "نشط" : "في إجازة"}
-            </span>
-          </div>
-          <div className="academic-team-stat">
-            <small>مجموعات التدريس</small>
-            <strong>{COACH.groups.length}</strong>
-          </div>
-          <div className="academic-team-stat">
-            <small>حصص هذا الأسبوع</small>
-            <strong>{COACH.sessionsThisWeek}</strong>
-          </div>
-          <div className="academic-team-stat">
-            <small>الحضور المسجل</small>
-            <strong>{COACH.attendanceRate}%</strong>
-          </div>
-          <button
-            className="academic-icon-button"
-            aria-label="عرض حصص المدرب"
-            onClick={() => onNavigate("sessions")}
-          >
-            <ArrowUpLeft size={16} />
-          </button>
-        </div>
-        <div className="academic-group-list-heading">
-          <strong>المجموعات الأكاديمية</strong>
-          <span>3 مجموعات توضيحية</span>
-        </div>
-        <div className="academic-group-list">
-          {COACH.groups.map((group, index) => {
-            const groupSession = SESSIONS.find(
-              session => session.courseName === group
-            );
-            return (
-              <button key={group} onClick={() => onNavigate("sessions")}>
-                <span className={`academic-group-icon tone-${index}`}>
-                  <BookOpen size={16} />
+        {COACHES.map(coach => (
+          <div className="academic-coach-team-block" key={coach.id}>
+            <div className="academic-coach-profile-card">
+              <span className="academic-coach-avatar large">
+                {coach.initials}
+              </span>
+              <div className="academic-coach-profile-main">
+                <strong>{coach.name}</strong>
+                <small>
+                  {coach.role} · رقم الموظف <bdi dir="ltr">{coach.id}</bdi>
+                </small>
+                <span className="academic-coach-online">
+                  <i /> {coach.status === "active" ? "نشط" : "في إجازة"}
                 </span>
-                <span>
-                  <strong>{group}</strong>
-                  <small>
-                    {index === 0
-                      ? "المستوى المتوسط · 10–12 سنة"
-                      : index === 1
-                        ? "المستوى التأسيسي · 7–9 سنوات"
-                        : "المستوى المتوسط · 10–12 سنة"}
-                  </small>
-                </span>
-                <span className="academic-group-next">
-                  {groupSession?.dateLabel ?? "هذا الأسبوع"}
-                  <small>{groupSession?.time ?? "حسب الجدول"}</small>
-                </span>
-                <ChevronLeft size={14} />
+              </div>
+              <div className="academic-team-stat">
+                <small>مجموعات التدريس</small>
+                <strong>{coach.groups.length}</strong>
+              </div>
+              <div className="academic-team-stat">
+                <small>حصص هذا الأسبوع</small>
+                <strong>{coach.sessionsThisWeek}</strong>
+              </div>
+              <div className="academic-team-stat">
+                <small>الحضور المسجل</small>
+                <strong>{coach.attendanceRate}%</strong>
+              </div>
+              <button
+                className="academic-icon-button"
+                aria-label={`عرض حصص ${coach.name}`}
+                onClick={() => onNavigate("sessions")}
+              >
+                <ArrowUpLeft size={16} />
               </button>
-            );
-          })}
-        </div>
+            </div>
+            <div className="academic-group-list-heading">
+              <strong>المجموعات الأكاديمية · {coach.name}</strong>
+              <span>{coach.groups.length} مجموعات توضيحية</span>
+            </div>
+            <div className="academic-group-list">
+              {coach.groups.map((group, index) => {
+                const groupSession = SESSIONS.find(
+                  session =>
+                    session.instructor === coach.name &&
+                    session.courseName === group
+                );
+                return (
+                  <button key={group} onClick={() => onNavigate("sessions")}>
+                    <span className={`academic-group-icon tone-${index % 3}`}>
+                      <BookOpen size={16} />
+                    </span>
+                    <span>
+                      <strong>{group}</strong>
+                      <small>{groupSession?.groupName ?? "مجموعة موضحة"}</small>
+                    </span>
+                    <span className="academic-group-next">
+                      {groupSession?.dateLabel ?? "هذا الأسبوع"}
+                      <small>{groupSession?.time ?? "حسب الجدول"}</small>
+                    </span>
+                    <ChevronLeft size={14} />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </section>
       <section className="academic-permission-note">
         <ShieldCheck size={17} />
@@ -1268,6 +1612,356 @@ function TeamView({
   );
 }
 
+function AttendanceApprovalsView({
+  sessions,
+  allSessions,
+  history,
+  resolvedIds,
+  selectedSessionId,
+  onSelectSession,
+  onDecision,
+  onReopen,
+}: {
+  sessions: SessionRecord[];
+  allSessions: SessionRecord[];
+  history: AttendanceDecision[];
+  resolvedIds: string[];
+  selectedSessionId: string;
+  onSelectSession: (id: string) => void;
+  onDecision: (
+    session: SessionRecord,
+    decision: AttendanceDecision["decision"],
+    note: string
+  ) => void;
+  onReopen: (sessionId: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [decisionNote, setDecisionNote] = useState("");
+  const selectedSession =
+    sessions.find(session => session.id === selectedSessionId) ??
+    sessions[0] ??
+    null;
+  const filteredSessions = useMemo(() => {
+    const needle = query.trim().toLocaleLowerCase("ar");
+    return sessions.filter(session =>
+      [
+        session.courseName,
+        session.groupName,
+        session.instructor,
+        session.id,
+      ].some(value => value.toLocaleLowerCase("ar").includes(needle))
+    );
+  }, [query, sessions]);
+  const approvedCount = history.filter(
+    item => item.decision === "approved"
+  ).length;
+  const returnedCount = history.filter(
+    item => item.decision === "returned"
+  ).length;
+  const statusLabels: Record<AttendanceEntry["status"], string> = {
+    present: "حاضر",
+    late: "متأخر",
+    absent: "غائب",
+    excused: "بعذر",
+  };
+
+  return (
+    <>
+      <section className="academic-approval-summary">
+        <div>
+          <span className="academic-panel-kicker">
+            مراجعة أكاديمية · فرع {BRANCH}
+          </span>
+          <h2>اعتماد تسجيل الحضور</h2>
+          <p>
+            راجع أسماء الطلاب والحالات وملاحظة المدرب، ثم اعتمد السجل أو أعده
+            للتصحيح. كل القرارات في هذه المعاينة محلية.
+          </p>
+        </div>
+        <div className="academic-approval-summary-stats">
+          <span className="waiting">
+            <strong>{sessions.length}</strong>
+            <small>بانتظار المراجعة</small>
+          </span>
+          <span className="approved">
+            <strong>{approvedCount}</strong>
+            <small>قرارات اعتماد</small>
+          </span>
+          <span className="returned">
+            <strong>{returnedCount}</strong>
+            <small>إعادات للمدرب</small>
+          </span>
+        </div>
+      </section>
+
+      <div className="academic-approval-layout">
+        <section className="academic-panel academic-approval-queue">
+          <div className="academic-panel-heading">
+            <div>
+              <span className="academic-panel-kicker">قائمة المراجعة</span>
+              <h2>
+                طلبات الحضور <small>{filteredSessions.length} طلبات</small>
+              </h2>
+            </div>
+          </div>
+          <label className="academic-search academic-approval-search">
+            <Search size={15} />
+            <input
+              aria-label="بحث في طلبات الحضور"
+              placeholder="ابحث باسم المدرب أو المجموعة..."
+              value={query}
+              onChange={event => setQuery(event.target.value)}
+            />
+          </label>
+          <div className="academic-approval-request-list">
+            {filteredSessions.map(session => (
+              <button
+                className={`academic-approval-request ${selectedSession?.id === session.id ? "selected" : ""}`}
+                key={session.id}
+                onClick={() => {
+                  onSelectSession(session.id);
+                  setDecisionNote("");
+                }}
+              >
+                <span className="academic-approval-request-icon">
+                  <ClipboardCheck size={16} />
+                </span>
+                <span className="academic-approval-request-main">
+                  <strong>{session.courseName}</strong>
+                  <small>{session.groupName}</small>
+                  <small>
+                    <UserRound size={11} /> {session.instructor}
+                  </small>
+                </span>
+                <span className="academic-approval-request-meta">
+                  <b>{formatDate(session.date)}</b>
+                  <small>{session.attendance?.present ?? 0} حاضر</small>
+                  <i />
+                </span>
+              </button>
+            ))}
+            {filteredSessions.length === 0 && (
+              <div className="academic-approval-empty">
+                <CheckCircle2 size={22} />
+                <strong>
+                  {sessions.length === 0
+                    ? "اكتملت مراجعة كل الطلبات"
+                    : "لا توجد طلبات مطابقة"}
+                </strong>
+                <span>
+                  {sessions.length === 0
+                    ? "يمكنك مراجعة قراراتك السابقة في سجل القرارات أدناه."
+                    : "جرّب كلمة بحث أخرى أو امسح البحث."}
+                </span>
+                {query && (
+                  <button onClick={() => setQuery("")}>مسح البحث</button>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="academic-table-footer">
+            <span>
+              <ShieldCheck size={13} /> طلبات هذا الفرع فقط · بيانات توضيحية
+            </span>
+          </div>
+        </section>
+
+        {selectedSession ? (
+          <section className="academic-panel academic-approval-detail">
+            <div className="academic-approval-detail-top">
+              <div className="academic-detail-icon">
+                <CalendarCheck size={19} />
+              </div>
+              <div>
+                <span className="academic-panel-kicker">
+                  تفاصيل طلب · <bdi dir="ltr">{selectedSession.id}</bdi>
+                </span>
+                <h2>{selectedSession.courseName}</h2>
+                <p>
+                  {selectedSession.groupName} · {selectedSession.dateLabel} ·{" "}
+                  <bdi dir="ltr">{selectedSession.time}</bdi>
+                </p>
+              </div>
+              <span className="academic-session-status pending_approval">
+                بانتظار الاعتماد
+              </span>
+            </div>
+            <div className="academic-approval-coach-note">
+              <span>
+                <MessageCircle size={14} /> ملاحظة المدرب ·{" "}
+                {selectedSession.instructor}
+              </span>
+              <p>
+                {selectedSession.instructorNote ??
+                  "لا توجد ملاحظة إضافية مرفقة بهذا التسجيل."}
+              </p>
+            </div>
+            <div className="academic-approval-roster-heading">
+              <span>
+                <Users size={15} /> سجل الطلاب
+              </span>
+              <strong>
+                {selectedSession.attendance?.present ?? 0} حاضر ·{" "}
+                {selectedSession.attendance?.late ?? 0} متأخر ·{" "}
+                {selectedSession.attendance?.absent ?? 0} غائب ·{" "}
+                {selectedSession.attendance?.excused ?? 0} بعذر
+              </strong>
+            </div>
+            <div className="academic-approval-roster">
+              {(selectedSession.attendanceEntries ?? []).map(entry => (
+                <div
+                  className="academic-approval-student"
+                  key={entry.studentId}
+                >
+                  <span className="academic-approval-student-avatar">
+                    {entry.student.slice(0, 1)}
+                  </span>
+                  <span className="academic-approval-student-main">
+                    <strong>{entry.student}</strong>
+                    <small>
+                      <bdi dir="ltr">{entry.studentId}</bdi>
+                      {entry.note ? ` · ${entry.note}` : ""}
+                    </small>
+                  </span>
+                  <span
+                    className={`academic-approval-attendance ${entry.status}`}
+                  >
+                    {entry.status === "late" && entry.lateMinutes
+                      ? `${statusLabels[entry.status]} ${entry.lateMinutes} د`
+                      : statusLabels[entry.status]}
+                  </span>
+                </div>
+              ))}
+              {!selectedSession.attendanceEntries?.length && (
+                <div className="academic-approval-no-roster">
+                  لا توجد تفاصيل طلاب إضافية في سجل هذه الجلسة.
+                </div>
+              )}
+            </div>
+            <label className="academic-approval-note-input">
+              <span>ملاحظة المراجعة {" · "} مطلوبة عند الإعادة</span>
+              <textarea
+                aria-label="ملاحظة قرار مراجعة الحضور"
+                placeholder="مثال: يرجى توضيح سبب الغياب قبل إعادة الإرسال..."
+                rows={3}
+                value={decisionNote}
+                onChange={event => setDecisionNote(event.target.value)}
+              />
+            </label>
+            <div className="academic-approval-actions">
+              <button
+                className="academic-secondary-button return"
+                disabled={!decisionNote.trim()}
+                onClick={() =>
+                  onDecision(selectedSession, "returned", decisionNote)
+                }
+              >
+                <ArrowDownLeft size={15} /> إعادة للمدرب
+              </button>
+              <button
+                className="academic-primary-button approve"
+                onClick={() =>
+                  onDecision(selectedSession, "approved", decisionNote)
+                }
+              >
+                <Check size={15} /> اعتماد الحضور
+              </button>
+            </div>
+            <div className="academic-approval-local-note">
+              <AlertCircle size={13} /> اعتماد توضيحي محلي؛ لا يرسل إشعارًا ولا
+              يغيّر سجل الحضور الفعلي.
+            </div>
+          </section>
+        ) : (
+          <section className="academic-panel academic-approval-no-selection">
+            <CheckCircle2 size={26} />
+            <h2>كل الطلبات في هذه القائمة تمت مراجعتها</h2>
+            <p>
+              افتح سجل القرارات أدناه إذا أردت إعادة طلب إلى قائمة المراجعة.
+            </p>
+          </section>
+        )}
+      </div>
+
+      <section className="academic-panel academic-approval-history-panel">
+        <div className="academic-panel-heading">
+          <div>
+            <span className="academic-panel-kicker">
+              سجل محلي · خلال المعاينة الحالية
+            </span>
+            <h2>
+              سجل قرارات مراجعة الحضور <small>{history.length} قرار</small>
+            </h2>
+          </div>
+          <span className="academic-approval-history-scope">
+            <ShieldCheck size={13} /> {HEAD_OF_INSTRUCTORS} · {BRANCH}
+          </span>
+        </div>
+        {history.length > 0 ? (
+          <div className="academic-approval-history-list">
+            {history.map(item => {
+              const session = allSessions.find(
+                candidate => candidate.id === item.sessionId
+              );
+              const resolved = resolvedIds.includes(item.sessionId);
+              return (
+                <article
+                  className="academic-approval-history-row"
+                  key={item.id}
+                >
+                  <span
+                    className={`academic-approval-history-icon ${item.decision}`}
+                  >
+                    {item.decision === "approved" ? (
+                      <CheckCircle2 size={16} />
+                    ) : (
+                      <ArrowDownLeft size={16} />
+                    )}
+                  </span>
+                  <div className="academic-approval-history-main">
+                    <strong>
+                      {item.decision === "approved"
+                        ? "تم اعتماد الحضور"
+                        : "أُعيد التسجيل إلى المدرب"}
+                      <small>{item.courseName}</small>
+                    </strong>
+                    <span>
+                      {item.instructor} · {item.groupName} · بواسطة {item.actor}
+                    </span>
+                    {item.note && <p>{item.note}</p>}
+                  </div>
+                  <time>{item.decidedAt}</time>
+                  {session && (
+                    <button
+                      className="academic-reopen-approval"
+                      disabled={!resolved}
+                      onClick={() => onReopen(item.sessionId)}
+                    >
+                      <Eye size={13} />
+                      {resolved ? "إعادة للمراجعة" : "مفتوح للمراجعة"}
+                    </button>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="academic-approval-history-empty">
+            <Clock3 size={17} />
+            <span>ستظهر هنا قرارات الاعتماد والإعادة بعد اتخاذها.</span>
+          </div>
+        )}
+        <div className="academic-table-footer">
+          <span>
+            <ShieldCheck size={13} /> السجل لا يُحفظ بعد إغلاق المعاينة المحلية
+          </span>
+          <span>لا يوجد اتصال بخدمة اعتماد فعلية</span>
+        </div>
+      </section>
+    </>
+  );
+}
+
 function SessionsView({
   query,
   setQuery,
@@ -1275,6 +1969,7 @@ function SessionsView({
   statusFilter,
   setStatusFilter,
   sessions,
+  summarySessions,
   selectedSessionId,
   selectedSession,
   onSelectSession,
@@ -1286,6 +1981,7 @@ function SessionsView({
   statusFilter: string;
   setStatusFilter: (value: string) => void;
   sessions: SessionRecord[];
+  summarySessions: SessionRecord[];
   selectedSessionId: string;
   selectedSession: SessionRecord;
   onSelectSession: (id: string) => void;
@@ -1294,13 +1990,13 @@ function SessionsView({
     sessionId: string
   ) => void;
 }) {
-  const completedCount = SESSIONS.filter(
+  const currentCompletedCount = summarySessions.filter(
     session => session.status === "completed"
   ).length;
-  const pendingCount = SESSIONS.filter(
+  const currentPendingCount = summarySessions.filter(
     session => session.status === "pending_approval"
   ).length;
-  const scheduledCount = SESSIONS.filter(
+  const currentScheduledCount = summarySessions.filter(
     session => session.status === "scheduled"
   ).length;
   return (
@@ -1308,19 +2004,19 @@ function SessionsView({
       <div className="academic-mini-kpis">
         <span>
           <i className="mini-teal" />
-          <b>{SESSIONS.length}</b> جلسات في العينة
+          <b>{summarySessions.length}</b> جلسات في العينة
         </span>
         <span>
           <i className="mini-blue" />
-          <b>{completedCount}</b> مكتملة
+          <b>{currentCompletedCount}</b> مكتملة
         </span>
         <span>
           <i className="mini-amber" />
-          <b>{pendingCount}</b> مراجعة تسجيل
+          <b>{currentPendingCount}</b> مراجعة تسجيل
         </span>
         <span>
           <i className="mini-violet" />
-          <b>{scheduledCount}</b> قادمة
+          <b>{currentScheduledCount}</b> قادمة
         </span>
       </div>
       <div className="academic-workspace-grid">
