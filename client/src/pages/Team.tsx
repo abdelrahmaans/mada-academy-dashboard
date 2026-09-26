@@ -42,6 +42,7 @@ type StaffMember = {
   branch: string;
   status: StaffStatus;
   joined: string;
+  headOfInstructorsId?: string;
 };
 type RoleInfo = {
   code: RoleCode;
@@ -137,6 +138,7 @@ const INITIAL_STAFF: StaffMember[] = [
     branch: "مدينة نصر",
     status: "active",
     joined: "03 أغسطس 2025",
+    headOfInstructorsId: "USR-0201",
   },
   {
     id: "USR-0203",
@@ -229,10 +231,14 @@ export default function Team() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [newRole, setNewRole] = useState<StaffMember["role"]>("R04");
+  const [supervisorId, setSupervisorId] = useState("USR-0201");
 
   const branchStaff = useMemo(
     () => staff.filter(member => member.branch === branch),
     [staff, branch]
+  );
+  const activeInstructorHeads = branchStaff.filter(
+    member => member.role === "R03" && member.status === "active"
   );
   const filteredStaff = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("ar");
@@ -276,6 +282,7 @@ export default function Team() {
     setName("");
     setPhone("");
     setNewRole("R04");
+    setSupervisorId(activeInstructorHeads[0]?.id ?? "");
     setDialog("add");
   };
   const submitStaff = (event: FormEvent<HTMLFormElement>) => {
@@ -289,6 +296,18 @@ export default function Team() {
       toast.error("رقم الموبايل مسجل بالفعل في بيانات العرض");
       return;
     }
+    if (
+      newRole === "R04" &&
+      !activeInstructorHeads.some(member => member.id === supervisorId)
+    ) {
+      toast.error("اختر مشرفًا أكاديميًا نشطًا من نفس الفرع");
+      return;
+    }
+    const joined = new Intl.DateTimeFormat("ar-EG", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(new Date());
     setStaff(current => [
       {
         id: `USR-${String(Date.now()).slice(-4)}`,
@@ -297,7 +316,8 @@ export default function Team() {
         role: newRole,
         branch,
         status: "active",
-        joined: "26 سبتمبر 2026",
+        joined,
+        ...(newRole === "R04" ? { headOfInstructorsId: supervisorId } : {}),
       },
       ...current,
     ]);
@@ -842,9 +862,12 @@ export default function Team() {
                   الدور
                   <select
                     value={newRole}
-                    onChange={event =>
-                      setNewRole(event.target.value as StaffMember["role"])
-                    }
+                    onChange={event => {
+                      const role = event.target.value as StaffMember["role"];
+                      setNewRole(role);
+                      if (role === "R04" && !supervisorId)
+                        setSupervisorId(activeInstructorHeads[0]?.id ?? "");
+                    }}
                   >
                     {ROLES.filter(role => role.assignable).map(role => (
                       <option key={role.code} value={role.code}>
@@ -859,6 +882,30 @@ export default function Team() {
                   <small>الحساب الجديد يُضاف لفرعك الحالي</small>
                 </div>
               </div>
+              {newRole === "R04" && (
+                <label className="team-supervisor-field">
+                  المشرف الأكاديمي <b>*</b>
+                  <select
+                    required
+                    value={supervisorId}
+                    onChange={event => setSupervisorId(event.target.value)}
+                    disabled={activeInstructorHeads.length === 0}
+                  >
+                    {activeInstructorHeads.length === 0 ? (
+                      <option value="">لا يوجد رئيس مدربين نشط في الفرع</option>
+                    ) : (
+                      activeInstructorHeads.map(head => (
+                        <option key={head.id} value={head.id}>
+                          {head.name}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                  <small>
+                    وفق علاقة المشرف المباشر للكوتش في مخطط البيانات.
+                  </small>
+                </label>
+              )}
               <div className="team-role-preview">
                 <span
                   className={`team-role-icon role-${ROLE_BY_CODE[newRole].tone}`}
@@ -868,6 +915,17 @@ export default function Team() {
                 <div>
                   <strong>نطاق دور {ROLE_BY_CODE[newRole].name}</strong>
                   <small>{ROLE_BY_CODE[newRole].scope.join(" · ")}</small>
+                  <small className="team-setup-hint">
+                    {newRole === "R04"
+                      ? "اربط المدرب برئيس مدربين نشط في نفس الفرع قبل التفعيل."
+                      : newRole === "R05"
+                        ? "جهّز قائمة التسجيل ومتابعة أولياء الأمور للحساب."
+                        : newRole === "R06"
+                          ? "النطاق المالي منفصل عن التسجيل والتقييم الأكاديمي."
+                          : newRole === "R03"
+                            ? "يظهر هذا الدور كمشرف أكاديمي قابل للربط بالمدربين."
+                            : "النطاق إرشادي؛ التفعيل الحقيقي يحتاج خدمة الهوية والصلاحيات."}
+                  </small>
                 </div>
               </div>
               <div className="dialog-info">

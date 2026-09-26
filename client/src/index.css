@@ -7484,3 +7484,45 @@ button:not(:disabled) {
     min-height: 43px;
   }
 }
+
+/* Team onboarding: explicit role setup and same-branch instructor supervision */
+.team-supervisor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  color: #34445a;
+  font-size: 10px;
+  font-weight: 750;
+}
+.team-supervisor-field > b {
+  color: #be123c;
+}
+.team-supervisor-field select {
+  min-height: 42px;
+  padding: 0 11px;
+  color: #263349;
+  background: #fff;
+  border: 1px solid #e4eaf0;
+  border-radius: 10px;
+  font: inherit;
+}
+.team-supervisor-field select:focus-visible {
+  border-color: var(--mada-brand-teal);
+  outline: 2px solid rgb(13 148 136 / 18%);
+  outline-offset: 1px;
+}
+.team-supervisor-field small,
+.team-setup-hint {
+  color: #748297;
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1.7;
+}
+.team-setup-hint {
+  display: block;
+  margin-top: 3px;
+}
+.team-supervisor-field select:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
