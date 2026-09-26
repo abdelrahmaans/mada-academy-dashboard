@@ -40,6 +40,7 @@ type ApprovalItem = {
   branch: string;
   requestedBy: string;
   submittedAt: string;
+  submittedAtSort: string;
   student?: string;
   course?: string;
   invoice?: string;
@@ -52,8 +53,13 @@ type ApprovalItem = {
   sessionDate?: string;
   sessionTime?: string;
   status: ApprovalStatus;
+  decidedAt?: string;
+  decidedAtSort?: number;
+  decidedBy?: string;
+  decisionNote?: string;
 };
 type QueueTab = "all" | ApprovalKind;
+type ApprovalSort = "priority" | "oldest" | "newest";
 
 const INITIAL_REQUESTS: ApprovalItem[] = [
   {
@@ -64,6 +70,7 @@ const INITIAL_REQUESTS: ApprovalItem[] = [
     branch: "مدينة نصر",
     requestedBy: "هبة محمود · السكرتارية",
     submittedAt: "اليوم · 10:24 ص",
+    submittedAtSort: "2026-09-26T10:24:00",
     student: "آدم شريف حسن",
     course: "ذكاء اصطناعي للصغار",
     invoice: "MAD-NSR-2026-0914",
@@ -81,6 +88,7 @@ const INITIAL_REQUESTS: ApprovalItem[] = [
     branch: "مدينة نصر",
     requestedBy: "مريم حسن · رئيس المدربين",
     submittedAt: "اليوم · 09:05 ص",
+    submittedAtSort: "2026-09-26T09:05:00",
     course: "روبوتكس مستوى 2",
     instructor: "عمر سامح",
     substitute: "يوسف عماد",
@@ -96,6 +104,7 @@ const INITIAL_REQUESTS: ApprovalItem[] = [
     branch: "المعادي",
     requestedBy: "سارة خالد · المحاسبة",
     submittedAt: "أمس · 04:18 م",
+    submittedAtSort: "2026-09-25T16:18:00",
     student: "ليلى أحمد محمود",
     course: "برمجة للمبتدئين",
     invoice: "MAD-MAD-2026-0905",
@@ -113,6 +122,7 @@ const INITIAL_REQUESTS: ApprovalItem[] = [
     branch: "مدينة نصر",
     requestedBy: "مريم حسن · رئيس المدربين",
     submittedAt: "أمس · 01:40 م",
+    submittedAtSort: "2026-09-25T13:40:00",
     course: "دوائر إلكترونية",
     instructor: "سارة خالد",
     substitute: "هبة محمود",
@@ -166,7 +176,12 @@ export default function Approvals() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState<QueueTab>("all");
+  const [statusFilter, setStatusFilter] = useState<ApprovalStatus | "all">(
+    "all"
+  );
+  const [sortOrder, setSortOrder] = useState<ApprovalSort>("priority");
   const [selected, setSelected] = useState<ApprovalItem | null>(null);
+  const [decisionNote, setDecisionNote] = useState("");
 
   const branchRequests = useMemo(
     () => requests.filter(item => item.branch === branch),
@@ -174,23 +189,39 @@ export default function Approvals() {
   );
   const visibleRequests = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("ar");
-    return branchRequests.filter(item => {
-      const matchesTab = tab === "all" || item.kind === tab;
-      const matchesText =
-        !needle ||
-        [
-          item.id,
-          item.title,
-          item.summary,
-          item.student ?? "",
-          item.course ?? "",
-          item.invoice ?? "",
-          item.instructor ?? "",
-          item.substitute ?? "",
-        ].some(value => value.toLocaleLowerCase("ar").includes(needle));
-      return matchesTab && matchesText;
-    });
-  }, [branchRequests, query, tab]);
+    return branchRequests
+      .filter(item => {
+        const matchesTab = tab === "all" || item.kind === tab;
+        const matchesStatus =
+          statusFilter === "all" || item.status === statusFilter;
+        const matchesText =
+          !needle ||
+          [
+            item.id,
+            item.title,
+            item.summary,
+            item.student ?? "",
+            item.course ?? "",
+            item.invoice ?? "",
+            item.instructor ?? "",
+            item.substitute ?? "",
+            item.decisionNote ?? "",
+          ].some(value => value.toLocaleLowerCase("ar").includes(needle));
+        return matchesTab && matchesStatus && matchesText;
+      })
+      .sort((a, b) => {
+        if (sortOrder === "oldest")
+          return a.submittedAtSort.localeCompare(b.submittedAtSort);
+        if (sortOrder === "newest")
+          return b.submittedAtSort.localeCompare(a.submittedAtSort);
+        const pendingFirst =
+          Number(b.status === "pending") - Number(a.status === "pending");
+        if (pendingFirst) return pendingFirst;
+        return a.status === "pending"
+          ? a.submittedAtSort.localeCompare(b.submittedAtSort)
+          : (b.decidedAtSort ?? 0) - (a.decidedAtSort ?? 0);
+      });
+  }, [branchRequests, query, sortOrder, statusFilter, tab]);
   const pending = branchRequests.filter(item => item.status === "pending");
   const pendingDiscounts = pending.filter(
     item => item.kind === "discount"
@@ -198,6 +229,14 @@ export default function Approvals() {
   const pendingSubstitutes = pending.filter(
     item => item.kind === "substitute"
   ).length;
+  const reviewedRequests = branchRequests
+    .filter(item => item.status !== "pending")
+    .sort((a, b) => (b.decidedAtSort ?? 0) - (a.decidedAtSort ?? 0));
+
+  const closeReview = () => {
+    setSelected(null);
+    setDecisionNote("");
+  };
 
   const showComingSoon = (label: string) => {
     toast("القسم قيد التجهيز", {
@@ -205,11 +244,32 @@ export default function Approvals() {
     });
     setMobileNavOpen(false);
   };
+  const openReview = (item: ApprovalItem) => {
+    setDecisionNote("");
+    setSelected(item);
+  };
   const decide = (id: string, status: "approved" | "rejected") => {
+    const decidedAtDate = new Date();
+    const decidedAt = new Intl.DateTimeFormat("ar-EG", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(decidedAtDate);
     setRequests(current =>
-      current.map(item => (item.id === id ? { ...item, status } : item))
+      current.map(item =>
+        item.id === id
+          ? {
+              ...item,
+              status,
+              decidedAt,
+              decidedAtSort: decidedAtDate.getTime(),
+              decidedBy: "أحمد محمود · مدير الفرع",
+              decisionNote: decisionNote.trim() || undefined,
+            }
+          : item
+      )
     );
     setSelected(null);
+    setDecisionNote("");
     toast.success(
       status === "approved"
         ? "تمت الموافقة في بيانات العرض"
@@ -573,6 +633,42 @@ export default function Approvals() {
                 />
               </label>
             </div>
+            <div className="approval-filter-row">
+              <label>
+                حالة الطلب
+                <select
+                  aria-label="تصفية حسب حالة الطلب"
+                  value={statusFilter}
+                  onChange={event =>
+                    setStatusFilter(
+                      event.target.value as ApprovalStatus | "all"
+                    )
+                  }
+                >
+                  <option value="all">كل الحالات</option>
+                  <option value="pending">بانتظار المراجعة</option>
+                  <option value="approved">تمت الموافقة</option>
+                  <option value="rejected">تم الرفض</option>
+                </select>
+              </label>
+              <label>
+                ترتيب القائمة
+                <select
+                  aria-label="ترتيب قائمة الطلبات"
+                  value={sortOrder}
+                  onChange={event =>
+                    setSortOrder(event.target.value as ApprovalSort)
+                  }
+                >
+                  <option value="priority">المعلّق أولًا · الأقدم</option>
+                  <option value="oldest">الأقدم إرسالًا</option>
+                  <option value="newest">الأحدث إرسالًا</option>
+                </select>
+              </label>
+              <span className="approval-filter-summary">
+                {visibleRequests.length} نتيجة · {pending.length} معلّق
+              </span>
+            </div>
             {visibleRequests.length ? (
               <div className="approval-list">
                 {visibleRequests.map(item => (
@@ -634,6 +730,17 @@ export default function Approvals() {
                           <span>
                             {item.sessionDate} · {item.sessionTime}
                           </span>
+                        </div>
+                      )}
+                      {item.status !== "pending" && (
+                        <div className="approval-history-inline">
+                          <CheckCircle2 size={13} />
+                          <span>
+                            {item.decidedBy ?? "أحمد محمود · مدير الفرع"}
+                          </span>
+                          <i />
+                          <span>{item.decidedAt ?? "قرار توضيحي سابق"}</span>
+                          {item.decisionNote && <em>{item.decisionNote}</em>}
                         </div>
                       )}
                     </div>
@@ -704,6 +811,63 @@ export default function Approvals() {
               <span>النطاق: {branch}</span>
             </div>
           </section>
+          <section
+            className="panel approval-history-panel"
+            aria-labelledby="approval-history-title"
+          >
+            <div className="approval-history-heading">
+              <div className="panel-title-group">
+                <span className="panel-icon panel-icon-teal">
+                  <Activity size={18} />
+                </span>
+                <div>
+                  <h2 id="approval-history-title">سجل القرارات</h2>
+                  <p>آخر قرارات مدير الفرع · {branch}</p>
+                </div>
+              </div>
+              <span className="team-table-total">
+                {reviewedRequests.length} قرار
+              </span>
+            </div>
+            {reviewedRequests.length ? (
+              <ol className="approval-history-list">
+                {reviewedRequests.map(item => (
+                  <li key={item.id}>
+                    <span
+                      className={`approval-history-icon ${item.status === "approved" ? "is-approved" : "is-rejected"}`}
+                    >
+                      {item.status === "approved" ? (
+                        <CheckCircle2 size={15} />
+                      ) : (
+                        <X size={15} />
+                      )}
+                    </span>
+                    <div>
+                      <strong>{item.title}</strong>
+                      <small>
+                        {item.id} · {item.decidedBy ?? "مدير الفرع"} ·{" "}
+                        {item.decidedAt ?? "قرار توضيحي سابق"}
+                      </small>
+                      {item.decisionNote && <p>{item.decisionNote}</p>}
+                    </div>
+                    <span className={`approval-status approval-${item.status}`}>
+                      <i />
+                      {STATUS_LABELS[item.status]}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <div className="approval-history-empty">
+                <Clock3 size={18} />
+                <span>لا توجد قرارات مسجلة في بيانات العرض بعد.</span>
+              </div>
+            )}
+            <p className="approval-history-disclaimer">
+              سجل تجريبي داخل المتصفح؛ السجل الرسمي يحتاج حفظًا على الخادم مع
+              Audit Log.
+            </p>
+          </section>
           <div className="finance-footer-note">
             <span>
               <AlertCircle size={14} />
@@ -722,7 +886,7 @@ export default function Approvals() {
           className="dialog-overlay"
           role="presentation"
           onMouseDown={event => {
-            if (event.target === event.currentTarget) setSelected(null);
+            if (event.target === event.currentTarget) closeReview();
           }}
         >
           <section
@@ -734,7 +898,7 @@ export default function Approvals() {
             <button
               className="dialog-close"
               aria-label="إغلاق"
-              onClick={() => setSelected(null)}
+              onClick={closeReview}
             >
               <X size={17} />
             </button>
@@ -800,6 +964,17 @@ export default function Approvals() {
                 </>
               )}
             </div>
+            <label className="approval-note-field">
+              ملاحظة القرار <span>اختياري · بحد أقصى 240 حرفًا</span>
+              <textarea
+                value={decisionNote}
+                onChange={event => setDecisionNote(event.target.value)}
+                maxLength={240}
+                rows={3}
+                placeholder="مثال: تمت مراجعة طلب ولي الأمر والموافقة وفق سياسة الفرع."
+              />
+              <small>{decisionNote.length}/240</small>
+            </label>
             <div className="dialog-info">
               <AlertCircle size={15} />
               <span>
