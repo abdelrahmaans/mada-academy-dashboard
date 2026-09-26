@@ -1010,6 +1010,16 @@ export default function Team() {
                 <ChevronLeft size={14} />
               </button>
             )}
+            {selectedRole.code === "R03" && (
+              <button
+                className="instructor-preview-link academic-preview-link"
+                onClick={() => navigate("/head-instructors")}
+              >
+                <GraduationCap size={16} />
+                معاينة مساحة رئيس المدربين
+                <ChevronLeft size={14} />
+              </button>
+            )}
             <div className="dialog-info">
               <AlertCircle size={15} />
               <span>
