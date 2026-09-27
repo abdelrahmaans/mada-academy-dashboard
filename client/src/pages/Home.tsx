@@ -266,6 +266,13 @@ function App() {
             <BarChart3 size={19} />
             <span>التقارير والتحليلات</span>
           </button>
+          <button
+            className="nav-link academy-owner-preview-nav"
+            onClick={() => navigate("/academy-owner")}
+          >
+            <GraduationCap size={19} />
+            <span>معاينة رئيس الأكاديمية</span>
+          </button>
         </nav>
 
         <div className="sidebar-spacer" />

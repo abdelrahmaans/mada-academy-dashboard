@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import InstructorPerformanceComparison from "@/components/InstructorPerformanceComparison";
 
 type WorkspaceView =
   | "overview"
@@ -88,6 +89,7 @@ type AttendanceDecision = {
   courseName: string;
   groupName: string;
   instructor: string;
+  sessionDate: string;
   actor: string;
   decision: "approved" | "returned";
   note: string;
@@ -749,6 +751,7 @@ export default function HeadInstructors() {
         courseName: session.courseName,
         groupName: session.groupName,
         instructor: session.instructor,
+        sessionDate: session.date,
         actor: HEAD_OF_INSTRUCTORS,
         decision,
         note: note.trim(),
@@ -981,6 +984,7 @@ export default function HeadInstructors() {
               averageScore={averageScore}
               readyEvaluationCount={readyEvaluationCount}
               followUpEvaluationCount={followUpEvaluationCount}
+              branch={BRANCH}
             />
           )}
           {view === "team" && <TeamView onNavigate={goToView} />}
@@ -1139,6 +1143,7 @@ function OverviewView({
   averageScore,
   readyEvaluationCount,
   followUpEvaluationCount,
+  branch,
 }: {
   onNavigate: (view: WorkspaceView) => void;
   onOpenEvaluation: (id: string) => void;
@@ -1150,6 +1155,7 @@ function OverviewView({
   averageScore: string;
   readyEvaluationCount: number;
   followUpEvaluationCount: number;
+  branch: string;
 }) {
   const avgSessionAttendance = Math.round(
     completedSessions.reduce(
@@ -1365,6 +1371,8 @@ function OverviewView({
           </div>
         </section>
       </div>
+
+      <InstructorPerformanceComparison scope="branch" branch={branch} />
 
       <div className="academic-overview-grid academic-overview-lower">
         <section className="academic-panel academic-today-panel">
@@ -1636,26 +1644,49 @@ function AttendanceApprovalsView({
   onReopen: (sessionId: string) => void;
 }) {
   const [query, setQuery] = useState("");
+  const [instructorFilter, setInstructorFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [decisionNote, setDecisionNote] = useState("");
-  const selectedSession =
-    sessions.find(session => session.id === selectedSessionId) ??
-    sessions[0] ??
-    null;
   const filteredSessions = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("ar");
-    return sessions.filter(session =>
-      [
+    return sessions.filter(session => {
+      const matchesSearch = [
         session.courseName,
         session.groupName,
         session.instructor,
         session.id,
-      ].some(value => value.toLocaleLowerCase("ar").includes(needle))
-    );
-  }, [query, sessions]);
-  const approvedCount = history.filter(
+      ].some(value => value.toLocaleLowerCase("ar").includes(needle));
+      const matchesInstructor =
+        instructorFilter === "all" || session.instructor === instructorFilter;
+      const matchesFrom = !dateFrom || session.date >= dateFrom;
+      const matchesTo = !dateTo || session.date <= dateTo;
+      return matchesSearch && matchesInstructor && matchesFrom && matchesTo;
+    });
+  }, [dateFrom, dateTo, instructorFilter, query, sessions]);
+  const selectedSession =
+    filteredSessions.find(session => session.id === selectedSessionId) ??
+    filteredSessions[0] ??
+    null;
+  useEffect(() => {
+    setDecisionNote("");
+  }, [selectedSession?.id]);
+  const filteredHistory = useMemo(
+    () =>
+      history.filter(item => {
+        const matchesInstructor =
+          instructorFilter === "all" || item.instructor === instructorFilter;
+        const matchesFrom = !dateFrom || item.sessionDate >= dateFrom;
+        const matchesTo = !dateTo || item.sessionDate <= dateTo;
+        return matchesInstructor && matchesFrom && matchesTo;
+      }),
+    [dateFrom, dateTo, history, instructorFilter]
+  );
+  const instructorOptions = COACHES.map(coach => coach.name);
+  const approvedCount = filteredHistory.filter(
     item => item.decision === "approved"
   ).length;
-  const returnedCount = history.filter(
+  const returnedCount = filteredHistory.filter(
     item => item.decision === "returned"
   ).length;
   const statusLabels: Record<AttendanceEntry["status"], string> = {
@@ -1680,7 +1711,7 @@ function AttendanceApprovalsView({
         </div>
         <div className="academic-approval-summary-stats">
           <span className="waiting">
-            <strong>{sessions.length}</strong>
+            <strong>{filteredSessions.length}</strong>
             <small>بانتظار المراجعة</small>
           </span>
           <span className="approved">
@@ -1713,6 +1744,54 @@ function AttendanceApprovalsView({
               onChange={event => setQuery(event.target.value)}
             />
           </label>
+          <div className="academic-approval-filters">
+            <label>
+              <span>المدرب</span>
+              <select
+                aria-label="تصفية طلبات الحضور حسب المدرب"
+                value={instructorFilter}
+                onChange={event => setInstructorFilter(event.target.value)}
+              >
+                <option value="all">كل مدربي الفرع</option>
+                {instructorOptions.map(name => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>تاريخ الحصة من</span>
+              <input
+                aria-label="تصفية الحضور من تاريخ"
+                type="date"
+                value={dateFrom}
+                onChange={event => setDateFrom(event.target.value)}
+              />
+            </label>
+            <label>
+              <span>تاريخ الحصة إلى</span>
+              <input
+                aria-label="تصفية الحضور إلى تاريخ"
+                type="date"
+                value={dateTo}
+                onChange={event => setDateTo(event.target.value)}
+              />
+            </label>
+            {(instructorFilter !== "all" || dateFrom || dateTo || query) && (
+              <button
+                className="academic-approval-clear-filters"
+                onClick={() => {
+                  setInstructorFilter("all");
+                  setDateFrom("");
+                  setDateTo("");
+                  setQuery("");
+                }}
+              >
+                مسح الفلاتر
+              </button>
+            )}
+          </div>
           <div className="academic-approval-request-list">
             {filteredSessions.map(session => (
               <button
@@ -1890,16 +1969,17 @@ function AttendanceApprovalsView({
               سجل محلي · خلال المعاينة الحالية
             </span>
             <h2>
-              سجل قرارات مراجعة الحضور <small>{history.length} قرار</small>
+              سجل قرارات مراجعة الحضور{" "}
+              <small>{filteredHistory.length} قرار</small>
             </h2>
           </div>
           <span className="academic-approval-history-scope">
             <ShieldCheck size={13} /> {HEAD_OF_INSTRUCTORS} · {BRANCH}
           </span>
         </div>
-        {history.length > 0 ? (
+        {filteredHistory.length > 0 ? (
           <div className="academic-approval-history-list">
-            {history.map(item => {
+            {filteredHistory.map(item => {
               const session = allSessions.find(
                 candidate => candidate.id === item.sessionId
               );
@@ -1930,7 +2010,9 @@ function AttendanceApprovalsView({
                     </span>
                     {item.note && <p>{item.note}</p>}
                   </div>
-                  <time>{item.decidedAt}</time>
+                  <time>
+                    {formatDate(item.sessionDate)} · {item.decidedAt}
+                  </time>
                   {session && (
                     <button
                       className="academic-reopen-approval"
@@ -1948,7 +2030,11 @@ function AttendanceApprovalsView({
         ) : (
           <div className="academic-approval-history-empty">
             <Clock3 size={17} />
-            <span>ستظهر هنا قرارات الاعتماد والإعادة بعد اتخاذها.</span>
+            <span>
+              {history.length > 0
+                ? "لا توجد قرارات مطابقة لفلاتر المدرب والتاريخ."
+                : "ستظهر هنا قرارات الاعتماد والإعادة بعد اتخاذها."}
+            </span>
           </div>
         )}
         <div className="academic-table-footer">

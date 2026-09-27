@@ -141,6 +141,26 @@ const INITIAL_STAFF: StaffMember[] = [
     headOfInstructorsId: "USR-0201",
   },
   {
+    id: "USR-0208",
+    name: "دينا مصطفى",
+    phone: "01033334444",
+    role: "R04",
+    branch: "مدينة نصر",
+    status: "active",
+    joined: "04 مارس 2026",
+    headOfInstructorsId: "USR-0201",
+  },
+  {
+    id: "USR-0209",
+    name: "كريم أشرف",
+    phone: "01133334444",
+    role: "R04",
+    branch: "مدينة نصر",
+    status: "active",
+    joined: "18 يناير 2026",
+    headOfInstructorsId: "USR-0201",
+  },
+  {
     id: "USR-0203",
     name: "سارة خالد",
     phone: "01234567890",
@@ -548,6 +568,12 @@ export default function Team() {
               </p>
             </div>
             <div className="welcome-actions">
+              <button
+                className="button button-secondary academy-owner-preview-button"
+                onClick={() => navigate("/academy-owner")}
+              >
+                <GraduationCap size={17} /> معاينة رئيس الأكاديمية
+              </button>
               <button className="button button-secondary" onClick={downloadCsv}>
                 <ArrowDownToLine size={17} /> تصدير الفريق
               </button>
