@@ -3851,6 +3851,106 @@ button:not(:disabled) {
   font-family: var(--mada-font-en), var(--mada-font-ar);
   unicode-bidi: isolate;
 }
+.session-workflow {
+  padding: 15px 0 2px;
+}
+.session-workflow-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+}
+.session-workflow-heading > div {
+  display: grid;
+  gap: 3px;
+}
+.session-workflow-heading strong {
+  color: #26364e;
+  font-size: 11px;
+  font-weight: 800;
+}
+.session-workflow-heading span,
+.session-workflow-heading small {
+  color: #929dad;
+  font-size: 8px;
+}
+.session-workflow-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+  margin-top: 12px;
+}
+.session-workflow-step {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+.session-workflow-step:not(:last-child)::after {
+  position: absolute;
+  top: 11px;
+  right: 25px;
+  left: -3px;
+  height: 1px;
+  content: "";
+  background: #e5ebef;
+}
+.workflow-step-dot {
+  width: 23px;
+  height: 23px;
+  display: grid;
+  z-index: 1;
+  flex: 0 0 auto;
+  place-items: center;
+  color: #8390a0;
+  background: #f2f5f7;
+  border: 1px solid #e1e8ed;
+  border-radius: 50%;
+  font-family: var(--mada-font-en), var(--mada-font-ar);
+  font-size: 8px;
+  direction: ltr;
+}
+.workflow-step-dot.done {
+  color: #fff;
+  background: #0d9488;
+  border-color: #0d9488;
+}
+.workflow-step-dot.current {
+  color: #8b5d09;
+  background: #fff4db;
+  border-color: #e6bd67;
+  box-shadow: 0 0 0 3px rgb(245 158 11 / 10%);
+}
+.workflow-step-dot.next {
+  color: #4a78bb;
+  background: #edf3fc;
+  border-color: #bdd1eb;
+}
+.workflow-step-dot.halted {
+  color: #a2acb8;
+  background: #f4f6f8;
+  border-color: #e8edf1;
+}
+.session-workflow-step > span:last-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding-top: 2px;
+}
+.session-workflow-step strong {
+  overflow: hidden;
+  color: #425168;
+  font-size: 8px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.session-workflow-step small {
+  color: #9aa5b2;
+  font-size: 7px;
+  white-space: nowrap;
+}
 .schedule-form-dialog {
   width: min(570px, 100%);
   max-height: min(90vh, 760px);
@@ -4032,6 +4132,16 @@ button:not(:disabled) {
   .schedule-detail-heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+  .session-workflow-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 6px;
+  }
+  .session-workflow-step:not(:last-child)::after {
+    display: none;
+  }
+  .session-workflow-step strong {
+    font-size: 8px;
   }
   .schedule-detail-grid {
     grid-template-columns: 1fr;
@@ -8063,6 +8173,32 @@ button:not(:disabled) {
 .instructor-back-admin:hover {
   color: #fff;
 }
+.instructor-scope-note {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 13px;
+  padding: 10px 11px;
+  color: #9dcfc7;
+  background: rgb(13 148 136 / 9%);
+  border: 1px solid rgb(117 203 191 / 15%);
+  border-radius: 10px;
+}
+.instructor-scope-note > svg {
+  flex: none;
+}
+.instructor-scope-note span {
+  display: grid;
+  gap: 2px;
+}
+.instructor-scope-note strong {
+  color: #d9f4ef;
+  font-size: 9px;
+}
+.instructor-scope-note small {
+  color: #8eb7b2;
+  font-size: 8px;
+}
 .instructor-sidebar-version {
   display: flex;
   justify-content: space-between;
@@ -8296,6 +8432,70 @@ button:not(:disabled) {
   border-radius: 5px;
   font-size: 8px;
   letter-spacing: 0.4px;
+}
+.instructor-permission-card {
+  display: grid;
+  gap: 13px;
+  margin-bottom: 17px;
+  padding: 14px 16px;
+  background: linear-gradient(105deg, #f4fbfa, #fffdf8);
+  border: 1px solid #e5efed;
+  border-radius: 14px;
+}
+.instructor-permission-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.instructor-permission-icon {
+  width: 31px;
+  height: 31px;
+  display: grid;
+  flex: none;
+  place-items: center;
+  color: #0d9488;
+  background: #e1f4f0;
+  border-radius: 10px;
+}
+.instructor-permission-heading strong {
+  display: block;
+  margin-top: 1px;
+  color: #30425a;
+  font-size: 10px;
+  font-weight: 800;
+}
+.instructor-permission-heading p {
+  margin: 4px 0 0;
+  color: #8795a5;
+  font-size: 8px;
+}
+.instructor-permission-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.instructor-permission-list span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 8px;
+  color: #317d74;
+  background: #fff;
+  border: 1px solid #e1efec;
+  border-radius: 7px;
+  font-size: 8px;
+  font-weight: 700;
+}
+.instructor-permission-list span svg {
+  color: #0d9488;
+}
+.instructor-permission-list span.is-locked {
+  color: #8b7a58;
+  background: #fffaf0;
+  border-color: #f0e2c5;
+}
+.instructor-permission-list span.is-locked svg {
+  color: #bd8a27;
 }
 .instructor-stats-grid {
   display: grid;
@@ -8975,6 +9175,10 @@ button:not(:disabled) {
 .attendance-panel-footer .instructor-primary-button {
   min-height: 34px;
 }
+.attendance-next-step {
+  min-height: 34px;
+  margin-right: auto;
+}
 .attendance-validation-hint {
   margin: 0;
   padding: 0 18px 12px;
@@ -9261,6 +9465,336 @@ button:not(:disabled) {
   color: #6f8983;
   font-size: 8px;
 }
+.evaluation-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 5px;
+  padding-top: 10px;
+  border-top: 1px solid rgb(13 148 136 / 11%);
+}
+.evaluation-card-actions .instructor-primary-button {
+  min-height: 31px;
+  padding-inline: 11px;
+  font-size: 9px;
+}
+.card-sent-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #78918b;
+  font-size: 8px;
+}
+.card-sent-status.is-sent {
+  color: #0b897d;
+  font-weight: 750;
+}
+.instructor-achievements-page,
+.instructor-profile-page {
+  display: grid;
+  gap: 16px;
+}
+.instructor-achievements-summary,
+.instructor-profile-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 21px 23px;
+  background: linear-gradient(110deg, #eef9f6, #fffdf6);
+  border: 1px solid #e0efeb;
+  border-radius: 16px;
+}
+.instructor-achievements-summary h2,
+.instructor-profile-hero h2 {
+  margin: 3px 0 4px;
+  color: #1d3048;
+  font-size: 18px;
+  font-weight: 850;
+}
+.instructor-achievements-summary p,
+.instructor-profile-hero p {
+  margin: 0;
+  color: #7f8d9d;
+  font-size: 9px;
+}
+.achievement-summary-mark,
+.instructor-profile-large-avatar {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  flex: none;
+  place-items: center;
+  color: #0d9488;
+  background: #dff3ee;
+  border-radius: 16px;
+}
+.instructor-milestone-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 13px;
+}
+.instructor-milestone-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 10px;
+  padding: 15px;
+  background: #fff;
+  border: 1px solid #e9eef3;
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgb(15 23 42 / 3%);
+}
+.instructor-milestone-card > span {
+  grid-row: 1 / span 3;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  color: #9b711a;
+  background: #fff5dc;
+  border-radius: 10px;
+}
+.instructor-milestone-card small {
+  color: #758499;
+  font-size: 8px;
+}
+.instructor-milestone-card strong {
+  color: #1f3048;
+  font-family: var(--mada-font-en);
+  font-size: 22px;
+  line-height: 1.1;
+}
+.instructor-milestone-card em {
+  color: #9aa5b2;
+  font-size: 7px;
+  font-style: normal;
+}
+.student-progress-list {
+  display: grid;
+  gap: 9px;
+}
+.student-progress-card {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(190px, 1.2fr) auto;
+  gap: 15px;
+  align-items: center;
+  padding: 13px;
+  border: 1px solid #eef1f4;
+  border-radius: 12px;
+}
+.student-progress-person {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.student-progress-person > i {
+  width: 31px;
+  height: 31px;
+  display: grid;
+  flex: none;
+  place-items: center;
+  border-radius: 10px;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 800;
+}
+.student-progress-person > span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.student-progress-person strong {
+  overflow: hidden;
+  color: #2b3e56;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.student-progress-person small {
+  color: #909cab;
+  font-size: 8px;
+}
+.student-progress-metric > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #8794a4;
+  font-size: 8px;
+}
+.student-progress-metric strong {
+  color: #2b8c80;
+  font-family: var(--mada-font-en);
+  font-size: 10px;
+}
+.student-progress-bar {
+  height: 7px;
+  margin-top: 7px;
+  overflow: hidden;
+  background: #edf3f2;
+  border-radius: 99px;
+}
+.student-progress-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #39b9a9, #0d9488);
+  border-radius: inherit;
+}
+.student-progress-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #8290a0;
+  font-size: 8px;
+  white-space: nowrap;
+}
+.student-progress-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.student-progress-meta svg {
+  color: #0d9488;
+}
+.student-progress-card > p {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  padding-top: 8px;
+  color: #8b7651;
+  border-top: 1px dashed #e9e4d8;
+  font-size: 8px;
+}
+.student-progress-card > p svg {
+  color: #c29227;
+}
+.instructor-profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+.instructor-profile-large-avatar {
+  width: 58px;
+  height: 58px;
+  color: #fff;
+  background: #0d9488;
+  font-size: 22px;
+  font-weight: 800;
+}
+.profile-active-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  color: #0a867a;
+  background: #e4f6f1;
+  border-radius: 999px;
+  font-size: 8px;
+  font-weight: 750;
+}
+.profile-active-badge i {
+  width: 6px;
+  height: 6px;
+  background: #0d9488;
+  border-radius: 50%;
+}
+.instructor-profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 16px;
+}
+.profile-heading-icon {
+  color: #0d9488;
+}
+.profile-detail-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.profile-detail-list div {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  background: #fbfcfd;
+  border: 1px solid #eef1f4;
+  border-radius: 10px;
+}
+.profile-detail-list small {
+  color: #8b98a8;
+  font-size: 8px;
+}
+.profile-detail-list strong {
+  color: #30435b;
+  font-size: 10px;
+}
+.profile-permission-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 0;
+  border-top: 1px solid #eef1f4;
+}
+.profile-permission-row > svg {
+  flex: none;
+}
+.profile-permission-row > span {
+  display: grid;
+  flex: 1;
+  gap: 3px;
+}
+.profile-permission-row strong {
+  color: #34465c;
+  font-size: 9px;
+}
+.profile-permission-row small {
+  color: #929eab;
+  font-size: 8px;
+}
+.profile-permission-row em {
+  padding: 4px 7px;
+  color: #0d897d;
+  background: #e9f7f3;
+  border-radius: 6px;
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 750;
+}
+.profile-permission-row.is-allowed > svg {
+  color: #0d9488;
+}
+.profile-permission-row.is-locked > svg {
+  color: #b78828;
+}
+.profile-permission-row.is-locked em {
+  color: #96701f;
+  background: #fff6df;
+}
+.profile-note-panel {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: #0d9488;
+}
+.profile-note-panel > div {
+  flex: 1;
+}
+.profile-note-panel strong {
+  color: #34465c;
+  font-size: 10px;
+}
+.profile-note-panel p {
+  margin: 4px 0 0;
+  color: #8b98a8;
+  font-size: 8px;
+}
+.profile-note-panel .instructor-secondary-button {
+  min-height: 32px;
+}
 .instructor-footer-note {
   display: flex;
   gap: 8px;
@@ -9411,6 +9945,44 @@ button:not(:disabled) {
     padding: 9px;
     font-size: 8px;
     line-height: 1.7;
+  }
+  .instructor-achievements-summary,
+  .instructor-profile-hero {
+    align-items: flex-start;
+    padding: 15px;
+  }
+  .instructor-achievements-summary h2,
+  .instructor-profile-hero h2 {
+    font-size: 15px;
+  }
+  .achievement-summary-mark,
+  .instructor-profile-large-avatar {
+    width: 43px;
+    height: 43px;
+    border-radius: 12px;
+  }
+  .instructor-milestone-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .student-progress-card {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .student-progress-meta {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  .instructor-profile-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .profile-note-panel {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .profile-note-panel .instructor-secondary-button {
+    margin-inline-start: 29px;
   }
   .instructor-stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

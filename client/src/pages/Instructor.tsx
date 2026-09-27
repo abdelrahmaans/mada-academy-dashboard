@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   Activity,
   AlertCircle,
-  ArrowLeft,
   ArrowUpRight,
   BookOpen,
   CalendarCheck,
@@ -29,7 +28,12 @@ import {
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 
-type WorkspaceView = "overview" | "attendance" | "evaluations";
+type WorkspaceView =
+  | "overview"
+  | "attendance"
+  | "evaluations"
+  | "achievements"
+  | "profile";
 type AttendanceStatus = "unmarked" | "present" | "absent" | "late" | "excused";
 type SessionStatus = "in_progress" | "upcoming" | "completed";
 type InstructorStudent = {
@@ -211,6 +215,67 @@ const INITIAL_EVALUATIONS: Record<string, Evaluation> = {
     updatedAt: "أمس · 05:34 م",
   },
 };
+const STUDENT_PROGRESS = [
+  {
+    id: "ST-0248",
+    name: "ياسين محمد علي",
+    initials: "يع",
+    color: "teal",
+    track: "روبوتكس مستوى 2",
+    progress: 86,
+    attendance: 96,
+    average: 4.4,
+    milestone: "أتقن التحدي الأخير باستقلالية",
+  },
+  {
+    id: "ST-0246",
+    name: "عمر خالد إبراهيم",
+    initials: "عإ",
+    color: "blue",
+    track: "روبوتكس مستوى 2",
+    progress: 72,
+    attendance: 88,
+    average: 4.0,
+    milestone: "تحسن في التطبيق العملي",
+  },
+  {
+    id: "ST-0244",
+    name: "آدم شريف حسن",
+    initials: "آح",
+    color: "navy",
+    track: "روبوتكس مستوى 2",
+    progress: 64,
+    attendance: 79,
+    average: 3.7,
+    milestone: "يحتاج دعمًا في شرح الفكرة",
+  },
+  {
+    id: "ST-0240",
+    name: "ملك حسام الدين",
+    initials: "مح",
+    color: "amber",
+    track: "أساسيات تصميم الروبوت",
+    progress: 91,
+    attendance: 100,
+    average: 4.8,
+    milestone: "مرشحة لشارة الإبداع",
+  },
+];
+const INSTRUCTOR_MILESTONES = [
+  { label: "بطاقات تقييم جاهزة", value: "12", hint: "هذا الشهر", icon: Star },
+  {
+    label: "متوسط حضور الطلاب",
+    value: "91%",
+    hint: "آخر 30 يومًا",
+    icon: CalendarCheck,
+  },
+  {
+    label: "طلاب تحسنوا",
+    value: "8",
+    hint: "مقارنة بالجولة السابقة",
+    icon: ArrowUpRight,
+  },
+];
 
 function InstructorBrand() {
   return (
@@ -243,7 +308,10 @@ export default function Instructor() {
   const [, navigate] = useLocation();
   const [view, setView] = useState<WorkspaceView>(() => {
     const requested = new URLSearchParams(window.location.search).get("view");
-    return requested === "attendance" || requested === "evaluations"
+    return requested === "attendance" ||
+      requested === "evaluations" ||
+      requested === "achievements" ||
+      requested === "profile"
       ? requested
       : "overview";
   });
@@ -266,6 +334,7 @@ export default function Instructor() {
   const [comment, setComment] = useState("");
   const [evaluations, setEvaluations] = useState(INITIAL_EVALUATIONS);
   const [previewEvaluation, setPreviewEvaluation] = useState(false);
+  const [sentCards, setSentCards] = useState<Record<string, boolean>>({});
 
   const selectedSession =
     SESSIONS.find(item => item.id === selectedSessionId) ?? SESSIONS[0];
@@ -276,7 +345,7 @@ export default function Instructor() {
   const visibleRoster = useMemo(() => {
     const needle = studentQuery.trim().toLocaleLowerCase("ar");
     return selectedSession.students.filter(student =>
-      [student.name, student.id, student.parent].some(value =>
+      [student.name, student.id].some(value =>
         value.toLocaleLowerCase("ar").includes(needle)
       )
     );
@@ -412,8 +481,17 @@ export default function Instructor() {
       },
     }));
     setPreviewEvaluation(true);
+    setSentCards(current => ({ ...current, [selectedEvaluationKey]: false }));
     toast.success("تم حفظ التقييم محليًا", {
       description: "بطاقة التقييم التجريبية أصبحت جاهزة للمعاينة.",
+    });
+  };
+
+  const sendEvaluationCard = () => {
+    if (!savedEvaluation) return;
+    setSentCards(current => ({ ...current, [selectedEvaluationKey]: true }));
+    toast.success("تم تجهيز البطاقة للإرسال", {
+      description: "الإرسال للأسرة محاكى محليًا في هذه المرحلة.",
     });
   };
 
@@ -471,12 +549,25 @@ export default function Instructor() {
               </button>
             );
           })}
-          <button onClick={() => showComingSoon("التلعيب والإنجازات")}>
+          <button
+            className={view === "achievements" ? "active" : ""}
+            aria-current={view === "achievements" ? "page" : undefined}
+            onClick={() => {
+              setView("achievements");
+              setMobileNavOpen(false);
+            }}
+          >
             <Sparkles size={18} />
             <span>الإنجازات</span>
-            <ChevronLeft size={14} />
           </button>
-          <button onClick={() => showComingSoon("ملفي الشخصي")}>
+          <button
+            className={view === "profile" ? "active" : ""}
+            aria-current={view === "profile" ? "page" : undefined}
+            onClick={() => {
+              setView("profile");
+              setMobileNavOpen(false);
+            }}
+          >
             <ShieldCheck size={18} />
             <span>ملفي الشخصي</span>
           </button>
@@ -495,10 +586,13 @@ export default function Instructor() {
           </span>
           <ChevronLeft size={14} />
         </button>
-        <button className="instructor-back-admin" onClick={() => navigate("/")}>
-          <ArrowLeft size={16} />
-          <span>العودة للوحة الفرع</span>
-        </button>
+        <div className="instructor-scope-note">
+          <ShieldCheck size={16} />
+          <span>
+            <strong>نطاق صلاحيتك</strong>
+            <small>جلساتك وطلابك فقط</small>
+          </span>
+        </div>
         <div className="instructor-sidebar-version">
           مدى لإدارة الأكاديميات <span>نسخة تجريبية</span>
         </div>
@@ -551,7 +645,8 @@ export default function Instructor() {
             <button onClick={() => setView("overview")}>مساحة المدرب</button>
             <ChevronLeft size={13} />
             <span>
-              {navItems.find(item => item.id === view)?.label ?? "الرئيسية"}
+              {navItems.find(item => item.id === view)?.label ??
+                (view === "achievements" ? "الإنجازات" : "ملفي الشخصي")}
             </span>
           </div>
           <section className="instructor-welcome">
@@ -564,14 +659,22 @@ export default function Instructor() {
                   ? "يومك الأكاديمي"
                   : view === "attendance"
                     ? "الحضور والغياب"
-                    : "تقييم الطلاب"}
+                    : view === "evaluations"
+                      ? "تقييم الطلاب"
+                      : view === "achievements"
+                        ? "إنجازات طلابي"
+                        : "ملفي الشخصي"}
               </h1>
               <p>
                 {view === "overview"
                   ? "تابعي جلساتك، وسجلي الحضور والتقييم من مساحة عمل واحدة."
                   : view === "attendance"
                     ? "سجّلي حالة كل طالب قبل تأكيد حضور الجلسة."
-                    : "قدّمي ملاحظات بنّاءة لكل طالب بعد الجلسة."}
+                    : view === "evaluations"
+                      ? "قدّمي ملاحظات بنّاءة لكل طالب بعد الجلسة."
+                      : view === "achievements"
+                        ? "تابعي التقدم والإنجازات التي تستحق الاحتفال داخل مجموعاتك."
+                        : "راجعي بياناتك المهنية ونطاق الصلاحيات المتاح لك."}
               </p>
             </div>
             <div className="instructor-welcome-actions">
@@ -594,6 +697,14 @@ export default function Instructor() {
                   <Star size={16} /> التقييمات
                 </button>
               )}
+              {view === "achievements" && (
+                <button
+                  className="instructor-secondary-button"
+                  onClick={() => setView("evaluations")}
+                >
+                  <Star size={16} /> إضافة تقييم
+                </button>
+              )}
             </div>
           </section>
           <section className="instructor-demo-note" role="note">
@@ -604,6 +715,39 @@ export default function Instructor() {
             </span>
             <b>DEMO</b>
           </section>
+          {view === "overview" && (
+            <section
+              className="instructor-permission-card"
+              aria-label="صلاحيات المدرب"
+            >
+              <div className="instructor-permission-heading">
+                <span className="instructor-permission-icon">
+                  <ShieldCheck size={17} />
+                </span>
+                <div>
+                  <strong>مساحتك مصممة للتركيز على الجلسة</strong>
+                  <p>
+                    تظهر لك البيانات اللازمة للتنفيذ فقط، بدون تفاصيل مالية أو
+                    إدارية.
+                  </p>
+                </div>
+              </div>
+              <div className="instructor-permission-list">
+                <span>
+                  <CheckCircle2 size={14} /> جلساتك المسندة
+                </span>
+                <span>
+                  <CheckCircle2 size={14} /> حضور الطلاب
+                </span>
+                <span>
+                  <CheckCircle2 size={14} /> تقييمات الطلاب
+                </span>
+                <span className="is-locked">
+                  <ShieldCheck size={14} /> المالية والموافقات للإدارة
+                </span>
+              </div>
+            </section>
+          )}
 
           {view === "overview" && (
             <>
@@ -815,6 +959,194 @@ export default function Instructor() {
             </>
           )}
 
+          {view === "achievements" && (
+            <div className="instructor-achievements-page">
+              <section className="instructor-achievements-summary">
+                <div>
+                  <span className="instructor-panel-kicker">لوحة التقدم</span>
+                  <h2>كل خطوة صغيرة تستحق أن تُرى</h2>
+                  <p>
+                    راجعي تطور طلابك من خلال الحضور ومتوسط التقييم وآخر إنجاز
+                    مسجل لكل طالب.
+                  </p>
+                </div>
+                <span className="achievement-summary-mark">
+                  <Sparkles size={23} />
+                </span>
+              </section>
+              <section
+                className="instructor-milestone-grid"
+                aria-label="ملخص الإنجازات"
+              >
+                {INSTRUCTOR_MILESTONES.map(item => {
+                  const Icon = item.icon;
+                  return (
+                    <article
+                      className="instructor-milestone-card"
+                      key={item.label}
+                    >
+                      <span>
+                        <Icon size={17} />
+                      </span>
+                      <small>{item.label}</small>
+                      <strong>{item.value}</strong>
+                      <em>{item.hint}</em>
+                    </article>
+                  );
+                })}
+              </section>
+              <section className="instructor-panel student-progress-panel">
+                <div className="instructor-panel-heading">
+                  <div>
+                    <span className="instructor-panel-kicker">
+                      مجموعاتك الحالية
+                    </span>
+                    <h2>تطور الطلاب</h2>
+                  </div>
+                  <span className="instructor-evaluation-count">
+                    {STUDENT_PROGRESS.length} طلاب
+                  </span>
+                </div>
+                <div className="student-progress-list">
+                  {STUDENT_PROGRESS.map(student => (
+                    <article className="student-progress-card" key={student.id}>
+                      <div className="student-progress-person">
+                        <i className={`student-color-${student.color}`}>
+                          {student.initials}
+                        </i>
+                        <span>
+                          <strong>{student.name}</strong>
+                          <small>
+                            {student.track} · {student.id}
+                          </small>
+                        </span>
+                      </div>
+                      <div className="student-progress-metric">
+                        <div>
+                          <span>التقدم في المسار</span>
+                          <strong>{student.progress}%</strong>
+                        </div>
+                        <div className="student-progress-bar">
+                          <i style={{ width: `${student.progress}%` }} />
+                        </div>
+                      </div>
+                      <div className="student-progress-meta">
+                        <span>
+                          <CalendarCheck size={13} /> حضور {student.attendance}%
+                        </span>
+                        <span>
+                          <Star size={13} /> متوسط {student.average}/5
+                        </span>
+                      </div>
+                      <p>
+                        <Sparkles size={13} /> {student.milestone}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            </div>
+          )}
+
+          {view === "profile" && (
+            <div className="instructor-profile-page">
+              <section className="instructor-profile-hero">
+                <div className="instructor-profile-identity">
+                  <span className="instructor-profile-large-avatar">م</span>
+                  <div>
+                    <span className="instructor-panel-kicker">
+                      الحساب المهني
+                    </span>
+                    <h2>{INSTRUCTOR}</h2>
+                    <p>مدرب روبوتكس · فرع {BRANCH}</p>
+                  </div>
+                </div>
+                <span className="profile-active-badge">
+                  <i /> حساب نشط
+                </span>
+              </section>
+              <div className="instructor-profile-grid">
+                <section className="instructor-panel profile-details-panel">
+                  <div className="instructor-panel-heading">
+                    <div>
+                      <span className="instructor-panel-kicker">
+                        بيانات العمل
+                      </span>
+                      <h2>ملخص الملف</h2>
+                    </div>
+                    <ShieldCheck size={18} className="profile-heading-icon" />
+                  </div>
+                  <div className="profile-detail-list">
+                    <div>
+                      <small>المسمى الوظيفي</small>
+                      <strong>مدرب روبوتكس</strong>
+                    </div>
+                    <div>
+                      <small>الفرع الأساسي</small>
+                      <strong>فرع {BRANCH}</strong>
+                    </div>
+                    <div>
+                      <small>المجموعات الحالية</small>
+                      <strong>3 مجموعات</strong>
+                    </div>
+                    <div>
+                      <small>منذ الانضمام</small>
+                      <strong>يناير ٢٠٢٥</strong>
+                    </div>
+                  </div>
+                </section>
+                <section className="instructor-panel profile-permissions-panel">
+                  <div className="instructor-panel-heading">
+                    <div>
+                      <span className="instructor-panel-kicker">الوصول</span>
+                      <h2>صلاحياتي الحالية</h2>
+                    </div>
+                  </div>
+                  <div className="profile-permission-row is-allowed">
+                    <CheckCircle2 size={15} />
+                    <span>
+                      <strong>الجلسات المسندة</strong>
+                      <small>عرض التفاصيل والتحديث التشغيلي</small>
+                    </span>
+                    <em>متاح</em>
+                  </div>
+                  <div className="profile-permission-row is-allowed">
+                    <CheckCircle2 size={15} />
+                    <span>
+                      <strong>الحضور والتقييم</strong>
+                      <small>تسجيل ومراجعة بيانات طلاب مجموعاتك</small>
+                    </span>
+                    <em>متاح</em>
+                  </div>
+                  <div className="profile-permission-row is-locked">
+                    <ShieldCheck size={15} />
+                    <span>
+                      <strong>المالية والموافقات</strong>
+                      <small>تحتاج صلاحية مدير الفرع</small>
+                    </span>
+                    <em>مقيد</em>
+                  </div>
+                </section>
+              </div>
+              <section className="instructor-panel profile-note-panel">
+                <MessageCircle size={18} />
+                <div>
+                  <strong>هل تحتاج تعديلًا على صلاحياتك؟</strong>
+                  <p>
+                    تواصل مع مدير الفرع لمراجعة نطاق الوصول أو طلب إضافة مجموعة
+                    جديدة.
+                  </p>
+                </div>
+                <button
+                  className="instructor-secondary-button"
+                  onClick={() => toast("تم تسجيل طلب المساعدة في المعاينة")}
+                >
+                  طلب مساعدة
+                </button>
+              </section>
+            </div>
+          )}
+
           {view === "attendance" && (
             <>
               <section className="instructor-session-selector panel-like">
@@ -910,7 +1242,6 @@ export default function Instructor() {
                         <th>الطالب</th>
                         <th>الحالة</th>
                         <th>تفاصيل</th>
-                        <th>ولي الأمر</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -983,18 +1314,12 @@ export default function Instructor() {
                                 </span>
                               )}
                             </td>
-                            <td>
-                              <span className="instructor-parent-cell">
-                                {student.parent}
-                                <small>ولي الأمر</small>
-                              </span>
-                            </td>
                           </tr>
                         );
                       })}
                       {visibleRoster.length === 0 && (
                         <tr>
-                          <td colSpan={4}>
+                          <td colSpan={3}>
                             <div className="instructor-empty">
                               <Search size={18} />
                               <strong>لا توجد نتائج</strong>
@@ -1026,6 +1351,15 @@ export default function Instructor() {
                       ? "تم تأكيد الحضور"
                       : "تأكيد حضور الجلسة"}
                   </button>
+                  {attendanceSaved[selectedSession.id] && (
+                    <button
+                      className="instructor-secondary-button attendance-next-step"
+                      type="button"
+                      onClick={() => setView("evaluations")}
+                    >
+                      <Star size={15} /> ابدئي التقييمات
+                    </button>
+                  )}
                 </div>
                 {attendanceSummary.unmarked > 0 && (
                   <p className="attendance-validation-hint">
@@ -1237,6 +1571,30 @@ export default function Instructor() {
                           ).toFixed(1)}{" "}
                           / 5
                         </small>
+                        <div className="evaluation-card-actions">
+                          <span
+                            className={
+                              sentCards[selectedEvaluationKey]
+                                ? "card-sent-status is-sent"
+                                : "card-sent-status"
+                            }
+                          >
+                            {sentCards[selectedEvaluationKey] ? (
+                              <>
+                                <CheckCircle2 size={13} /> جاهزة للإرسال
+                              </>
+                            ) : (
+                              "معاينة محلية"
+                            )}
+                          </span>
+                          <button
+                            type="button"
+                            className="instructor-primary-button"
+                            onClick={sendEvaluationCard}
+                          >
+                            <ArrowUpRight size={14} /> إرسال للأسرة
+                          </button>
+                        </div>
                       </div>
                     )}
                   </>
