@@ -136,6 +136,7 @@ const STATUS_LABELS: Record<ApprovalStatus, string> = {
   approved: "تمت الموافقة",
   rejected: "مرفوض",
 };
+const BRANCH_MANAGER_DISCOUNT_LIMIT = 15;
 
 function BrandMark() {
   return (
@@ -182,6 +183,9 @@ export default function Approvals() {
   const [sortOrder, setSortOrder] = useState<ApprovalSort>("priority");
   const [selected, setSelected] = useState<ApprovalItem | null>(null);
   const [decisionNote, setDecisionNote] = useState("");
+  const canApproveSelected =
+    selected?.kind !== "discount" ||
+    (selected.discountValue ?? 0) <= BRANCH_MANAGER_DISCOUNT_LIMIT;
 
   const branchRequests = useMemo(
     () => requests.filter(item => item.branch === branch),
@@ -249,6 +253,22 @@ export default function Approvals() {
     setSelected(item);
   };
   const decide = (id: string, status: "approved" | "rejected") => {
+    const item = requests.find(request => request.id === id);
+    if (!item) return;
+    if (
+      status === "approved" &&
+      item.kind === "discount" &&
+      !canApproveSelected
+    ) {
+      toast.error("الخصم يتجاوز حد اعتماد مدير الفرع", {
+        description: `ارفع الطلب للإدارة المركزية لأن الحد الحالي ${BRANCH_MANAGER_DISCOUNT_LIMIT}%.`,
+      });
+      return;
+    }
+    if (status === "rejected" && !decisionNote.trim()) {
+      toast.error("اكتب سبب الرفض قبل إغلاق الطلب");
+      return;
+    }
     const decidedAtDate = new Date();
     const decidedAt = new Intl.DateTimeFormat("ar-EG", {
       dateStyle: "medium",
@@ -508,6 +528,24 @@ export default function Approvals() {
               المعاينة فقط ولا يحفظ قرارًا رسميًا.
             </span>
             <span className="demo-tag">DEMO</span>
+          </section>
+          <section
+            className="manager-policy-card"
+            aria-label="صلاحيات مدير الفرع"
+          >
+            <span className="manager-policy-icon">
+              <ShieldCheck size={18} />
+            </span>
+            <div>
+              <strong>نطاق مدير فرع مدينة نصر</strong>
+              <p>
+                اعتماد الخصومات حتى {BRANCH_MANAGER_DISCOUNT_LIMIT}% وتبديل
+                المدربين داخل الفرع.
+              </p>
+            </div>
+            <span className="manager-policy-escalation">
+              ما فوق {BRANCH_MANAGER_DISCOUNT_LIMIT}% <b>يُرفع للإدارة</b>
+            </span>
           </section>
 
           <section
@@ -964,6 +1002,18 @@ export default function Approvals() {
                 </>
               )}
             </div>
+            {selected.kind === "discount" && (
+              <div
+                className={`approval-policy-check ${canApproveSelected ? "is-allowed" : "is-escalated"}`}
+              >
+                <ShieldCheck size={15} />
+                <span>
+                  {canApproveSelected
+                    ? `ضمن صلاحية مدير الفرع · الحد ${BRANCH_MANAGER_DISCOUNT_LIMIT}%`
+                    : `يتطلب تصعيدًا للإدارة · الخصم ${selected.discountValue}% يتجاوز الحد`}
+                </span>
+              </div>
+            )}
             <label className="approval-note-field">
               ملاحظة القرار <span>اختياري · بحد أقصى 240 حرفًا</span>
               <textarea
@@ -992,8 +1042,10 @@ export default function Approvals() {
               <button
                 className="button button-primary"
                 onClick={() => decide(selected.id, "approved")}
+                disabled={!canApproveSelected}
               >
-                <Check size={15} /> موافقة تجريبية
+                <Check size={15} />{" "}
+                {canApproveSelected ? "موافقة تجريبية" : "رفع للإدارة"}
               </button>
             </div>
           </section>

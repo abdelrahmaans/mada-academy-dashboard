@@ -285,6 +285,7 @@ export default function Finance() {
     useState<Expense["category"]>("materials");
   const [expenseBranch, setExpenseBranch] = useState("مدينة نصر");
   const [expenseAmount, setExpenseAmount] = useState("");
+  const [monthlyReportOpen, setMonthlyReportOpen] = useState(false);
   const currentInvoice = invoices.find(invoice => invoice.id === invoiceId);
   const remainingForInvoice = currentInvoice
     ? Math.max(0, currentInvoice.total - currentInvoice.collected)
@@ -353,6 +354,37 @@ export default function Finance() {
           100
       )
     : 0;
+  const monthlyBilled = scopedInvoices.reduce(
+    (sum, invoice) => sum + invoice.total,
+    0
+  );
+  const monthlyCollected = scopedInvoices.reduce(
+    (sum, invoice) => sum + invoice.collected,
+    0
+  );
+  const monthlyNetCash = monthlyCollected - expensesTotal;
+  const monthlyBranchBreakdown = BRANCHES.filter(
+    item => item !== "كل الفروع"
+  ).map(item => {
+    const invoicesForBranch = invoices.filter(
+      invoice => invoice.branch === item
+    );
+    const expensesForBranch = expenses
+      .filter(expense => expense.branch === item)
+      .reduce((sum, expense) => sum + expense.amount, 0);
+    return {
+      branch: item,
+      collected: invoicesForBranch.reduce(
+        (sum, invoice) => sum + invoice.collected,
+        0
+      ),
+      outstanding: invoicesForBranch.reduce(
+        (sum, invoice) => sum + Math.max(0, invoice.total - invoice.collected),
+        0
+      ),
+      expenses: expensesForBranch,
+    };
+  });
 
   const openPaymentDialog = (targetId?: string) => {
     const target = targetId
@@ -473,6 +505,38 @@ export default function Finance() {
     link.click();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     toast.success("تم تنزيل نسخة CSV من البيانات الظاهرة");
+  };
+  const downloadMonthlyReport = () => {
+    const rows = [
+      ["التقرير المالي الشهري", "سبتمبر 2026", branch],
+      ["إجمالي الفواتير", monthlyBilled],
+      ["إجمالي التحصيل", monthlyCollected],
+      ["المبالغ المستحقة", receivables],
+      ["المصروفات", expensesTotal],
+      ["صافي التدفق النقدي", monthlyNetCash],
+      [],
+      ["الفرع", "التحصيل", "المستحق", "المصروفات"],
+      ...monthlyBranchBreakdown.map(item => [
+        item.branch,
+        item.collected,
+        item.outstanding,
+        item.expenses,
+      ]),
+    ];
+    const csv = `\uFEFF${rows
+      .map(row =>
+        row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(",")
+      )
+      .join("\n")}`;
+    const url = URL.createObjectURL(
+      new Blob([csv], { type: "text/csv;charset=utf-8" })
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "mada-monthly-finance-report-september-2026.csv";
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast.success("تم تنزيل التقرير المالي الشهري كملف CSV");
   };
   const clearFilters = () => {
     setQuery("");
@@ -713,6 +777,13 @@ export default function Finance() {
                 <ArrowDownToLine size={17} /> تصدير CSV
               </button>
               <button
+                className="button button-secondary finance-report-trigger"
+                onClick={() => setMonthlyReportOpen(open => !open)}
+                aria-expanded={monthlyReportOpen}
+              >
+                <FileText size={16} /> التقرير الشهري
+              </button>
+              <button
                 className="button button-primary"
                 onClick={
                   tab === "collections"
@@ -759,6 +830,88 @@ export default function Finance() {
               </span>
             </div>
           </section>
+          {monthlyReportOpen && (
+            <section
+              className="finance-monthly-report"
+              aria-label="التقرير المالي الشهري"
+            >
+              <div className="finance-monthly-report-heading">
+                <div className="panel-title-group">
+                  <span className="panel-icon panel-icon-violet">
+                    <FileText size={18} />
+                  </span>
+                  <div>
+                    <h2>تقرير سبتمبر 2026</h2>
+                    <p>ملخص التحصيل والمصروفات · {branch}</p>
+                  </div>
+                </div>
+                <button
+                  className="button button-secondary"
+                  onClick={downloadMonthlyReport}
+                >
+                  <ArrowDownToLine size={15} /> تنزيل التقرير
+                </button>
+              </div>
+              <div className="finance-monthly-kpis">
+                <div>
+                  <small>إجمالي الفواتير</small>
+                  <strong>
+                    <bdi dir="ltr">{formatMoney(monthlyBilled)}</bdi> ج.م
+                  </strong>
+                </div>
+                <div>
+                  <small>التحصيل</small>
+                  <strong className="is-positive">
+                    <bdi dir="ltr">{formatMoney(monthlyCollected)}</bdi> ج.م
+                  </strong>
+                </div>
+                <div>
+                  <small>المصروفات</small>
+                  <strong className="is-expense">
+                    <bdi dir="ltr">{formatMoney(expensesTotal)}</bdi> ج.م
+                  </strong>
+                </div>
+                <div>
+                  <small>صافي التدفق النقدي</small>
+                  <strong>
+                    <bdi dir="ltr">{formatMoney(monthlyNetCash)}</bdi> ج.م
+                  </strong>
+                </div>
+              </div>
+              <div className="finance-monthly-table-wrap">
+                <table className="finance-monthly-table">
+                  <thead>
+                    <tr>
+                      <th>الفرع</th>
+                      <th>التحصيل</th>
+                      <th>المستحق</th>
+                      <th>المصروفات</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthlyBranchBreakdown.map(item => (
+                      <tr key={item.branch}>
+                        <td>{item.branch}</td>
+                        <td>
+                          <bdi dir="ltr">{formatMoney(item.collected)}</bdi> ج.م
+                        </td>
+                        <td>
+                          <bdi dir="ltr">{formatMoney(item.outstanding)}</bdi>{" "}
+                          ج.م
+                        </td>
+                        <td>
+                          <bdi dir="ltr">{formatMoney(item.expenses)}</bdi> ج.م
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <small className="finance-report-footnote">
+                الأرقام توضيحية ومحلية، وتتأثر بفرع العرض المحدد في أعلى الصفحة.
+              </small>
+            </section>
+          )}
           <section className="finance-stats-grid" aria-label="ملخص مالي للعينة">
             <article className="finance-stat">
               <span className="finance-stat-icon icon-teal">
