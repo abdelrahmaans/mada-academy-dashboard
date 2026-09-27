@@ -203,6 +203,66 @@ const sourceLabels: Record<StudentSource, string> = {
 const branches = ["كل الفروع", "مدينة نصر", "المعادي", "الشيخ زايد"];
 const PAGE_SIZE = 6;
 
+type StudentJourneySummary = {
+  attendance: string;
+  attendanceNote: string;
+  nextSession: string;
+  nextSessionNote: string;
+  payment: string;
+  paymentNote: string;
+  progress: number;
+};
+
+function getStudentJourney(student: Student): StudentJourneySummary {
+  if (student.course === "لم يتم التسجيل في كورس") {
+    return {
+      attendance: "—",
+      attendanceNote: "لا توجد جلسات مسجلة",
+      nextSession: "غير محددة",
+      nextSessionNote: "يحتاج تسجيل في مجموعة",
+      payment: "لا توجد فاتورة",
+      paymentNote: "سيظهر بعد التسجيل",
+      progress: 0,
+    };
+  }
+
+  if (student.status === "graduated") {
+    return {
+      attendance: "94%",
+      attendanceNote: "انتظام ممتاز",
+      nextSession: "اكتمل المسار",
+      nextSessionNote: "جاهز للشهادة",
+      payment: "مدفوع بالكامل",
+      paymentNote: "لا توجد مستحقات",
+      progress: 100,
+    };
+  }
+
+  if (student.status === "on_hold") {
+    return {
+      attendance: "71%",
+      attendanceNote: "يحتاج متابعة",
+      nextSession: "موقوف مؤقتًا",
+      nextSessionNote: "راجع حالة التسجيل",
+      payment: "قسط مستحق",
+      paymentNote: "يحتاج تواصل مع الأسرة",
+      progress: 46,
+    };
+  }
+
+  return {
+    attendance: student.id.endsWith("248") ? "88%" : "86%",
+    attendanceNote: "من آخر ٨ جلسات",
+    nextSession: "الأحد · ١٢:٠٠ م",
+    nextSessionNote: "معمل ١ · الجلسة ٩",
+    payment: student.id.endsWith("247") ? "قسطان متبقيان" : "مدفوع حتى أكتوبر",
+    paymentNote: student.id.endsWith("247")
+      ? "أقرب استحقاق ١ أكتوبر"
+      : "آخر تحصيل ١ سبتمبر",
+    progress: student.id.endsWith("248") ? 72 : 64,
+  };
+}
+
 function BrandMark() {
   return (
     <div className="brand-lockup" aria-label="مدى">
@@ -587,7 +647,7 @@ function StudentPage() {
               </span>
               <span className="student-stat-label">إجمالي الطلاب</span>
               <div>
-                <strong>248</strong>
+                <strong>{students.length}</strong>
                 <span>طالب مسجل</span>
               </div>
               <small>
@@ -600,7 +660,12 @@ function StudentPage() {
               </span>
               <span className="student-stat-label">طلاب نشطون</span>
               <div>
-                <strong>218</strong>
+                <strong>
+                  {
+                    students.filter(student => student.status === "active")
+                      .length
+                  }
+                </strong>
                 <span>طالب</span>
               </div>
               <small className="stat-neutral">في كورس أو مجموعة حاليًا</small>
@@ -626,7 +691,7 @@ function StudentPage() {
               </span>
               <span className="student-stat-label">موقوفون مؤقتًا</span>
               <div>
-                <strong>06</strong>
+                <strong>{String(pausedCount).padStart(2, "0")}</strong>
                 <span>طلاب</span>
               </div>
               <small className="stat-neutral">يحتاجون متابعة من الفرع</small>
@@ -1121,6 +1186,74 @@ function StudentPage() {
                 <strong>{sourceLabels[detailsStudent.source]}</strong>
               </div>
             </div>
+            {(() => {
+              const journey = getStudentJourney(detailsStudent);
+              return (
+                <>
+                  <div className="student-journey-heading">
+                    <div>
+                      <strong>رحلة الطالب</strong>
+                      <span>ملخص تشغيلي سريع مبني على بيانات العرض</span>
+                    </div>
+                    <span className="journey-progress-label">
+                      {journey.progress}% مكتمل
+                    </span>
+                  </div>
+                  <div
+                    className="student-journey-progress"
+                    aria-label={`نسبة تقدم الطالب ${journey.progress}%`}
+                  >
+                    <span style={{ width: `${journey.progress}%` }} />
+                  </div>
+                  <div className="student-journey-grid">
+                    <article>
+                      <span className="journey-icon journey-icon-teal">
+                        <CheckCircle2 size={15} />
+                      </span>
+                      <div>
+                        <small>انتظام الحضور</small>
+                        <strong>{journey.attendance}</strong>
+                        <span>{journey.attendanceNote}</span>
+                      </div>
+                    </article>
+                    <article>
+                      <span className="journey-icon journey-icon-blue">
+                        <CalendarDays size={15} />
+                      </span>
+                      <div>
+                        <small>الجلسة القادمة</small>
+                        <strong>{journey.nextSession}</strong>
+                        <span>{journey.nextSessionNote}</span>
+                      </div>
+                    </article>
+                    <article>
+                      <span className="journey-icon journey-icon-amber">
+                        <Wallet size={15} />
+                      </span>
+                      <div>
+                        <small>حالة التحصيل</small>
+                        <strong>{journey.payment}</strong>
+                        <span>{journey.paymentNote}</span>
+                      </div>
+                    </article>
+                  </div>
+                  <div className="student-journey-actions">
+                    <button
+                      className="button button-secondary"
+                      onClick={() => setLocation("/schedule")}
+                    >
+                      <CalendarDays size={15} /> عرض الجدول
+                    </button>
+                    <button
+                      className="button button-secondary"
+                      onClick={() => setLocation("/finance")}
+                    >
+                      <Wallet size={15} /> فتح التحصيل
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
             <div className="dialog-info">
               <FileText size={15} />
               <span>تفاصيل توضيحية للعرض، غير مرتبطة بملف طالب حقيقي.</span>
