@@ -67,7 +67,16 @@ type Lead = {
   assignedTo: string;
   notes: string;
   createdAt: string;
+  activities?: LeadActivity[];
   convertedStudentId?: string;
+};
+type LeadActivity = {
+  id: string;
+  kind: "call" | "follow_up";
+  date: string;
+  scheduledFor?: string;
+  note: string;
+  outcome: string;
 };
 type Course = {
   id: string;
@@ -479,6 +488,11 @@ export default function Secretary() {
     null
   );
   const [studentSearch, setStudentSearch] = useState("");
+  const [activityKind, setActivityKind] =
+    useState<LeadActivity["kind"]>("call");
+  const [activityNote, setActivityNote] = useState("");
+  const [activityDate, setActivityDate] = useState("2026-09-27");
+  const [activityOpen, setActivityOpen] = useState(false);
 
   const selectedLead =
     leads.find(lead => lead.id === selectedLeadId) ?? leads[0];
@@ -692,6 +706,41 @@ export default function Secretary() {
       )
     );
     toast.success("أُضيفت الملاحظة لقائمة المتابعة المحلية");
+  };
+
+  const saveLeadActivity = (event: FormEvent) => {
+    event.preventDefault();
+    if (!selectedLead || !activityNote.trim()) {
+      toast.error("أضف ملخصًا قصيرًا للنشاط قبل الحفظ");
+      return;
+    }
+    const activity: LeadActivity = {
+      id: `ACT-${Date.now()}`,
+      kind: activityKind,
+      date: new Date().toISOString(),
+      scheduledFor: activityKind === "follow_up" ? activityDate : undefined,
+      note: activityNote.trim(),
+      outcome:
+        activityKind === "call" ? "تم تسجيل المكالمة" : "موعد متابعة مجدول",
+    };
+    setLeads(current =>
+      current.map(lead =>
+        lead.id === selectedLead.id
+          ? { ...lead, activities: [activity, ...(lead.activities ?? [])] }
+          : lead
+      )
+    );
+    if (activityKind === "call" && selectedLead.status === "new") {
+      changeLeadStatus(selectedLead.id, "contacted");
+    }
+    setActivityNote("");
+    setActivityOpen(false);
+    toast.success(
+      activityKind === "call"
+        ? "تم تسجيل المكالمة محليًا"
+        : "تم جدولة موعد المتابعة محليًا",
+      { description: "النشاط توضيحي ولا يرسل رسالة أو ينشئ تذكيرًا فعليًا." }
+    );
   };
 
   const logContactAttempt = (lead: Lead) => {
@@ -1597,6 +1646,137 @@ export default function Secretary() {
                           key={selectedLead.id}
                           onSave={note => saveLeadNote(selectedLead.id, note)}
                         />
+                      </div>
+                      <div className="secretary-activity-block">
+                        <div className="secretary-activity-heading">
+                          <div>
+                            <strong>سجل التواصل والمتابعة</strong>
+                            <small>
+                              {selectedLead.activities?.length ?? 0} نشاطات
+                              مسجلة
+                            </small>
+                          </div>
+                          <button
+                            className="secretary-copy-button"
+                            onClick={() => {
+                              setActivityKind("call");
+                              setActivityOpen(open => !open);
+                            }}
+                          >
+                            <Clock3 size={14} /> إضافة نشاط
+                          </button>
+                        </div>
+                        {activityOpen && (
+                          <form
+                            className="secretary-activity-form"
+                            onSubmit={saveLeadActivity}
+                          >
+                            <div
+                              className="secretary-activity-type"
+                              role="group"
+                              aria-label="نوع النشاط"
+                            >
+                              <button
+                                type="button"
+                                className={
+                                  activityKind === "call" ? "active" : ""
+                                }
+                                onClick={() => setActivityKind("call")}
+                              >
+                                <MessageCircle size={13} /> مكالمة
+                              </button>
+                              <button
+                                type="button"
+                                className={
+                                  activityKind === "follow_up" ? "active" : ""
+                                }
+                                onClick={() => setActivityKind("follow_up")}
+                              >
+                                <CalendarDays size={13} /> موعد متابعة
+                              </button>
+                            </div>
+                            {activityKind === "follow_up" && (
+                              <label>
+                                <span>موعد المتابعة</span>
+                                <input
+                                  type="date"
+                                  value={activityDate}
+                                  onChange={event =>
+                                    setActivityDate(event.target.value)
+                                  }
+                                />
+                              </label>
+                            )}
+                            <label>
+                              <span>
+                                {activityKind === "call"
+                                  ? "ملخص المكالمة"
+                                  : "هدف المتابعة"}
+                              </span>
+                              <textarea
+                                rows={2}
+                                placeholder="مثال: طلب ولي الأمر الاتصال بعد انتهاء الدوام"
+                                value={activityNote}
+                                onChange={event =>
+                                  setActivityNote(event.target.value)
+                                }
+                              />
+                            </label>
+                            <div className="secretary-activity-form-actions">
+                              <button
+                                type="button"
+                                className="secretary-copy-button"
+                                onClick={() => setActivityOpen(false)}
+                              >
+                                إلغاء
+                              </button>
+                              <button
+                                className="secretary-primary-button"
+                                type="submit"
+                              >
+                                <Check size={14} /> حفظ النشاط
+                              </button>
+                            </div>
+                          </form>
+                        )}
+                        <div className="secretary-activity-timeline">
+                          {(selectedLead.activities ?? [])
+                            .slice(0, 3)
+                            .map(activity => (
+                              <div
+                                key={activity.id}
+                                className="secretary-activity-item"
+                              >
+                                <span
+                                  className={
+                                    activity.kind === "call"
+                                      ? "call"
+                                      : "follow-up"
+                                  }
+                                >
+                                  {activity.kind === "call" ? (
+                                    <MessageCircle size={12} />
+                                  ) : (
+                                    <CalendarDays size={12} />
+                                  )}
+                                </span>
+                                <div>
+                                  <strong>{activity.outcome}</strong>
+                                  <small>
+                                    {activity.note}
+                                    {activity.scheduledFor
+                                      ? ` · ${formatDate(activity.scheduledFor)}`
+                                      : ""}
+                                  </small>
+                                </div>
+                              </div>
+                            ))}
+                          {!selectedLead.activities?.length && (
+                            <p className="secretary-activity-empty">
+                              لم يتم تسجيل مكالمات أو مواعيد متابعة بعد.
+                            </p>
+                          )}
+                        </div>
                       </div>
                       <div className="secretary-detail-actions">
                         <button

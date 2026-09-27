@@ -325,6 +325,29 @@ button:not(:disabled) {
 .sidebar-help > svg {
   color: #8594a8;
 }
+.finance-scope-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 2px 13px;
+  padding: 9px;
+  color: #91d9d1;
+  background: rgb(13 148 136 / 10%);
+  border: 1px solid rgb(13 148 136 / 22%);
+  border-radius: 9px;
+}
+.finance-scope-note > span {
+  display: grid;
+  gap: 2px;
+}
+.finance-scope-note strong {
+  color: #d8f7f2;
+  font-size: 8px;
+}
+.finance-scope-note small {
+  color: #91a9b8;
+  font-size: 7px;
+}
 .sidebar-bottom {
   display: grid;
   gap: 4px;
@@ -5181,6 +5204,63 @@ button:not(:disabled) {
   letter-spacing: 0.5px;
   direction: ltr;
 }
+.finance-permission-card {
+  display: grid;
+  grid-template-columns: 35px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 15px;
+  padding: 13px 15px;
+  color: #3d5d65;
+  background: linear-gradient(105deg, #eef9f7, #fffdf6);
+  border: 1px solid #dceeea;
+  border-radius: 13px;
+}
+.finance-permission-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  color: #0b8a7e;
+  background: #dff4ef;
+  border-radius: 10px;
+}
+.finance-permission-card > div:nth-child(2) {
+  display: grid;
+  gap: 3px;
+}
+.finance-permission-card strong {
+  color: #2e4b57;
+  font-size: 10px;
+}
+.finance-permission-card p {
+  margin: 0;
+  color: #82919d;
+  font-size: 8px;
+}
+.finance-permission-tags {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.finance-permission-tags span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 7px;
+  color: #0b887d;
+  background: #e5f6f1;
+  border-radius: 6px;
+  font-size: 7px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.finance-permission-tags .is-locked {
+  color: #937222;
+  background: #fff5df;
+}
 .finance-stats-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -5944,6 +6024,19 @@ button:not(:disabled) {
     align-items: flex-start;
     font-size: 8px;
     line-height: 1.7;
+  }
+  .finance-permission-card {
+    grid-template-columns: 31px minmax(0, 1fr);
+    align-items: start;
+    padding: 11px;
+  }
+  .finance-permission-icon {
+    width: 30px;
+    height: 30px;
+  }
+  .finance-permission-tags {
+    grid-column: 2;
+    justify-content: flex-start;
   }
   .finance-stats-grid {
     gap: 8px;
@@ -11408,6 +11501,151 @@ button:not(:disabled) {
   font-size: 9px;
   line-height: 1.8;
   white-space: pre-wrap;
+}
+.secretary-activity-block {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #edf1f3;
+}
+.secretary-activity-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.secretary-activity-heading > div {
+  display: grid;
+  gap: 3px;
+}
+.secretary-activity-heading strong {
+  color: #56677b;
+  font-size: 9px;
+}
+.secretary-activity-heading small {
+  color: #9da8b4;
+  font-size: 8px;
+}
+.secretary-activity-heading .secretary-copy-button {
+  min-height: 28px;
+  padding-inline: 8px;
+  font-size: 8px;
+}
+.secretary-activity-form {
+  display: grid;
+  gap: 7px;
+  padding: 9px;
+  background: #f7fbfb;
+  border: 1px solid #dfeeed;
+  border-radius: 8px;
+}
+.secretary-activity-type {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+.secretary-activity-type button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 28px;
+  color: #728294;
+  background: white;
+  border: 1px solid #e5ebee;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 8px;
+}
+.secretary-activity-type button.active {
+  color: #087e78;
+  background: #e5f6f2;
+  border-color: #bde3dc;
+  font-weight: 750;
+}
+.secretary-activity-form label {
+  display: grid;
+  gap: 4px;
+  color: #778697;
+  font-size: 8px;
+}
+.secretary-activity-form input,
+.secretary-activity-form textarea {
+  width: 100%;
+  padding: 7px;
+  color: #455970;
+  background: white;
+  border: 1px solid #e4eaee;
+  border-radius: 6px;
+  outline: none;
+  font: inherit;
+  font-size: 9px;
+}
+.secretary-activity-form textarea {
+  resize: vertical;
+  line-height: 1.6;
+}
+.secretary-activity-form input:focus,
+.secretary-activity-form textarea:focus {
+  border-color: #92c9c2;
+}
+.secretary-activity-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.secretary-activity-form-actions button {
+  min-height: 29px;
+  padding-inline: 9px;
+  font-size: 8px;
+}
+.secretary-activity-timeline {
+  display: grid;
+  gap: 7px;
+}
+.secretary-activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+.secretary-activity-item > span {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  flex: none;
+  place-items: center;
+  border-radius: 7px;
+}
+.secretary-activity-item > span.call {
+  color: #0b887d;
+  background: #e2f5f0;
+}
+.secretary-activity-item > span.follow-up {
+  color: #96701f;
+  background: #fff4dc;
+}
+.secretary-activity-item > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.secretary-activity-item strong {
+  color: #657587;
+  font-size: 8px;
+}
+.secretary-activity-item small {
+  color: #929eaa;
+  font-size: 8px;
+  line-height: 1.5;
+}
+.secretary-activity-empty {
+  margin: 0;
+  padding: 8px;
+  color: #9ba6b1;
+  background: #fafcfd;
+  border-radius: 6px;
+  font-size: 8px;
 }
 .secretary-note-composer {
   display: flex;

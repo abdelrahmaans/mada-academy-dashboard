@@ -486,6 +486,12 @@ export default function Finance() {
     });
     setMobileNavOpen(false);
   };
+  const restricted = (label: string) => {
+    toast("صلاحية غير متاحة للمحاسب", {
+      description: `الوصول إلى «${label}» محجوز للإدارة أو الدور المختص.`,
+    });
+    setMobileNavOpen(false);
+  };
 
   return (
     <div className="app-shell" dir="rtl">
@@ -523,16 +529,22 @@ export default function Finance() {
             <LayoutDashboard size={19} />
             <span>الرئيسية</span>
           </button>
-          <button className="nav-link" onClick={() => navigate("/students")}>
+          <button
+            className="nav-link"
+            onClick={() => restricted("ملفات الطلاب")}
+          >
             <Users size={19} />
             <span>الطلاب</span>
             <span className="nav-count">248</span>
           </button>
-          <button className="nav-link" onClick={() => navigate("/schedule")}>
+          <button className="nav-link" onClick={() => restricted("الجدول")}>
             <CalendarDays size={19} />
             <span>الجدول</span>
           </button>
-          <button className="nav-link" onClick={() => navigate("/classes")}>
+          <button
+            className="nav-link"
+            onClick={() => restricted("الحصص والكورسات")}
+          >
             <BookOpen size={19} />
             <span>الحصص والكورسات</span>
           </button>
@@ -547,15 +559,21 @@ export default function Finance() {
             <Wallet size={19} />
             <span>المالية والتحصيل</span>
           </button>
-          <button className="nav-link" onClick={() => navigate("/team")}>
+          <button
+            className="nav-link"
+            onClick={() => restricted("الفريق والأدوار")}
+          >
             <Users size={19} />
             <span>الفريق والأدوار</span>
           </button>
-          <button className="nav-link" onClick={() => navigate("/approvals")}>
+          <button className="nav-link" onClick={() => restricted("الموافقات")}>
             <CheckCircle2 size={19} />
             <span>الموافقات</span>
           </button>
-          <button className="nav-link" onClick={() => navigate("/reports")}>
+          <button
+            className="nav-link"
+            onClick={() => restricted("التقارير العامة")}
+          >
             <Activity size={19} />
             <span>التقارير والتحليلات</span>
           </button>
@@ -570,6 +588,13 @@ export default function Finance() {
             <span>مركز الدعم والإرشادات</span>
           </div>
           <ChevronLeft size={16} />
+        </div>
+        <div className="finance-scope-note">
+          <CheckCircle2 size={15} />
+          <span>
+            <strong>نطاق صلاحيتك</strong>
+            <small>التحصيل والمصروفات والتصدير</small>
+          </span>
         </div>
         <div className="sidebar-bottom">
           <button className="nav-link" onClick={() => comingSoon("الإعدادات")}>
@@ -707,6 +732,32 @@ export default function Finance() {
               محفوظة.
             </span>
             <span className="finance-demo-badge">DEMO</span>
+          </section>
+          <section
+            className="finance-permission-card"
+            aria-label="صلاحيات المحاسب"
+          >
+            <span className="finance-permission-icon">
+              <CheckCircle2 size={17} />
+            </span>
+            <div>
+              <strong>مساحة مالية مركزة على التسجيل والمراجعة</strong>
+              <p>
+                سجل التحصيل والمصروفات، راجع الأرصدة، وصدّر الحركة المالية ضمن
+                نطاق الفروع.
+              </p>
+            </div>
+            <div className="finance-permission-tags">
+              <span>
+                <Check size={12} /> تحصيل
+              </span>
+              <span>
+                <Check size={12} /> مصروفات
+              </span>
+              <span className="is-locked">
+                <Users size={12} /> تعديل الطلاب للإدارة
+              </span>
+            </div>
           </section>
           <section className="finance-stats-grid" aria-label="ملخص مالي للعينة">
             <article className="finance-stat">
