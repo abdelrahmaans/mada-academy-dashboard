@@ -32,7 +32,7 @@ import {
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 
-type SecretaryView = "overview" | "leads" | "registrations";
+type SecretaryView = "overview" | "leads" | "registrations" | "operations";
 type LeadStatus =
   | "new"
   | "contacted"
@@ -128,7 +128,12 @@ type RegistrationDraft = {
 
 const BRANCH = "مدينة نصر";
 const SECRETARY = "هبة محمود";
-const WORKSPACE_VIEWS = ["overview", "leads", "registrations"] as const;
+const WORKSPACE_VIEWS = [
+  "overview",
+  "leads",
+  "registrations",
+  "operations",
+] as const;
 const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   new: "جديد",
   contacted: "تم التواصل",
@@ -776,15 +781,12 @@ export default function Secretary() {
             );
           })}
           <button
-            onClick={() =>
-              toast("قسم توضيحي", {
-                description: "التقويم التشغيلي سيُنفذ في مرحلة مستقلة.",
-              })
-            }
+            className={view === "operations" ? "active" : ""}
+            aria-current={view === "operations" ? "page" : undefined}
+            onClick={() => setLeadView("operations")}
           >
             <CalendarDays size={18} />
             <span>التقويم التشغيلي</span>
-            <ChevronLeft size={14} />
           </button>
           <button
             onClick={() =>
@@ -819,6 +821,13 @@ export default function Secretary() {
           <ArrowLeft size={16} />
           <span>العودة للوحة الفرع</span>
         </button>
+        <div className="secretary-scope-note">
+          <CheckCircle2 size={15} />
+          <span>
+            <strong>نطاق صلاحيتك</strong>
+            <small>فرع {BRANCH} · تسجيل ومتابعة فقط</small>
+          </span>
+        </div>
         <div className="secretary-sidebar-version">
           مدى لإدارة الأكاديميات <span>نسخة تجريبية</span>
         </div>
@@ -889,14 +898,18 @@ export default function Secretary() {
                   ? "أهلًا هبة، نبدأ من هنا"
                   : view === "leads"
                     ? "الاستفسارات والمتابعة"
-                    : "التسجيلات والطلاب"}
+                    : view === "registrations"
+                      ? "التسجيلات والطلاب"
+                      : "التقويم التشغيلي"}
               </h1>
               <p>
                 {view === "overview"
                   ? "استقبلي الاهتمامات، تابعي الأسر، وأكملي التسجيلات من قائمة عمل واحدة."
                   : view === "leads"
                     ? "سجلي كل استفسار وخطوة متابعة داخل نطاق فرعك."
-                    : "راجعي التسجيلات النشطة أو ابدئي تسجيلًا جديدًا في مجموعة متاحة."}
+                    : view === "registrations"
+                      ? "راجعي التسجيلات النشطة أو ابدئي تسجيلًا جديدًا في مجموعة متاحة."
+                      : "راجعي مواعيد مجموعات الفرع والطاقة المتاحة قبل بدء أي تسجيل."}
               </p>
             </div>
             <div className="secretary-welcome-actions">
@@ -932,6 +945,35 @@ export default function Secretary() {
             </span>
             <b>DEMO</b>
           </section>
+
+          {view === "overview" && (
+            <section
+              className="secretary-permission-card"
+              aria-label="نطاق صلاحيات السكرتارية"
+            >
+              <span className="secretary-permission-icon">
+                <CheckCircle2 size={17} />
+              </span>
+              <div>
+                <strong>مساحة عملك تركز على خدمة الأسرة والتسجيل</strong>
+                <p>
+                  يمكنك إدارة استفسارات فرعك، متابعة التحويلات، وربط الطلاب
+                  بالمجموعات المتاحة.
+                </p>
+              </div>
+              <div className="secretary-permission-tags">
+                <span>
+                  <Check size={12} /> المتابعة
+                </span>
+                <span>
+                  <Check size={12} /> التسجيل
+                </span>
+                <span className="is-locked">
+                  <Wallet size={12} /> التحصيل للإدارة المالية
+                </span>
+              </div>
+            </section>
+          )}
 
           {view === "overview" && (
             <>
@@ -1141,6 +1183,139 @@ export default function Secretary() {
                 </div>
               </section>
             </>
+          )}
+
+          {view === "operations" && (
+            <div className="secretary-operations-page">
+              <section className="secretary-operations-summary">
+                <div>
+                  <span className="secretary-panel-kicker">
+                    تشغيل الفرع · السبت ٢٦ سبتمبر
+                  </span>
+                  <h2>نظرة سريعة على مجموعات اليوم</h2>
+                  <p>
+                    استخدمي الطاقة المتاحة لاختيار المجموعة المناسبة قبل إكمال
+                    التسجيل.
+                  </p>
+                </div>
+                <span className="secretary-operations-mark">
+                  <CalendarDays size={23} />
+                </span>
+              </section>
+              <section className="secretary-operations-kpis">
+                <article>
+                  <span>
+                    <CalendarDays size={16} />
+                  </span>
+                  <small>مجموعات نشطة</small>
+                  <strong>
+                    {offerings.filter(item => item.status === "ongoing").length}
+                  </strong>
+                </article>
+                <article>
+                  <span>
+                    <Clock3 size={16} />
+                  </span>
+                  <small>مجموعات قادمة</small>
+                  <strong>
+                    {
+                      offerings.filter(item => item.status === "upcoming")
+                        .length
+                    }
+                  </strong>
+                </article>
+                <article>
+                  <span>
+                    <Users size={16} />
+                  </span>
+                  <small>مقاعد متاحة</small>
+                  <strong>
+                    {offerings.reduce(
+                      (total, item) =>
+                        total + item.maxStudents - item.enrolledStudents,
+                      0
+                    )}
+                  </strong>
+                </article>
+              </section>
+              <section className="secretary-panel secretary-schedule-panel">
+                <div className="secretary-panel-heading">
+                  <div>
+                    <span className="secretary-panel-kicker">
+                      مجموعات فرع {BRANCH}
+                    </span>
+                    <h2>الجدول والطاقة الاستيعابية</h2>
+                  </div>
+                  <span className="secretary-pipeline-total">
+                    {offerings.length} مجموعات
+                  </span>
+                </div>
+                <div className="secretary-schedule-list">
+                  {offerings.map(offering => {
+                    const available =
+                      offering.maxStudents - offering.enrolledStudents;
+                    const fill = Math.round(
+                      (offering.enrolledStudents / offering.maxStudents) * 100
+                    );
+                    return (
+                      <article
+                        key={offering.id}
+                        className="secretary-schedule-card"
+                      >
+                        <span
+                          className={`secretary-schedule-status ${offering.status}`}
+                        >
+                          <i />
+                          {offering.status === "ongoing" ? "جارية" : "قادمة"}
+                        </span>
+                        <div className="secretary-schedule-main">
+                          <strong>{offering.courseName}</strong>
+                          <small>
+                            {offering.id} · {offering.schedule}
+                          </small>
+                          <span>
+                            <MapPin size={13} /> {offering.classroom} · المدرب{" "}
+                            {offering.instructor}
+                          </span>
+                        </div>
+                        <div className="secretary-capacity">
+                          <div>
+                            <span>الطاقة</span>
+                            <strong>
+                              {offering.enrolledStudents}/{offering.maxStudents}
+                            </strong>
+                          </div>
+                          <div className="secretary-capacity-bar">
+                            <i style={{ width: `${fill}%` }} />
+                          </div>
+                          <small>
+                            {available > 0
+                              ? `${available} مقاعد متاحة`
+                              : "المجموعة مكتملة"}
+                          </small>
+                        </div>
+                        <button
+                          className="secretary-secondary-button"
+                          disabled={available === 0}
+                          onClick={() =>
+                            openRegistration(undefined, offering.id)
+                          }
+                        >
+                          <UserRoundPlus size={14} /> تسجيل طالب
+                        </button>
+                      </article>
+                    );
+                  })}
+                </div>
+                <div className="secretary-schedule-note">
+                  <AlertCircle size={14} />
+                  <span>
+                    التقويم للعرض التشغيلي فقط؛ تعديل مواعيد الجلسات من اختصاص
+                    الإدارة الأكاديمية.
+                  </span>
+                </div>
+              </section>
+            </div>
           )}
 
           {view === "leads" && (
