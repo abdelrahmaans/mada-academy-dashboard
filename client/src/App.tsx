@@ -17,6 +17,7 @@ const Reports = lazy(() => import("./pages/Reports"));
 const Instructor = lazy(() => import("./pages/Instructor"));
 const Secretary = lazy(() => import("./pages/Secretary"));
 const HeadInstructors = lazy(() => import("./pages/HeadInstructors"));
+const AcademicPrograms = lazy(() => import("./pages/AcademicPrograms"));
 const AcademyOwner = lazy(() => import("./pages/AcademyOwner"));
 const PlatformConsole = lazy(() => import("./pages/PlatformConsole"));
 function Router() {
@@ -37,6 +38,7 @@ function Router() {
         <Route path={"/instructor"} component={Instructor} />
         <Route path={"/secretary"} component={Secretary} />
         <Route path={"/head-instructors"} component={HeadInstructors} />
+        <Route path={"/academic-programs"} component={AcademicPrograms} />
         <Route path={"/academy-owner"} component={AcademyOwner} />
         <Route path={"/platform-console"} component={PlatformConsole} />
         <Route path={"/404"} component={NotFound} />
