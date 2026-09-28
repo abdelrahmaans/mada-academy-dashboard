@@ -31,6 +31,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import RoleDashboardShell from "@/components/RoleDashboardShell";
+import RoleScopeCard from "@/components/RoleScopeCard";
+import { EmptyState, ErrorState, LockedState } from "@/components/FeedbackStates";
 
 type SecretaryView = "overview" | "leads" | "registrations" | "operations";
 type LeadStatus =
@@ -829,7 +832,14 @@ export default function Secretary() {
   ];
 
   return (
-    <div className="secretary-shell" dir="rtl">
+    <RoleDashboardShell
+      className="secretary-shell"
+      roleCode="R05"
+      roleLabel="السكرتارية"
+      scopeLevel="branch"
+      scopeLabel={`فرع ${BRANCH}`}
+      branchName={BRANCH}
+    >
       <div
         className={`secretary-mobile-backdrop ${mobileNavOpen ? "is-open" : ""}`}
         onClick={() => setMobileNavOpen(false)}
@@ -1029,6 +1039,7 @@ export default function Secretary() {
             </span>
             <b>DEMO</b>
           </section>
+          <RoleScopeCard className="secretary-role-scope-card" compact />
 
           {view === "overview" && (
             <section
@@ -1052,9 +1063,11 @@ export default function Secretary() {
                 <span>
                   <Check size={12} /> التسجيل
                 </span>
-                <span className="is-locked">
-                  <Wallet size={12} /> التحصيل للإدارة المالية
-                </span>
+                <LockedState
+                  compact
+                  title="التحصيل للإدارة المالية"
+                  description="السكرتارية تستخدم السعر النهائي فقط ولا تسجل تحصيلًا."
+                />
               </div>
             </section>
           )}
@@ -1571,10 +1584,13 @@ export default function Secretary() {
                         {filteredLeads.length === 0 && (
                           <tr>
                             <td colSpan={6}>
-                              <div className="secretary-empty">
-                                <Search size={18} />
-                                <strong>لا توجد استفسارات مطابقة</strong>
+                            <EmptyState
+                              compact
+                              className="secretary-empty"
+                              title="لا توجد استفسارات مطابقة"
+                              action={
                                 <button
+                                  type="button"
                                   onClick={() => {
                                     setQuery("");
                                     setStatusFilter("all");
@@ -1583,7 +1599,8 @@ export default function Secretary() {
                                 >
                                   مسح الفلاتر
                                 </button>
-                              </div>
+                              }
+                            />
                             </td>
                           </tr>
                         )}
@@ -1850,10 +1867,12 @@ export default function Secretary() {
                       </div>
                     </>
                   ) : (
-                    <div className="secretary-empty">
-                      <Users size={19} />
-                      <strong>اختاري استفسارًا من القائمة</strong>
-                    </div>
+                    <ErrorState
+                      compact
+                      className="secretary-empty"
+                      title="تعذر العثور على الاستفسار"
+                      description="اختاري سجلًا آخر من قائمة المتابعة لإكمال العمل."
+                    />
                   )}
                 </aside>
               </div>
@@ -2468,7 +2487,7 @@ export default function Secretary() {
           </section>
         </div>
       )}
-    </div>
+    </RoleDashboardShell>
   );
 }
 

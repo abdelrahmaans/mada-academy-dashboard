@@ -27,6 +27,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import RoleDashboardShell from "@/components/RoleDashboardShell";
+import RoleScopeCard from "@/components/RoleScopeCard";
+import { EmptyState, LockedState } from "@/components/FeedbackStates";
 
 type WorkspaceView =
   | "overview"
@@ -509,7 +512,14 @@ export default function Instructor() {
   ];
 
   return (
-    <div className="instructor-shell" dir="rtl">
+    <RoleDashboardShell
+      className="instructor-shell"
+      roleCode="R04"
+      roleLabel="المدرب"
+      scopeLevel="assigned"
+      scopeLabel="جلساتي وطلابي المسندون"
+      branchName={BRANCH}
+    >
       <div
         className={`instructor-mobile-backdrop ${mobileNavOpen ? "is-open" : ""}`}
         onClick={() => setMobileNavOpen(false)}
@@ -715,6 +725,7 @@ export default function Instructor() {
             </span>
             <b>DEMO</b>
           </section>
+          <RoleScopeCard className="instructor-role-scope-card" compact />
           {view === "overview" && (
             <section
               className="instructor-permission-card"
@@ -742,9 +753,11 @@ export default function Instructor() {
                 <span>
                   <CheckCircle2 size={14} /> تقييمات الطلاب
                 </span>
-                <span className="is-locked">
-                  <ShieldCheck size={14} /> المالية والموافقات للإدارة
-                </span>
+                <LockedState
+                  compact
+                  title="المالية والموافقات للإدارة"
+                  description="اطلب المساعدة من مدير الفرع عند الحاجة."
+                />
               </div>
             </section>
           )}
@@ -1320,16 +1333,19 @@ export default function Instructor() {
                       {visibleRoster.length === 0 && (
                         <tr>
                           <td colSpan={3}>
-                            <div className="instructor-empty">
-                              <Search size={18} />
-                              <strong>لا توجد نتائج</strong>
-                              <button
-                                type="button"
-                                onClick={() => setStudentQuery("")}
-                              >
-                                مسح البحث
-                              </button>
-                            </div>
+                            <EmptyState
+                              compact
+                              className="instructor-empty"
+                              title="لا توجد نتائج"
+                              action={
+                                <button
+                                  type="button"
+                                  onClick={() => setStudentQuery("")}
+                                >
+                                  مسح البحث
+                                </button>
+                              }
+                            />
                           </td>
                         </tr>
                       )}
@@ -1606,10 +1622,11 @@ export default function Instructor() {
                     )}
                   </>
                 ) : (
-                  <div className="instructor-empty">
-                    <Users size={20} />
-                    <strong>لا يوجد طلاب في الجلسة</strong>
-                  </div>
+                  <EmptyState
+                    compact
+                    className="instructor-empty"
+                    title="لا يوجد طلاب في الجلسة"
+                  />
                 )}
               </section>
             </div>
@@ -1625,6 +1642,6 @@ export default function Instructor() {
           </footer>
         </div>
       </main>
-    </div>
+    </RoleDashboardShell>
   );
 }
