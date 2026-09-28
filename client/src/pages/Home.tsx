@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import RoleDashboardShell from "@/components/RoleDashboardShell";
 
 type Session = {
   time: string;
@@ -189,7 +190,15 @@ function App() {
   };
 
   return (
-    <div className="app-shell" dir="rtl">
+    <RoleDashboardShell
+      className="app-shell"
+      roleCode="R02"
+      roleLabel="مدير الفرع"
+      scopeLevel="branch"
+      scopeLabel={branch}
+      tenantName="أكاديمية مدى"
+      branchName={branch}
+    >
       {mobileNavOpen && (
         <button
           className="mobile-scrim"
@@ -931,7 +940,7 @@ function App() {
           </section>
         </div>
       )}
-    </div>
+    </RoleDashboardShell>
   );
 }
 

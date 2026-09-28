@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import RoleDashboardShell from "@/components/RoleDashboardShell";
 import {
   Dialog,
   DialogClose,
@@ -590,7 +591,14 @@ export default function PlatformConsole() {
     );
 
   return (
-    <div className="app-shell platform-console" dir="rtl">
+    <RoleDashboardShell
+      className="app-shell platform-console"
+      roleCode="R00"
+      roleLabel="أدمن منصة مدى"
+      scopeLevel="platform"
+      scopeLabel="نطاق المنصة"
+      tenantName="منصة مدى"
+    >
       {mobileNavOpen && (
         <button
           className="mobile-scrim pc-sidebar-scrim"
@@ -1302,7 +1310,7 @@ export default function PlatformConsole() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </RoleDashboardShell>
   );
 }
 

@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { useLocation } from "wouter";
+import RoleDashboardShell from "@/components/RoleDashboardShell";
 import InstructorPerformanceComparison from "@/components/InstructorPerformanceComparison";
 import {
   ACADEMY_BRANCHES,
@@ -53,7 +54,15 @@ export default function AcademyOwner() {
   }, [branch, instructorId, month]);
 
   return (
-    <div className="academy-owner-shell" dir="rtl">
+    <RoleDashboardShell
+      className="academy-owner-shell"
+      roleCode="R01"
+      roleLabel="مسؤول الأكاديمية"
+      scopeLevel="tenant"
+      scopeLabel={branchLabel}
+      tenantName="أكاديمية مدى"
+      branchName={branchLabel}
+    >
       {mobileNavOpen && (
         <button
           className="academy-owner-scrim"
@@ -240,7 +249,7 @@ export default function AcademyOwner() {
           </footer>
         </div>
       </main>
-    </div>
+    </RoleDashboardShell>
   );
 }
 
