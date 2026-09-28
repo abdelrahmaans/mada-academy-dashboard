@@ -30,6 +30,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import RoleDashboardShell from "@/components/RoleDashboardShell";
+import PageHeader from "@/components/PageHeader";
+import RoleScopeCard from "@/components/RoleScopeCard";
+import SharedStatusBadge from "@/components/StatusBadge";
 import {
   Dialog,
   DialogClose,
@@ -257,14 +261,6 @@ const ticketPriorityLabels = {
 const formatNumber = (value: number) =>
   new Intl.NumberFormat("ar-EG").format(value);
 
-function StatusBadge({ status }: { status: AcademyStatus }) {
-  return (
-    <span className={`pc-status-badge pc-status-${status}`}>
-      {academyStatusLabels[status]}
-    </span>
-  );
-}
-
 function TicketStatusBadge({ status }: { status: TicketStatus }) {
   return (
     <span className={`pc-ticket-status pc-ticket-${status}`}>
@@ -366,7 +362,11 @@ function AcademyTable({
                   </span>
                 </td>
                 <td>
-                  <StatusBadge status={academy.status} />
+                  <SharedStatusBadge
+                    status={academy.status}
+                    label={academyStatusLabels[academy.status]}
+                    className={`pc-status-badge pc-status-${academy.status}`}
+                  />
                 </td>
                 <td>
                   <span className="pc-renewal-text">{academy.renewal}</span>
@@ -590,7 +590,14 @@ export default function PlatformConsole() {
     );
 
   return (
-    <div className="app-shell platform-console" dir="rtl">
+    <RoleDashboardShell
+      className="app-shell platform-console"
+      roleCode="R00"
+      roleLabel="أدمن منصة مدى"
+      scopeLevel="platform"
+      scopeLabel="نطاق المنصة"
+      tenantName="منصة مدى"
+    >
       {mobileNavOpen && (
         <button
           className="mobile-scrim pc-sidebar-scrim"
@@ -729,17 +736,21 @@ export default function PlatformConsole() {
         </header>
 
         <div className="pc-content">
-          <section className="pc-page-heading">
-            <div>
+          <PageHeader
+            className="pc-page-heading"
+            copyClassName="pc-page-heading-copy"
+            actionsClassName="pc-heading-actions"
+            eyebrow={
               <span className="pc-eyebrow">
                 <span className="pc-eyebrow-dot" />
                 {currentView.eyebrow}
               </span>
-              <h1>{currentView.title}</h1>
-              <p>{currentView.description}</p>
-            </div>
-            <div className="pc-heading-actions">{pageAction}</div>
-          </section>
+            }
+            title={currentView.title}
+            description={currentView.description}
+            actions={pageAction}
+          />
+          <RoleScopeCard className="pc-role-scope-card" compact />
 
           <div className="pc-demo-banner" role="note">
             <span className="pc-demo-mark">DEMO</span>
@@ -969,7 +980,11 @@ export default function PlatformConsole() {
                         <small>التجديد / الحالة</small>
                         <strong>{academy.renewal}</strong>
                       </span>
-                      <StatusBadge status={academy.status} />
+                      <SharedStatusBadge
+                        status={academy.status}
+                        label={academyStatusLabels[academy.status]}
+                        className={`pc-status-badge pc-status-${academy.status}`}
+                      />
                       <button
                         className="pc-row-action"
                         type="button"
@@ -1302,7 +1317,7 @@ export default function PlatformConsole() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </RoleDashboardShell>
   );
 }
 

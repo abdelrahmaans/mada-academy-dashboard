@@ -14,6 +14,9 @@ import {
   X,
 } from "lucide-react";
 import { useLocation } from "wouter";
+import RoleDashboardShell from "@/components/RoleDashboardShell";
+import PageHeader from "@/components/PageHeader";
+import RoleScopeCard from "@/components/RoleScopeCard";
 import InstructorPerformanceComparison from "@/components/InstructorPerformanceComparison";
 import {
   ACADEMY_BRANCHES,
@@ -53,7 +56,15 @@ export default function AcademyOwner() {
   }, [branch, instructorId, month]);
 
   return (
-    <div className="academy-owner-shell" dir="rtl">
+    <RoleDashboardShell
+      className="academy-owner-shell"
+      roleCode="R01"
+      roleLabel="مسؤول الأكاديمية"
+      scopeLevel="tenant"
+      scopeLabel={branchLabel}
+      tenantName="أكاديمية مدى"
+      branchName={branchLabel}
+    >
       {mobileNavOpen && (
         <button
           className="academy-owner-scrim"
@@ -147,26 +158,29 @@ export default function AcademyOwner() {
             <ChevronLeft size={13} />
             <strong>رئيس الأكاديمية</strong>
           </div>
-          <section className="academy-owner-welcome">
-            <div>
+          <PageHeader
+            className="academy-owner-welcome"
+            copyClassName="academy-owner-welcome-copy"
+            actionsClassName="academy-owner-welcome-meta"
+            eyebrow={
               <span className="academy-owner-eyebrow">
                 <i /> متابعة على مستوى الأكاديمية
               </span>
-              <h1>أداء الأكاديمية والمدربين</h1>
-              <p>
-                مقارنة موحّدة لأداء كل مدرب وفروع الأكاديمية، مع الحفاظ على فصل
-                هذه النظرة عن مهام مدير الفرع اليومية.
-              </p>
-            </div>
-            <div className="academy-owner-welcome-meta">
-              <span>
-                <CalendarIcon /> {monthLabel}
-              </span>
-              <span>
-                <ShieldCheck size={14} /> للعرض فقط
-              </span>
-            </div>
-          </section>
+            }
+            title="أداء الأكاديمية والمدربين"
+            description="مقارنة موحّدة لأداء كل مدرب وفروع الأكاديمية، مع الحفاظ على فصل هذه النظرة عن مهام مدير الفرع اليومية."
+            actions={
+              <>
+                <span>
+                  <CalendarIcon /> {monthLabel}
+                </span>
+                <span>
+                  <ShieldCheck size={14} /> للعرض فقط
+                </span>
+              </>
+            }
+          />
+          <RoleScopeCard className="academy-owner-content-scope" />
 
           <div className="academy-owner-demo-banner" role="note">
             <span>DEMO</span>
@@ -240,7 +254,7 @@ export default function AcademyOwner() {
           </footer>
         </div>
       </main>
-    </div>
+    </RoleDashboardShell>
   );
 }
 
