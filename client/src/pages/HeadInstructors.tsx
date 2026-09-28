@@ -863,6 +863,11 @@ export default function HeadInstructors() {
           </button>
         </nav>
         <div className="academic-sidebar-divider" />
+        <button className="academic-nav-link" onClick={() => navigate("/academic-programs")}>
+          <BookOpen size={16} />
+          <span>إدارة البرامج والمناهج</span>
+          <ChevronLeft size={14} />
+        </button>
         <button
           className="academic-nav-link"
           onClick={() => navigate("/schedule")}
