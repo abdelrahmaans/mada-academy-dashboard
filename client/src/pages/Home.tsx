@@ -252,6 +252,10 @@ function App() {
             <BookOpen size={19} />
             <span>الحصص والكورسات</span>
           </button>
+          <button className="nav-link" onClick={() => navigate("/branch-operations")}>
+            <Settings size={19} />
+            <span>إدارة التشغيل</span>
+          </button>
           <button
             className="nav-link"
             onClick={() => showComingSoon("المسابقات")}
