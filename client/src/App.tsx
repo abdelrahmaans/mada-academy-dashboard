@@ -21,6 +21,7 @@ const InstructorDesk = lazy(() => import("./pages/InstructorDesk"));
 const HeadInstructors = lazy(() => import("./pages/HeadInstructors"));
 const AcademicPrograms = lazy(() => import("./pages/AcademicPrograms"));
 const AcademyOwner = lazy(() => import("./pages/AcademyOwner"));
+const ExecutiveDashboard = lazy(() => import("./pages/ExecutiveDashboard"));
 const PlatformConsole = lazy(() => import("./pages/PlatformConsole"));
 function Router() {
   return (
@@ -45,6 +46,7 @@ function Router() {
         <Route path={"/head-instructors"} component={HeadInstructors} />
         <Route path={"/academic-programs"} component={AcademicPrograms} />
         <Route path={"/academy-owner"} component={AcademyOwner} />
+        <Route path={"/executive-dashboard"} component={ExecutiveDashboard} />
         <Route path={"/platform-console"} component={PlatformConsole} />
         <Route path={"/404"} component={NotFound} />
         {/* Final fallback route */}
