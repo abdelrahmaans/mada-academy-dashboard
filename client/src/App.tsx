@@ -12,6 +12,7 @@ const Secretary = lazy(() => import("./pages/Secretary"));
 const SecretaryDesk = lazy(() => import("./pages/SecretaryDesk"));
 const Finance = lazy(() => import("./pages/Finance"));
 const FinanceDesk = lazy(() => import("./pages/FinanceDesk"));
+const MarketingDesk = lazy(() => import("./pages/MarketingDesk"));
 const Team = lazy(() => import("./pages/Team"));
 const BranchOperations = lazy(() => import("./pages/BranchOperations"));
 const Approvals = lazy(() => import("./pages/Approvals"));
@@ -36,6 +37,7 @@ function Router() {
         <Route path={"/secretary-desk"} component={SecretaryDesk} />
         <Route path={"/finance"} component={Finance} />
         <Route path={"/finance-desk"} component={FinanceDesk} />
+        <Route path={"/marketing-desk"} component={MarketingDesk} />
         <Route path={"/team"} component={Team} />
         <Route path={"/branch-operations"} component={BranchOperations} />
         <Route path={"/approvals"} component={Approvals} />
