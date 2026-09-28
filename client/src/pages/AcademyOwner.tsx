@@ -273,6 +273,7 @@ export default function AcademyOwner() {
           <OwnerNavButton active={view === "branches"} icon={<Building2 size={17} />} label="الفروع والأداء" count={BRANCH_ROLLUP.length} onClick={() => goToView("branches")} />
           <OwnerNavButton active={view === "tickets"} icon={<Headphones size={17} />} label="مركز التذاكر" count={tickets.filter(ticket => ticket.status !== "resolved").length} onClick={() => goToView("tickets")} />
           <OwnerNavButton active={view === "reports"} icon={<FileBarChart size={17} />} label="التقارير المجمعة" onClick={() => goToView("reports")} />
+          <button className="academy-owner-nav-button" onClick={() => navigate("/executive-dashboard")}><TrendingUp size={17} /><span>لوحة الإدارة التنفيذية</span></button>
         </nav>
         <div className="academy-owner-sidebar-spacer" />
         <div className="academy-owner-scope-card"><MapPin size={15} /><span><small>نطاق العرض</small><strong>{branchLabel}</strong></span></div>
