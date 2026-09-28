@@ -41,6 +41,9 @@ import {
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import InstructorPerformanceComparison from "@/components/InstructorPerformanceComparison";
+import RoleDashboardShell from "@/components/RoleDashboardShell";
+import RoleScopeCard from "@/components/RoleScopeCard";
+import { EmptyState, LoadingState, LockedState } from "@/components/FeedbackStates";
 
 type WorkspaceView =
   | "overview"
@@ -570,9 +573,13 @@ function EvaluationCard({
         </strong>
         <small>من ٥</small>
       </span>
-      <span className={`academic-card-status ${evaluation.cardStatus}`}>
-        {reviewed ? "تم الاطلاع" : CARD_STATUS_LABELS[evaluation.cardStatus]}
-      </span>
+      {evaluation.cardStatus === "generating" ? (
+        <LoadingState compact label="جارٍ تجهيز البطاقة" />
+      ) : (
+        <span className={`academic-card-status ${evaluation.cardStatus}`}>
+          {reviewed ? "تم الاطلاع" : CARD_STATUS_LABELS[evaluation.cardStatus]}
+        </span>
+      )}
       <ChevronLeft size={15} className="academic-row-chevron" />
     </button>
   );
@@ -786,7 +793,14 @@ export default function HeadInstructors() {
   };
 
   return (
-    <div className="academic-shell" dir="rtl">
+    <RoleDashboardShell
+      className="academic-shell"
+      roleCode="R03"
+      roleLabel="رئيس المدربين"
+      scopeLevel="branch"
+      scopeLabel={`فرع ${BRANCH}`}
+      branchName={BRANCH}
+    >
       <button
         className={`academic-mobile-backdrop ${mobileNavOpen ? "is-open" : ""}`}
         aria-label="إغلاق القائمة"
@@ -982,6 +996,7 @@ export default function HeadInstructors() {
             </span>
             <b>DEMO</b>
           </div>
+          <RoleScopeCard className="academic-role-scope-card" compact />
 
           {view === "overview" && (
             <OverviewView
@@ -1135,7 +1150,7 @@ export default function HeadInstructors() {
           </section>
         </div>
       )}
-    </div>
+    </RoleDashboardShell>
   );
 }
 
@@ -1617,16 +1632,17 @@ function TeamView({
           </div>
         ))}
       </section>
-      <section className="academic-permission-note">
-        <ShieldCheck size={17} />
-        <p>
-          المدربون والمجموعات هنا للمتابعة الأكاديمية. إدارة الحسابات وتغيير
-          الدور أو حالة الموظف تظل ضمن صلاحيات مدير الفرع.
-        </p>
-        <button onClick={() => window.location.assign("/team")}>
-          إدارة الفريق <ArrowUpLeft size={13} />
-        </button>
-      </section>
+      <LockedState
+        className="academic-permission-note"
+        compact
+        title="إدارة الحسابات خارج نطاق R03"
+        description="إدارة الدور أو حالة الموظف تظل ضمن صلاحيات مدير الفرع."
+        action={
+          <button type="button" onClick={() => window.location.assign("/team")}>
+            إدارة الفريق <ArrowUpLeft size={13} />
+          </button>
+        }
+      />
     </>
   );
 }
@@ -1831,22 +1847,24 @@ function AttendanceApprovalsView({
               </button>
             ))}
             {filteredSessions.length === 0 && (
-              <div className="academic-approval-empty">
-                <CheckCircle2 size={22} />
-                <strong>
-                  {sessions.length === 0
+              <EmptyState
+                className="academic-approval-empty"
+                title={
+                  sessions.length === 0
                     ? "اكتملت مراجعة كل الطلبات"
-                    : "لا توجد طلبات مطابقة"}
-                </strong>
-                <span>
-                  {sessions.length === 0
+                    : "لا توجد طلبات مطابقة"
+                }
+                description={
+                  sessions.length === 0
                     ? "يمكنك مراجعة قراراتك السابقة في سجل القرارات أدناه."
-                    : "جرّب كلمة بحث أخرى أو امسح البحث."}
-                </span>
-                {query && (
-                  <button onClick={() => setQuery("")}>مسح البحث</button>
-                )}
-              </div>
+                    : "جرّب كلمة بحث أخرى أو امسح البحث."
+                }
+                action={
+                  query ? (
+                    <button type="button" onClick={() => setQuery("")}>مسح البحث</button>
+                  ) : undefined
+                }
+              />
             )}
           </div>
           <div className="academic-table-footer">
