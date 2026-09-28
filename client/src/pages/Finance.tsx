@@ -14,6 +14,7 @@ import {
   CircleHelp,
   Clock3,
   CreditCard,
+  FileCheck2,
   FileText,
   GraduationCap,
   LayoutDashboard,
@@ -736,6 +737,10 @@ export default function Finance() {
           <button className="nav-link active" aria-current="page">
             <Wallet size={19} />
             <span>المالية والتحصيل</span>
+          </button>
+          <button className="nav-link" onClick={() => navigate("/finance-desk")}>
+            <FileCheck2 size={19} />
+            <span>مركز الإقفال المالي</span>
           </button>
           <button
             className="nav-link"
