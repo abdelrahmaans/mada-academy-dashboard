@@ -15,6 +15,7 @@ const BranchOperations = lazy(() => import("./pages/BranchOperations"));
 const Approvals = lazy(() => import("./pages/Approvals"));
 const Reports = lazy(() => import("./pages/Reports"));
 const Instructor = lazy(() => import("./pages/Instructor"));
+const InstructorDesk = lazy(() => import("./pages/InstructorDesk"));
 const Secretary = lazy(() => import("./pages/Secretary"));
 const HeadInstructors = lazy(() => import("./pages/HeadInstructors"));
 const AcademicPrograms = lazy(() => import("./pages/AcademicPrograms"));
@@ -36,6 +37,7 @@ function Router() {
         <Route path={"/approvals"} component={Approvals} />
         <Route path={"/reports"} component={Reports} />
         <Route path={"/instructor"} component={Instructor} />
+        <Route path={"/instructor-desk"} component={InstructorDesk} />
         <Route path={"/secretary"} component={Secretary} />
         <Route path={"/head-instructors"} component={HeadInstructors} />
         <Route path={"/academic-programs"} component={AcademicPrograms} />
