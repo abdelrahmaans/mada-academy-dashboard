@@ -7,6 +7,7 @@ import {
   BarChart3,
   Bell,
   BookOpen,
+  Building2,
   CalendarCheck,
   CalendarDays,
   CheckCircle2,
@@ -272,6 +273,14 @@ function App() {
           >
             <GraduationCap size={19} />
             <span>معاينة رئيس الأكاديمية</span>
+          </button>
+          <button
+            className="nav-link"
+            onClick={() => navigate("/platform-console")}
+          >
+            <Building2 size={19} />
+            <span>معاينة إدارة المنصة</span>
+            <span className="nav-count">R00</span>
           </button>
         </nav>
 

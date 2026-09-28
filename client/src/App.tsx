@@ -17,6 +17,7 @@ const Instructor = lazy(() => import("./pages/Instructor"));
 const Secretary = lazy(() => import("./pages/Secretary"));
 const HeadInstructors = lazy(() => import("./pages/HeadInstructors"));
 const AcademyOwner = lazy(() => import("./pages/AcademyOwner"));
+const PlatformConsole = lazy(() => import("./pages/PlatformConsole"));
 function Router() {
   return (
     <Suspense
@@ -35,6 +36,7 @@ function Router() {
         <Route path={"/secretary"} component={Secretary} />
         <Route path={"/head-instructors"} component={HeadInstructors} />
         <Route path={"/academy-owner"} component={AcademyOwner} />
+        <Route path={"/platform-console"} component={PlatformConsole} />
         <Route path={"/404"} component={NotFound} />
         {/* Final fallback route */}
         <Route component={NotFound} />

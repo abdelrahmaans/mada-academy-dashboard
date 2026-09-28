@@ -574,6 +574,12 @@ export default function Team() {
               >
                 <GraduationCap size={17} /> معاينة رئيس الأكاديمية
               </button>
+              <button
+                className="button button-secondary academy-owner-preview-button"
+                onClick={() => navigate("/platform-console")}
+              >
+                <ShieldCheck size={17} /> معاينة أدمن المنصة · R00
+              </button>
               <button className="button button-secondary" onClick={downloadCsv}>
                 <ArrowDownToLine size={17} /> تصدير الفريق
               </button>
