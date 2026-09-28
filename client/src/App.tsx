@@ -8,7 +8,8 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 const Home = lazy(() => import("./pages/Home"));
 const Students = lazy(() => import("./pages/Students"));
 const Schedule = lazy(() => import("./pages/Schedule"));
-const Classes = lazy(() => import("./pages/Classes"));
+const Secretary = lazy(() => import("./pages/Secretary"));
+const SecretaryDesk = lazy(() => import("./pages/SecretaryDesk"));
 const Finance = lazy(() => import("./pages/Finance"));
 const Team = lazy(() => import("./pages/Team"));
 const BranchOperations = lazy(() => import("./pages/BranchOperations"));
@@ -16,7 +17,6 @@ const Approvals = lazy(() => import("./pages/Approvals"));
 const Reports = lazy(() => import("./pages/Reports"));
 const Instructor = lazy(() => import("./pages/Instructor"));
 const InstructorDesk = lazy(() => import("./pages/InstructorDesk"));
-const Secretary = lazy(() => import("./pages/Secretary"));
 const HeadInstructors = lazy(() => import("./pages/HeadInstructors"));
 const AcademicPrograms = lazy(() => import("./pages/AcademicPrograms"));
 const AcademyOwner = lazy(() => import("./pages/AcademyOwner"));
@@ -30,7 +30,8 @@ function Router() {
         <Route path={"/"} component={Home} />
         <Route path={"/students"} component={Students} />
         <Route path={"/schedule"} component={Schedule} />
-        <Route path={"/classes"} component={Classes} />
+        <Route path={"/secretary"} component={Secretary} />
+        <Route path={"/secretary-desk"} component={SecretaryDesk} />
         <Route path={"/finance"} component={Finance} />
         <Route path={"/team"} component={Team} />
         <Route path={"/branch-operations"} component={BranchOperations} />
