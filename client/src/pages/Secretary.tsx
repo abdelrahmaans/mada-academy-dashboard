@@ -892,6 +892,10 @@ export default function Secretary() {
             <Wallet size={18} />
             <span>التحصيل والفواتير</span>
           </button>
+          <button onClick={() => navigate("/secretary-desk")}>
+            <FileText size={18} />
+            <span>مركز خدمة الأسرة</span>
+          </button>
         </nav>
         <div className="secretary-sidebar-spacer" />
         <button
