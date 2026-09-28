@@ -581,6 +581,12 @@ export default function Instructor() {
             <ShieldCheck size={18} />
             <span>ملفي الشخصي</span>
           </button>
+          <button
+            onClick={() => navigate("/instructor-desk")}
+          >
+            <CalendarDays size={18} />
+            <span>وضع الحصة السريع</span>
+          </button>
         </nav>
         <div className="instructor-sidebar-spacer" />
         <button
