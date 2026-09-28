@@ -64,7 +64,19 @@ type Expense = {
   approvedBy?: string;
   approvalNote?: string;
 };
+type CorrectionRequestStatus = "pending" | "approved" | "rejected";
+type InvoiceCorrectionRequest = {
+  id: string;
+  invoiceId: string;
+  reason: string;
+  evidenceReference: string;
+  evidenceFileName: string;
+  status: CorrectionRequestStatus;
+  requestedAt: string;
+  requestedBy: string;
+};
 type FinanceTab = "collections" | "expenses";
+type FinanceDialog = "payment" | "expense" | "correction" | null;
 
 const BRANCHES = ["كل الفروع", "مدينة نصر", "المعادي", "الشيخ زايد"];
 const TODAY = "2026-09-26";
@@ -212,6 +224,11 @@ const STATUS_LABELS: Record<InvoiceStatus, string> = {
   paid: "مدفوعة",
   overdue: "متأخرة",
 };
+const CORRECTION_STATUS_LABELS: Record<CorrectionRequestStatus, string> = {
+  pending: "بانتظار المراجعة",
+  approved: "تمت الموافقة",
+  rejected: "مرفوض",
+};
 const CATEGORY_LABELS: Record<Expense["category"], string> = {
   instructor_salary: "أجور مدربين",
   competition: "مسابقات",
@@ -236,6 +253,12 @@ function formatDate(value: string) {
     day: "numeric",
     month: "short",
   }).format(new Date(`${value}T12:00:00`));
+}
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("ar-EG-u-nu-latn", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
 }
 function getStatus(invoice: Invoice): InvoiceStatus {
   if (invoice.collected >= invoice.total) return "paid";
@@ -279,7 +302,18 @@ export default function Finance() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [branchMenuOpen, setBranchMenuOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [dialog, setDialog] = useState<"payment" | "expense" | null>(null);
+  const [dialog, setDialog] = useState<FinanceDialog>(null);
+  const [correctionRequests, setCorrectionRequests] = useState<
+    InvoiceCorrectionRequest[]
+  >([]);
+  const [correctionInvoiceId, setCorrectionInvoiceId] = useState("");
+  const [correctionReason, setCorrectionReason] = useState("");
+  const [correctionEvidenceReference, setCorrectionEvidenceReference] =
+    useState("");
+  const [correctionEvidenceFileName, setCorrectionEvidenceFileName] =
+    useState("");
+  const [correctionValidationError, setCorrectionValidationError] =
+    useState("");
   const [invoiceId, setInvoiceId] = useState(
     INITIAL_INVOICES.find(invoice => invoice.collected < invoice.total)?.id ??
       ""
@@ -298,6 +332,15 @@ export default function Finance() {
   const remainingForInvoice = currentInvoice
     ? Math.max(0, currentInvoice.total - currentInvoice.collected)
     : 0;
+  const correctionInvoice = invoices.find(
+    invoice => invoice.id === correctionInvoiceId
+  );
+  const correctionHistory = correctionRequests.filter(
+    request => request.invoiceId === correctionInvoiceId
+  );
+  const hasPendingCorrection = correctionHistory.some(
+    request => request.status === "pending"
+  );
 
   const visibleInvoices = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("ar");
@@ -422,9 +465,12 @@ export default function Finance() {
     setDialog("expense");
   };
   const requestInvoiceCorrection = (invoice: Invoice) => {
-    toast("الفاتورة مقفولة بعد التحصيل", {
-      description: `للتصحيح ارفع طلبًا موثقًا للإدارة مع السبب · ${invoice.invoiceNumber}`,
-    });
+    setCorrectionInvoiceId(invoice.id);
+    setCorrectionReason("");
+    setCorrectionEvidenceReference("");
+    setCorrectionEvidenceFileName("");
+    setCorrectionValidationError("");
+    setDialog("correction");
   };
   const submitPayment = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -474,6 +520,52 @@ export default function Finance() {
     toast.success("تم رفع المصروف للمراجعة", {
       description:
         "يحتاج تأكيد مدير الفرع قبل اعتباره مصروفًا معتمدًا في الماليات.",
+    });
+  };
+  const submitCorrectionRequest = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (
+      !correctionInvoice ||
+      correctionInvoice.collected < correctionInvoice.total
+    ) {
+      toast.error("لا يمكن طلب تصحيح قبل اكتمال تحصيل الفاتورة");
+      return;
+    }
+    if (correctionHistory.some(request => request.status === "pending")) {
+      setCorrectionValidationError("يوجد طلب مفتوح لهذه الفاتورة بالفعل.");
+      return;
+    }
+    const reason = correctionReason.trim();
+    const evidenceReference = correctionEvidenceReference.trim();
+    if (!reason) {
+      setCorrectionValidationError("اكتب سبب التصحيح قبل إرسال الطلب.");
+      return;
+    }
+    if (!evidenceReference && !correctionEvidenceFileName) {
+      setCorrectionValidationError(
+        "أضف رقمًا مرجعيًا أو اختر اسم ملف مستند داعم للمتابعة."
+      );
+      return;
+    }
+
+    const request: InvoiceCorrectionRequest = {
+      id: `COR-${Date.now()}`,
+      invoiceId: correctionInvoice.id,
+      reason,
+      evidenceReference,
+      evidenceFileName: correctionEvidenceFileName,
+      status: "pending",
+      requestedAt: new Date().toISOString(),
+      requestedBy: "أحمد محمود · محاسب الفرع",
+    };
+    setCorrectionRequests(current => [request, ...current]);
+    setDialog(null);
+    setCorrectionReason("");
+    setCorrectionEvidenceReference("");
+    setCorrectionEvidenceFileName("");
+    setCorrectionValidationError("");
+    toast.success("تم تسجيل طلب التصحيح في بيانات العرض", {
+      description: `${correctionInvoice.invoiceNumber} · بانتظار المراجعة الإدارية.`,
     });
   };
   const downloadCsv = () => {
@@ -1270,14 +1362,40 @@ export default function Finance() {
                                 تحصيل
                               </button>
                             ) : (
-                              <button
-                                className="finance-correction-button"
-                                onClick={() =>
-                                  requestInvoiceCorrection(invoice)
-                                }
-                              >
-                                <Check size={15} /> طلب تصحيح
-                              </button>
+                              (() => {
+                                const history = correctionRequests.filter(
+                                  request => request.invoiceId === invoice.id
+                                );
+                                const latestRequest = history[0];
+                                return (
+                                  <span className="finance-correction-action">
+                                    <button
+                                      className="finance-correction-button"
+                                      onClick={() =>
+                                        requestInvoiceCorrection(invoice)
+                                      }
+                                      aria-label={`${latestRequest ? "عرض سجل طلب التصحيح" : "طلب تصحيح"} للفاتورة ${invoice.invoiceNumber}`}
+                                    >
+                                      <FileText size={14} />
+                                      {latestRequest
+                                        ? "سجل التصحيح"
+                                        : "طلب تصحيح"}
+                                    </button>
+                                    {latestRequest && (
+                                      <span
+                                        className={`finance-correction-status finance-correction-status-${latestRequest.status}`}
+                                      >
+                                        <i />
+                                        {
+                                          CORRECTION_STATUS_LABELS[
+                                            latestRequest.status
+                                          ]
+                                        }
+                                      </span>
+                                    )}
+                                  </span>
+                                );
+                              })()
                             )}
                           </td>
                         </tr>
@@ -1432,7 +1550,7 @@ export default function Finance() {
           }}
         >
           <section
-            className="student-dialog finance-dialog"
+            className={`student-dialog finance-dialog${dialog === "correction" ? " finance-correction-dialog" : ""}`}
             role="dialog"
             aria-modal="true"
             aria-labelledby="finance-dialog-title"
@@ -1441,6 +1559,8 @@ export default function Finance() {
               <span className="dialog-mark">
                 {dialog === "payment" ? (
                   <CreditCard size={20} />
+                ) : dialog === "correction" ? (
+                  <FileText size={20} />
                 ) : (
                   <TrendingDown size={20} />
                 )}
@@ -1455,12 +1575,18 @@ export default function Finance() {
             </div>
             <div className="finance-dialog-heading">
               <h2 id="finance-dialog-title">
-                {dialog === "payment" ? "تسجيل تحصيل" : "إضافة مصروف"}
+                {dialog === "payment"
+                  ? "تسجيل تحصيل"
+                  : dialog === "correction"
+                    ? "طلب تصحيح فاتورة"
+                    : "إضافة مصروف"}
               </h2>
               <p>
                 {dialog === "payment"
                   ? "سجّل دفعة على فاتورة الطالب."
-                  : "أضف بند مصروف توضيحي للفرع."}
+                  : dialog === "correction"
+                    ? "ارفع طلب مراجعة موثقًا؛ لا يتم تعديل الفاتورة المحصّلة مباشرة."
+                    : "أضف بند مصروف توضيحي للفرع."}
               </p>
             </div>
             {dialog === "payment" ? (
@@ -1540,7 +1666,7 @@ export default function Finance() {
                   </button>
                 </div>
               </form>
-            ) : (
+            ) : dialog === "expense" ? (
               <form className="finance-form" onSubmit={submitExpense}>
                 <label>
                   وصف المصروف
@@ -1613,7 +1739,200 @@ export default function Finance() {
                   </button>
                 </div>
               </form>
-            )}
+            ) : correctionInvoice ? (
+              <div className="finance-correction-content">
+                <div className="finance-correction-lock-note">
+                  <AlertCircle size={16} />
+                  <span>
+                    <strong>الفاتورة المحصّلة غير قابلة للتعديل المباشر</strong>
+                    <small>
+                      الطلب يذهب للمراجعة فقط، ولا يغيّر قيمة الفاتورة أو بيانات
+                      التحصيل.
+                    </small>
+                  </span>
+                </div>
+                <div className="finance-correction-invoice">
+                  <span>
+                    <small>رقم الفاتورة</small>
+                    <strong dir="ltr">{correctionInvoice.invoiceNumber}</strong>
+                  </span>
+                  <span>
+                    <small>الطالب / ولي الأمر</small>
+                    <strong>
+                      {correctionInvoice.student} · {correctionInvoice.parent}
+                    </strong>
+                  </span>
+                  <span>
+                    <small>الكورس والفرع</small>
+                    <strong>
+                      {correctionInvoice.course} · {correctionInvoice.branch}
+                    </strong>
+                  </span>
+                  <span>
+                    <small>إجمالي الفاتورة المحصّل</small>
+                    <strong dir="ltr">
+                      {formatMoney(correctionInvoice.total)} ج.م
+                    </strong>
+                  </span>
+                </div>
+                <section
+                  className="finance-correction-history"
+                  aria-labelledby="correction-history-title"
+                >
+                  <div className="finance-correction-history-heading">
+                    <span>
+                      <Clock3 size={15} />
+                      <strong id="correction-history-title">سجل الطلبات</strong>
+                    </span>
+                    <small>{correctionHistory.length} طلب</small>
+                  </div>
+                  {correctionHistory.length ? (
+                    <ol>
+                      {correctionHistory.map(request => (
+                        <li key={request.id}>
+                          <div className="finance-correction-history-top">
+                            <strong dir="ltr">{request.id}</strong>
+                            <span
+                              className={`finance-correction-status finance-correction-status-${request.status}`}
+                            >
+                              <i />
+                              {CORRECTION_STATUS_LABELS[request.status]}
+                            </span>
+                          </div>
+                          <small>
+                            {request.requestedBy} ·{" "}
+                            {formatDateTime(request.requestedAt)}
+                          </small>
+                          <p>{request.reason}</p>
+                          {(request.evidenceReference ||
+                            request.evidenceFileName) && (
+                            <small className="finance-correction-evidence-summary">
+                              المستند: {request.evidenceReference || "—"}
+                              {request.evidenceFileName
+                                ? ` · ${request.evidenceFileName}`
+                                : ""}
+                            </small>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p className="finance-correction-empty-history">
+                      لا توجد طلبات سابقة لهذه الفاتورة.
+                    </p>
+                  )}
+                </section>
+                {hasPendingCorrection ? (
+                  <div
+                    className="finance-correction-pending"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <Clock3 size={16} />
+                    <span>
+                      <strong>يوجد طلب مفتوح بانتظار المراجعة</strong>
+                      <small>
+                        لن يمكن إرسال طلب آخر لهذه الفاتورة قبل انتهاء المراجعة.
+                      </small>
+                    </span>
+                  </div>
+                ) : (
+                  <form
+                    className="finance-form finance-correction-form"
+                    onSubmit={submitCorrectionRequest}
+                  >
+                    <label>
+                      سبب طلب التصحيح <b>*</b>
+                      <textarea
+                        value={correctionReason}
+                        onChange={event => {
+                          setCorrectionReason(event.target.value);
+                          setCorrectionValidationError("");
+                        }}
+                        maxLength={500}
+                        rows={3}
+                        placeholder="وضّح البيانات المطلوب مراجعتها وسبب طلب التعديل..."
+                        required
+                      />
+                      <small className="finance-correction-counter">
+                        {correctionReason.length}/500
+                      </small>
+                    </label>
+                    <div className="finance-correction-evidence">
+                      <div>
+                        <strong>
+                          مستند داعم أو مرجع <b>*</b>
+                        </strong>
+                        <small>
+                          أرفق ملفًا أو أدخل رقم إيصال/مستند مرتبط بالطلب.
+                        </small>
+                      </div>
+                      <div className="finance-correction-evidence-controls">
+                        <label className="finance-evidence-picker">
+                          <FileText size={14} /> اختيار ملف
+                          <input
+                            type="file"
+                            accept=".pdf,.png,.jpg,.jpeg,image/png,image/jpeg,application/pdf"
+                            aria-label="اختيار مستند داعم"
+                            onChange={event => {
+                              setCorrectionEvidenceFileName(
+                                event.target.files?.[0]?.name ?? ""
+                              );
+                              setCorrectionValidationError("");
+                            }}
+                          />
+                        </label>
+                        {correctionEvidenceFileName && (
+                          <span className="finance-evidence-file-name">
+                            {correctionEvidenceFileName}
+                          </span>
+                        )}
+                      </div>
+                      <label className="finance-evidence-reference">
+                        أو رقم/مرجع المستند
+                        <input
+                          value={correctionEvidenceReference}
+                          onChange={event => {
+                            setCorrectionEvidenceReference(event.target.value);
+                            setCorrectionValidationError("");
+                          }}
+                          maxLength={120}
+                          placeholder="مثال: إيصال تحصيل رقم 2048"
+                        />
+                      </label>
+                      <small className="finance-evidence-disclaimer">
+                        معاينة محلية فقط: لا يتم رفع الملف أو حفظه على خادم؛
+                        يُسجّل اسم الملف/المرجع في سجل الطلب.
+                      </small>
+                    </div>
+                    {correctionValidationError && (
+                      <p className="finance-correction-error" role="alert">
+                        {correctionValidationError}
+                      </p>
+                    )}
+                    <div className="dialog-info">
+                      <AlertCircle size={15} />
+                      <span>
+                        تسجيل الطلب لا يغيّر الفاتورة. حالة الطلب وسجله محفوظان
+                        داخل هذه المعاينة فقط.
+                      </span>
+                    </div>
+                    <div className="dialog-actions">
+                      <button
+                        type="button"
+                        className="button button-secondary"
+                        onClick={() => setDialog(null)}
+                      >
+                        إلغاء
+                      </button>
+                      <button className="button button-primary" type="submit">
+                        <Check size={15} /> إرسال طلب المراجعة
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            ) : null}
           </section>
         </div>
       )}

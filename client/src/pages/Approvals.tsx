@@ -200,6 +200,7 @@ export default function Approvals() {
   const [sortOrder, setSortOrder] = useState<ApprovalSort>("priority");
   const [selected, setSelected] = useState<ApprovalItem | null>(null);
   const [decisionNote, setDecisionNote] = useState("");
+  const [expenseRejectionMode, setExpenseRejectionMode] = useState(false);
   const canApproveSelected =
     selected?.kind !== "discount" ||
     (selected.discountValue ?? 0) <= BRANCH_MANAGER_DISCOUNT_LIMIT;
@@ -261,6 +262,7 @@ export default function Approvals() {
   const closeReview = () => {
     setSelected(null);
     setDecisionNote("");
+    setExpenseRejectionMode(false);
   };
 
   const showComingSoon = (label: string) => {
@@ -271,6 +273,7 @@ export default function Approvals() {
   };
   const openReview = (item: ApprovalItem) => {
     setDecisionNote("");
+    setExpenseRejectionMode(false);
     setSelected(item);
   };
   const decide = (id: string, status: "approved" | "rejected") => {
@@ -311,6 +314,7 @@ export default function Approvals() {
     );
     setSelected(null);
     setDecisionNote("");
+    setExpenseRejectionMode(false);
     toast.success(
       status === "approved"
         ? "تمت الموافقة في بيانات العرض"
@@ -827,13 +831,25 @@ export default function Approvals() {
                       )}
                       {item.status !== "pending" && (
                         <div className="approval-history-inline">
-                          <CheckCircle2 size={13} />
+                          {item.status === "rejected" ? (
+                            <X size={13} />
+                          ) : (
+                            <CheckCircle2 size={13} />
+                          )}
                           <span>
                             {item.decidedBy ?? "أحمد محمود · مدير الفرع"}
                           </span>
                           <i />
                           <span>{item.decidedAt ?? "قرار توضيحي سابق"}</span>
-                          {item.decisionNote && <em>{item.decisionNote}</em>}
+                          {item.decisionNote && (
+                            <em>
+                              {item.kind === "expense" &&
+                                item.status === "rejected" && (
+                                  <strong>سبب الرفض: </strong>
+                                )}
+                              {item.decisionNote}
+                            </em>
+                          )}
                         </div>
                       )}
                     </div>
@@ -950,7 +966,17 @@ export default function Approvals() {
                         {item.id} · {item.decidedBy ?? "مدير الفرع"} ·{" "}
                         {item.decidedAt ?? "قرار توضيحي سابق"}
                       </small>
-                      {item.decisionNote && <p>{item.decisionNote}</p>}
+                      {item.decisionNote && (
+                        <p>
+                          <strong>
+                            {item.kind === "expense" &&
+                            item.status === "rejected"
+                              ? "سبب الرفض: "
+                              : "ملاحظة القرار: "}
+                          </strong>
+                          {item.decisionNote}
+                        </p>
+                      )}
                     </div>
                     <span className={`approval-status approval-${item.status}`}>
                       <i />
@@ -1100,40 +1126,122 @@ export default function Approvals() {
                 </span>
               </div>
             )}
-            <label className="approval-note-field">
-              ملاحظة القرار <span>اختياري · بحد أقصى 240 حرفًا</span>
-              <textarea
-                value={decisionNote}
-                onChange={event => setDecisionNote(event.target.value)}
-                maxLength={240}
-                rows={3}
-                placeholder="مثال: تمت مراجعة طلب ولي الأمر والموافقة وفق سياسة الفرع."
-              />
-              <small>{decisionNote.length}/240</small>
-            </label>
-            <div className="dialog-info">
-              <AlertCircle size={15} />
-              <span>
-                هذا إجراء تجريبي محلي. المراجعة الحقيقية تحتاج تحقق الصلاحيات
-                وتسجيل القرار في Audit Log.
-              </span>
-            </div>
-            <div className="approval-dialog-actions">
-              <button
-                className="button button-secondary"
-                onClick={() => decide(selected.id, "rejected")}
+            {selected.kind === "expense" && expenseRejectionMode ? (
+              <form
+                className="approval-expense-rejection"
+                onSubmit={event => {
+                  event.preventDefault();
+                  decide(selected.id, "rejected");
+                }}
               >
-                <X size={15} /> رفض تجريبي
-              </button>
-              <button
-                className="button button-primary"
-                onClick={() => decide(selected.id, "approved")}
-                disabled={!canApproveSelected}
-              >
-                <Check size={15} />{" "}
-                {canApproveSelected ? "موافقة تجريبية" : "رفع للإدارة"}
-              </button>
-            </div>
+                <div className="approval-expense-rejection-notice">
+                  <AlertCircle size={16} />
+                  <span>
+                    <strong>رفض المصروف يتطلب سببًا</strong>
+                    <small>
+                      سيُسجّل السبب مع اسم مدير الفرع ووقت القرار في سجل
+                      القرارات.
+                    </small>
+                  </span>
+                </div>
+                <label className="approval-note-field approval-expense-rejection-note">
+                  سبب الرفض <b aria-hidden="true">*</b>
+                  <span>إلزامي · بحد أقصى 240 حرفًا</span>
+                  <textarea
+                    value={decisionNote}
+                    onChange={event => setDecisionNote(event.target.value)}
+                    maxLength={240}
+                    rows={3}
+                    placeholder="اذكر سبب عدم اعتماد هذا المصروف..."
+                    required
+                    aria-required="true"
+                    aria-describedby="expense-rejection-counter"
+                  />
+                  <small id="expense-rejection-counter">
+                    {decisionNote.length}/240
+                  </small>
+                </label>
+                <div className="dialog-info">
+                  <AlertCircle size={15} />
+                  <span>
+                    هذا القرار تجريبي ومحلي؛ لا يؤثر على سجل المصروفات أو
+                    إجماليات الماليات ولا يُحفظ على خادم.
+                  </span>
+                </div>
+                <div className="approval-dialog-actions approval-expense-rejection-actions">
+                  <button
+                    type="button"
+                    className="button button-secondary"
+                    onClick={() => {
+                      setExpenseRejectionMode(false);
+                      setDecisionNote("");
+                    }}
+                  >
+                    رجوع للطلب
+                  </button>
+                  <button
+                    type="submit"
+                    className="button approval-reject-confirm"
+                    disabled={!decisionNote.trim()}
+                  >
+                    <X size={15} /> تأكيد رفض المصروف
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <>
+                <label className="approval-note-field">
+                  ملاحظة القرار{" "}
+                  <span>
+                    {selected.kind === "expense"
+                      ? "اختيارية للموافقة؛ الرفض يتطلب سببًا"
+                      : "اختياري · بحد أقصى 240 حرفًا"}
+                  </span>
+                  <textarea
+                    value={decisionNote}
+                    onChange={event => setDecisionNote(event.target.value)}
+                    maxLength={240}
+                    rows={3}
+                    placeholder={
+                      selected.kind === "expense"
+                        ? "أضف ملاحظة اختيارية للموافقة..."
+                        : "مثال: تمت مراجعة الطلب وفق سياسة الفرع."
+                    }
+                  />
+                  <small>{decisionNote.length}/240</small>
+                </label>
+                <div className="dialog-info">
+                  <AlertCircle size={15} />
+                  <span>
+                    هذا إجراء تجريبي محلي. المراجعة الحقيقية تحتاج تحقق
+                    الصلاحيات وتسجيل القرار في Audit Log.
+                  </span>
+                </div>
+                <div className="approval-dialog-actions">
+                  <button
+                    className="button button-secondary"
+                    onClick={() => {
+                      if (selected.kind === "expense") {
+                        setDecisionNote("");
+                        setExpenseRejectionMode(true);
+                      } else {
+                        decide(selected.id, "rejected");
+                      }
+                    }}
+                  >
+                    <X size={15} /> رفض تجريبي
+                  </button>
+                  <button
+                    className="button button-primary"
+                    onClick={() => decide(selected.id, "approved")}
+                    disabled={!canApproveSelected}
+                  >
+                    <Check size={15} />{" "}
+                    {canApproveSelected ? "موافقة تجريبية" : "رفع للإدارة"}
+                  </button>
+                </div>
+              </>
+            )}
           </section>
         </div>
       )}
