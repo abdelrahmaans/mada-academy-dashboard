@@ -45,7 +45,7 @@ The role set below is taken from the approved architecture/permission matrix. Co
 - Added a reusable demo role shell and scope card for the platform workspace.
 - Added `/platform-console` for R00 with local-only academy records, branch/users/pending-setup metrics, search/status filters, mobile cards, details, and a non-persistent create preview.
 - Added an internal link from the branch dashboard. The role selector is only a prototype route switcher and does not authenticate or authorize.
-- `pnpm check`, `pnpm build`, and Prettier validation pass. Desktop (1440px) and mobile (390px) screenshots were reviewed; search, status filtering, details, and local-only create interactions were verified. Browser console reported no runtime errors; pushed to `main` at `f62748f`.
+- `pnpm check`, `pnpm build`, and Prettier validation pass. Desktop (1440px) and mobile (390px) screenshots were reviewed; search, status filtering, details, and local-only create interactions were verified. Browser console reported no runtime errors; ready to commit and push.
 - The successful build still reports pre-existing non-blocking warnings: unset Vite analytics endpoint/site ID, the analytics script is not a module, and pnpm ignores legacy `package.json` override/patch keys. These are outside this UI-only slice and were not changed.
 
 ## Acceptance criteria for each role
