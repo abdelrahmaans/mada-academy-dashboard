@@ -11,6 +11,7 @@ const Schedule = lazy(() => import("./pages/Schedule"));
 const Classes = lazy(() => import("./pages/Classes"));
 const Finance = lazy(() => import("./pages/Finance"));
 const Team = lazy(() => import("./pages/Team"));
+const BranchOperations = lazy(() => import("./pages/BranchOperations"));
 const Approvals = lazy(() => import("./pages/Approvals"));
 const Reports = lazy(() => import("./pages/Reports"));
 const Instructor = lazy(() => import("./pages/Instructor"));
@@ -30,6 +31,7 @@ function Router() {
         <Route path={"/classes"} component={Classes} />
         <Route path={"/finance"} component={Finance} />
         <Route path={"/team"} component={Team} />
+        <Route path={"/branch-operations"} component={BranchOperations} />
         <Route path={"/approvals"} component={Approvals} />
         <Route path={"/reports"} component={Reports} />
         <Route path={"/instructor"} component={Instructor} />
