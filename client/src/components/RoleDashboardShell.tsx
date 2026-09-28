@@ -9,6 +9,7 @@ import {
   type RoleScopeLevel,
 } from "@/contexts/RoleScopeContext";
 import "./RoleDashboardShell.css";
+import "./RoleFoundation.css";
 
 type RoleDashboardShellProps = Omit<HTMLAttributes<HTMLDivElement>, "role"> & {
   children: ReactNode;

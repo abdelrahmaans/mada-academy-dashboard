@@ -35,6 +35,9 @@ import {
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
+import PageHeader from "@/components/PageHeader";
+import RoleScopeCard from "@/components/RoleScopeCard";
+import SharedStatusBadge from "@/components/StatusBadge";
 
 type Session = {
   time: string;
@@ -429,32 +432,40 @@ function App() {
         </header>
 
         <div className="workspace">
-          <section className="welcome-row">
-            <div className="welcome-copy">
+          <PageHeader
+            className="welcome-row"
+            copyClassName="welcome-copy"
+            actionsClassName="welcome-actions"
+            eyebrow={
               <div className="eyebrow">
                 <span className="eyebrow-dot" /> {todayLabel}{" "}
                 <span className="eyebrow-divider" /> الفصل الدراسي الأول
               </div>
-              <h1>
+            }
+            title={
+              <>
                 صباح الخير، أ. أحمد <span className="wave">✦</span>
-              </h1>
-              <p>إليك ملخص سريع لحالة الفرع ونشاطه اليوم.</p>
-            </div>
-            <div className="welcome-actions">
-              <button
-                className="button button-secondary"
-                onClick={() => navigate("/reports")}
-              >
-                <BarChart3 size={17} /> عرض التقارير
-              </button>
-              <button
-                className="button button-primary"
-                onClick={() => setStudentDialogOpen(true)}
-              >
-                <Plus size={18} /> إضافة طالب
-              </button>
-            </div>
-          </section>
+              </>
+            }
+            description="إليك ملخص سريع لحالة الفرع ونشاطه اليوم."
+            actions={
+              <>
+                <button
+                  className="button button-secondary"
+                  onClick={() => navigate("/reports")}
+                >
+                  <BarChart3 size={17} /> عرض التقارير
+                </button>
+                <button
+                  className="button button-primary"
+                  onClick={() => setStudentDialogOpen(true)}
+                >
+                  <Plus size={18} /> إضافة طالب
+                </button>
+              </>
+            }
+          />
+          <RoleScopeCard className="home-role-scope-card" compact />
 
           <section className="stats-grid" aria-label="ملخص الفرع">
             <article className="stat-card">
@@ -635,12 +646,15 @@ function App() {
                             </span>
                           </td>
                           <td>
-                            <span
+                            <SharedStatusBadge
+                              status={
+                                session.status === "جارية"
+                                  ? "IN_PROGRESS"
+                                  : "SCHEDULED"
+                              }
+                              label={session.status}
                               className={`status-pill ${session.status === "جارية" ? "status-live" : "status-upcoming"}`}
-                            >
-                              <i />
-                              {session.status}
-                            </span>
+                            />
                           </td>
                           <td>
                             <button
