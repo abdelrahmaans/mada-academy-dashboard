@@ -30,7 +30,7 @@ import {
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 
-type ApprovalKind = "discount" | "substitute";
+type ApprovalKind = "discount" | "substitute" | "expense";
 type ApprovalStatus = "pending" | "approved" | "rejected";
 type ApprovalItem = {
   id: string;
@@ -50,6 +50,9 @@ type ApprovalItem = {
   finalAmount?: number;
   instructor?: string;
   substitute?: string;
+  expenseDescription?: string;
+  expenseAmount?: number;
+  expenseCategory?: string;
   sessionDate?: string;
   sessionTime?: string;
   status: ApprovalStatus;
@@ -62,6 +65,20 @@ type QueueTab = "all" | ApprovalKind;
 type ApprovalSort = "priority" | "oldest" | "newest";
 
 const INITIAL_REQUESTS: ApprovalItem[] = [
+  {
+    id: "APR-085",
+    kind: "expense",
+    title: "مصروف مستلزمات يحتاج تأكيدًا",
+    summary: "طلب تأكيد مصروف تشغيلي مسجل من المحاسبة",
+    branch: "مدينة نصر",
+    requestedBy: "أحمد محمود · المحاسبة",
+    submittedAt: "اليوم · 11:10 ص",
+    submittedAtSort: "2026-09-26T11:10:00",
+    expenseDescription: "مستلزمات معمل الروبوتكس",
+    expenseAmount: 3850,
+    expenseCategory: "مواد ومستلزمات",
+    status: "pending",
+  },
   {
     id: "APR-084",
     kind: "discount",
@@ -209,6 +226,7 @@ export default function Approvals() {
             item.invoice ?? "",
             item.instructor ?? "",
             item.substitute ?? "",
+            item.expenseDescription ?? "",
             item.decisionNote ?? "",
           ].some(value => value.toLocaleLowerCase("ar").includes(needle));
         return matchesTab && matchesStatus && matchesText;
@@ -232,6 +250,9 @@ export default function Approvals() {
   ).length;
   const pendingSubstitutes = pending.filter(
     item => item.kind === "substitute"
+  ).length;
+  const pendingExpenses = pending.filter(
+    item => item.kind === "expense"
   ).length;
   const reviewedRequests = branchRequests
     .filter(item => item.status !== "pending")
@@ -312,7 +333,11 @@ export default function Approvals() {
       ],
       ...visibleRequests.map(item => [
         item.id,
-        item.kind === "discount" ? "خصم" : "مدرب بديل",
+        item.kind === "discount"
+          ? "خصم"
+          : item.kind === "expense"
+            ? "مصروف"
+            : "مدرب بديل",
         item.branch,
         item.title,
         item.requestedBy,
@@ -587,6 +612,17 @@ export default function Approvals() {
             </article>
             <article className="finance-stat">
               <span className="finance-stat-icon icon-teal">
+                <Wallet size={18} />
+              </span>
+              <span className="finance-stat-label">مصروفات تحتاج تأكيدًا</span>
+              <div>
+                <strong>{pendingExpenses}</strong>
+                <small>ترفعها المحاسبة</small>
+              </div>
+              <small>تظهر في الماليات بعد اعتمادك</small>
+            </article>
+            <article className="finance-stat">
+              <span className="finance-stat-icon icon-teal">
                 <CheckCircle2 size={18} />
               </span>
               <span className="finance-stat-label">تمت مراجعتها</span>
@@ -645,6 +681,13 @@ export default function Approvals() {
                       label: "مدرب بديل",
                       count: branchRequests.filter(
                         item => item.kind === "substitute"
+                      ).length,
+                    },
+                    {
+                      id: "expense",
+                      label: "مصروفات",
+                      count: branchRequests.filter(
+                        item => item.kind === "expense"
                       ).length,
                     },
                   ] as const
@@ -715,10 +758,12 @@ export default function Approvals() {
                     className={`approval-card ${item.status !== "pending" ? "approval-card-reviewed" : ""}`}
                   >
                     <div
-                      className={`approval-type-icon ${item.kind === "discount" ? "approval-discount-icon" : "approval-substitute-icon"}`}
+                      className={`approval-type-icon ${item.kind === "discount" ? "approval-discount-icon" : item.kind === "expense" ? "approval-expense-icon" : "approval-substitute-icon"}`}
                     >
                       {item.kind === "discount" ? (
                         <FileText size={18} />
+                      ) : item.kind === "expense" ? (
+                        <Wallet size={18} />
                       ) : (
                         <UserCheck size={18} />
                       )}
@@ -755,6 +800,16 @@ export default function Approvals() {
                           <span>{item.course}</span>
                           <i />
                           <bdi dir="ltr">{item.invoice}</bdi>
+                        </div>
+                      ) : item.kind === "expense" ? (
+                        <div className="approval-detail-strip">
+                          <span>{item.expenseDescription}</span>
+                          <i />
+                          <bdi dir="ltr">
+                            {formatMoney(item.expenseAmount ?? 0)} ج.م
+                          </bdi>
+                          <i />
+                          <span>{item.expenseCategory}</span>
                         </div>
                       ) : (
                         <div className="approval-detail-strip">
@@ -794,6 +849,15 @@ export default function Approvals() {
                           <span>
                             بدلًا من {formatMoney(item.originalAmount ?? 0)} ج.م
                           </span>
+                        </>
+                      ) : item.kind === "expense" ? (
+                        <>
+                          <small>مصروف يحتاج تأكيدًا</small>
+                          <strong>
+                            {formatMoney(item.expenseAmount ?? 0)}{" "}
+                            <bdi>ج.م</bdi>
+                          </strong>
+                          <span>{item.expenseCategory}</span>
                         </>
                       ) : (
                         <>
@@ -941,10 +1005,12 @@ export default function Approvals() {
               <X size={17} />
             </button>
             <div
-              className={`approval-type-icon ${selected.kind === "discount" ? "approval-discount-icon" : "approval-substitute-icon"}`}
+              className={`approval-type-icon ${selected.kind === "discount" ? "approval-discount-icon" : selected.kind === "expense" ? "approval-expense-icon" : "approval-substitute-icon"}`}
             >
               {selected.kind === "discount" ? (
                 <FileText size={18} />
+              ) : selected.kind === "expense" ? (
+                <Wallet size={18} />
               ) : (
                 <UserCheck size={18} />
               )}
@@ -981,6 +1047,26 @@ export default function Approvals() {
                   <span>
                     <small>الفاتورة</small>
                     <strong dir="ltr">{selected.invoice}</strong>
+                  </span>
+                </>
+              ) : selected.kind === "expense" ? (
+                <>
+                  <span>
+                    <small>المصروف</small>
+                    <strong>{selected.expenseDescription}</strong>
+                  </span>
+                  <span>
+                    <small>القيمة</small>
+                    <strong>
+                      <bdi dir="ltr">
+                        {formatMoney(selected.expenseAmount ?? 0)}
+                      </bdi>{" "}
+                      ج.م
+                    </strong>
+                  </span>
+                  <span>
+                    <small>التصنيف</small>
+                    <strong>{selected.expenseCategory}</strong>
                   </span>
                 </>
               ) : (

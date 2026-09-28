@@ -17497,3 +17497,98 @@ button:not(:disabled) {
     display: none;
   }
 }
+
+/* Business rules UX layer */
+.secretary-discount-code-field {
+  padding: 10px;
+  background: #f4fbf9;
+  border: 1px solid #d8eee9;
+  border-radius: 10px;
+}
+.secretary-discount-code-field > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.secretary-discount-code-field > span small,
+.secretary-field-hint {
+  color: #6f8e8b;
+  font-size: 8px;
+  font-weight: 500;
+}
+.secretary-field-hint {
+  display: block;
+  margin-top: 4px;
+  line-height: 1.6;
+}
+.finance-approval-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 7px;
+  border-radius: 7px;
+  font-size: 8px;
+  white-space: nowrap;
+}
+.finance-approval-status i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.finance-approval-status.approved {
+  color: #138478;
+  background: #e9f7f3;
+}
+.finance-approval-status.pending {
+  color: #a37020;
+  background: #fff3db;
+}
+.finance-pending-note {
+  color: #a37020;
+  font-style: normal;
+}
+.finance-correction-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  color: #8d6b2f;
+  background: #fff7e8;
+  border: 1px solid #f4dfb5;
+  border-radius: 7px;
+  font-size: 8px;
+  cursor: pointer;
+}
+.finance-correction-button:hover {
+  background: #ffefcf;
+}
+.approval-expense-icon {
+  color: #138478;
+  background: #e6f7f2;
+}
+.evaluation-review-chain {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 4px;
+  padding: 8px 10px;
+  color: #4d7480;
+  background: #eef8f7;
+  border: 1px solid #d9eeeb;
+  border-radius: 8px;
+  font-size: 8px;
+}
+@media (max-width: 720px) {
+  .secretary-discount-code-field > span {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .finance-approval-status {
+    white-space: normal;
+  }
+  .evaluation-review-chain {
+    align-items: flex-start;
+    line-height: 1.6;
+  }
+}

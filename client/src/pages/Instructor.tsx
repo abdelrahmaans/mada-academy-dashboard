@@ -1468,6 +1468,13 @@ export default function Instructor() {
                       </div>
                       <span>{selectedSession.level}</span>
                     </div>
+                    <div className="evaluation-review-chain">
+                      <ShieldCheck size={14} />
+                      <span>
+                        مسار المراجعة: المدرب يكتب · رئيس المدربين يراجع · مدير
+                        الفرع يطلع على ملخص الفريق
+                      </span>
+                    </div>
                     <form className="evaluation-form" onSubmit={saveEvaluation}>
                       <div className="evaluation-rubric-list">
                         {RUBRIC.map((criterion, index) => (

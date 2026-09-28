@@ -60,6 +60,9 @@ type Expense = {
   date: string;
   amount: number;
   createdBy: string;
+  approvalStatus: "pending" | "approved";
+  approvedBy?: string;
+  approvalNote?: string;
 };
 type FinanceTab = "collections" | "expenses";
 
@@ -160,6 +163,7 @@ const INITIAL_EXPENSES: Expense[] = [
     date: "2026-09-24",
     amount: 3850,
     createdBy: "أحمد محمود",
+    approvalStatus: "approved",
   },
   {
     id: "exp-2",
@@ -169,6 +173,7 @@ const INITIAL_EXPENSES: Expense[] = [
     date: "2026-09-22",
     amount: 2400,
     createdBy: "أحمد محمود",
+    approvalStatus: "approved",
   },
   {
     id: "exp-3",
@@ -178,6 +183,7 @@ const INITIAL_EXPENSES: Expense[] = [
     date: "2026-09-19",
     amount: 1650,
     createdBy: "سارة خالد",
+    approvalStatus: "approved",
   },
   {
     id: "exp-4",
@@ -187,6 +193,7 @@ const INITIAL_EXPENSES: Expense[] = [
     date: "2026-09-17",
     amount: 6200,
     createdBy: "أحمد محمود",
+    approvalStatus: "approved",
   },
   {
     id: "exp-5",
@@ -196,6 +203,7 @@ const INITIAL_EXPENSES: Expense[] = [
     date: "2026-09-12",
     amount: 2900,
     createdBy: "سارة خالد",
+    approvalStatus: "approved",
   },
 ];
 const STATUS_LABELS: Record<InvoiceStatus, string> = {
@@ -332,6 +340,12 @@ export default function Finance() {
     branch === "كل الفروع"
       ? expenses
       : expenses.filter(expense => expense.branch === branch);
+  const approvedExpenses = scopedExpenses.filter(
+    expense => expense.approvalStatus === "approved"
+  );
+  const pendingExpenseCount = scopedExpenses.filter(
+    expense => expense.approvalStatus === "pending"
+  ).length;
   const collectedTotal = scopedInvoices.reduce(
     (sum, invoice) => sum + invoice.collected,
     0
@@ -343,7 +357,7 @@ export default function Finance() {
   const overdueTotal = scopedInvoices
     .filter(invoice => getStatus(invoice) === "overdue")
     .reduce((sum, invoice) => sum + invoice.total - invoice.collected, 0);
-  const expensesTotal = scopedExpenses.reduce(
+  const expensesTotal = approvedExpenses.reduce(
     (sum, expense) => sum + expense.amount,
     0
   );
@@ -371,6 +385,7 @@ export default function Finance() {
     );
     const expensesForBranch = expenses
       .filter(expense => expense.branch === item)
+      .filter(expense => expense.approvalStatus === "approved")
       .reduce((sum, expense) => sum + expense.amount, 0);
     return {
       branch: item,
@@ -405,6 +420,11 @@ export default function Finance() {
     setExpenseCategory("materials");
     setExpenseBranch(branch === "كل الفروع" ? "مدينة نصر" : branch);
     setDialog("expense");
+  };
+  const requestInvoiceCorrection = (invoice: Invoice) => {
+    toast("الفاتورة مقفولة بعد التحصيل", {
+      description: `للتصحيح ارفع طلبًا موثقًا للإدارة مع السبب · ${invoice.invoiceNumber}`,
+    });
   };
   const submitPayment = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -446,12 +466,14 @@ export default function Finance() {
         date: TODAY,
         amount,
         createdBy: "أحمد محمود",
+        approvalStatus: "pending",
       },
       ...current,
     ]);
     setDialog(null);
-    toast.success("تم تسجيل المصروف محليًا", {
-      description: "التغييرات غير محفوظة بعد إغلاق المعاينة.",
+    toast.success("تم رفع المصروف للمراجعة", {
+      description:
+        "يحتاج تأكيد مدير الفرع قبل اعتباره مصروفًا معتمدًا في الماليات.",
     });
   };
   const downloadCsv = () => {
@@ -1248,9 +1270,14 @@ export default function Finance() {
                                 تحصيل
                               </button>
                             ) : (
-                              <span className="finance-paid-check">
-                                <Check size={15} /> مكتملة
-                              </span>
+                              <button
+                                className="finance-correction-button"
+                                onClick={() =>
+                                  requestInvoiceCorrection(invoice)
+                                }
+                              >
+                                <Check size={15} /> طلب تصحيح
+                              </button>
                             )}
                           </td>
                         </tr>
@@ -1288,6 +1315,7 @@ export default function Finance() {
                       <th>الفرع</th>
                       <th>تاريخ التسجيل</th>
                       <th>سجل بواسطة</th>
+                      <th>حالة الاعتماد</th>
                       <th>المبلغ</th>
                     </tr>
                   </thead>
@@ -1319,6 +1347,16 @@ export default function Finance() {
                           </span>
                         </td>
                         <td data-label="سجل بواسطة">{expense.createdBy}</td>
+                        <td data-label="حالة الاعتماد">
+                          <span
+                            className={`finance-approval-status ${expense.approvalStatus}`}
+                          >
+                            <i />{" "}
+                            {expense.approvalStatus === "approved"
+                              ? "معتمد من مدير الفرع"
+                              : "بانتظار تأكيد مدير الفرع"}
+                          </span>
+                        </td>
                         <td data-label="المبلغ">
                           <bdi
                             className="finance-money expense-money"
@@ -1331,7 +1369,7 @@ export default function Finance() {
                     ))}
                     {!visibleExpenses.length && (
                       <tr>
-                        <td colSpan={6}>
+                        <td colSpan={7}>
                           <div className="finance-empty">
                             <Search size={20} />
                             <strong>مفيش مصروفات مطابقة</strong>
@@ -1361,6 +1399,12 @@ export default function Finance() {
                     : visibleExpenses.length}
                 </b>{" "}
                 سجل
+                {tab === "expenses" && pendingExpenseCount > 0 && (
+                  <em className="finance-pending-note">
+                    {" "}
+                    · {pendingExpenseCount} بانتظار اعتماد مدير الفرع
+                  </em>
+                )}
               </span>
               <button className="text-link" onClick={downloadCsv}>
                 <ArrowDownToLine size={14} /> تنزيل CSV للنتائج

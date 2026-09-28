@@ -112,6 +112,8 @@ type Registration = {
   courseId: string;
   courseName: string;
   finalPricePiastres: number;
+  discountCode?: string;
+  discountLabel?: string;
   status: "active" | "completed" | "dropped" | "transferred";
   enrolledAt: string;
   convertedFromLeadId?: string;
@@ -133,6 +135,7 @@ type RegistrationDraft = {
   relation: "father" | "mother" | "guardian";
   source: StudentSource | "";
   offeringId: string;
+  discountCode: string;
 };
 
 const BRANCH = "مدينة نصر";
@@ -434,7 +437,12 @@ const createRegistrationDraft = (
   relation: "father",
   source: lead ? studentSourceFromLead(lead.source) : "walk_in",
   offeringId,
+  discountCode: "",
 });
+const FIXED_DISCOUNT_CODES = [
+  { code: "SIBLINGS15", label: "خصم إخوة ثابت", percent: 15 },
+  { code: "CAMPAIGN10", label: "خصم حملة معتمدة", percent: 10 },
+] as const;
 
 function SecretaryBrand() {
   return (
@@ -511,6 +519,15 @@ export default function Secretary() {
   const chosenCourse = COURSE_CATALOG.find(
     course => course.id === chosenOffering?.courseId
   );
+  const activeDiscount = FIXED_DISCOUNT_CODES.find(
+    item => item.code === registrationDraft.discountCode.trim().toUpperCase()
+  );
+  const registrationPricePiastres = chosenCourse
+    ? Math.round(
+        chosenCourse.basePricePiastres *
+          (1 - (activeDiscount?.percent ?? 0) / 100)
+      )
+    : 0;
   const activeLeadCount = leads.filter(lead =>
     ["new", "contacted", "interested"].includes(lead.status)
   ).length;
@@ -644,6 +661,19 @@ export default function Secretary() {
       return;
     }
     const studentId = `ST-${1100 + registrations.length}`;
+    const normalizedDiscountCode = registrationDraft.discountCode
+      .trim()
+      .toUpperCase();
+    const discount = FIXED_DISCOUNT_CODES.find(
+      item => item.code === normalizedDiscountCode
+    );
+    if (normalizedDiscountCode && !discount) {
+      toast.error("كود الخصم غير معتمد", {
+        description:
+          "استخدم كودًا ثابتًا من قائمة السكرتارية أو ارفع طلب خصم استثنائي.",
+      });
+      return;
+    }
     const registration: Registration = {
       id: `ENR-${590 + registrations.length}`,
       studentId,
@@ -657,7 +687,12 @@ export default function Secretary() {
       offeringId: offering.id,
       courseId: course.id,
       courseName: course.name,
-      finalPricePiastres: course.basePricePiastres,
+      finalPricePiastres: Math.round(
+        course.basePricePiastres * (1 - (discount?.percent ?? 0) / 100)
+      ),
+      ...(discount
+        ? { discountCode: discount.code, discountLabel: discount.label }
+        : {}),
       status: "active",
       enrolledAt: new Date().toISOString(),
       ...(registrationLeadId
@@ -686,7 +721,7 @@ export default function Secretary() {
     setRegistrationLeadId(null);
     setRegistrationDraft(createRegistrationDraft());
     toast.success("اكتمل التسجيل في المعاينة المحلية", {
-      description: `${registration.fullName} · ${course.name} · دون إنشاء حساب دخول أو فاتورة فعلية.`,
+      description: `${registration.fullName} · ${course.name}${discount ? ` · ${discount.label} (${discount.percent}%)` : ""} · دون إنشاء حساب دخول أو فاتورة فعلية.`,
     });
   };
 
@@ -2361,6 +2396,35 @@ export default function Secretary() {
                   ))}
                 </select>
               </label>
+              <label className="secretary-field secretary-discount-code-field">
+                <span>
+                  كود خصم ثابت <small>اختياري · لا يحتاج طلب اعتماد</small>
+                </span>
+                <input
+                  value={registrationDraft.discountCode}
+                  onChange={event =>
+                    setRegistrationDraft(current => ({
+                      ...current,
+                      discountCode: event.target.value.toUpperCase(),
+                    }))
+                  }
+                  placeholder="مثال: SIBLINGS15"
+                  dir="ltr"
+                  list="secretary-discount-codes"
+                />
+                <datalist id="secretary-discount-codes">
+                  {FIXED_DISCOUNT_CODES.map(item => (
+                    <option key={item.code} value={item.code}>
+                      {item.label} · {item.percent}%
+                    </option>
+                  ))}
+                </datalist>
+                <small className="secretary-field-hint">
+                  {activeDiscount
+                    ? `${activeDiscount.label} · ${activeDiscount.percent}% · يسمع في الفاتورة والماليات تلقائيًا.`
+                    : "الأكواد الثابتة مثل خصم الأخوات تُفعل من السكرتارية دون موافقة منفصلة."}
+                </small>
+              </label>
               <div className="secretary-price-summary">
                 <span>
                   <small>المجموعة</small>
@@ -2370,10 +2434,10 @@ export default function Secretary() {
                   </strong>
                 </span>
                 <span>
-                  <small>السعر الأساسي التوضيحي</small>
+                  <small>السعر بعد الخصم</small>
                   <strong>
                     {chosenCourse
-                      ? formatMoney(chosenCourse.basePricePiastres)
+                      ? formatMoney(registrationPricePiastres)
                       : "—"}
                   </strong>
                 </span>
