@@ -18768,3 +18768,177 @@ button:not(:disabled) {
     padding-bottom: 2px;
   }
 }
+
+/* R06 — Financials & Billing */
+.r06-billing-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(300px, .9fr);
+  gap: 14px;
+  margin: 14px 0;
+}
+.billing-summary,
+.payment-status-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  background: #fff;
+  border: 1px solid #e6edef;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(31, 73, 78, .04);
+}
+.billing-summary {
+  background: linear-gradient(135deg, #f3fbfa, #fff);
+  border-color: #d8eeeb;
+}
+.billing-summary-heading,
+.payment-status-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.billing-summary-kicker,
+.payment-status-heading > div > span {
+  color: #118578;
+  font-family: var(--mada-font-en);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .02em;
+}
+.billing-summary h2,
+.payment-status-heading h2 {
+  margin: 4px 0;
+  color: #2d4e59;
+  font-size: 15px;
+}
+.billing-summary p {
+  margin: 0;
+  color: #81939a;
+  font-size: 10px;
+}
+.billing-summary-heading button,
+.payment-status-heading button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 10px;
+  color: #087c72;
+  background: #e8f7f4;
+  border: 1px solid #cfeae5;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.billing-summary-meter {
+  display: grid;
+  gap: 8px;
+}
+.billing-summary-meter > div {
+  display: flex;
+  justify-content: space-between;
+  color: #71858d;
+  font-size: 10px;
+}
+.billing-summary-meter > div strong {
+  color: #087d73;
+  font-family: var(--mada-font-en);
+  font-size: 16px;
+}
+.billing-summary-meter > i {
+  display: block;
+  height: 8px;
+  overflow: hidden;
+  background: #dff0ee;
+  border-radius: 10px;
+}
+.billing-summary-meter > i em {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #43b9a9, #078176);
+  border-radius: inherit;
+}
+.billing-summary-meter small {
+  color: #84959b;
+  font-size: 9px;
+}
+.billing-summary-values {
+  display: flex;
+  gap: 24px;
+}
+.billing-summary-values span {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 3px 6px;
+  color: #17897d;
+}
+.billing-summary-values span svg {
+  grid-row: span 2;
+}
+.billing-summary-values small {
+  color: #88979c;
+  font-size: 9px;
+}
+.billing-summary-values bdi {
+  color: #405d67;
+  font-family: var(--mada-font-en);
+  font-size: 12px;
+  font-weight: 800;
+}
+.payment-status-card {
+  background: #fff;
+}
+.payment-status-heading > div {
+  display: grid;
+  gap: 2px;
+}
+.payment-status-heading > div > span {
+  color: #88979c;
+  font-family: inherit;
+  font-weight: 600;
+}
+.payment-status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+}
+.payment-status-grid span {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 10px 4px;
+  border-radius: 9px;
+  color: #82929a;
+  background: #f7f9fa;
+}
+.payment-status-grid span svg { opacity: .85; }
+.payment-status-grid span b { font-family: var(--mada-font-en); font-size: 18px; }
+.payment-status-grid span small { font-size: 8px; }
+.payment-status-grid .paid { color: #148275; background: #edf9f6; }
+.payment-status-grid .partial { color: #a8722f; background: #fff8e9; }
+.payment-status-grid .overdue { color: #b0524d; background: #fff1f0; }
+.payment-status-grid .unpaid { color: #637f91; background: #f1f6fa; }
+.payment-status-card > p {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  margin: 0;
+  color: #87969c;
+  font-size: 9px;
+  line-height: 1.6;
+}
+.payment-status-card > p svg { flex: 0 0 auto; color: #c58b39; }
+@media (max-width: 900px) {
+  .r06-billing-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .billing-summary-heading,
+  .payment-status-heading { flex-direction: column; }
+  .billing-summary-heading button,
+  .payment-status-heading button { width: 100%; justify-content: center; }
+  .payment-status-grid { grid-template-columns: repeat(2, 1fr); }
+}

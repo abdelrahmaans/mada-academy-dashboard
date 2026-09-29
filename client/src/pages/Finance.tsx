@@ -33,7 +33,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import BillingSummary from "@/components/BillingSummary";
 import InvoiceCorrectionDialog from "@/components/InvoiceCorrectionDialog";
+import PaymentStatus from "@/components/PaymentStatus";
 
 type InvoiceStatus = "unpaid" | "partial" | "paid" | "overdue";
 type Invoice = {
@@ -413,6 +415,16 @@ export default function Finance() {
           100
       )
     : 0;
+  const paymentStatusCounts = scopedInvoices.reduce(
+    (counts, invoice) => {
+      counts[getStatus(invoice)] += 1;
+      return counts;
+    },
+    { paid: 0, partial: 0, overdue: 0, unpaid: 0 } as Record<
+      InvoiceStatus,
+      number
+    >
+  );
   const monthlyBilled = scopedInvoices.reduce(
     (sum, invoice) => sum + invoice.total,
     0
@@ -1107,6 +1119,23 @@ export default function Finance() {
               </small>
             </article>
           </section>
+          <div className="r06-billing-grid">
+            <BillingSummary
+              billed={monthlyBilled}
+              collected={monthlyCollected}
+              receivables={receivables}
+              overdue={overdueTotal}
+              formatMoney={formatMoney}
+              onOpenInvoices={() => setTab("collections")}
+            />
+            <PaymentStatus
+              paid={paymentStatusCounts.paid}
+              partial={paymentStatusCounts.partial}
+              overdue={paymentStatusCounts.overdue}
+              unpaid={paymentStatusCounts.unpaid}
+              onCollect={() => openPaymentDialog()}
+            />
+          </div>
           <section className="finance-insights-grid">
             <article className="panel finance-insight-card">
               <div className="finance-panel-heading">
