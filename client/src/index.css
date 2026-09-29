@@ -18450,3 +18450,177 @@ button:not(:disabled) {
     font-size: 7px;
   }
 }
+
+/* Sprint 13 — remaining shared approval workflow components */
+.approval-queue-tabs {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.approval-queue-tabs::-webkit-scrollbar {
+  display: none;
+}
+.approval-queue-tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 0 10px;
+  color: #7d8999;
+  background: #f7f9fa;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 8px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+.approval-queue-tabs button:hover {
+  color: #0b8176;
+  background: #eef8f6;
+}
+.approval-queue-tabs button.active {
+  color: #0b746b;
+  background: #e7f6f3;
+  border-color: #ccebe5;
+}
+.approval-queue-tabs button b {
+  display: inline-grid;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  place-items: center;
+  color: #81909d;
+  background: #fff;
+  border-radius: 20px;
+  font-family: var(--mada-font-en);
+  font-size: 8px;
+}
+.approval-queue-tabs button.active b {
+  color: #0b8176;
+}
+.reason-field {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  margin: 14px 0;
+}
+.reason-field-label {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: #516075;
+  font-size: 9px;
+  font-weight: 750;
+}
+.reason-field-label b {
+  color: #c75b55;
+}
+.reason-field-label small {
+  color: #96a1ae;
+  font-size: 8px;
+  font-weight: 500;
+}
+.reason-field textarea {
+  width: 100%;
+  min-height: 73px;
+  padding: 10px;
+  resize: vertical;
+  color: #344259;
+  background: #fbfcfd;
+  border: 1px solid #e2e9ed;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 9px;
+  line-height: 1.7;
+  outline: 0;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+.reason-field textarea:focus {
+  background: #fff;
+  border-color: #a6d8d2;
+  box-shadow: 0 0 0 3px rgb(13 148 136 / 7%);
+}
+.reason-field textarea::placeholder {
+  color: #a3adb8;
+}
+.reason-field-counter {
+  justify-self: end;
+  margin-top: -2px;
+  color: #9ca7b3;
+  font-family: var(--mada-font-en);
+  font-size: 8px;
+  direction: ltr;
+}
+.escalation-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 13px 0;
+  padding: 10px 11px;
+  border: 1px solid;
+  border-radius: 10px;
+}
+.escalation-banner.is-allowed {
+  color: #0b8176;
+  background: #f0faf8;
+  border-color: #cdebe5;
+}
+.escalation-banner.is-escalated {
+  color: #a75e1c;
+  background: #fff8eb;
+  border-color: #f1dfb9;
+}
+.escalation-banner-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  background: rgb(255 255 255 / 62%);
+  border-radius: 8px;
+}
+.escalation-banner-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.escalation-banner-copy strong {
+  color: #3a4b58;
+  font-size: 9px;
+}
+.escalation-banner-copy small {
+  color: #7a8791;
+  font-size: 8px;
+  line-height: 1.55;
+}
+.escalation-banner-copy em {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 2px;
+  color: inherit;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 800;
+}
+@media (max-width: 640px) {
+  .approval-queue-tabs {
+    width: 100%;
+  }
+  .approval-queue-tabs button {
+    min-height: 30px;
+    padding-inline: 8px;
+    font-size: 7px;
+  }
+  .reason-field-label {
+    display: grid;
+    gap: 2px;
+  }
+}

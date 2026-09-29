@@ -2,12 +2,13 @@ import {
   AlertCircle,
   Check,
   FileText,
-  ShieldCheck,
   UserCheck,
   Wallet,
   X,
 } from "lucide-react";
 import type { ApprovalItem } from "./ApprovalCard";
+import EscalationBanner from "./EscalationBanner";
+import ReasonField from "./ReasonField";
 import WorkflowStepper, { type WorkflowStep } from "./WorkflowStepper";
 
 function formatMoney(value: number) {
@@ -187,16 +188,12 @@ export default function DecisionDialog({
           description="تتابع الحالة من الإرسال حتى قرار صاحب الصلاحية."
         />
         {item.kind === "discount" && (
-          <div
-            className={`approval-policy-check ${canApprove ? "is-allowed" : "is-escalated"}`}
-          >
-            <ShieldCheck size={15} />
-            <span>
-              {canApprove
-                ? `ضمن صلاحية مدير الفرع · الحد ${discountLimit}%`
-                : `يتطلب تصعيدًا للإدارة · الخصم ${item.discountValue}% يتجاوز الحد`}
-            </span>
-          </div>
+          <EscalationBanner
+            escalated={!canApprove}
+            message={`الخصم ${item.discountValue}% يتجاوز حد مدير الفرع ${discountLimit}%.`}
+            allowedMessage={`الخصم ضمن حد مدير الفرع ${discountLimit}%.`}
+            nextAction={!canApprove ? "ارفع الطلب للإدارة المركزية" : undefined}
+          />
         )}
         {item.kind === "expense" && expenseRejectionMode ? (
           <form
@@ -215,23 +212,15 @@ export default function DecisionDialog({
                 </small>
               </span>
             </div>
-            <label className="approval-note-field approval-expense-rejection-note">
-              سبب الرفض <b aria-hidden="true">*</b>
-              <span>إلزامي · بحد أقصى 240 حرفًا</span>
-              <textarea
-                value={decisionNote}
-                onChange={event => onDecisionNoteChange(event.target.value)}
-                maxLength={240}
-                rows={3}
-                placeholder="اذكر سبب عدم اعتماد هذا المصروف..."
-                required
-                aria-required="true"
-                aria-describedby="expense-rejection-counter"
-              />
-              <small id="expense-rejection-counter">
-                {decisionNote.length}/240
-              </small>
-            </label>
+            <ReasonField
+              id="expense-rejection-reason"
+              label="سبب الرفض"
+              helper="إلزامي · بحد أقصى 240 حرفًا"
+              value={decisionNote}
+              onChange={onDecisionNoteChange}
+              placeholder="اذكر سبب عدم اعتماد هذا المصروف..."
+              required
+            />
             <div className="dialog-info">
               <AlertCircle size={15} />
               <span>
@@ -258,26 +247,22 @@ export default function DecisionDialog({
           </form>
         ) : (
           <>
-            <label className="approval-note-field">
-              ملاحظة القرار{" "}
-              <span>
-                {item.kind === "expense"
+            <ReasonField
+              id="approval-decision-note"
+              label="ملاحظة القرار"
+              helper={
+                item.kind === "expense"
                   ? "اختيارية للموافقة؛ الرفض يتطلب سببًا"
-                  : "اختياري · بحد أقصى 240 حرفًا"}
-              </span>
-              <textarea
-                value={decisionNote}
-                onChange={event => onDecisionNoteChange(event.target.value)}
-                maxLength={240}
-                rows={3}
-                placeholder={
-                  item.kind === "expense"
-                    ? "أضف ملاحظة اختيارية للموافقة..."
-                    : "مثال: تمت مراجعة الطلب وفق سياسة الفرع."
-                }
-              />
-              <small>{decisionNote.length}/240</small>
-            </label>
+                  : "اختياري · بحد أقصى 240 حرفًا"
+              }
+              value={decisionNote}
+              onChange={onDecisionNoteChange}
+              placeholder={
+                item.kind === "expense"
+                  ? "أضف ملاحظة اختيارية للموافقة..."
+                  : "مثال: تمت مراجعة الطلب وفق سياسة الفرع."
+              }
+            />
             <div className="dialog-info">
               <AlertCircle size={15} />
               <span>

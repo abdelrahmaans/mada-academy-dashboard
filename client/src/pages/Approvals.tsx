@@ -35,6 +35,7 @@ import ApprovalCard, {
   type ApprovalKind,
   type ApprovalStatus,
 } from "@/components/ApprovalCard";
+import ApprovalQueueTabs from "@/components/ApprovalQueueTabs";
 import AuditTimeline, { type AuditEvent } from "@/components/AuditTimeline";
 import DecisionDialog from "@/components/DecisionDialog";
 import NotificationCenter, {
@@ -692,53 +693,38 @@ export default function Approvals() {
               </span>
             </div>
             <div className="approval-controls">
-              <div
-                className="approval-tabs"
-                role="tablist"
-                aria-label="أنواع الطلبات"
-              >
-                {(
-                  [
-                    {
-                      id: "all",
-                      label: "كل الطلبات",
-                      count: branchRequests.length,
-                    },
-                    {
-                      id: "discount",
-                      label: "خصومات",
-                      count: branchRequests.filter(
-                        item => item.kind === "discount"
-                      ).length,
-                    },
-                    {
-                      id: "substitute",
-                      label: "مدرب بديل",
-                      count: branchRequests.filter(
-                        item => item.kind === "substitute"
-                      ).length,
-                    },
-                    {
-                      id: "expense",
-                      label: "مصروفات",
-                      count: branchRequests.filter(
-                        item => item.kind === "expense"
-                      ).length,
-                    },
-                  ] as const
-                ).map(item => (
-                  <button
-                    key={item.id}
-                    className={tab === item.id ? "active" : ""}
-                    role="tab"
-                    aria-selected={tab === item.id}
-                    onClick={() => setTab(item.id)}
-                  >
-                    {item.label}
-                    <b>{item.count}</b>
-                  </button>
-                ))}
-              </div>
+              <ApprovalQueueTabs
+                activeTab={tab}
+                onChange={setTab}
+                tabs={[
+                  {
+                    id: "all",
+                    label: "كل الطلبات",
+                    count: branchRequests.length,
+                  },
+                  {
+                    id: "discount",
+                    label: "خصومات",
+                    count: branchRequests.filter(
+                      item => item.kind === "discount"
+                    ).length,
+                  },
+                  {
+                    id: "substitute",
+                    label: "مدرب بديل",
+                    count: branchRequests.filter(
+                      item => item.kind === "substitute"
+                    ).length,
+                  },
+                  {
+                    id: "expense",
+                    label: "مصروفات",
+                    count: branchRequests.filter(
+                      item => item.kind === "expense"
+                    ).length,
+                  },
+                ]}
+              />
               <label className="approval-search">
                 <Search size={15} />
                 <input
