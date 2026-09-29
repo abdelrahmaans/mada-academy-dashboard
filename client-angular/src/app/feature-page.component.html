@@ -1,0 +1,22 @@
+<section class="page-header">
+  <div><span class="page-kicker">{{ page.kicker }}</span><h2>{{ page.title }}</h2><p>{{ page.description }}</p></div>
+  <div class="header-actions">@for (action of page.actions; track action) { <button type="button" class="button" (click)="doAction(action)">{{ action }}</button> }</div>
+</section>
+
+@if (notice()) { <div class="toast" role="status">{{ notice() }}</div> }
+
+<section class="metric-grid">
+  @for (metric of metrics; track metric.label) {
+    <article class="metric-card" [class]="metric.tone"><span>{{ metric.label }}</span><strong>{{ metric.value }}</strong><small>{{ metric.trend }}</small></article>
+  }
+</section>
+
+<section class="work-panel">
+  <div class="panel-head"><div><span class="section-kicker">{{ isHub ? 'ROLE TREE' : 'OPERATIONAL VIEW' }}</span><h3>{{ isHub ? 'خريطة المساحات الحالية' : 'آخر التحديثات داخل النطاق' }}</h3></div><label class="search-box"><span>⌕</span><input #query type="search" [value]="search()" (input)="updateSearch(query.value)" placeholder="بحث داخل النتائج" /></label></div>
+  <div class="table-wrap"><table><thead><tr>@for (column of page.columns; track column) { <th>{{ column }}</th> }</tr></thead><tbody>@for (row of filteredRows; track row[0]) { <tr>@for (cell of row; track $index) { <td [class.status-cell]="$index === row.length - 1">{{ cell }}</td> }</tr> } @empty { <tr><td class="empty" [attr.colspan]="page.columns.length">لا توجد نتائج مطابقة للبحث الحالي.</td></tr> }</tbody></table></div>
+</section>
+
+<section class="bottom-grid">
+  <article class="info-panel"><div class="panel-head compact"><div><span class="section-kicker">CURRENT ROLE</span><h3>{{ session.definition().code }} · {{ session.definition().label }}</h3></div><span class="scope-pill">{{ session.definition().scopeLevel }}</span></div><p>{{ session.definition().defaultScopeLabel }}</p><div class="guard-note"><span>✓</span><span>هذه الصفحة تعمل ضمن Role Preview. الـauthorization الملزم سيكون في ASP.NET Core.</span></div></article>
+  <article class="info-panel"><div class="panel-head compact"><div><span class="section-kicker">NEXT STATES</span><h3>حالات الـUX الأساسية</h3></div></div><div class="state-list"><span>Loading</span><span>Empty</span><span>Pending</span><span>Approved</span><span>Locked</span><span>Error</span></div></article>
+</section>

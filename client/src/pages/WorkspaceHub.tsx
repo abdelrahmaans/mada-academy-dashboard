@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { ROLE_DEFINITIONS, type RoleDefinition } from "@/lib/roleNavigation";
 
 const ROLE_ORDER = ["R00", "R01", "R02", "R03", "R04", "R05", "R06", "R07", "R08", "R09"] as const;
+const ANGULAR_PREVIEW_URL = "https://4300-ikmfmvmdte3kxlh25o9sc-ec94301a.sg2.manus.computer";
 const GROUPS = [
   { title: "طبقة الإدارة والمنصة", description: "منصة مدى، الأكاديمية، والفروع", roles: ["R00", "R01", "R02"] },
   { title: "طبقة التشغيل الأكاديمي", description: "الجودة، الجلسات، التسجيل، والمالية", roles: ["R03", "R04", "R05", "R06"] },
@@ -38,7 +39,7 @@ export default function WorkspaceHub() {
           <h1>غرفة متابعة كل الأدوار</h1>
           <p>اختار أي Role أو غيّر الـURL مباشرة. كل بطاقة تفتح الـsurface الحقيقية الخاصة بالدور.</p>
         </div>
-        <div className="workspace-hub-summary"><strong>R00 → R09</strong><span>10 Role surfaces</span></div>
+        <div className="workspace-hub-summary"><strong>R00 → R09</strong><span>10 Role surfaces</span><a className="workspace-engine-link" href={ANGULAR_PREVIEW_URL} target="_blank" rel="noreferrer"><ExternalLink size={13} /> جرّب Angular Preview</a></div>
       </header>
       <section className="workspace-hub-howto">
         <div><Users size={17} /><strong>طريقة الاستخدام</strong></div>
@@ -50,7 +51,7 @@ export default function WorkspaceHub() {
           <div className="workspace-role-grid">{group.roles.map(code => <RoleCard key={code} role={ROLE_DEFINITIONS[code]} />)}</div>
         </div>)}
       </section>
-      <footer className="workspace-hub-footer"><span>Prototype navigation only · backend authorization will be enforced server-side.</span><Link href="/">العودة لملخص التشغيل <ArrowUpLeft size={13} /></Link></footer>
+      <footer className="workspace-hub-footer"><span>React هو الـdefault frontend الحالي · backend authorization will be enforced server-side.</span><span className="workspace-engine-footer"><a href={ANGULAR_PREVIEW_URL} target="_blank" rel="noreferrer">فتح نسخة Angular</a><Link href="/">العودة لملخص التشغيل <ArrowUpLeft size={13} /></Link></span></footer>
     </main>
   );
 }

@@ -132,3 +132,13 @@ R00 إلى R09 مغطاة كواجهات prototype مع role code وscope labels
 كان الـscrollbar لا يظهر في Preview لأن بعض قواعد الـlegacy داخل `index.css` كانت تستخدم `scrollbar-width: none` و`::-webkit-scrollbar { display: none; }` على `student-filter-tabs` و`schedule-filter-tabs` و`approval-tabs` و`approval-queue-tabs`. تم إضافة override صريح في `MadaTheme.css` لإجبار هذه المناطق على scrollbar Teal ظاهر، مع track وthumb وارتفاع أفقي ثابت، مع الحفاظ على التمرير نفسه.
 
 التحقق: `pnpm check` نجح، و`pnpm build` نجح، و`git diff --check` نجح، كما أعادت `/` و`/workspace` و`/students` و`/schedule` و`/approvals` حالة HTTP 200 محليًا.
+
+### 29 سبتمبر 2026 — React Default + Angular Preview
+
+تم تثبيت React كواجهة default على `/` وعدم تغييره في هذه المرحلة. أضيف رابط واضح إلى Angular Preview داخل `Workspace Hub`، وأضيف رابط رجوع إلى React default داخل Angular topbar. Backend/API work مؤجل مؤقتًا؛ الأولوية الحالية polish بصري ومقارنة أولية للـfrontendين والـrole tree والـsidebar والـresponsive behavior.
+
+### 29 سبتمبر 2026 — Angular Host + Backend Persistence Foundation
+
+تم إصلاح Angular preview بإضافة `allowedHosts` لنطاقات Manus إلى `client-angular/angular.json`. التحقق عبر localhost وHost header العام أعاد `200`.
+
+بدأ هيكل Backend حقيقي بـASP.NET Core/.NET 10 داخل `backend/`: EF Core، PostgreSQL provider، `MadaDbContext`، tenant/branch/user/membership/invitation/refresh session entities، audit/approval/state transition entities، وmigration أولى باسم `InitialIdentityAndGovernance`. لم يتم تطبيق migration تلقائيًا ولم يتم ربط auth أو feature APIs بعد.
