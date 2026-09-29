@@ -9,3 +9,13 @@
 بدأ تنفيذ sequence-aligned operational schema بإضافة scheduling core (`Classroom`, `CourseTemplate`, `CourseOffering`, `AcademySession`, `Kit`, `KitAssignment`) وstudent core (`Student`, `StudentEnrollment`, `SessionAttendance`) مع migration `AddSchedulingAndStudentCore` و`ConflictService` لفحص instructor/classroom/student/kit conflicts. Branch-hours check وSerializable create-session transaction هما الخطوة التالية قبل endpoint إنشاء السيشن.
 
 Angular shell تم توحيد ألوانه وRTL/topbar/sidebar spacing مع React Mada tokens مع إبقاء React هو default.
+
+---
+
+## 11. PostgreSQL + Demo Data — 29 سبتمبر 2026
+
+تم تثبيت PostgreSQL 16.15 وتشغيله محليًا على port `5432`، وإنشاء database `mada_academy` وapplication role `mada_app`. تم تطبيق migrations الثلاثة فعليًا عبر `dotnet ef database update`.
+
+تمت إضافة `DemoDataSeeder` idempotent وبيانات اختبار حقيقية: tenant واحد، فرعان، 7 staff accounts، memberships لكل الأدوار الحالية، classrooms، course offering، 3 sessions، kit، 6 students، 4 enrollments، وattendance records. تم اختبار OTP/JWT و`/me` وtenant scope وrefresh ضد PostgreSQL الحقيقي.
+
+ملف التشغيل والتفاصيل: `backend/DATABASE_STATUS.md`.

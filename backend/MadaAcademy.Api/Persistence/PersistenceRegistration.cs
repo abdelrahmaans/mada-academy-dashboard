@@ -12,9 +12,11 @@ public static class PersistenceRegistration
             return services;
         }
 
-        var connectionString = configuration.GetConnectionString("Default")
-            ?? Environment.GetEnvironmentVariable("DATABASE_URL")
-            ?? "Host=localhost;Port=5432;Database=mada_academy;Username=postgres;Password=postgres";
+        var configuredConnection = configuration.GetConnectionString("Default");
+        var connectionString = !string.IsNullOrWhiteSpace(configuredConnection)
+            ? configuredConnection
+            : Environment.GetEnvironmentVariable("DATABASE_URL")
+                ?? "Host=localhost;Port=5432;Database=mada_academy;Username=postgres;Password=postgres";
 
         services.AddDbContext<MadaDbContext>(options => options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure(3)));
         return services;

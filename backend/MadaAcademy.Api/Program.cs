@@ -5,6 +5,7 @@ using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Modules.Scheduling;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
+using MadaAcademy.Api.Persistence.Seeding;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,6 +19,16 @@ builder.Services.AddScoped<ConflictService>();
 builder.Services.AddSingleton<IAuditSink, DevelopmentAuditSink>();
 
 var app = builder.Build();
+
+if (IsEnabled("MADA_APPLY_MIGRATIONS") || IsEnabled("MADA_SEED_DEMO_DATA"))
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    var database = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+    await database.Database.MigrateAsync();
+    if (IsEnabled("MADA_SEED_DEMO_DATA"))
+        await DemoDataSeeder.SeedAsync(database);
+}
+
 app.UseExceptionHandler();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -139,6 +150,8 @@ app.MapPost("/api/v1/scheduling/check-conflict", async (ConflictCheckRequest req
 }).RequireAuthorization("staff");
 
 app.Run();
+
+static bool IsEnabled(string name) => string.Equals(Environment.GetEnvironmentVariable(name), "true", StringComparison.OrdinalIgnoreCase);
 
 public sealed record AuditInput(string Action, string TargetType, string TargetId, string? TenantId, string? BranchId, string? Reason);
 public interface IAuditSink { Task AppendAsync(AuditInput input); }
