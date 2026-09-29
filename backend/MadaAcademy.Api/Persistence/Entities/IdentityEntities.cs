@@ -30,6 +30,8 @@ public sealed class Branch : EntityBase
 public sealed class UserAccount : EntityBase
 {
     public required string Email { get; set; }
+    public required string Phone { get; set; }
+    public string AccountType { get; set; } = "staff";
     public string? DisplayName { get; set; }
     public string Status { get; set; } = "INVITED";
     public DateTimeOffset? LastLoginAt { get; set; }

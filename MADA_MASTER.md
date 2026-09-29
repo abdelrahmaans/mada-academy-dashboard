@@ -142,3 +142,7 @@ R00 إلى R09 مغطاة كواجهات prototype مع role code وscope labels
 تم إصلاح Angular preview بإضافة `allowedHosts` لنطاقات Manus إلى `client-angular/angular.json`. التحقق عبر localhost وHost header العام أعاد `200`.
 
 بدأ هيكل Backend حقيقي بـASP.NET Core/.NET 10 داخل `backend/`: EF Core، PostgreSQL provider، `MadaDbContext`، tenant/branch/user/membership/invitation/refresh session entities، audit/approval/state transition entities، وmigration أولى باسم `InitialIdentityAndGovernance`. لم يتم تطبيق migration تلقائيًا ولم يتم ربط auth أو feature APIs بعد.
+
+### 29 سبتمبر 2026 — JWT + Sequence-aligned Backend Slice
+
+تم تفعيل JWT Bearer حقيقي في ASP.NET Core مع OTP challenge development adapter، access/refresh rotation، token hashing، role policies، وtenant/branch scope checks. تم توسيع EF Core/PostgreSQL model إلى scheduling/student core طبقًا لأول sequence diagram، وإضافة `ConflictService` وmigrations جديدة. Angular صار يستخدم نفس Mada React visual tokens وRTL shell مع بقاء React هو الـdefault. الخطوة التالية: provider OTP حقيقي، parent/student identities المنفصلة، Serializable create-session transaction، ثم attendance/evaluation workflow.

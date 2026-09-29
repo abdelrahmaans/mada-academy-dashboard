@@ -1,6 +1,57 @@
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap');
-:root { font-family: 'Cairo', system-ui, sans-serif; color-scheme: light; }
+
+:root {
+  --mada-brand-teal: #0d9488;
+  --mada-brand-navy: #0f172a;
+  --mada-ui-page: #f6f8fb;
+  --mada-ui-surface: #fff;
+  --mada-ui-border: #e2e8f0;
+  --mada-ui-secondary: #64748b;
+  --mada-ui-teal-soft: #e6f4f2;
+  --mada-ui-teal-dark: #0b746b;
+  --mada-shadow-card: 0 5px 18px rgb(15 23 42 / 5%);
+  --mada-shadow-popover: 0 14px 34px rgb(15 23 42 / 14%);
+  --mada-radius-control: 10px;
+  --mada-radius-card: 15px;
+  --mada-radius-panel: 19px;
+  font-family: 'Cairo', sans-serif;
+  color: var(--mada-brand-navy);
+  background: var(--mada-ui-page);
+  color-scheme: light;
+}
+
 * { box-sizing: border-box; }
-html, body { min-height: 100%; margin: 0; }
-body { background: #f4f7f9; }
-button, select { font: inherit; }
+html, body { min-width: 360px; min-height: 100%; margin: 0; background: var(--mada-ui-page); }
+body { min-height: 100vh; font-family: 'Cairo', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+button, input, select { font: inherit; }
+button:not(:disabled) { cursor: pointer; }
+::selection { color: var(--mada-brand-navy); background: #ccece7; }
+
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  background: var(--mada-ui-page);
+}
+.app-main { min-width: 0; }
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 0 34px;
+  background: rgb(255 255 255 / 92%);
+  border-bottom: 1px solid #e9eef4;
+  backdrop-filter: blur(16px);
+}
+.content-frame { min-height: calc(100vh - 76px); padding: 27px 34px 40px; }
+
+@media (max-width: 760px) {
+  .app-shell { display: block; }
+  .content-frame { padding: 22px 16px 32px; }
+  .topbar { align-items: flex-start; flex-direction: column; padding: 18px 16px; }
+}

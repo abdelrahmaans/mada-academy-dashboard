@@ -6,6 +6,12 @@ public static class PersistenceRegistration
 {
     public static IServiceCollection AddMadaPersistence(this IServiceCollection services, IConfiguration configuration)
     {
+        if (string.Equals(Environment.GetEnvironmentVariable("MADA_DATABASE_MODE"), "memory", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddDbContext<MadaDbContext>(options => options.UseInMemoryDatabase("mada-auth-test"));
+            return services;
+        }
+
         var connectionString = configuration.GetConnectionString("Default")
             ?? Environment.GetEnvironmentVariable("DATABASE_URL")
             ?? "Host=localhost;Port=5432;Database=mada_academy;Username=postgres;Password=postgres";

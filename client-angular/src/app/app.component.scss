@@ -1,12 +1,8 @@
 :host { display: block; min-height: 100vh; }
-.app-shell { min-height: 100vh; display: flex; background: #f4f7f9; color: #14243a; }
-.app-main { flex: 1; min-width: 0; padding: 28px 34px 40px; }
-.topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 26px; }
-.eyebrow { margin: 0 0 8px; color: #0d9488; font-size: 11px; font-weight: 800; letter-spacing: .14em; }
-h1 { margin: 0; font-size: clamp(24px, 3vw, 34px); letter-spacing: -.04em; }
-.topbar-meta { display: flex; align-items: center; gap: 9px; color: #64748b; font-size: 13px; padding-top: 12px; }
-.react-link { padding: 7px 9px; border: 1px solid #d9e8eb; border-radius: 8px; color: #0d766d; background: #fff; font-size: 11px; font-weight: 800; text-decoration: none; }
-.react-link:hover { color: #fff; background: #14243a; border-color: #14243a; }
-.status-dot { width: 9px; height: 9px; border-radius: 50%; background: #0d9488; box-shadow: 0 0 0 5px rgba(13,148,136,.12); }
-.content-frame { min-height: calc(100vh - 130px); }
-@media (max-width: 760px) { .app-main { padding: 20px 16px 30px; } .topbar { align-items: stretch; flex-direction: column; margin-bottom: 18px; } .topbar-meta { padding-top: 0; } }
+.topbar > div:first-child { min-width: 0; }
+.eyebrow { margin: 0 0 5px; color: var(--mada-brand-teal); font-size: 10px; font-weight: 800; letter-spacing: .13em; }
+h1 { margin: 0; color: var(--mada-brand-navy); font-size: clamp(21px, 2.4vw, 29px); font-weight: 800; letter-spacing: -.04em; }
+.topbar-meta { display: flex; align-items: center; gap: 12px; color: var(--mada-ui-secondary); font-size: 11px; }
+.react-link { padding: 8px 11px; border: 1px solid #d9e8eb; border-radius: 9px; color: var(--mada-ui-teal-dark); background: #fff; font-size: 10px; font-weight: 800; text-decoration: none; transition: .18s ease; }
+.react-link:hover { color: #fff; background: var(--mada-brand-navy); border-color: var(--mada-brand-navy); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mada-brand-teal); box-shadow: 0 0 0 5px rgb(13 148 136 / 12%); }
