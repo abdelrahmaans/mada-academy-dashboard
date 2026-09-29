@@ -18624,3 +18624,147 @@ button:not(:disabled) {
     gap: 2px;
   }
 }
+
+/* R05 — Family Profile & Enrollment Handoff */
+.family-profile-card {
+  align-self: start;
+}
+.family-profile-intro {
+  margin: -4px 0 14px;
+  color: #7d8997;
+  font-size: 9px;
+  line-height: 1.7;
+}
+.family-profile-next-action {
+  display: grid;
+  gap: 3px;
+  margin-top: 14px;
+  padding: 10px 11px;
+  background: #f7fafb;
+  border: 1px solid #e6eef0;
+  border-radius: 9px;
+}
+.family-profile-next-action span {
+  color: #8c9aa4;
+  font-size: 8px;
+}
+.family-profile-next-action strong {
+  color: #405565;
+  font-size: 9px;
+}
+.enrollment-handoff {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 14px;
+  background: linear-gradient(135deg, #f1faf8, #f7fbfc);
+  border: 1px solid #d5eee8;
+  border-radius: 12px;
+}
+.enrollment-handoff-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.enrollment-handoff-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  color: #087e73;
+  background: #def5f0;
+  border-radius: 9px;
+}
+.enrollment-handoff-heading > div {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+}
+.enrollment-handoff-heading > div > span {
+  color: #7c9998;
+  font-size: 8px;
+}
+.enrollment-handoff-heading h3 {
+  margin: 0;
+  color: #36515c;
+  font-size: 11px;
+}
+.enrollment-handoff-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #0a8177;
+  font-family: var(--mada-font-en);
+  font-size: 8px;
+  font-weight: 800;
+}
+.enrollment-handoff-steps {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+}
+.enrollment-handoff-steps span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 7px;
+  color: #8e9da4;
+  background: #fff;
+  border: 1px solid #e2eaeb;
+  border-radius: 7px;
+  font-size: 8px;
+  white-space: nowrap;
+}
+.enrollment-handoff-steps span.complete {
+  color: #0b8176;
+  background: #eaf8f5;
+  border-color: #cdebe5;
+}
+.enrollment-handoff-steps span.current {
+  color: #a76a2e;
+  background: #fff8e9;
+  border-color: #f1dfba;
+}
+.enrollment-handoff p {
+  margin: 0;
+  color: #526876;
+  font-size: 9px;
+  font-weight: 700;
+}
+.enrollment-handoff > small {
+  color: #7d8d96;
+  font-size: 8px;
+  line-height: 1.7;
+}
+.enrollment-handoff > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 31px;
+  color: #fff;
+  background: #148a7d;
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.enrollment-handoff > button:disabled {
+  color: #9aa9ae;
+  background: #e4ecee;
+  cursor: not-allowed;
+}
+@media (max-width: 700px) {
+  .enrollment-handoff-heading {
+    align-items: flex-start;
+  }
+  .enrollment-handoff-scope {
+    display: none;
+  }
+  .enrollment-handoff-steps {
+    padding-bottom: 2px;
+  }
+}
