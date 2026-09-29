@@ -36,6 +36,9 @@ import ApprovalCard, {
   type ApprovalStatus,
 } from "@/components/ApprovalCard";
 import DecisionDialog from "@/components/DecisionDialog";
+import NotificationCenter, {
+  type NotificationItem,
+} from "@/components/NotificationCenter";
 
 type QueueTab = "all" | ApprovalKind;
 type ApprovalSort = "priority" | "oldest" | "newest";
@@ -125,6 +128,34 @@ const INITIAL_REQUESTS: ApprovalItem[] = [
   },
 ];
 const BRANCH_MANAGER_DISCOUNT_LIMIT = 15;
+const INITIAL_NOTIFICATIONS: NotificationItem[] = [
+  {
+    id: "approval-expense-085",
+    kind: "approval",
+    title: "مصروف يحتاج اعتمادك",
+    description: "مستلزمات معمل الروبوتكس · مدينة نصر · 3,850 ج.م",
+    time: "منذ 20 دقيقة",
+    unread: true,
+    actionLabel: "فتح المصروفات",
+  },
+  {
+    id: "approval-discount-084",
+    kind: "approval",
+    title: "خصم إخوة بانتظار القرار",
+    description: "آدم شريف حسن · خصم 15% ضمن سقف الفرع",
+    time: "منذ 45 دقيقة",
+    unread: true,
+    actionLabel: "فتح الخصومات",
+  },
+  {
+    id: "escalation-discount-policy",
+    kind: "escalation",
+    title: "تذكير بسياسة التصعيد",
+    description: "أي خصم يتجاوز 15% يُرفع للإدارة المركزية.",
+    time: "اليوم · 09:00 ص",
+    actionLabel: "مراجعة الطلبات",
+  },
+];
 
 function BrandMark() {
   return (
@@ -172,6 +203,7 @@ export default function Approvals() {
   const [selected, setSelected] = useState<ApprovalItem | null>(null);
   const [decisionNote, setDecisionNote] = useState("");
   const [expenseRejectionMode, setExpenseRejectionMode] = useState(false);
+  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
   const canApproveSelected =
     selected?.kind !== "discount" ||
     (selected.discountValue ?? 0) <= BRANCH_MANAGER_DISCOUNT_LIMIT;
@@ -241,6 +273,23 @@ export default function Approvals() {
       description: `هنبدأ في تطوير «${label}» في المرحلة التالية.`,
     });
     setMobileNavOpen(false);
+  };
+  const handleNotificationAction = (notification: NotificationItem) => {
+    setNotifications(current =>
+      current.map(item =>
+        item.id === notification.id ? { ...item, unread: false } : item
+      )
+    );
+    if (notification.id.includes("expense")) setTab("expense");
+    else if (notification.id.includes("discount")) setTab("discount");
+    else setTab("all");
+    setQuery("");
+    toast.success("تم فتح قائمة الموافقات", {
+      description: "البيانات توضيحية ومحلية داخل هذه المعاينة.",
+    });
+  };
+  const markAllNotificationsRead = () => {
+    setNotifications(current => current.map(item => ({ ...item, unread: false })));
   };
   const openReview = (item: ApprovalItem) => {
     setDecisionNote("");
@@ -472,14 +521,11 @@ export default function Approvals() {
             </label>
           </div>
           <div className="topbar-left">
-            <button
-              className="icon-button notification-button"
-              aria-label="الإشعارات"
-              onClick={() => toast("لا توجد إشعارات جديدة")}
-            >
-              <span className="notification-dot" />
-              <Bell size={18} />
-            </button>
+            <NotificationCenter
+              notifications={notifications}
+              onAction={handleNotificationAction}
+              onMarkAllRead={markAllNotificationsRead}
+            />
             <span className="topbar-divider" />
             <button
               className="profile-button"
