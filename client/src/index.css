@@ -18206,3 +18206,247 @@ button:not(:disabled) {
     width: auto;
   }
 }
+
+/* Sprint 12 — shared audit and workflow components */
+.audit-timeline {
+  display: grid;
+  gap: 12px;
+}
+.audit-timeline-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.audit-timeline-event {
+  position: relative;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 10px;
+  min-height: 66px;
+}
+.audit-timeline-event:not(:last-child)::before {
+  position: absolute;
+  top: 29px;
+  right: 14px;
+  bottom: 0;
+  width: 1px;
+  content: "";
+  background: #e6edf0;
+}
+.audit-timeline-marker {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 29px;
+  height: 29px;
+  place-items: center;
+  color: #718093;
+  background: #f1f5f7;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #e6edf0;
+}
+.audit-timeline-approved .audit-timeline-marker {
+  color: #0b8176;
+  background: #e8f6f3;
+  box-shadow: 0 0 0 1px #c9ebe5;
+}
+.audit-timeline-rejected .audit-timeline-marker {
+  color: #b6534e;
+  background: #fff0ee;
+  box-shadow: 0 0 0 1px #f2d5d2;
+}
+.audit-timeline-pending .audit-timeline-marker {
+  color: #a4771d;
+  background: #fff7e8;
+  box-shadow: 0 0 0 1px #f2e2b9;
+}
+.audit-timeline-content {
+  min-width: 0;
+  padding: 2px 0 16px;
+}
+.audit-timeline-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.audit-timeline-heading strong {
+  color: #2c3b51;
+  font-size: 10px;
+}
+.audit-timeline-heading time {
+  flex: 0 0 auto;
+  color: #96a1ae;
+  font-size: 8px;
+}
+.audit-timeline-actor {
+  display: block;
+  margin-top: 4px;
+  color: #83909f;
+  font-size: 8px;
+}
+.audit-timeline-content p {
+  margin: 6px 0 0;
+  color: #637286;
+  font-size: 8px;
+  line-height: 1.6;
+}
+.audit-timeline-meta {
+  display: inline-flex;
+  margin-top: 6px;
+  padding: 3px 6px;
+  color: #738194;
+  background: #f6f8fa;
+  border-radius: 5px;
+  font-family: var(--mada-font-en);
+  font-size: 8px;
+}
+.audit-timeline-empty {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 20px;
+  color: #8a96a5;
+  text-align: center;
+  font-size: 9px;
+}
+.audit-timeline-empty svg {
+  color: #b0bbc5;
+}
+.audit-timeline-disclaimer {
+  color: #a0aab6;
+  font-size: 8px;
+}
+.workflow-stepper {
+  display: grid;
+  gap: 13px;
+  margin: 15px 0;
+  padding: 13px;
+  background: #fbfdfd;
+  border: 1px solid #e7efee;
+  border-radius: 11px;
+}
+.workflow-stepper-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.workflow-stepper-heading > div {
+  display: grid;
+  gap: 4px;
+}
+.workflow-stepper-heading strong {
+  color: #304056;
+  font-size: 10px;
+}
+.workflow-stepper-heading small {
+  color: #8995a4;
+  font-size: 8px;
+}
+.workflow-stepper-heading > span {
+  padding: 4px 7px;
+  color: #0b8176;
+  background: #e8f6f3;
+  border-radius: 20px;
+  font-size: 8px;
+  font-weight: 800;
+}
+.workflow-stepper-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.workflow-stepper-step {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  min-width: 0;
+  text-align: center;
+}
+.workflow-stepper-step:not(:last-child)::after {
+  position: absolute;
+  top: 13px;
+  left: calc(-50% + 13px);
+  width: calc(100% - 26px);
+  height: 1px;
+  content: "";
+  background: #dfe8e8;
+}
+.workflow-stepper-marker {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  color: #97a3b0;
+  background: #f3f6f7;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #dfe8e8;
+}
+.workflow-stepper-step > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.workflow-stepper-step strong {
+  overflow: hidden;
+  color: #657387;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workflow-stepper-step small {
+  overflow: hidden;
+  color: #a0aab6;
+  font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workflow-stepper-complete .workflow-stepper-marker {
+  color: #fff;
+  background: #0d9488;
+  box-shadow: 0 0 0 1px #0d9488;
+}
+.workflow-stepper-complete strong,
+.workflow-stepper-current strong {
+  color: #0b8176;
+}
+.workflow-stepper-current .workflow-stepper-marker {
+  color: #fff;
+  background: #d29a2e;
+  box-shadow: 0 0 0 1px #d29a2e;
+}
+.workflow-stepper-halted .workflow-stepper-marker {
+  color: #fff;
+  background: #c75b55;
+  box-shadow: 0 0 0 1px #c75b55;
+}
+@media (max-width: 640px) {
+  .audit-timeline-heading {
+    display: grid;
+    gap: 3px;
+  }
+  .workflow-stepper {
+    padding: 11px;
+  }
+  .workflow-stepper-heading {
+    display: grid;
+    gap: 8px;
+  }
+  .workflow-stepper-heading > span {
+    justify-self: start;
+  }
+  .workflow-stepper-step strong {
+    font-size: 7px;
+  }
+}

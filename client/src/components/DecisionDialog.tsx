@@ -8,6 +8,7 @@ import {
   X,
 } from "lucide-react";
 import type { ApprovalItem } from "./ApprovalCard";
+import WorkflowStepper, { type WorkflowStep } from "./WorkflowStepper";
 
 function formatMoney(value: number) {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(
@@ -30,6 +31,41 @@ function ApprovalTypeIcon({ kind }: { kind: ApprovalItem["kind"] }) {
       )}
     </div>
   );
+}
+
+function workflowSteps(item: ApprovalItem): WorkflowStep[] {
+  const decisionLabel =
+    item.status === "rejected"
+      ? "مرفوض"
+      : item.status === "approved"
+        ? "تم الاعتماد"
+        : "قرار الاعتماد";
+  const decisionStatus: WorkflowStep["status"] =
+    item.status === "rejected"
+      ? "halted"
+      : item.status === "approved"
+        ? "complete"
+        : "upcoming";
+  return [
+    {
+      id: "submitted",
+      label: "تم إرسال الطلب",
+      caption: item.submittedAt,
+      status: "complete",
+    },
+    {
+      id: "review",
+      label: "مراجعة مدير الفرع",
+      caption: item.status === "pending" ? "بانتظار القرار" : "تمت المراجعة",
+      status: item.status === "pending" ? "current" : "complete",
+    },
+    {
+      id: "decision",
+      label: decisionLabel,
+      caption: item.decidedAt ?? "الخطوة التالية بعد المراجعة",
+      status: decisionStatus,
+    },
+  ];
 }
 
 export type DecisionDialogProps = {
@@ -145,6 +181,11 @@ export default function DecisionDialog({
             </>
           )}
         </div>
+        <WorkflowStepper
+          steps={workflowSteps(item)}
+          title="مسار الموافقة"
+          description="تتابع الحالة من الإرسال حتى قرار صاحب الصلاحية."
+        />
         {item.kind === "discount" && (
           <div
             className={`approval-policy-check ${canApprove ? "is-allowed" : "is-escalated"}`}

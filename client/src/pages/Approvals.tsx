@@ -35,6 +35,7 @@ import ApprovalCard, {
   type ApprovalKind,
   type ApprovalStatus,
 } from "@/components/ApprovalCard";
+import AuditTimeline, { type AuditEvent } from "@/components/AuditTimeline";
 import DecisionDialog from "@/components/DecisionDialog";
 import NotificationCenter, {
   type NotificationItem,
@@ -261,6 +262,17 @@ export default function Approvals() {
   const reviewedRequests = branchRequests
     .filter(item => item.status !== "pending")
     .sort((a, b) => (b.decidedAtSort ?? 0) - (a.decidedAtSort ?? 0));
+  const auditEvents: AuditEvent[] = reviewedRequests.map(item => ({
+    id: `decision-${item.id}`,
+    title: item.title,
+    description: item.decisionNote
+      ? `${item.status === "rejected" && item.kind === "expense" ? "سبب الرفض: " : "ملاحظة القرار: "}${item.decisionNote}`
+      : undefined,
+    actor: item.decidedBy ?? "مدير الفرع",
+    timestamp: item.decidedAt ?? "قرار توضيحي سابق",
+    tone: item.status === "approved" ? "approved" : "rejected",
+    meta: <span dir="ltr">{item.id}</span>,
+  }));
 
   const closeReview = () => {
     setSelected(null);
@@ -289,7 +301,9 @@ export default function Approvals() {
     });
   };
   const markAllNotificationsRead = () => {
-    setNotifications(current => current.map(item => ({ ...item, unread: false })));
+    setNotifications(current =>
+      current.map(item => ({ ...item, unread: false }))
+    );
   };
   const openReview = (item: ApprovalItem) => {
     setDecisionNote("");
@@ -774,7 +788,11 @@ export default function Approvals() {
             {visibleRequests.length ? (
               <div className="approval-list">
                 {visibleRequests.map(item => (
-                  <ApprovalCard key={item.id} item={item} onReview={openReview} />
+                  <ApprovalCard
+                    key={item.id}
+                    item={item}
+                    onReview={openReview}
+                  />
                 ))}
               </div>
             ) : (
@@ -819,54 +837,10 @@ export default function Approvals() {
                 {reviewedRequests.length} قرار
               </span>
             </div>
-            {reviewedRequests.length ? (
-              <ol className="approval-history-list">
-                {reviewedRequests.map(item => (
-                  <li key={item.id}>
-                    <span
-                      className={`approval-history-icon ${item.status === "approved" ? "is-approved" : "is-rejected"}`}
-                    >
-                      {item.status === "approved" ? (
-                        <CheckCircle2 size={15} />
-                      ) : (
-                        <X size={15} />
-                      )}
-                    </span>
-                    <div>
-                      <strong>{item.title}</strong>
-                      <small>
-                        {item.id} · {item.decidedBy ?? "مدير الفرع"} ·{" "}
-                        {item.decidedAt ?? "قرار توضيحي سابق"}
-                      </small>
-                      {item.decisionNote && (
-                        <p>
-                          <strong>
-                            {item.kind === "expense" &&
-                            item.status === "rejected"
-                              ? "سبب الرفض: "
-                              : "ملاحظة القرار: "}
-                          </strong>
-                          {item.decisionNote}
-                        </p>
-                      )}
-                    </div>
-                    <span className={`approval-status approval-${item.status}`}>
-                      <i />
-                      {APPROVAL_STATUS_LABELS[item.status]}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <div className="approval-history-empty">
-                <Clock3 size={18} />
-                <span>لا توجد قرارات مسجلة في بيانات العرض بعد.</span>
-              </div>
-            )}
-            <p className="approval-history-disclaimer">
-              سجل تجريبي داخل المتصفح؛ السجل الرسمي يحتاج حفظًا على الخادم مع
-              Audit Log.
-            </p>
+            <AuditTimeline
+              events={auditEvents}
+              emptyLabel="لا توجد قرارات مسجلة في بيانات العرض بعد."
+            />
           </section>
           <div className="finance-footer-note">
             <span>
