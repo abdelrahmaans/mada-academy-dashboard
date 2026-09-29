@@ -40,10 +40,17 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import AuditTimeline, { type AuditEvent } from "@/components/AuditTimeline";
 import InstructorPerformanceComparison from "@/components/InstructorPerformanceComparison";
+import ReasonField from "@/components/ReasonField";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
-import { EmptyState, LoadingState, LockedState } from "@/components/FeedbackStates";
+import {
+  EmptyState,
+  LoadingState,
+  LockedState,
+} from "@/components/FeedbackStates";
+import WorkflowStepper from "@/components/WorkflowStepper";
 
 type WorkspaceView =
   | "overview"
@@ -58,6 +65,7 @@ type SessionStatus =
   | "cancelled"
   | "rescheduled";
 type EvaluationCardStatus = "pending" | "generating" | "ready";
+type EvaluationReviewStatus = "pending" | "approved" | "changes_requested";
 type AttendanceEntry = {
   studentId: string;
   student: string;
@@ -614,12 +622,52 @@ export default function HeadInstructors() {
     string | null
   >(null);
   const [reviewedIds, setReviewedIds] = useState<string[]>([]);
+  const [evaluationReviewStatuses, setEvaluationReviewStatuses] = useState<
+    Record<string, EvaluationReviewStatus>
+  >({});
+  const [evaluationReviewNote, setEvaluationReviewNote] = useState("");
 
   const selectedSession =
     SESSIONS.find(session => session.id === selectedSessionId) ?? SESSIONS[0];
   const selectedEvaluation = EVALUATIONS.find(
     evaluation => evaluation.id === selectedEvaluationId
   );
+  const selectedEvaluationReviewStatus = selectedEvaluation
+    ? (evaluationReviewStatuses[selectedEvaluation.id] ?? "pending")
+    : "pending";
+  const evaluationReviewEvents: AuditEvent[] = selectedEvaluation
+    ? [
+        {
+          id: `${selectedEvaluation.id}-submitted`,
+          title: "تم إرسال التقييم",
+          description: selectedEvaluation.comment,
+          actor: selectedEvaluation.instructor,
+          timestamp: formatDate(selectedEvaluation.sessionDate),
+          tone: "pending" as const,
+        },
+        ...(selectedEvaluationReviewStatus !== "pending"
+          ? [
+              {
+                id: `${selectedEvaluation.id}-decision`,
+                title:
+                  selectedEvaluationReviewStatus === "approved"
+                    ? "تم اعتماد التقييم"
+                    : "مطلوب تعديل",
+                description:
+                  selectedEvaluationReviewStatus === "approved"
+                    ? "التقييم جاهز للمشاركة بعد ربط النظام."
+                    : "أُعيد للمدرب مع ملاحظة مراجعة.",
+                actor: "رئيس المدربين",
+                timestamp: "الآن",
+                tone:
+                  selectedEvaluationReviewStatus === "approved"
+                    ? ("approved" as const)
+                    : ("rejected" as const),
+              },
+            ]
+          : []),
+      ]
+    : [];
   const approvedAttendanceIds = useMemo(
     () =>
       decisionHistory
@@ -739,6 +787,22 @@ export default function HeadInstructors() {
     toast.success("تم تسجيل الاطلاع في المعاينة المحلية", {
       description: "الحالة لا تُحفظ خارج هذه الجلسة.",
     });
+  };
+  const decideEvaluation = (
+    id: string,
+    status: Exclude<EvaluationReviewStatus, "pending">,
+    note = ""
+  ) => {
+    setEvaluationReviewStatuses(current => ({ ...current, [id]: status }));
+    setReviewedIds(current =>
+      current.includes(id) ? current : [...current, id]
+    );
+    setEvaluationReviewNote("");
+    setSelectedEvaluationId(null);
+    toast.success(
+      status === "approved" ? "تم اعتماد التقييم" : "أُعيد التقييم للتعديل",
+      { description: note || "تم تسجيل القرار محليًا داخل المعاينة." }
+    );
   };
   const recordAttendanceDecision = (
     session: SessionRecord,
@@ -863,7 +927,10 @@ export default function HeadInstructors() {
           </button>
         </nav>
         <div className="academic-sidebar-divider" />
-        <button className="academic-nav-link" onClick={() => navigate("/academic-programs")}>
+        <button
+          className="academic-nav-link"
+          onClick={() => navigate("/academic-programs")}
+        >
           <BookOpen size={16} />
           <span>إدارة البرامج والمناهج</span>
           <ChevronLeft size={14} />
@@ -1134,6 +1201,56 @@ export default function HeadInstructors() {
                 {CARD_STATUS_LABELS[selectedEvaluation.cardStatus]}
               </b>
             </div>
+            <WorkflowStepper
+              title="دورة التقييم"
+              description="من إرسال المدرب حتى قرار رئيس المدربين."
+              steps={[
+                {
+                  id: "submitted",
+                  label: "أرسل المدرب التقييم",
+                  caption: "مكتمل",
+                  status: "complete",
+                },
+                {
+                  id: "review",
+                  label: "مراجعة رئيس المدربين",
+                  caption:
+                    selectedEvaluationReviewStatus === "pending"
+                      ? "بانتظار القرار"
+                      : "تمت المراجعة",
+                  status:
+                    selectedEvaluationReviewStatus === "pending"
+                      ? "current"
+                      : "complete",
+                },
+                {
+                  id: "share",
+                  label: "المشاركة مع ولي الأمر",
+                  caption:
+                    selectedEvaluationReviewStatus === "approved"
+                      ? "الخطوة التالية"
+                      : "بعد الاعتماد",
+                  status:
+                    selectedEvaluationReviewStatus === "approved"
+                      ? "current"
+                      : "upcoming",
+                },
+              ]}
+            />
+            <AuditTimeline
+              events={evaluationReviewEvents}
+              emptyLabel="لا يوجد سجل مراجعة بعد."
+            />
+            {selectedEvaluationReviewStatus === "pending" && (
+              <ReasonField
+                id="evaluation-review-note"
+                label="ملاحظة المراجعة"
+                helper="اختيارية للاعتماد؛ مطلوبة عند طلب التعديل"
+                value={evaluationReviewNote}
+                onChange={setEvaluationReviewNote}
+                placeholder="اكتب ما يجب تثبيته أو تعديله قبل المشاركة..."
+              />
+            )}
             <div className="academic-modal-actions">
               <button
                 className="academic-secondary-button"
@@ -1141,16 +1258,46 @@ export default function HeadInstructors() {
               >
                 إغلاق
               </button>
-              <button
-                className="academic-primary-button"
-                onClick={() => markEvaluationViewed(selectedEvaluation.id)}
-              >
-                <Eye size={15} /> تسجيل الاطلاع
-              </button>
+              {selectedEvaluationReviewStatus === "pending" ? (
+                <>
+                  <button
+                    className="academic-secondary-button academic-return-button"
+                    disabled={!evaluationReviewNote.trim()}
+                    onClick={() =>
+                      decideEvaluation(
+                        selectedEvaluation.id,
+                        "changes_requested",
+                        evaluationReviewNote
+                      )
+                    }
+                  >
+                    <ArrowLeft size={15} /> طلب تعديل
+                  </button>
+                  <button
+                    className="academic-primary-button"
+                    onClick={() =>
+                      decideEvaluation(
+                        selectedEvaluation.id,
+                        "approved",
+                        evaluationReviewNote
+                      )
+                    }
+                  >
+                    <Check size={15} /> اعتماد التقييم
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="academic-primary-button"
+                  onClick={() => setSelectedEvaluationId(null)}
+                >
+                  <Eye size={15} /> إغلاق المراجعة
+                </button>
+              )}
             </div>
             <div className="academic-modal-disclaimer">
-              تسجيل الاطلاع حالة توضيحية داخل الصفحة فقط؛ لا يغيّر التقييم أو
-              ينشئ بطاقة.
+              هذه حالة توضيحية محلية؛ الاعتماد الحقيقي يحتاج Evaluation API
+              وAudit Log ومشاركة خاضعة للسياسة.
             </div>
           </section>
         </div>
@@ -1866,7 +2013,9 @@ function AttendanceApprovalsView({
                 }
                 action={
                   query ? (
-                    <button type="button" onClick={() => setQuery("")}>مسح البحث</button>
+                    <button type="button" onClick={() => setQuery("")}>
+                      مسح البحث
+                    </button>
                   ) : undefined
                 }
               />
