@@ -18942,3 +18942,112 @@ button:not(:disabled) {
   .payment-status-heading button { width: 100%; justify-content: center; }
   .payment-status-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* R07 — Campaign workflow and R05 handoff */
+.campaign-workflow,
+.marketing-lead-handoff {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  background: #fff;
+  border: 1px solid #e7edf0;
+  border-radius: 12px;
+}
+.campaign-workflow {
+  margin: 14px 0;
+  background: linear-gradient(135deg, #faf7ff, #fff);
+  border-color: #e8def7;
+}
+.campaign-workflow-heading,
+.marketing-lead-handoff-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.campaign-workflow-heading > span,
+.marketing-lead-handoff-heading > span {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  place-items: center;
+  color: #7152a4;
+  background: #f0eafa;
+  border-radius: 8px;
+}
+.campaign-workflow-heading > div,
+.marketing-lead-handoff-heading > div {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+}
+.campaign-workflow-heading small,
+.marketing-lead-handoff-heading small {
+  color: #9a8daa;
+  font-size: 8px;
+}
+.campaign-workflow-heading strong,
+.marketing-lead-handoff-heading strong {
+  color: #475a67;
+  font-size: 10px;
+}
+.campaign-workflow-heading > b {
+  padding: 5px 8px;
+  color: #7457a4;
+  background: #f3edfc;
+  border-radius: 7px;
+  font-size: 8px;
+}
+.campaign-workflow-heading > b.active { color: #087c72; background: #e7f7f3; }
+.campaign-workflow-heading > b.paused { color: #a36c2e; background: #fff5df; }
+.campaign-workflow-steps,
+.marketing-lead-handoff-steps {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+}
+.campaign-workflow-steps span,
+.marketing-lead-handoff-steps span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 7px;
+  color: #9aa6ad;
+  background: #f8fafb;
+  border: 1px solid #e7edef;
+  border-radius: 7px;
+  font-size: 8px;
+  white-space: nowrap;
+}
+.campaign-workflow-steps span.complete,
+.marketing-lead-handoff-steps span.complete { color: #0b8176; background: #eaf8f5; border-color: #d0eee8; }
+.campaign-workflow-steps span.current,
+.marketing-lead-handoff-steps span.current { color: #906531; background: #fff8e9; border-color: #f3e3bf; }
+.campaign-workflow-steps span i { width: 6px; height: 6px; background: #c8d2d6; border-radius: 50%; }
+.campaign-workflow > button,
+.marketing-lead-handoff > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 28px;
+  color: #fff;
+  background: #7152a4;
+  border: 0;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 8px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.campaign-workflow > button:disabled,
+.marketing-lead-handoff > button:disabled { color: #9aa7ad; background: #e6edef; cursor: not-allowed; }
+.campaign-workflow-note,
+.marketing-lead-handoff > small { color: #84939a; font-size: 8px; line-height: 1.6; }
+.marketing-lead-handoff { margin-top: 8px; padding: 10px; background: #f7fbfc; border-color: #deeaed; }
+.marketing-lead-handoff-heading > span { color: #087d73; background: #e5f6f2; }
+.marketing-lead-handoff-steps span.next { color: #748a94; }
+.marketing-lead-handoff > button { background: #0b8479; }
+@media (max-width: 640px) {
+  .campaign-workflow-heading { align-items: flex-start; }
+  .campaign-workflow-heading > b { display: none; }
+}
