@@ -243,6 +243,8 @@ export default function MarketingDesk() {
   const [branch, setBranch] = useState("كل الفروع");
   const [query, setQuery] = useState("");
   const [leads, setLeads] = useState(INITIAL_LEADS);
+  const [campaigns, setCampaigns] = useState(CAMPAIGNS);
+  const [content, setContent] = useState(CONTENT);
   const [campaignName, setCampaignName] = useState("");
   const [campaignChannel, setCampaignChannel] = useState("Instagram");
   const [contentTitle, setContentTitle] = useState("");
@@ -258,8 +260,8 @@ export default function MarketingDesk() {
       ),
     [branch, leads, query]
   );
-  const campaignLeads = CAMPAIGNS.reduce((sum, item) => sum + item.leads, 0);
-  const campaignConversions = CAMPAIGNS.reduce(
+  const campaignLeads = campaigns.reduce((sum, item) => sum + item.leads, 0);
+  const campaignConversions = campaigns.reduce(
     (sum, item) => sum + item.conversions,
     0
   );
@@ -278,8 +280,9 @@ export default function MarketingDesk() {
       toast.error("اكتب اسم الحملة");
       return;
     }
+    setCampaigns(current => [{ id: `CMP-${String(current.length + 25).padStart(3, "0")}`, name: campaignName.trim(), channel: campaignChannel, status: "draft", leads: 0, conversions: 0, spend: 0, branch: "كل الفروع", owner: "مريم حسن", updated: "الآن" }, ...current]);
     toast.success("تم حفظ الحملة كمسودة", {
-      description: `${campaignName} · ${campaignChannel} · DEMO`,
+      description: `${campaignName} · ${campaignChannel} · الحالة: مسودة`,
     });
     setCampaignName("");
   };
@@ -289,6 +292,7 @@ export default function MarketingDesk() {
       toast.error("اكتب عنوان الأصل");
       return;
     }
+    setContent(current => [{ id: `AST-${String(current.length + 109).padStart(3, "0")}`, title: contentTitle.trim(), type: "نص", status: "draft", campaign: "بدون حملة", due: "غير محدد", platform: "Website" }, ...current]);
     toast.success("تمت إضافة أصل المحتوى للمراجعة", {
       description: `${contentTitle} · الحالة: مسودة`,
     });
@@ -362,14 +366,14 @@ export default function MarketingDesk() {
             onClick={() => selectView("campaigns")}
             icon={<Target size={19} />}
             label="الحملات"
-            count={CAMPAIGNS.filter(item => item.status === "active").length}
+            count={campaigns.filter(item => item.status === "active").length}
           />
           <NavButton
             active={view === "content"}
             onClick={() => selectView("content")}
             icon={<Image size={19} />}
             label="تقويم المحتوى"
-            count={CONTENT.filter(item => item.status === "in_review").length}
+            count={content.filter(item => item.status === "in_review").length}
           />
           <NavButton
             active={view === "leads"}
@@ -495,6 +499,7 @@ export default function MarketingDesk() {
               spend={spend}
               conversionRate={conversionRate}
               onView={selectView}
+              campaigns={campaigns}
             />
           )}
           {view === "campaigns" && (
@@ -506,6 +511,7 @@ export default function MarketingDesk() {
               channel={campaignChannel}
               setChannel={setCampaignChannel}
               onCreate={createCampaign}
+              items={campaigns}
             />
           )}
           {view === "content" && (
@@ -513,6 +519,7 @@ export default function MarketingDesk() {
               title={contentTitle}
               setTitle={setContentTitle}
               onCreate={createContent}
+              items={content}
             />
           )}
           {view === "leads" && (
@@ -539,12 +546,14 @@ function Overview({
   spend,
   conversionRate,
   onView,
+  campaigns,
 }: {
   campaignLeads: number;
   conversions: number;
   spend: number;
   conversionRate: number;
   onView: (view: View) => void;
+  campaigns: Campaign[];
 }) {
   return (
     <>
@@ -597,7 +606,7 @@ function Overview({
             }
           />
           <div className="marketing-campaign-list">
-            {CAMPAIGNS.slice(0, 3).map(item => (
+            {campaigns.slice(0, 3).map(item => (
               <article className="marketing-campaign-row" key={item.id}>
                 <span className={`marketing-campaign-icon ${item.status}`}>
                   <Target size={15} />
@@ -683,6 +692,7 @@ function Campaigns({
   channel,
   setChannel,
   onCreate,
+  items,
 }: {
   query: string;
   setQuery: (v: string) => void;
@@ -691,8 +701,9 @@ function Campaigns({
   channel: string;
   setChannel: (v: string) => void;
   onCreate: (event: FormEvent) => void;
+  items: Campaign[];
 }) {
-  const items = CAMPAIGNS.filter(
+  const filteredItems = items.filter(
     item =>
       !query.trim() ||
       `${item.name} ${item.channel} ${item.branch}`
@@ -717,7 +728,7 @@ function Campaigns({
           }
         />
         <div className="marketing-table-list">
-          {items.map(item => (
+          {filteredItems.map(item => (
             <article className="marketing-table-row" key={item.id}>
               <span className={`marketing-campaign-icon ${item.status}`}>
                 <Target size={15} />
@@ -795,10 +806,12 @@ function Content({
   title,
   setTitle,
   onCreate,
+  items,
 }: {
   title: string;
   setTitle: (v: string) => void;
   onCreate: (event: FormEvent) => void;
+  items: ContentItem[];
 }) {
   return (
     <div className="marketing-two-col">
@@ -807,11 +820,11 @@ function Content({
           icon={<Image size={16} />}
           title="تقويم المحتوى"
           action={
-            <span className="marketing-context">{CONTENT.length} أصول</span>
+            <span className="marketing-context">{items.length} أصول</span>
           }
         />
         <div className="marketing-content-list">
-          {CONTENT.map(item => (
+          {items.map(item => (
             <article className="marketing-content-row" key={item.id}>
               <span className="marketing-content-icon">
                 <FileText size={15} />

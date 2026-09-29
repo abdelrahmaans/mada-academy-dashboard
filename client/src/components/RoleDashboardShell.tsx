@@ -8,6 +8,7 @@ import {
   type RoleIdentityKind,
   type RoleScopeLevel,
 } from "@/contexts/RoleScopeContext";
+import { getRoleDefinition } from "@/lib/roleNavigation";
 import "./RoleDashboardShell.css";
 import "./RoleFoundation.css";
 
@@ -37,6 +38,7 @@ export default function RoleDashboardShell({
   ...props
 }: RoleDashboardShellProps) {
   const classes = ["role-dashboard-shell", className].filter(Boolean).join(" ");
+  const roleDefinition = getRoleDefinition(roleCode);
 
   return (
     <RoleScopeProvider
@@ -53,8 +55,12 @@ export default function RoleDashboardShell({
         {...props}
         className={classes}
         dir="rtl"
+        aria-label={`مساحة ${roleLabel} — ${scopeLabel}`}
         data-demo={demo ? "true" : "false"}
         data-role-code={roleCode}
+        data-role-label={roleDefinition.label}
+        data-identity-kind={identityKind}
+        data-role-home={roleDefinition.homePath}
         data-scope-level={scopeLevel}
       >
         {children}

@@ -569,7 +569,7 @@ function App() {
                 <span className="stat-hint">مصدرها صفحة الأكاديمية</span>
                 <button
                   className="text-link"
-                  onClick={() => showComingSoon("إدارة الطلبات")}
+                  onClick={() => navigate("/approvals")}
                 >
                   عرض الطلبات <ChevronLeft size={13} />
                 </button>

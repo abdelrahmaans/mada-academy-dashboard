@@ -24,9 +24,11 @@ import { toast } from "sonner";
 import StudentProgressCard, {
   type StudentAchievement,
 } from "@/components/StudentProgressCard";
+import { RoleScopeProvider } from "@/contexts/RoleScopeContext";
+import "@/components/RoleFoundation.css";
 
 type StudentTab = "home" | "sessions" | "progress";
-const achievements: StudentAchievement[] = [
+const INITIAL_ACHIEVEMENTS: StudentAchievement[] = [
   { title: "مستكشف الحلول", detail: "أنهيت ٣ تحديات تطبيقية", unlocked: true },
   { title: "منتظم في التعلم", detail: "حضرت ٤ جلسات متتالية", unlocked: true },
   { title: "بطل الوحدة", detail: "أكمل الوحدة الحالية", unlocked: false },
@@ -58,6 +60,8 @@ const sessions = [
 export default function StudentPortal() {
   const [tab, setTab] = useState<StudentTab>("home");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [progress, setProgress] = useState(72);
+  const [achievementState, setAchievementState] = useState(INITIAL_ACHIEVEMENTS);
   const nav = [
     { id: "home" as const, label: "رحلتي", icon: Home },
     { id: "sessions" as const, label: "جلساتي", icon: CalendarDays },
@@ -67,8 +71,28 @@ export default function StudentPortal() {
     setTab(next);
     setMobileOpen(false);
   };
+  const completeCheckpoint = () => {
+    setProgress(current => Math.max(current, 84));
+    setAchievementState(current =>
+      current.map(item =>
+        item.title === "بطل الوحدة" ? { ...item, unlocked: true } : item
+      )
+    );
+    toast.success("تم تسجيل إنجاز تحدي الوحدة", {
+      description: "أصبح الإنجاز ظاهرًا في رحلتك التعليمية داخل المعاينة.",
+    });
+  };
   return (
-    <div className="student-portal" dir="rtl">
+    <RoleScopeProvider
+      roleCode="R09"
+      roleLabel="الطالب"
+      scopeLevel="self"
+      scopeLabel="حساب الطالب فقط"
+      identityKind="consumer"
+      tenantName="أكاديمية مدى"
+      demo
+    >
+      <div className="student-portal" dir="rtl">
       {mobileOpen && (
         <button
           className="student-portal-scrim"
@@ -181,15 +205,28 @@ export default function StudentPortal() {
               أدوات إدارية.
             </span>
           </div>
-          {tab === "home" && <HomeTab onNavigate={select} />}
+          {tab === "home" && (
+            <HomeTab
+              onNavigate={select}
+              progress={progress}
+              achievements={achievementState}
+            />
+          )}
           {tab === "sessions" && <SessionsTab />}
-          {tab === "progress" && <ProgressTab />}
+          {tab === "progress" && (
+            <ProgressTab
+              progress={progress}
+              achievements={achievementState}
+              onCompleteCheckpoint={completeCheckpoint}
+            />
+          )}
         </div>
       </main>
-    </div>
+      </div>
+    </RoleScopeProvider>
   );
 }
-function HomeTab({ onNavigate }: { onNavigate: (tab: StudentTab) => void }) {
+function HomeTab({ onNavigate, progress, achievements }: { onNavigate: (tab: StudentTab) => void; progress: number; achievements: StudentAchievement[] }) {
   return (
     <>
       <section className="student-hero-card">
@@ -218,7 +255,7 @@ function HomeTab({ onNavigate }: { onNavigate: (tab: StudentTab) => void }) {
         <Stat
           icon={<Trophy size={16} />}
           label="التقدم"
-          value="72%"
+          value={`${progress}%`}
           note="في المسار الحالي"
           tone="violet"
         />
@@ -232,9 +269,9 @@ function HomeTab({ onNavigate }: { onNavigate: (tab: StudentTab) => void }) {
       </div>
       <div className="student-home-grid">
         <StudentProgressCard
-          progress={72}
+          progress={progress}
           currentUnit="الحساسات والحركة"
-          nextCheckpoint="تحدي الوحدة"
+          nextCheckpoint={achievements.find(item => item.title === "بطل الوحدة")?.unlocked ? "تم اجتيازه" : "تحدي الوحدة"}
           achievements={achievements}
         />
         <section className="student-panel">
@@ -315,13 +352,14 @@ function SessionsTab() {
     </section>
   );
 }
-function ProgressTab() {
+function ProgressTab({ progress, achievements, onCompleteCheckpoint }: { progress: number; achievements: StudentAchievement[]; onCompleteCheckpoint: () => void }) {
+  const checkpointComplete = achievements.find(item => item.title === "بطل الوحدة")?.unlocked ?? false;
   return (
     <div className="student-progress-layout">
       <StudentProgressCard
-        progress={72}
+        progress={progress}
         currentUnit="الحساسات والحركة"
-        nextCheckpoint="تحدي الوحدة"
+        nextCheckpoint={checkpointComplete ? "تم اجتيازه" : "تحدي الوحدة"}
         achievements={achievements}
       />
       <section className="student-panel">
@@ -330,8 +368,16 @@ function ProgressTab() {
           <CourseStep title="المقدمة والأمان" state="مكتمل" />
           <CourseStep title="دوائر التحكم" state="مكتمل" />
           <CourseStep title="الحساسات والحركة" state="جاري الآن" />
-          <CourseStep title="تحدي الوحدة" state="قادم" />
+          <CourseStep title="تحدي الوحدة" state={checkpointComplete ? "مكتمل" : "قادم"} />
         </div>
+        {!checkpointComplete && (
+          <button type="button" className="student-note" onClick={onCompleteCheckpoint}>
+            <Trophy size={14} /> سجّل إكمال تحدي الوحدة بعد إنهاء التطبيق
+          </button>
+        )}
+        {checkpointComplete && (
+          <div className="student-note"><CheckCircle2 size={14} /> تم تسجيل الإنجاز ويمكنك متابعة الوحدة التالية.</div>
+        )}
       </section>
     </div>
   );

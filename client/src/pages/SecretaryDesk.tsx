@@ -161,6 +161,7 @@ export default function SecretaryDesk() {
   const [registrationPhone, setRegistrationPhone] = useState("");
   const [registrationGroup, setRegistrationGroup] = useState(OFFERINGS[0].id);
   const [discountCode, setDiscountCode] = useState("");
+  const [offerings, setOfferings] = useState(OFFERINGS);
   const selectedLead =
     leads.find(item => item.id === selectedLeadId) ?? leads[0];
   const activeLeads = leads.filter(item =>
@@ -208,9 +209,21 @@ export default function SecretaryDesk() {
       });
       return;
     }
+    const selectedOffering = offerings.find(item => item.id === registrationGroup);
+    if (!selectedOffering || selectedOffering.seats >= selectedOffering.capacity) {
+      toast.error("المجموعة ممتلئة أو غير متاحة", {
+        description: "اختر مجموعة بها مقعد متاح قبل إنشاء التسجيل.",
+      });
+      return;
+    }
     toast.success("تم إنشاء تسجيل تجريبي", {
       description: `${registrationName} · ${discount ? `${discount.label} ${discount.percent}%` : "بدون خصم"} · لا توجد فاتورة فعلية.`,
     });
+    setOfferings(current =>
+      current.map(item =>
+        item.id === registrationGroup ? { ...item, seats: item.seats + 1 } : item
+      )
+    );
     setRegistrationName("");
     setRegistrationPhone("");
   };
@@ -409,6 +422,7 @@ export default function SecretaryDesk() {
               discount={discountCode}
               setDiscount={setDiscountCode}
               onSubmit={registerStudent}
+              offerings={offerings}
               onHandoff={() =>
                 toast.success("تم تجهيز ملخص التسليم للمالية", {
                   description: "سيحتاج إنشاء الفاتورة إلى صلاحية R06 وربط API.",
@@ -418,7 +432,7 @@ export default function SecretaryDesk() {
           )}
           {view === "operations" && (
             <OperationsView
-              offerings={OFFERINGS}
+              offerings={offerings}
               onRegister={() => selectView("registration")}
             />
           )}
@@ -748,6 +762,7 @@ function RegistrationView({
   discount,
   setDiscount,
   onSubmit,
+  offerings,
   onHandoff,
 }: {
   query: string;
@@ -761,6 +776,7 @@ function RegistrationView({
   discount: string;
   setDiscount: (v: string) => void;
   onSubmit: (e: FormEvent) => void;
+  offerings: Offering[];
   onHandoff: () => void;
 }) {
   const duplicate =
@@ -768,7 +784,7 @@ function RegistrationView({
     ["آدم شريف حسن", "ملك حسام الدين"].some(item =>
       item.includes(query.trim())
     );
-  const selectedGroup = OFFERINGS.find(item => item.id === group);
+  const selectedGroup = offerings.find(item => item.id === group);
   const ready = Boolean(
     name.trim() && /^01\d{9}$/.test(phone.trim()) && selectedGroup
   );
@@ -810,7 +826,7 @@ function RegistrationView({
               value={group}
               onChange={event => setGroup(event.target.value)}
             >
-              {OFFERINGS.map(item => (
+              {offerings.map(item => (
                 <option key={item.id} value={item.id}>
                   {item.course} · {item.id} · {item.capacity - item.seats} مقاعد
                   متاحة

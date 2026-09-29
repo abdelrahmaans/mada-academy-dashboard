@@ -22,6 +22,8 @@ import { toast } from "sonner";
 import ChildrenSwitcher, {
   type FamilyChild,
 } from "@/components/ChildrenSwitcher";
+import { RoleScopeProvider } from "@/contexts/RoleScopeContext";
+import "@/components/RoleFoundation.css";
 
 type PortalTab = "overview" | "attendance" | "evaluations" | "invoices";
 type ChildData = FamilyChild & {
@@ -71,6 +73,7 @@ export default function FamilyPortal() {
   const [selectedId, setSelectedId] = useState(CHILDREN[0].id);
   const [tab, setTab] = useState<PortalTab>("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [supportRequested, setSupportRequested] = useState(false);
   const child = useMemo(
     () => CHILDREN.find(item => item.id === selectedId) ?? CHILDREN[0],
     [selectedId]
@@ -87,7 +90,16 @@ export default function FamilyPortal() {
     setMobileOpen(false);
   };
   return (
-    <div className="family-portal" dir="rtl">
+    <RoleScopeProvider
+      roleCode="R08"
+      roleLabel="ولي الأمر"
+      scopeLevel="family"
+      scopeLabel="الأطفال المرتبطون فقط"
+      identityKind="consumer"
+      tenantName="أكاديمية مدى"
+      demo
+    >
+      <div className="family-portal" dir="rtl">
       {mobileOpen && (
         <button
           className="family-portal-scrim"
@@ -215,7 +227,7 @@ export default function FamilyPortal() {
           {tab === "overview" && <Overview child={child} onTab={setTab} />}
           {tab === "attendance" && <Attendance child={child} />}
           {tab === "evaluations" && <Evaluations child={child} />}
-          {tab === "invoices" && <Invoices child={child} />}
+          {tab === "invoices" && <Invoices child={child} supportRequested={supportRequested} onRequestSupport={() => { setSupportRequested(true); toast.success("تم إرسال طلب المتابعة", { description: "ستراجعه الأكاديمية قبل أي تعديل على الفاتورة." }); }} />}
           <footer className="family-portal-privacy">
             <ShieldCheck size={14} />
             <span>
@@ -225,7 +237,8 @@ export default function FamilyPortal() {
           </footer>
         </div>
       </main>
-    </div>
+      </div>
+    </RoleScopeProvider>
   );
 }
 
@@ -317,7 +330,16 @@ function Overview({
   );
 }
 function Attendance({ child }: { child: ChildData }) {
-  const days = [88, 100, 75, 100, 88, 100, 88, 100];
+  const days = [
+    { value: 88, label: "متأخر" },
+    { value: 100, label: "حاضر" },
+    { value: 75, label: "حضور جزئي" },
+    { value: 100, label: "حاضر" },
+    { value: 88, label: "متأخر" },
+    { value: 100, label: "حاضر" },
+    { value: 88, label: "متأخر" },
+    { value: 100, label: "حاضر" },
+  ];
   return (
     <section className="family-portal-panel family-detail-panel">
       <PanelTitle
@@ -331,13 +353,13 @@ function Attendance({ child }: { child: ChildData }) {
         <small>مؤشر توضيحي مرتبط بالطفل المحدد</small>
       </div>
       <div className="family-attendance-list">
-        {days.map((value, index) => (
+        {days.map((day, index) => (
           <div key={index}>
             <span>الجلسة {index + 1}</span>
             <i>
-              <em style={{ width: `${value}%` }} />
+              <em style={{ width: `${day.value}%` }} />
             </i>
-            <b>{value === 100 ? "حاضر" : "حاضر"}</b>
+            <b>{day.label}</b>
           </div>
         ))}
       </div>
@@ -378,7 +400,7 @@ function Evaluations({ child }: { child: ChildData }) {
     </section>
   );
 }
-function Invoices({ child }: { child: ChildData }) {
+function Invoices({ child, supportRequested, onRequestSupport }: { child: ChildData; supportRequested: boolean; onRequestSupport: () => void }) {
   const paid = child.invoiceStatus.includes("مدفوع");
   return (
     <section className="family-portal-panel family-detail-panel">
@@ -398,18 +420,15 @@ function Invoices({ child }: { child: ChildData }) {
         </div>
         <button
           type="button"
-          onClick={() =>
-            toast("الدفع الإلكتروني قيد التجهيز", {
-              description: "لا توجد عملية دفع حقيقية في هذه المعاينة.",
-            })
-          }
+          onClick={onRequestSupport}
+          disabled={supportRequested}
         >
-          التفاصيل
+          {supportRequested ? "تم إرسال طلب المراجعة" : "طلب مراجعة الفاتورة"}
         </button>
       </div>
       <div className="family-info-note">
         <AlertCircle size={14} /> هذه معاينة للعرض فقط. لا يتم الدفع أو تغيير
-        الفاتورة من بوابة الأسرة حاليًا.
+        الفاتورة من بوابة الأسرة حاليًا؛ طلب المراجعة يمر عبر الأكاديمية.
       </div>
     </section>
   );

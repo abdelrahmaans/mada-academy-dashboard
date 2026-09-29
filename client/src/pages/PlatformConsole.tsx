@@ -469,6 +469,7 @@ export default function PlatformConsole() {
   const [ownerName, setOwnerName] = useState("");
   const [firstBranchName, setFirstBranchName] = useState("");
   const [planName, setPlanName] = useState("تجريبية · توضيحية");
+  const [createError, setCreateError] = useState("");
 
   const normalizedQuery = query.trim().toLocaleLowerCase("ar-EG");
   const filteredAcademies = useMemo(
@@ -514,7 +515,10 @@ export default function PlatformConsole() {
     const cleanName = academyName.trim();
     const cleanOwner = ownerName.trim();
     const cleanBranch = firstBranchName.trim();
-    if (!cleanName || !cleanOwner || !cleanBranch) return;
+    if (!cleanName || !cleanOwner || !cleanBranch) {
+      setCreateError("أكمل اسم الأكاديمية والمسؤول والفرع الأول قبل المتابعة.");
+      return;
+    }
 
     const academy: Academy = {
       id: `DEMO-${Date.now().toString().slice(-4)}`,
@@ -583,7 +587,10 @@ export default function PlatformConsole() {
       <button
         className="pc-primary-button"
         type="button"
-        onClick={() => setCreateOpen(true)}
+        onClick={() => {
+          setCreateError("");
+          setCreateOpen(true);
+        }}
       >
         <Plus size={17} aria-hidden="true" /> إضافة أكاديمية
       </button>
@@ -1158,6 +1165,11 @@ export default function PlatformConsole() {
                 فقط.
               </span>
             </div>
+            {createError && (
+              <p className="pc-form-error" role="alert">
+                {createError}
+              </p>
+            )}
           </form>
           <DialogFooter className="pc-dialog-footer">
             <button
