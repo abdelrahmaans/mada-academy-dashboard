@@ -19051,3 +19051,69 @@ button:not(:disabled) {
   .campaign-workflow-heading { align-items: flex-start; }
   .campaign-workflow-heading > b { display: none; }
 }
+
+/* R08 — Parent Family Portal consumer surface */
+.family-portal { min-height: 100vh; display: flex; color: #263b46; background: #f5f8fa; font-family: Cairo, Inter, sans-serif; }
+.family-portal-sidebar { width: 250px; display: flex; flex-direction: column; padding: 22px 16px; color: #d8e6ea; background: #12343f; }
+.family-portal-brand { display: flex; align-items: center; gap: 8px; padding: 0 8px 22px; border-bottom: 1px solid rgb(255 255 255 / 10%); }
+.family-portal-brand > span { color: #fff; font-size: 25px; font-weight: 900; letter-spacing: -1px; }
+.family-portal-brand > small { color: #8fd4ca; font-size: 10px; }
+.family-portal-brand button { display: none; margin-inline-start: auto; color: #c7dcdf; background: transparent; border: 0; }
+.family-parent-card { display: flex; align-items: center; gap: 9px; padding: 18px 7px; }
+.family-parent-avatar { display: grid; width: 36px; height: 36px; place-items: center; color: #096f68; background: #d6f0ea; border-radius: 50%; font-weight: 900; }
+.family-parent-card div { display: grid; gap: 2px; }
+.family-parent-card strong { color: #fff; font-size: 12px; }
+.family-parent-card small, .family-portal-label { color: #98b6bb; font-size: 9px; }
+.family-portal-label { padding: 12px 9px 8px; }
+.family-portal-nav { display: grid; gap: 4px; }
+.family-portal-nav button, .family-portal-logout { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 11px; color: #a9c0c5; background: transparent; border: 0; border-radius: 9px; font: inherit; font-size: 11px; text-align: right; cursor: pointer; }
+.family-portal-nav button.active, .family-portal-nav button:hover { color: #fff; background: #1a5660; }
+.family-portal-nav button.active svg { color: #7de1d3; }
+.family-portal-spacer { flex: 1; }
+.family-portal-help { display: flex; align-items: center; gap: 7px; padding: 11px 8px; color: #9ed4cc; background: rgb(255 255 255 / 6%); border: 0; border-radius: 10px; text-align: right; cursor: pointer; }
+.family-portal-help > span { display: grid; flex: 1; gap: 2px; }
+.family-portal-help strong { color: #d9f1ed; font-size: 10px; }
+.family-portal-help small { color: #8cafb5; font-size: 8px; }
+.family-portal-logout { margin-top: 12px; color: #91adb3; }
+.family-portal-main { min-width: 0; flex: 1; }
+.family-portal-topbar { display: flex; align-items: center; justify-content: space-between; min-height: 70px; padding: 0 34px; background: #fff; border-bottom: 1px solid #e8eef0; }
+.family-portal-topbar > div { display: grid; gap: 2px; }
+.family-portal-topbar > div > span { color: #24424c; font-size: 13px; font-weight: 900; }
+.family-portal-topbar small { color: #8aa0a7; font-size: 9px; }
+.family-menu-button, .family-notification { display: grid; place-items: center; width: 32px; height: 32px; color: #668089; background: #f2f7f8; border: 1px solid #e5edef; border-radius: 9px; cursor: pointer; }
+.family-menu-button { display: none; }
+.family-portal-content { max-width: 1120px; margin: 0 auto; padding: 30px 34px 44px; }
+.family-portal-welcome { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 20px; }
+.family-kicker { display: inline-flex; align-items: center; gap: 5px; color: #0c8176; font-size: 10px; font-weight: 800; }
+.family-portal-welcome h1 { margin: 8px 0 4px; color: #203942; font-size: 27px; letter-spacing: -.5px; }
+.family-portal-welcome p { margin: 0; color: #789099; font-size: 11px; }
+.family-demo-badge { padding: 6px 9px; color: #927035; background: #fff7df; border: 1px solid #f3e5bf; border-radius: 7px; font-size: 8px; white-space: nowrap; }
+.family-children-switcher { padding: 16px; background: #fff; border: 1px solid #e5edef; border-radius: 14px; box-shadow: 0 6px 20px rgb(15 23 42 / 4%); }
+.family-children-switcher-heading { display: flex; align-items: center; gap: 8px; color: #55707a; }
+.family-children-switcher-heading > span { display: grid; width: 29px; height: 29px; place-items: center; color: #087c72; background: #e4f6f2; border-radius: 8px; }
+.family-children-switcher-heading div { display: grid; flex: 1; gap: 1px; }
+.family-children-switcher-heading small { color: #8ba0a7; font-size: 8px; }
+.family-children-switcher-heading strong { color: #35545e; font-size: 11px; }
+.family-children-list { display: flex; gap: 9px; margin-top: 13px; overflow-x: auto; }
+.family-children-list button { display: flex; align-items: center; gap: 8px; min-width: 210px; padding: 9px; color: #65808a; background: #fbfcfd; border: 1px solid #e7edef; border-radius: 10px; text-align: right; cursor: pointer; }
+.family-children-list button.selected { color: #174e4b; background: #effaf7; border-color: #aee3d9; }
+.family-children-list button > span:nth-child(2) { display: grid; flex: 1; gap: 2px; }
+.family-children-list strong { font-size: 10px; }
+.family-children-list small { color: #8ba0a7; font-size: 8px; }
+.family-children-list button > svg { color: #0b8378; }
+.family-children-switcher p { margin: 11px 2px 0; color: #8a9ca2; font-size: 8px; }
+.family-children-switcher p strong { color: #44656e; }
+.family-child-avatar { display: grid; width: 31px; height: 31px; flex: 0 0 auto; place-items: center; color: #fff; border-radius: 9px; font-size: 10px; font-weight: 900; }
+.family-child-avatar.large { width: 48px; height: 48px; border-radius: 13px; font-size: 15px; }
+.family-child-avatar.teal { background: #0b9589; }.family-child-avatar.violet { background: #8063b4; }.family-child-avatar.blue { background: #4e82bc; }.family-child-avatar.amber { background: #c28b42; }
+.family-selected-child { display: flex; align-items: center; gap: 11px; margin-top: 20px; padding: 17px; background: linear-gradient(110deg, #e6f7f3, #f5fbfa); border: 1px solid #d3eee9; border-radius: 14px; }
+.family-selected-child div { flex: 1; }.family-selected-child small { color: #68918e; font-size: 8px; }.family-selected-child h2 { margin: 2px 0; color: #245750; font-size: 16px; }.family-selected-child p { margin: 0; color: #668a88; font-size: 9px; }
+.family-active-status { display: inline-flex; align-items: center; gap: 4px; padding: 5px 8px; color: #087d73; background: #d5f2eb; border-radius: 7px; font-size: 8px; font-weight: 800; }
+.family-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 18px 0; }
+.family-metric { display: grid; gap: 4px; padding: 14px; background: #fff; border: 1px solid #e7edef; border-radius: 12px; }.family-metric-icon { display: grid; width: 28px; height: 28px; place-items: center; margin-bottom: 3px; border-radius: 8px; }.family-metric-icon.teal { color: #087d73; background: #e6f7f3; }.family-metric-icon.violet { color: #7655a5; background: #f1ebfa; }.family-metric-icon.amber { color: #9a7135; background: #fff5df; }.family-metric-icon.blue { color: #4778ae; background: #eaf2fb; }.family-metric small { color: #82959c; font-size: 8px; }.family-metric strong { color: #284750; font-size: 18px; line-height: 1.2; }.family-metric > span:last-child { color: #9aa9ae; font-size: 8px; }
+.family-overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }.family-portal-panel { padding: 17px; background: #fff; border: 1px solid #e7edef; border-radius: 13px; }.family-panel-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; }.family-panel-title > div { display: flex; align-items: center; gap: 7px; }.family-panel-title > div > span { color: #0b8278; }.family-panel-title h2 { margin: 0; color: #36545c; font-size: 12px; }.family-panel-title button { display: inline-flex; align-items: center; gap: 3px; color: #0a8378; background: transparent; border: 0; font: inherit; font-size: 8px; cursor: pointer; }.family-context { color: #9aa9ae; font-size: 8px; }
+.family-next-session, .family-evaluation-preview { display: flex; align-items: center; gap: 10px; }.family-next-session > span { display: grid; width: 38px; height: 38px; place-items: center; color: #0c877b; background: #e8f8f4; border-radius: 10px; }.family-next-session div, .family-evaluation-preview div { display: grid; flex: 1; gap: 4px; }.family-next-session strong, .family-evaluation-preview strong { color: #3b5c64; font-size: 11px; }.family-next-session small, .family-evaluation-preview small { color: #8a9da3; font-size: 8px; }.family-next-session b { padding: 5px 7px; color: #0b8378; background: #e4f6f2; border-radius: 6px; font-size: 8px; }.family-score { display: grid; width: 42px; height: 42px; place-items: center; color: #8a662e; background: #fff4da; border-radius: 50%; font-size: 12px; font-weight: 900; }
+.family-detail-panel { margin-top: 18px; }.family-attendance-hero { display: grid; gap: 2px; padding: 19px; background: #effaf7; border-radius: 10px; }.family-attendance-hero strong { color: #087c72; font-size: 28px; }.family-attendance-hero span { color: #3f6d68; font-size: 10px; font-weight: 800; }.family-attendance-hero small { color: #85a19d; font-size: 8px; }.family-attendance-list { display: grid; gap: 10px; margin: 18px 0; }.family-attendance-list > div { display: grid; grid-template-columns: 70px 1fr 40px; align-items: center; gap: 10px; color: #7e9399; font-size: 9px; }.family-attendance-list i { height: 6px; overflow: hidden; background: #edf1f2; border-radius: 99px; }.family-attendance-list em { display: block; height: 100%; background: #44b6a4; border-radius: inherit; }.family-attendance-list b { color: #168579; font-size: 8px; }.family-info-note { display: flex; align-items: flex-start; gap: 7px; padding: 10px; color: #758b91; background: #f8fafb; border-radius: 8px; font-size: 8px; line-height: 1.7; }.family-info-note svg { flex: 0 0 auto; color: #75a9a4; }
+.family-rubric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }.family-rubric-grid > div { display: grid; gap: 8px; padding: 13px; background: #fffbf1; border: 1px solid #f3e8c9; border-radius: 9px; }.family-rubric-grid span { color: #8d8065; font-size: 9px; }.family-rubric-grid strong { color: #8d682d; font-size: 20px; }.family-rubric-grid small { font-size: 9px; font-weight: 400; }.family-evaluation-message { display: flex; gap: 9px; margin: 15px 0; padding: 14px; color: #5d7380; background: #f6f9fb; border-radius: 10px; }.family-evaluation-message svg { color: #6c9eaa; }.family-evaluation-message strong { font-size: 10px; }.family-evaluation-message p { margin: 5px 0 0; font-size: 9px; line-height: 1.7; }.family-invoice-card { display: flex; align-items: center; gap: 11px; padding: 16px; border-radius: 10px; }.family-invoice-card.paid { background: #edf9f4; }.family-invoice-card.due { background: #fff8e8; }.family-invoice-card > span { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 9px; }.family-invoice-card.paid > span { color: #0c8477; background: #d6f1e8; }.family-invoice-card.due > span { color: #ad7e31; background: #ffebbf; }.family-invoice-card > div { display: grid; flex: 1; gap: 3px; }.family-invoice-card small { color: #7f9398; font-size: 8px; }.family-invoice-card strong { color: #3d5960; font-size: 12px; }.family-invoice-card p { margin: 0; color: #71878d; font-size: 8px; }.family-invoice-card button { padding: 7px 9px; color: #4e7279; background: #fff; border: 1px solid #dce7e8; border-radius: 7px; font: inherit; font-size: 8px; cursor: pointer; }.family-portal-privacy { display: flex; gap: 7px; margin-top: 22px; padding: 11px; color: #82969d; background: #eef5f6; border-radius: 8px; font-size: 8px; line-height: 1.7; }.family-portal-privacy svg { flex: 0 0 auto; color: #6e9ea2; }
+@media (max-width: 900px) { .family-portal-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 20; transform: translateX(-100%); transition: transform .2s ease; }.family-portal-sidebar.open { transform: translateX(0); }.family-portal-brand button { display: block; }.family-portal-scrim { position: fixed; inset: 0; z-index: 19; background: rgb(15 23 42 / 45%); border: 0; }.family-menu-button { display: grid; }.family-portal-topbar { padding: 0 18px; }.family-portal-content { padding: 24px 18px 38px; } }
+@media (max-width: 640px) { .family-portal-welcome { display: grid; }.family-portal-welcome h1 { font-size: 22px; }.family-demo-badge { width: max-content; }.family-metrics { grid-template-columns: 1fr 1fr; gap: 8px; }.family-overview-grid { grid-template-columns: 1fr; }.family-rubric-grid { grid-template-columns: 1fr; }.family-selected-child { align-items: flex-start; }.family-active-status { display: none; }.family-children-list button { min-width: 185px; } }
