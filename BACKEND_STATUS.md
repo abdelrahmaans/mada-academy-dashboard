@@ -19,3 +19,9 @@ Angular shell تم توحيد ألوانه وRTL/topbar/sidebar spacing مع Rea
 تمت إضافة `DemoDataSeeder` idempotent وبيانات اختبار حقيقية: tenant واحد، فرعان، 7 staff accounts، memberships لكل الأدوار الحالية، classrooms، course offering، 3 sessions، kit، 6 students، 4 enrollments، وattendance records. تم اختبار OTP/JWT و`/me` وtenant scope وrefresh ضد PostgreSQL الحقيقي.
 
 ملف التشغيل والتفاصيل: `backend/DATABASE_STATUS.md`.
+
+---
+
+## 12. React API Integration — 29 سبتمبر 2026
+
+React أصبح متصلًا بالـASP.NET Core عبر `client/src/lib/apiClient.ts` و`AuthContext`. تمت إضافة OTP/JWT session handling، refresh retry، logout، وdashboard summary حقيقي من PostgreSQL. أضيفت بطاقة اتصال داخل `/workspace` تعرض DEMO MODE أو CONNECTED مع role/scope وأعداد الطلاب والجلسات القادمة والمكتملة. تم تفعيل CORS للـDevelopment، وإضافة `VITE_API_URL` في `.env.example`.

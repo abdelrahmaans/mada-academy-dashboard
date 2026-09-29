@@ -150,3 +150,7 @@ R00 إلى R09 مغطاة كواجهات prototype مع role code وscope labels
 ### 29 سبتمبر 2026 — PostgreSQL Applied + Demo Seed
 
 تم تشغيل PostgreSQL 16.15 محليًا، إنشاء `mada_academy` و`mada_app`، وتطبيق migrations الثلاثة. أضيف `DemoDataSeeder` idempotent وبيانات اختبار للـtenant/branches/roles/scheduling/students/attendance. الـAPI تم اختباره ضد PostgreSQL الحقيقي؛ الخطوة التالية ربط Angular بـtyped API client ثم تنفيذ create-session transaction.
+
+### 29 سبتمبر 2026 — React Connected to Real Backend
+
+تم ربط React بالـASP.NET Core/PostgreSQL عبر typed API client وAuthContext. `/workspace` يدعم OTP/JWT login ويعرض dashboard summary حقيقي من الداتا، مع fallback واضح إلى DEMO MODE. تم إضافة CORS و`VITE_API_URL` للتشغيل المحلي أو public preview.

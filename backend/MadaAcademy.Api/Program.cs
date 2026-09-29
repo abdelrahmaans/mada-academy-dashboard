@@ -17,6 +17,14 @@ builder.Services.AddMadaPersistence(builder.Configuration);
 builder.Services.AddMadaAuthentication(jwtOptions);
 builder.Services.AddScoped<ConflictService>();
 builder.Services.AddSingleton<IAuditSink, DevelopmentAuditSink>();
+builder.Services.AddCors(options => options.AddPolicy("frontend", policy =>
+{
+    var configuredOrigins = Environment.GetEnvironmentVariable("MADA_CORS_ORIGINS")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    if (builder.Environment.IsDevelopment() && (configuredOrigins is null || configuredOrigins.Length == 0))
+        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+    else
+        policy.WithOrigins(configuredOrigins ?? []).AllowAnyHeader().AllowAnyMethod();
+}));
 
 var app = builder.Build();
 
@@ -30,6 +38,7 @@ if (IsEnabled("MADA_APPLY_MIGRATIONS") || IsEnabled("MADA_SEED_DEMO_DATA"))
 }
 
 app.UseExceptionHandler();
+app.UseCors("frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapHealthChecks("/api/v1/health");
@@ -137,6 +146,30 @@ app.MapGet("/api/v1/tenants/{tenantId:guid}/scope-check", (Guid tenantId, HttpCo
     if (!isPlatformAdmin && !string.Equals(tokenTenantId, tenantId.ToString(), StringComparison.OrdinalIgnoreCase))
         return Results.Problem(statusCode: 403, title: "Tenant scope denied", extensions: new Dictionary<string, object?> { ["code"] = "TENANT_SCOPE_DENIED" });
     return Results.Ok(new { data = new { tenantId, access = "allowed", role = context.User.FindFirstValue("role") } });
+}).RequireAuthorization("staff");
+
+app.MapGet("/api/v1/dashboard/summary", async (HttpContext context, MadaDbContext db, CancellationToken cancellationToken) =>
+{
+    if (!Guid.TryParse(context.User.FindFirstValue("tenantId"), out var tenantId))
+        return Results.Problem(statusCode: 403, title: "Missing tenant scope");
+    var branchClaim = context.User.FindFirstValue("branchId");
+    var hasBranchScope = Guid.TryParse(branchClaim, out var branchId);
+    var students = db.Students.Where(x => x.TenantId == tenantId);
+    var enrollments = db.StudentEnrollments.Where(x => x.StudentId != Guid.Empty).Join(students, x => x.StudentId, x => x.Id, (enrollment, _) => enrollment);
+    var sessions = db.AcademySessions.Where(x => x.TenantId == tenantId && (!hasBranchScope || x.BranchId == branchId));
+    var upcoming = await sessions.Where(x => x.StartAt > DateTimeOffset.UtcNow && x.Status != "CANCELLED").OrderBy(x => x.StartAt).Take(5).Select(x => new { x.Id, x.SessionNumber, x.StartAt, x.Status }).ToListAsync(cancellationToken);
+    return Results.Ok(new
+    {
+        data = new
+        {
+            students = await students.CountAsync(cancellationToken),
+            activeEnrollments = await enrollments.CountAsync(x => x.Status == "ACTIVE", cancellationToken),
+            upcomingSessions = await sessions.CountAsync(x => x.StartAt > DateTimeOffset.UtcNow && x.Status != "CANCELLED", cancellationToken),
+            completedSessions = await sessions.CountAsync(x => x.Status == "COMPLETED", cancellationToken),
+            branchCount = hasBranchScope ? 1 : await db.Branches.CountAsync(x => x.TenantId == tenantId && x.Status == "ACTIVE", cancellationToken),
+            upcoming
+        }
+    });
 }).RequireAuthorization("staff");
 
 app.MapPost("/api/v1/scheduling/check-conflict", async (ConflictCheckRequest request, ConflictService conflicts, HttpContext context, CancellationToken cancellationToken) =>
