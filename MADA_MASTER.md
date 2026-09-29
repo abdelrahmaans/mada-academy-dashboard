@@ -25,3 +25,29 @@
 - `git diff --check`: نجح.
 - `/workspace` و`/` وكل المسارات الرئيسية المختبرة أعادت HTTP 200 محليًا.
 - تحذيرات build غير المانعة كما هي: analytics env/module وpnpm legacy configuration.
+
+
+### 29 سبتمبر 2026 — Shared Mada Theme + Scroll System Pass
+
+تم توحيد الطبقة البصرية لكل الـroles على مرجعية واجهة المدربين، بدون تغيير الـroutes أو الـpermissions أو الـbackend:
+
+- إضافة `client/src/components/MadaTheme.css` كطبقة shared تُحمّل بعد `index.css`.
+- اعتماد palette موحدة: `#14243a` للنص الأساسي، Teal Mada `#0d9488` للأفعال والـactive states، أسطح بيضاء، page background فاتح، borders هادئة وradius موحد.
+- توحيد sidebar treatment لكل `app-shell` و`*-desk-shell` وportals على gradient الكحلي الخاص بواجهة المدربين.
+- توحيد panels/cards والـinputs والـselects والـtextareas والـprimary/secondary actions والـfocus ring.
+- توحيد active navigation على Teal Mada بدل اختلافات Marketing/Executive/Finance القديمة.
+- إضافة scroll system عام: thin scrollbars، thumb متناسق مع الثيم، hover state، dark-sidebar scrollbar، و`scrollbar-gutter` و`overscroll-behavior` للقوائم والجداول الأفقية.
+- احترام `prefers-reduced-motion` وإبقاء responsive paddings للشاشات الصغيرة.
+
+#### التحقق
+
+- `pnpm check`: نجح.
+- `pnpm build`: نجح.
+- `git diff --check`: نجح.
+- Runtime smoke: `/`, `/instructor`, `/instructor-desk`, `/marketing-desk`, `/family-portal`, `/student-portal`, `/workspace` أعادت HTTP 200.
+- التحذيرات الموجودة مسبقًا: analytics env variables وpnpm legacy configuration، بدون أخطاء TypeScript أو build.
+
+#### المتبقي
+
+- مراجعة بصرية تفاعلية على كل role في المتصفح بعد اختيار المستخدم للـscreens الأكثر أهمية.
+- لا يوجد تغيير backend/API؛ هذه طبقة UI/UX فقط.

@@ -1,0 +1,234 @@
+/* Mada Academy — shared visual system
+ * Reference surface: Instructor workspace
+ * Applied after index.css so role-specific legacy accents converge here.
+ */
+:root {
+  --mada-theme-ink: #14243a;
+  --mada-theme-ink-soft: #27364a;
+  --mada-theme-muted: #78879a;
+  --mada-theme-muted-soft: #95a1b1;
+  --mada-theme-line: #e8edf2;
+  --mada-theme-page: #f4f7fa;
+  --mada-theme-paper: #ffffff;
+  --mada-theme-teal: #0d9488;
+  --mada-theme-teal-dark: #08776c;
+  --mada-theme-teal-soft: #e5f5f1;
+  --mada-theme-amber: #d49a2d;
+  --mada-theme-amber-soft: #fff4db;
+  --mada-theme-blue: #4f7ca2;
+  --mada-theme-blue-soft: #eaf2f8;
+  --mada-theme-violet: #7161ad;
+  --mada-theme-violet-soft: #efedfb;
+  --mada-theme-danger: #b45b62;
+  --mada-theme-danger-soft: #fff0f1;
+  --mada-theme-shadow: 0 6px 20px rgb(15 23 42 / 3.5%);
+  --mada-theme-shadow-hover: 0 10px 26px rgb(15 23 42 / 7%);
+  --mada-theme-radius-sm: 9px;
+  --mada-theme-radius-md: 13px;
+  --mada-theme-radius-lg: 15px;
+}
+
+/* Stable palette and type across every role surface. */
+:where(.app-shell, .instructor-shell, .family-portal, .student-portal, .workspace-hub,
+  .role-dashboard-shell) {
+  color: var(--mada-theme-ink);
+  background: var(--mada-theme-page);
+  font-family: var(--mada-font-ar, "Cairo", sans-serif);
+}
+
+/* Instructor navigation is the canonical navigation treatment. */
+:where(.app-shell, .instructor-shell, .family-portal, .student-portal) :where(.sidebar,
+  .instructor-sidebar, .family-portal-sidebar, .student-portal-sidebar,
+  [class*="-sidebar"]) {
+  background:
+    radial-gradient(ellipse at 85% 4%, rgb(13 148 136 / 16%), transparent 34%),
+    linear-gradient(170deg, #111d30 0%, #0f172a 56%, #121c30 100%) !important;
+  color: #e9f0fa;
+}
+
+/* Converge role-specific sidebar overrides without changing navigation structure. */
+.r02-operations-shell .sidebar,
+.academic-programs-shell .sidebar,
+.instructor-desk-shell .sidebar,
+.secretary-desk-shell .sidebar,
+.finance-desk-shell .sidebar,
+.executive-dashboard-shell .sidebar,
+.marketing-desk-shell .sidebar {
+  background:
+    radial-gradient(ellipse at 85% 4%, rgb(13 148 136 / 16%), transparent 34%),
+    linear-gradient(170deg, #111d30 0%, #0f172a 56%, #121c30 100%) !important;
+}
+
+:where(.app-shell, .instructor-shell, .family-portal, .student-portal) :where(.topbar,
+  .instructor-topbar, .family-portal-topbar, .student-portal-topbar) {
+  background: rgb(255 255 255 / 94%);
+  border-bottom-color: var(--mada-theme-line);
+  box-shadow: 0 1px 0 rgb(15 23 42 / 2%);
+}
+
+/* One panel language for dashboards, portals, and role-specific panels. */
+:where(.app-shell, .instructor-shell, .family-portal, .student-portal, .workspace-hub)
+  :where(.panel-like, .instructor-panel, .family-portal-panel, .student-detail-panel,
+    .student-progress-card, [class*="-panel"], [class*="-card"]) {
+  border-color: var(--mada-theme-line);
+  border-radius: var(--mada-theme-radius-md);
+  box-shadow: var(--mada-theme-shadow);
+}
+
+:where(.app-shell, .instructor-shell, .family-portal, .student-portal) :where(
+  .panel-like, .instructor-panel, .family-portal-panel, .student-detail-panel,
+  .student-progress-card, [class*="-panel"]) {
+  background: var(--mada-theme-paper);
+}
+
+/* Shared controls: same focus ring, field shape, and action hierarchy everywhere. */
+:where(.app-shell, .instructor-shell, .family-portal, .student-portal, .workspace-hub)
+  :where(input, select, textarea) {
+  border-color: var(--mada-theme-line);
+  border-radius: var(--mada-theme-radius-sm);
+  color: var(--mada-theme-ink-soft);
+  background: var(--mada-theme-paper);
+}
+
+:where(.app-shell, .instructor-shell, .family-portal, .student-portal, .workspace-hub)
+  :where(input, select, textarea):focus {
+  border-color: #8ecdc4;
+  box-shadow: 0 0 0 3px rgb(13 148 136 / 7%);
+  outline: 0;
+}
+
+:where(.app-shell, .instructor-shell, .family-portal, .student-portal) :where(
+  .primary-button, .instructor-primary-button, .finance-desk-primary,
+  .marketing-primary, .desk-primary-action, .workspace-role-open) {
+  color: #fff;
+  background: linear-gradient(135deg, var(--mada-theme-teal), #08776c);
+  border-color: transparent;
+  border-radius: var(--mada-theme-radius-sm);
+  box-shadow: 0 6px 14px rgb(13 148 136 / 16%);
+}
+
+:where(.app-shell, .instructor-shell, .family-portal, .student-portal) :where(
+  .primary-button, .instructor-primary-button, .finance-desk-primary,
+  .marketing-primary, .desk-primary-action, .workspace-role-open):hover {
+  background: linear-gradient(135deg, #0b8176, #07675f);
+}
+
+:where(.app-shell, .instructor-shell, .family-portal, .student-portal) :where(
+  .secondary-button, .instructor-secondary-button, .finance-desk-secondary,
+  .marketing-secondary, .desk-secondary-action) {
+  color: var(--mada-theme-teal-dark);
+  background: #f8fcfb;
+  border-color: #dcebea;
+  border-radius: var(--mada-theme-radius-sm);
+}
+
+/* Consistent active navigation and role scope accents. */
+:where(.app-shell, .family-portal, .student-portal) :where(.nav-link.active,
+  .family-portal-nav button.active, .student-portal-nav button.active) {
+  color: #fff;
+  background: var(--mada-theme-teal) !important;
+  box-shadow: 0 8px 20px rgb(13 148 136 / 22%);
+}
+
+:where(.instructor-shell) .instructor-nav button.active {
+  background: var(--mada-theme-teal);
+}
+
+:where(.role-dashboard-shell) {
+  --role-shell-scope: var(--mada-theme-teal);
+}
+.role-dashboard-shell[data-scope-level="platform"] { --role-shell-scope: var(--mada-theme-violet); }
+.role-dashboard-shell[data-scope-level="tenant"],
+.role-dashboard-shell[data-scope-level="branch"],
+.role-dashboard-shell[data-scope-level="team"] { --role-shell-scope: var(--mada-theme-teal); }
+.role-dashboard-shell[data-scope-level="family"],
+.role-dashboard-shell[data-scope-level="self"] { --role-shell-scope: var(--mada-theme-blue); }
+
+/* Accessible, quiet scrollbars that match the dark sidebar and light canvas. */
+html {
+  scroll-behavior: smooth;
+  scrollbar-color: #9ab8b7 var(--mada-theme-page);
+  scrollbar-width: thin;
+}
+body,
+#root {
+  min-height: 100vh;
+  scrollbar-color: #9ab8b7 var(--mada-theme-page);
+  scrollbar-width: thin;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #9ab8b7 transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  min-height: 34px;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: #a8c5c3;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #6eaaa5;
+  background-clip: padding-box;
+}
+.sidebar,
+.instructor-sidebar,
+.family-portal-sidebar,
+.student-portal-sidebar {
+  scrollbar-color: #4d777a transparent;
+}
+.sidebar::-webkit-scrollbar-thumb,
+.instructor-sidebar::-webkit-scrollbar-thumb,
+.family-portal-sidebar::-webkit-scrollbar-thumb,
+.student-portal-sidebar::-webkit-scrollbar-thumb {
+  background: #4d777a;
+  background-clip: padding-box;
+}
+
+/* Horizontal data surfaces scroll cleanly without visible jump or clipped edges. */
+:where(.instructor-roster-wrap, .attendance-desk-table-wrap, .approval-queue-tabs,
+  .marketing-table-list, .marketing-content-list, .marketing-lead-list,
+  .family-children-list, [class*="table-wrap"], [class*="list"]):where(
+  :not(.sidebar)) {
+  scrollbar-gutter: stable;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+:where(.instructor-roster-wrap, .attendance-desk-table-wrap, .approval-queue-tabs,
+  .marketing-table-list, .marketing-content-list, .marketing-lead-list,
+  .family-children-list, [class*="table-wrap"])::-webkit-scrollbar {
+  height: 8px;
+}
+
+:where(.instructor-roster-wrap, .attendance-desk-table-wrap, .approval-queue-tabs,
+  .marketing-table-list, .marketing-content-list, .marketing-lead-list,
+  .family-children-list, [class*="table-wrap"])::-webkit-scrollbar-thumb {
+  border-width: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+@media (max-width: 900px) {
+  :where(.app-shell, .instructor-shell, .family-portal, .student-portal) :where(
+    .workspace, .instructor-content, .family-portal-content, .student-portal-content) {
+    padding-inline: 18px;
+  }
+}
+
+@media (max-width: 560px) {
+  *::-webkit-scrollbar { width: 7px; height: 7px; }
+  :where(.app-shell, .instructor-shell, .family-portal, .student-portal) :where(
+    .workspace, .instructor-content, .family-portal-content, .student-portal-content) {
+    padding-inline: 12px;
+  }
+}
