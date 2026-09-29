@@ -51,3 +51,10 @@
 
 - مراجعة بصرية تفاعلية على كل role في المتصفح بعد اختيار المستخدم للـscreens الأكثر أهمية.
 - لا يوجد تغيير backend/API؛ هذه طبقة UI/UX فقط.
+
+
+### 29 سبتمبر 2026 — Scrollbar Refinement Pass
+
+تم تحسين scrollbar system ليكون ظاهرًا ومتسقًا عبر المشروع كله، بما في ذلك المناطق التي كانت تخفيه سابقًا مثل بعض filter tabs وقوائم البيانات. أصبح النظام يستخدم thin scrollbar موحدًا، track فاتحًا وهادئًا، thumb Teal Mada بدرجات hover/active، rounded corners، وcorner شفاف للجداول. أضيفت نسخة أغمق للـsidebars، مع تثبيت التمرير الأفقي للقوائم والجداول ودعم الشاشات الصغيرة. تم فرض `scrollbar-width: thin` وظهور WebKit scrollbar لضمان عدم اختلاف السلوك بين الشاشات.
+
+التحقق: `pnpm check` و`pnpm build` و`git diff --check` نجحوا. التحذيرات الوحيدة هي analytics env variables وpnpm legacy configuration الموجودة مسبقًا.

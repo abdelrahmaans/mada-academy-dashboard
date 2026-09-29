@@ -157,32 +157,43 @@ body,
   scrollbar-width: thin;
 }
 * {
-  scrollbar-width: thin;
-  scrollbar-color: #9ab8b7 transparent;
+  scrollbar-width: thin !important;
+  scrollbar-color: #86b9b5 transparent !important;
 }
 *::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  display: block !important;
+  width: 9px;
+  height: 9px;
 }
 *::-webkit-scrollbar-track {
-  background: transparent;
+  margin: 3px;
+  border-radius: 999px;
+  background: rgb(226 237 237 / 46%);
 }
 *::-webkit-scrollbar-thumb {
-  min-height: 34px;
-  border: 3px solid transparent;
+  min-height: 36px;
+  border: 2px solid transparent;
   border-radius: 999px;
-  background: #a8c5c3;
+  background: #86b9b5;
   background-clip: padding-box;
+  transition: background 160ms ease;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: #6eaaa5;
+  background: #4e9b94;
   background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:active {
+  background: #08776c;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 .sidebar,
 .instructor-sidebar,
 .family-portal-sidebar,
 .student-portal-sidebar {
-  scrollbar-color: #4d777a transparent;
+  scrollbar-color: #4d777a transparent !important;
 }
 .sidebar::-webkit-scrollbar-thumb,
 .instructor-sidebar::-webkit-scrollbar-thumb,
@@ -190,6 +201,12 @@ body,
 .student-portal-sidebar::-webkit-scrollbar-thumb {
   background: #4d777a;
   background-clip: padding-box;
+}
+.sidebar::-webkit-scrollbar-track,
+.instructor-sidebar::-webkit-scrollbar-track,
+.family-portal-sidebar::-webkit-scrollbar-track,
+.student-portal-sidebar::-webkit-scrollbar-track {
+  background: rgb(255 255 255 / 5%);
 }
 
 /* Horizontal data surfaces scroll cleanly without visible jump or clipped edges. */
