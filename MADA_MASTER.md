@@ -125,3 +125,10 @@ R00 إلى R09 مغطاة كواجهات prototype مع role code وscope labels
 ### نتيجة التدقيق
 
 لا توجد حاليًا ملفات backend فعلية داخل الريبو يمكن البناء عليها مباشرة؛ الموجود هو `server/index.ts` الخاص بالتقديم فقط. لذلك **الخطوة التالية المنطقية ليست تعديل UI عشوائيًا**، بل بدء `Backend foundation + Auth + Tenancy` من العقود الموجودة في ملفات البلان، ثم ربط أول vertical slice كامل من `auth → tenant/branch scope → R00/R01` مع الحفاظ على الـUX الحالي.
+
+
+### 29 سبتمبر 2026 — Preview Scrollbar Visibility Fix
+
+كان الـscrollbar لا يظهر في Preview لأن بعض قواعد الـlegacy داخل `index.css` كانت تستخدم `scrollbar-width: none` و`::-webkit-scrollbar { display: none; }` على `student-filter-tabs` و`schedule-filter-tabs` و`approval-tabs` و`approval-queue-tabs`. تم إضافة override صريح في `MadaTheme.css` لإجبار هذه المناطق على scrollbar Teal ظاهر، مع track وthumb وارتفاع أفقي ثابت، مع الحفاظ على التمرير نفسه.
+
+التحقق: `pnpm check` نجح، و`pnpm build` نجح، و`git diff --check` نجح، كما أعادت `/` و`/workspace` و`/students` و`/schedule` و`/approvals` حالة HTTP 200 محليًا.

@@ -231,6 +231,44 @@ body,
   border-width: 2px;
 }
 
+/* Legacy tab rules hid their scrollbar. Keep the tabs scrollable and visible in Preview. */
+:where(.student-filter-tabs, .schedule-filter-tabs, .approval-tabs, .approval-queue-tabs) {
+  scrollbar-width: thin !important;
+  scrollbar-color: #86b9b5 rgb(226 237 237 / 46%) !important;
+  scrollbar-gutter: stable;
+}
+
+.student-filter-tabs::-webkit-scrollbar,
+.schedule-filter-tabs::-webkit-scrollbar,
+.approval-tabs::-webkit-scrollbar,
+.approval-queue-tabs::-webkit-scrollbar {
+  display: block !important;
+  width: 9px !important;
+  height: 9px !important;
+}
+
+.student-filter-tabs::-webkit-scrollbar-track,
+.schedule-filter-tabs::-webkit-scrollbar-track,
+.approval-tabs::-webkit-scrollbar-track,
+.approval-queue-tabs::-webkit-scrollbar-track {
+  display: block !important;
+  margin: 2px;
+  border-radius: 999px;
+  background: rgb(226 237 237 / 46%);
+}
+
+.student-filter-tabs::-webkit-scrollbar-thumb,
+.schedule-filter-tabs::-webkit-scrollbar-thumb,
+.approval-tabs::-webkit-scrollbar-thumb,
+.approval-queue-tabs::-webkit-scrollbar-thumb {
+  display: block !important;
+  min-height: 30px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: #86b9b5;
+  background-clip: padding-box;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 }
