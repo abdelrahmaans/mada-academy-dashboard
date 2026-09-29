@@ -25,3 +25,11 @@ Angular shell تم توحيد ألوانه وRTL/topbar/sidebar spacing مع Rea
 ## 12. React API Integration — 29 سبتمبر 2026
 
 React أصبح متصلًا بالـASP.NET Core عبر `client/src/lib/apiClient.ts` و`AuthContext`. تمت إضافة OTP/JWT session handling، refresh retry، logout، وdashboard summary حقيقي من PostgreSQL. أضيفت بطاقة اتصال داخل `/workspace` تعرض DEMO MODE أو CONNECTED مع role/scope وأعداد الطلاب والجلسات القادمة والمكتملة. تم تفعيل CORS للـDevelopment، وإضافة `VITE_API_URL` في `.env.example`.
+
+---
+
+## 13. Frontend-first Demo Role Mode — 29 سبتمبر 2026
+
+تم إيقاف تفعيل login/JWT داخل React مؤقتًا. الوضع الافتراضي الآن هو `Demo Role Mode`: اختيار R00–R09 من Workspace Hub وفتح الصفحة الخاصة بالدور مباشرة، مع scope وnavigation tree واضحين لكل Role. ملفات API/Auth محفوظة للتفعيل لاحقًا بعد اكتمال الشاشات والـworkflow interactions والاختبار ببيانات حقيقية.
+
+تم تثبيت Mada shared theme والـcustom scrollbar على الأسطح الرئيسية والـcontent scroll containers بدل الشكل الافتراضي للمتصفح.

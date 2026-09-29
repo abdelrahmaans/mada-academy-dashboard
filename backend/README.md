@@ -7,3 +7,7 @@ PostgreSQL 16 is now the active local persistence target. See [`DATABASE_STATUS.
 ## React integration
 
 React uses `VITE_API_URL` and `client/src/lib/apiClient.ts`. In local development it defaults to `http://127.0.0.1:4191/api/v1`; for a public preview set `VITE_API_URL` to the public HTTPS API base before starting Vite. The `/workspace` page contains the first live auth/data connection card.
+
+## Current frontend phase
+
+React currently runs in `Demo Role Mode` without requiring a real account. The API/Auth implementation remains available but intentionally inactive in the default frontend until all role surfaces, scopes, tree navigation, and UI workflows are finalized.

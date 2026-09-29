@@ -154,3 +154,7 @@ R00 إلى R09 مغطاة كواجهات prototype مع role code وscope labels
 ### 29 سبتمبر 2026 — React Connected to Real Backend
 
 تم ربط React بالـASP.NET Core/PostgreSQL عبر typed API client وAuthContext. `/workspace` يدعم OTP/JWT login ويعرض dashboard summary حقيقي من الداتا، مع fallback واضح إلى DEMO MODE. تم إضافة CORS و`VITE_API_URL` للتشغيل المحلي أو public preview.
+
+### 29 سبتمبر 2026 — Frontend First / Demo Role Mode
+
+قرار مرحلي: لا login فعلي الآن. React يعمل افتراضيًا في Demo Role Mode حتى تكتمل كل Role surfaces والـscope tree والـUI interactions. بعد تثبيت الواجهة سيتم إعادة تفعيل API/Auth ثم الاختبار بالـdatabase data. تم توحيد الثيم والـscrollbar كجزء من التصميم.
