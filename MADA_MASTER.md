@@ -58,3 +58,70 @@
 تم تحسين scrollbar system ليكون ظاهرًا ومتسقًا عبر المشروع كله، بما في ذلك المناطق التي كانت تخفيه سابقًا مثل بعض filter tabs وقوائم البيانات. أصبح النظام يستخدم thin scrollbar موحدًا، track فاتحًا وهادئًا، thumb Teal Mada بدرجات hover/active، rounded corners، وcorner شفاف للجداول. أضيفت نسخة أغمق للـsidebars، مع تثبيت التمرير الأفقي للقوائم والجداول ودعم الشاشات الصغيرة. تم فرض `scrollbar-width: thin` وظهور WebKit scrollbar لضمان عدم اختلاف السلوك بين الشاشات.
 
 التحقق: `pnpm check` و`pnpm build` و`git diff --check` نجحوا. التحذيرات الوحيدة هي analytics env variables وpnpm legacy configuration الموجودة مسبقًا.
+
+## 13. Continuation Pack — مراجعة السورس والبلان
+
+**تاريخ المراجعة:** 29 سبتمبر 2026
+**آخر commit مفحوص:** `b7a7316` — `fix: refine shared mada scrollbars`
+**حالة Git:** `main` متزامن مع `origin/main` ونظيف.
+
+### الحكم التنفيذي
+
+الريبو الحالي هو **Frontend UI/UX prototype متقدم**، وليس Backend جاهزًا. واجهات R00 إلى R09 موجودة، والـrouting والـrole metadata والـshared UX foundation موجودة، لكن البيانات كلها تقريبًا local/demo state. لا يوجد في السورس الحالي API client حقيقي أو database integration أو auth/session enforcement أو migrations أو server modules؛ `server/index.ts` وظيفته الحالية static serving وSPA fallback فقط. هذا متسق مع البلان: نُكمل من prototype المعتمد إلى Backend readiness، ولا نعتبر أي إخفاء زر في الواجهة حماية صلاحيات.
+
+### الملفات المرجعية التي يجب أن يبدأ منها أي استكمال
+
+| الأولوية | الملف | وظيفته | الحالة |
+|---|---|---|---|
+| 1 | `MADA_MASTER.md` داخل هذا الريبو | المرجع التشغيلي الوحيد للحالة الحالية، ما تم، الفجوات، والخطوة التالية | يتم تحديثه مع كل milestone |
+| 2 | `/home/ubuntu/projects/mada-soft-52b76b15/Mada Academy — Role, Permission & State Dictionary.md` | المصدر المركزي للأدوار والصلاحيات والحالات والـworkflow transitions | UX contract معتمد |
+| 3 | `/home/ubuntu/projects/mada-soft-52b76b15/Mada Academy — Final Permission Matrix & Shared UI Components.md` | permission matrix ومكونات الـshared UI وقواعد scope | مرجع policy قبل API |
+| 4 | `/home/ubuntu/projects/mada-soft-52b76b15/Mada Academy — Master Brand, UX & Business Plan.md` | رؤية المنتج، business rules، ترتيب الـSprints، وقرار تأجيل الـbackend | المرجع التجاري والتشغيلي |
+| 5 | `/home/ubuntu/projects/mada-soft-52b76b15/Academy Pro — Architecture Overview (v0.1).md` | Multi-tenancy، auth، layers، modules، والـbackend build order | قرار معماري أساسي |
+| 6 | `/home/ubuntu/projects/mada-soft-52b76b15/Academy Pro — ERD & Entity Dictionary (v0.1).md` | العلاقات والكيانات ونطاقات tenant/branch | مرجع ERD |
+| 7 | `/home/ubuntu/projects/mada-soft-52b76b15/03_Database_Schema.md` | تعريف الجداول والحقول والقيود والفهارس | مرجع database التفصيلي |
+| 8 | `/home/ubuntu/projects/mada-soft-52b76b15/Academy Pro — API Contracts & Module Specs (v0.1).md` | الـendpoint contracts والـguards والـbusiness rules | المرجع الرسمي عند كتابة services |
+| 9 | `/home/ubuntu/projects/mada-soft-52b76b15/Academy Pro — Sequence Diagrams for Critical Flows (v0.1).md` | الترتيب الزمني للتدفقات الحرجة والتعارضات والموافقات | مرجع service orchestration |
+| 10 | `/home/ubuntu/projects/mada-soft-52b76b15/UX لكل الأدوار خطوة بخطوة.md` و`UX.md` | سياق قرارات UX وترتيب استكمال الأدوار | سياق تاريخي مفيد، وليس بديلًا عن هذا الملف |
+
+### ملفات السورس الأساسية لفهم المنتج بسرعة
+
+| المجموعة | الملفات | ما الذي توضحه |
+|---|---|---|
+| Entry/routing | `client/src/App.tsx`, `client/src/main.tsx`, `vite.config.ts`, `server/index.ts` | تحميل التطبيق، lazy routes، base path، وstatic serving |
+| Role contract | `client/src/lib/roleNavigation.ts`, `client/src/contexts/RoleScopeContext.tsx`, `client/src/components/RoleDashboardShell.tsx` | R00–R09، identity، scope، home paths، وحدود أن metadata ليست authorization |
+| Shared UI | `client/src/components/PageHeader.tsx`, `RoleScopeCard.tsx`, `StatusBadge.tsx`, `FeedbackStates.tsx`, `WorkflowStepper.tsx`, `DecisionDialog.tsx`, `AuditTimeline.tsx`, `NotificationCenter.tsx`, `MadaTheme.css` | shell، states، decisions، audit presentation، والثيم الموحد |
+| Role surfaces | `client/src/pages/PlatformConsole.tsx`, `ExecutiveDashboard.tsx`, `AcademyOwner.tsx`, `Home.tsx`, `BranchOperations.tsx`, `HeadInstructors.tsx`, `AcademicPrograms.tsx`, `InstructorDesk.tsx`, `Instructor.tsx`, `SecretaryDesk.tsx`, `Secretary.tsx`, `FinanceDesk.tsx`, `Finance.tsx`, `MarketingDesk.tsx`, `FamilyPortal.tsx`, `StudentPortal.tsx` | الـworkflows الحالية والـlocal fixtures لكل role |
+| Cross-role surfaces | `client/src/pages/Students.tsx`, `Classes.tsx`, `Schedule.tsx`, `Team.tsx`, `Approvals.tsx`, `Reports.tsx`, `WorkspaceHub.tsx` | الشاشات التشغيلية المشتركة ومسارات المتابعة |
+| Current visual foundation | `client/src/index.css`, `client/src/components/RoleFoundation.css`, `client/src/components/RoleDashboardShell.css`, `client/src/components/MadaTheme.css` | ألوان Mada، responsive behavior، focus، scrollbars، وsurface patterns |
+
+### خريطة الحالة الفعلية حسب الـRole
+
+R00 إلى R09 مغطاة كواجهات prototype مع role code وscope labels ومسارات من خلال `ROLE_DEFINITIONS`. الـWorkspace Hub في `/workspace` هو نقطة الدخول البصرية لمراجعة كل الأدوار. لكن كل role ما زال يحتاج عند ربط backend إلى نقل local state إلى API مع الحفاظ على نفس الحالات: loading، empty، error، locked، pending، approved، rejected، وaudit feedback.
+
+الفجوات ليست موزعة بالتساوي: R00 يحتاج tenants/plans/support APIs، R01 يحتاج academy rollup وbranch/team/ticket APIs، R02 يحتاج branch operations وapprovals، R03 يحتاج curriculum/progress review، R04 يحتاج attendance/evaluation، R05 يحتاج leads/enrollment وduplicate matching، R06 يحتاج payments/expenses/corrections، R07 يحتاج campaigns/content/leads/media، R08 يحتاج family-scoped read/support، وR09 يحتاج student-scoped learning/progress/achievements.
+
+### الترتيب الصحيح للاستكمال من هنا
+
+1. **Backend foundation:** إنشاء Backend modular monolith حسب الـArchitecture، مع `/api/v1`، config validation، Postgres/Prisma، migrations، وstructured error contract.
+2. **Auth أولًا:** Phone OTP ثم JWT access/refresh/logout، مع payload يفرق بين staff وconsumer ويحمل tenant/branch scope، ثم `JwtAuthGuard` و`RolesGuard` و`TenantScopeGuard`.
+3. **Tenancy وcore data:** `tenants`, `branches`, `users`, roles، account types، invitations، ثم query scoping تلقائي لكل Prisma query وعدم الاعتماد على UI filtering.
+4. **Core operational modules:** students، courses/programs، classes/groups، scheduling/conflict engine، ثم attendance.
+5. **Workflow modules:** leads/enrollment، approvals، finance/payment/expense/correction، مع server-side state transitions وreason fields.
+6. **Cross-cutting modules:** audit log، notifications، storage، analytics/report exports، ثم marketing/family/student surfaces.
+7. **Frontend integration تدريجيًا:** إضافة typed API client + query/mutation layer لكل module، واستبدال fixture واحدة في كل workflow مع إبقاء حالات UX الحالية وعدم ادعاء الحفظ قبل نجاح API.
+8. **Production gates:** authorization tests لكل role/scope، tenant-isolation tests، state-transition tests، API contract tests، ثم E2E للرحلات الحرجة المذكورة في sequence diagrams.
+
+### قواعد لا يجب كسرها أثناء الاستكمال
+
+- لا نبدأ من أسماء الملفات فقط؛ نبدأ دائمًا من `MADA_MASTER.md` ثم State Dictionary ثم Permission Matrix ثم API/DB contract.
+- `R08` و`R09` consumer identities منفصلة عن staff roles، ولا يتم وضعهما في نفس authorization model دون الرجوع للبلان.
+- `R02` هو Branch Manager؛ `BA` alias قديم في بعض الوثائق فقط، ويجب استخدام `BM` في backend الجديد.
+- كل query يجب أن يفرض tenant/branch scope على الخادم؛ إخفاء route أو button ليس حماية.
+- لا نضيف frontend-only state يوحي بحفظ دائم. أي prototype behavior يظل معلّمًا بـ`DEMO` ورسالة واضحة.
+- لا نغيّر ERD أو API contract أثناء التنفيذ بدون تسجيل decision واضح في هذا الملف.
+- أي milestone جديد يحدّث هذا الـMaster File، ولا نحتاج إرسال ملفات تحديث منفصلة للمستخدم.
+
+### نتيجة التدقيق
+
+لا توجد حاليًا ملفات backend فعلية داخل الريبو يمكن البناء عليها مباشرة؛ الموجود هو `server/index.ts` الخاص بالتقديم فقط. لذلك **الخطوة التالية المنطقية ليست تعديل UI عشوائيًا**، بل بدء `Backend foundation + Auth + Tenancy` من العقود الموجودة في ملفات البلان، ثم ربط أول vertical slice كامل من `auth → tenant/branch scope → R00/R01` مع الحفاظ على الـUX الحالي.
