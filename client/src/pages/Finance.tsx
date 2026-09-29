@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import InvoiceCorrectionDialog from "@/components/InvoiceCorrectionDialog";
 
 type InvoiceStatus = "unpaid" | "partial" | "paid" | "overdue";
 type Invoice = {
@@ -738,7 +739,10 @@ export default function Finance() {
             <Wallet size={19} />
             <span>المالية والتحصيل</span>
           </button>
-          <button className="nav-link" onClick={() => navigate("/finance-desk")}>
+          <button
+            className="nav-link"
+            onClick={() => navigate("/finance-desk")}
+          >
             <FileCheck2 size={19} />
             <span>مركز الإقفال المالي</span>
           </button>
@@ -1745,198 +1749,20 @@ export default function Finance() {
                 </div>
               </form>
             ) : correctionInvoice ? (
-              <div className="finance-correction-content">
-                <div className="finance-correction-lock-note">
-                  <AlertCircle size={16} />
-                  <span>
-                    <strong>الفاتورة المحصّلة غير قابلة للتعديل المباشر</strong>
-                    <small>
-                      الطلب يذهب للمراجعة فقط، ولا يغيّر قيمة الفاتورة أو بيانات
-                      التحصيل.
-                    </small>
-                  </span>
-                </div>
-                <div className="finance-correction-invoice">
-                  <span>
-                    <small>رقم الفاتورة</small>
-                    <strong dir="ltr">{correctionInvoice.invoiceNumber}</strong>
-                  </span>
-                  <span>
-                    <small>الطالب / ولي الأمر</small>
-                    <strong>
-                      {correctionInvoice.student} · {correctionInvoice.parent}
-                    </strong>
-                  </span>
-                  <span>
-                    <small>الكورس والفرع</small>
-                    <strong>
-                      {correctionInvoice.course} · {correctionInvoice.branch}
-                    </strong>
-                  </span>
-                  <span>
-                    <small>إجمالي الفاتورة المحصّل</small>
-                    <strong dir="ltr">
-                      {formatMoney(correctionInvoice.total)} ج.م
-                    </strong>
-                  </span>
-                </div>
-                <section
-                  className="finance-correction-history"
-                  aria-labelledby="correction-history-title"
-                >
-                  <div className="finance-correction-history-heading">
-                    <span>
-                      <Clock3 size={15} />
-                      <strong id="correction-history-title">سجل الطلبات</strong>
-                    </span>
-                    <small>{correctionHistory.length} طلب</small>
-                  </div>
-                  {correctionHistory.length ? (
-                    <ol>
-                      {correctionHistory.map(request => (
-                        <li key={request.id}>
-                          <div className="finance-correction-history-top">
-                            <strong dir="ltr">{request.id}</strong>
-                            <span
-                              className={`finance-correction-status finance-correction-status-${request.status}`}
-                            >
-                              <i />
-                              {CORRECTION_STATUS_LABELS[request.status]}
-                            </span>
-                          </div>
-                          <small>
-                            {request.requestedBy} ·{" "}
-                            {formatDateTime(request.requestedAt)}
-                          </small>
-                          <p>{request.reason}</p>
-                          {(request.evidenceReference ||
-                            request.evidenceFileName) && (
-                            <small className="finance-correction-evidence-summary">
-                              المستند: {request.evidenceReference || "—"}
-                              {request.evidenceFileName
-                                ? ` · ${request.evidenceFileName}`
-                                : ""}
-                            </small>
-                          )}
-                        </li>
-                      ))}
-                    </ol>
-                  ) : (
-                    <p className="finance-correction-empty-history">
-                      لا توجد طلبات سابقة لهذه الفاتورة.
-                    </p>
-                  )}
-                </section>
-                {hasPendingCorrection ? (
-                  <div
-                    className="finance-correction-pending"
-                    role="status"
-                    aria-live="polite"
-                  >
-                    <Clock3 size={16} />
-                    <span>
-                      <strong>يوجد طلب مفتوح بانتظار المراجعة</strong>
-                      <small>
-                        لن يمكن إرسال طلب آخر لهذه الفاتورة قبل انتهاء المراجعة.
-                      </small>
-                    </span>
-                  </div>
-                ) : (
-                  <form
-                    className="finance-form finance-correction-form"
-                    onSubmit={submitCorrectionRequest}
-                  >
-                    <label>
-                      سبب طلب التصحيح <b>*</b>
-                      <textarea
-                        value={correctionReason}
-                        onChange={event => {
-                          setCorrectionReason(event.target.value);
-                          setCorrectionValidationError("");
-                        }}
-                        maxLength={500}
-                        rows={3}
-                        placeholder="وضّح البيانات المطلوب مراجعتها وسبب طلب التعديل..."
-                        required
-                      />
-                      <small className="finance-correction-counter">
-                        {correctionReason.length}/500
-                      </small>
-                    </label>
-                    <div className="finance-correction-evidence">
-                      <div>
-                        <strong>
-                          مستند داعم أو مرجع <b>*</b>
-                        </strong>
-                        <small>
-                          أرفق ملفًا أو أدخل رقم إيصال/مستند مرتبط بالطلب.
-                        </small>
-                      </div>
-                      <div className="finance-correction-evidence-controls">
-                        <label className="finance-evidence-picker">
-                          <FileText size={14} /> اختيار ملف
-                          <input
-                            type="file"
-                            accept=".pdf,.png,.jpg,.jpeg,image/png,image/jpeg,application/pdf"
-                            aria-label="اختيار مستند داعم"
-                            onChange={event => {
-                              setCorrectionEvidenceFileName(
-                                event.target.files?.[0]?.name ?? ""
-                              );
-                              setCorrectionValidationError("");
-                            }}
-                          />
-                        </label>
-                        {correctionEvidenceFileName && (
-                          <span className="finance-evidence-file-name">
-                            {correctionEvidenceFileName}
-                          </span>
-                        )}
-                      </div>
-                      <label className="finance-evidence-reference">
-                        أو رقم/مرجع المستند
-                        <input
-                          value={correctionEvidenceReference}
-                          onChange={event => {
-                            setCorrectionEvidenceReference(event.target.value);
-                            setCorrectionValidationError("");
-                          }}
-                          maxLength={120}
-                          placeholder="مثال: إيصال تحصيل رقم 2048"
-                        />
-                      </label>
-                      <small className="finance-evidence-disclaimer">
-                        معاينة محلية فقط: لا يتم رفع الملف أو حفظه على خادم؛
-                        يُسجّل اسم الملف/المرجع في سجل الطلب.
-                      </small>
-                    </div>
-                    {correctionValidationError && (
-                      <p className="finance-correction-error" role="alert">
-                        {correctionValidationError}
-                      </p>
-                    )}
-                    <div className="dialog-info">
-                      <AlertCircle size={15} />
-                      <span>
-                        تسجيل الطلب لا يغيّر الفاتورة. حالة الطلب وسجله محفوظان
-                        داخل هذه المعاينة فقط.
-                      </span>
-                    </div>
-                    <div className="dialog-actions">
-                      <button
-                        type="button"
-                        className="button button-secondary"
-                        onClick={() => setDialog(null)}
-                      >
-                        إلغاء
-                      </button>
-                      <button className="button button-primary" type="submit">
-                        <Check size={15} /> إرسال طلب المراجعة
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </div>
+              <InvoiceCorrectionDialog
+                invoice={correctionInvoice}
+                history={correctionHistory}
+                reason={correctionReason}
+                evidenceReference={correctionEvidenceReference}
+                evidenceFileName={correctionEvidenceFileName}
+                validationError={correctionValidationError}
+                onReasonChange={setCorrectionReason}
+                onEvidenceReferenceChange={setCorrectionEvidenceReference}
+                onEvidenceFileChange={setCorrectionEvidenceFileName}
+                onValidationErrorClear={() => setCorrectionValidationError("")}
+                onSubmit={submitCorrectionRequest}
+                onClose={() => setDialog(null)}
+              />
             ) : null}
           </section>
         </div>
