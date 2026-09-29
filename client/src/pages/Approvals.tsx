@@ -29,38 +29,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import ApprovalCard, {
+  APPROVAL_STATUS_LABELS,
+  type ApprovalItem,
+  type ApprovalKind,
+  type ApprovalStatus,
+} from "@/components/ApprovalCard";
+import DecisionDialog from "@/components/DecisionDialog";
 
-type ApprovalKind = "discount" | "substitute" | "expense";
-type ApprovalStatus = "pending" | "approved" | "rejected";
-type ApprovalItem = {
-  id: string;
-  kind: ApprovalKind;
-  title: string;
-  summary: string;
-  branch: string;
-  requestedBy: string;
-  submittedAt: string;
-  submittedAtSort: string;
-  student?: string;
-  course?: string;
-  invoice?: string;
-  discountType?: string;
-  discountValue?: number;
-  originalAmount?: number;
-  finalAmount?: number;
-  instructor?: string;
-  substitute?: string;
-  expenseDescription?: string;
-  expenseAmount?: number;
-  expenseCategory?: string;
-  sessionDate?: string;
-  sessionTime?: string;
-  status: ApprovalStatus;
-  decidedAt?: string;
-  decidedAtSort?: number;
-  decidedBy?: string;
-  decisionNote?: string;
-};
 type QueueTab = "all" | ApprovalKind;
 type ApprovalSort = "priority" | "oldest" | "newest";
 
@@ -148,11 +124,6 @@ const INITIAL_REQUESTS: ApprovalItem[] = [
     status: "pending",
   },
 ];
-const STATUS_LABELS: Record<ApprovalStatus, string> = {
-  pending: "بانتظار القرار",
-  approved: "تمت الموافقة",
-  rejected: "مرفوض",
-};
 const BRANCH_MANAGER_DISCOUNT_LIMIT = 15;
 
 function BrandMark() {
@@ -346,7 +317,7 @@ export default function Approvals() {
         item.title,
         item.requestedBy,
         item.submittedAt,
-        STATUS_LABELS[item.status],
+        APPROVAL_STATUS_LABELS[item.status],
       ]),
     ];
     const csv = `\uFEFF${rows.map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(",")).join("\n")}`;
@@ -757,152 +728,7 @@ export default function Approvals() {
             {visibleRequests.length ? (
               <div className="approval-list">
                 {visibleRequests.map(item => (
-                  <article
-                    key={item.id}
-                    className={`approval-card ${item.status !== "pending" ? "approval-card-reviewed" : ""}`}
-                  >
-                    <div
-                      className={`approval-type-icon ${item.kind === "discount" ? "approval-discount-icon" : item.kind === "expense" ? "approval-expense-icon" : "approval-substitute-icon"}`}
-                    >
-                      {item.kind === "discount" ? (
-                        <FileText size={18} />
-                      ) : item.kind === "expense" ? (
-                        <Wallet size={18} />
-                      ) : (
-                        <UserCheck size={18} />
-                      )}
-                    </div>
-                    <div className="approval-card-main">
-                      <div className="approval-card-top">
-                        <div>
-                          <span className="approval-id" dir="ltr">
-                            {item.id}
-                          </span>
-                          <span
-                            className={`approval-status approval-${item.status}`}
-                          >
-                            <i />
-                            {STATUS_LABELS[item.status]}
-                          </span>
-                        </div>
-                        <small>{item.submittedAt}</small>
-                      </div>
-                      <h3>{item.title}</h3>
-                      <p>{item.summary}</p>
-                      <div className="approval-meta-row">
-                        <span>
-                          <MapPin size={13} /> {item.branch}
-                        </span>
-                        <span>
-                          <Users size={13} /> {item.requestedBy}
-                        </span>
-                      </div>
-                      {item.kind === "discount" ? (
-                        <div className="approval-detail-strip">
-                          <span>{item.student}</span>
-                          <i />
-                          <span>{item.course}</span>
-                          <i />
-                          <bdi dir="ltr">{item.invoice}</bdi>
-                        </div>
-                      ) : item.kind === "expense" ? (
-                        <div className="approval-detail-strip">
-                          <span>{item.expenseDescription}</span>
-                          <i />
-                          <bdi dir="ltr">
-                            {formatMoney(item.expenseAmount ?? 0)} ج.م
-                          </bdi>
-                          <i />
-                          <span>{item.expenseCategory}</span>
-                        </div>
-                      ) : (
-                        <div className="approval-detail-strip">
-                          <span>الأساسي: {item.instructor}</span>
-                          <ArrowDownToLine
-                            size={13}
-                            className="substitute-arrow"
-                          />
-                          <span>البديل: {item.substitute}</span>
-                          <i />
-                          <span>
-                            {item.sessionDate} · {item.sessionTime}
-                          </span>
-                        </div>
-                      )}
-                      {item.status !== "pending" && (
-                        <div className="approval-history-inline">
-                          {item.status === "rejected" ? (
-                            <X size={13} />
-                          ) : (
-                            <CheckCircle2 size={13} />
-                          )}
-                          <span>
-                            {item.decidedBy ?? "أحمد محمود · مدير الفرع"}
-                          </span>
-                          <i />
-                          <span>{item.decidedAt ?? "قرار توضيحي سابق"}</span>
-                          {item.decisionNote && (
-                            <em>
-                              {item.kind === "expense" &&
-                                item.status === "rejected" && (
-                                  <strong>سبب الرفض: </strong>
-                                )}
-                              {item.decisionNote}
-                            </em>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <div className="approval-card-side">
-                      {item.kind === "discount" ? (
-                        <>
-                          <small>
-                            {item.discountType} · {item.discountValue}%
-                          </small>
-                          <strong>
-                            {formatMoney(item.finalAmount ?? 0)} <bdi>ج.م</bdi>
-                          </strong>
-                          <span>
-                            بدلًا من {formatMoney(item.originalAmount ?? 0)} ج.م
-                          </span>
-                        </>
-                      ) : item.kind === "expense" ? (
-                        <>
-                          <small>مصروف يحتاج تأكيدًا</small>
-                          <strong>
-                            {formatMoney(item.expenseAmount ?? 0)}{" "}
-                            <bdi>ج.م</bdi>
-                          </strong>
-                          <span>{item.expenseCategory}</span>
-                        </>
-                      ) : (
-                        <>
-                          <small>موعد الحصة</small>
-                          <strong className="approval-session-time">
-                            {item.sessionTime}
-                          </strong>
-                          <span>{item.sessionDate}</span>
-                        </>
-                      )}
-                      {item.status === "pending" ? (
-                        <button
-                          className="approval-review-button"
-                          onClick={() => setSelected(item)}
-                        >
-                          مراجعة الطلب <ChevronLeft size={14} />
-                        </button>
-                      ) : (
-                        <span className="approval-review-result">
-                          {item.status === "approved" ? (
-                            <CheckCircle2 size={14} />
-                          ) : (
-                            <X size={14} />
-                          )}
-                          {STATUS_LABELS[item.status]}
-                        </span>
-                      )}
-                    </div>
-                  </article>
+                  <ApprovalCard key={item.id} item={item} onReview={openReview} />
                 ))}
               </div>
             ) : (
@@ -980,7 +806,7 @@ export default function Approvals() {
                     </div>
                     <span className={`approval-status approval-${item.status}`}>
                       <i />
-                      {STATUS_LABELS[item.status]}
+                      {APPROVAL_STATUS_LABELS[item.status]}
                     </span>
                   </li>
                 ))}
@@ -1010,240 +836,24 @@ export default function Approvals() {
       </main>
 
       {selected && (
-        <div
-          className="dialog-overlay"
-          role="presentation"
-          onMouseDown={event => {
-            if (event.target === event.currentTarget) closeReview();
+        <DecisionDialog
+          item={selected}
+          canApprove={canApproveSelected}
+          discountLimit={BRANCH_MANAGER_DISCOUNT_LIMIT}
+          decisionNote={decisionNote}
+          expenseRejectionMode={expenseRejectionMode}
+          onDecisionNoteChange={setDecisionNote}
+          onClose={closeReview}
+          onDecide={status => decide(selected.id, status)}
+          onStartExpenseRejection={() => {
+            setDecisionNote("");
+            setExpenseRejectionMode(true);
           }}
-        >
-          <section
-            className="dialog-card approval-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="approval-dialog-title"
-          >
-            <button
-              className="dialog-close"
-              aria-label="إغلاق"
-              onClick={closeReview}
-            >
-              <X size={17} />
-            </button>
-            <div
-              className={`approval-type-icon ${selected.kind === "discount" ? "approval-discount-icon" : selected.kind === "expense" ? "approval-expense-icon" : "approval-substitute-icon"}`}
-            >
-              {selected.kind === "discount" ? (
-                <FileText size={18} />
-              ) : selected.kind === "expense" ? (
-                <Wallet size={18} />
-              ) : (
-                <UserCheck size={18} />
-              )}
-            </div>
-            <div className="team-dialog-heading">
-              <span className="approval-id" dir="ltr">
-                {selected.id}
-              </span>
-              <h2 id="approval-dialog-title">{selected.title}</h2>
-              <p>{selected.summary}</p>
-            </div>
-            <div className="approval-review-summary">
-              <span>
-                <small>الفرع</small>
-                <strong>{selected.branch}</strong>
-              </span>
-              <span>
-                <small>مقدم الطلب</small>
-                <strong>{selected.requestedBy}</strong>
-              </span>
-              {selected.kind === "discount" ? (
-                <>
-                  <span>
-                    <small>قيمة الخصم</small>
-                    <strong>
-                      {selected.discountValue}% ·{" "}
-                      {formatMoney(
-                        (selected.originalAmount ?? 0) -
-                          (selected.finalAmount ?? 0)
-                      )}{" "}
-                      ج.م
-                    </strong>
-                  </span>
-                  <span>
-                    <small>الفاتورة</small>
-                    <strong dir="ltr">{selected.invoice}</strong>
-                  </span>
-                </>
-              ) : selected.kind === "expense" ? (
-                <>
-                  <span>
-                    <small>المصروف</small>
-                    <strong>{selected.expenseDescription}</strong>
-                  </span>
-                  <span>
-                    <small>القيمة</small>
-                    <strong>
-                      <bdi dir="ltr">
-                        {formatMoney(selected.expenseAmount ?? 0)}
-                      </bdi>{" "}
-                      ج.م
-                    </strong>
-                  </span>
-                  <span>
-                    <small>التصنيف</small>
-                    <strong>{selected.expenseCategory}</strong>
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span>
-                    <small>المدرب الأساسي</small>
-                    <strong>{selected.instructor}</strong>
-                  </span>
-                  <span>
-                    <small>المدرب البديل</small>
-                    <strong>{selected.substitute}</strong>
-                  </span>
-                  <span>
-                    <small>موعد الجلسة</small>
-                    <strong>
-                      {selected.sessionDate} · {selected.sessionTime}
-                    </strong>
-                  </span>
-                </>
-              )}
-            </div>
-            {selected.kind === "discount" && (
-              <div
-                className={`approval-policy-check ${canApproveSelected ? "is-allowed" : "is-escalated"}`}
-              >
-                <ShieldCheck size={15} />
-                <span>
-                  {canApproveSelected
-                    ? `ضمن صلاحية مدير الفرع · الحد ${BRANCH_MANAGER_DISCOUNT_LIMIT}%`
-                    : `يتطلب تصعيدًا للإدارة · الخصم ${selected.discountValue}% يتجاوز الحد`}
-                </span>
-              </div>
-            )}
-            {selected.kind === "expense" && expenseRejectionMode ? (
-              <form
-                className="approval-expense-rejection"
-                onSubmit={event => {
-                  event.preventDefault();
-                  decide(selected.id, "rejected");
-                }}
-              >
-                <div className="approval-expense-rejection-notice">
-                  <AlertCircle size={16} />
-                  <span>
-                    <strong>رفض المصروف يتطلب سببًا</strong>
-                    <small>
-                      سيُسجّل السبب مع اسم مدير الفرع ووقت القرار في سجل
-                      القرارات.
-                    </small>
-                  </span>
-                </div>
-                <label className="approval-note-field approval-expense-rejection-note">
-                  سبب الرفض <b aria-hidden="true">*</b>
-                  <span>إلزامي · بحد أقصى 240 حرفًا</span>
-                  <textarea
-                    value={decisionNote}
-                    onChange={event => setDecisionNote(event.target.value)}
-                    maxLength={240}
-                    rows={3}
-                    placeholder="اذكر سبب عدم اعتماد هذا المصروف..."
-                    required
-                    aria-required="true"
-                    aria-describedby="expense-rejection-counter"
-                  />
-                  <small id="expense-rejection-counter">
-                    {decisionNote.length}/240
-                  </small>
-                </label>
-                <div className="dialog-info">
-                  <AlertCircle size={15} />
-                  <span>
-                    هذا القرار تجريبي ومحلي؛ لا يؤثر على سجل المصروفات أو
-                    إجماليات الماليات ولا يُحفظ على خادم.
-                  </span>
-                </div>
-                <div className="approval-dialog-actions approval-expense-rejection-actions">
-                  <button
-                    type="button"
-                    className="button button-secondary"
-                    onClick={() => {
-                      setExpenseRejectionMode(false);
-                      setDecisionNote("");
-                    }}
-                  >
-                    رجوع للطلب
-                  </button>
-                  <button
-                    type="submit"
-                    className="button approval-reject-confirm"
-                    disabled={!decisionNote.trim()}
-                  >
-                    <X size={15} /> تأكيد رفض المصروف
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <>
-                <label className="approval-note-field">
-                  ملاحظة القرار{" "}
-                  <span>
-                    {selected.kind === "expense"
-                      ? "اختيارية للموافقة؛ الرفض يتطلب سببًا"
-                      : "اختياري · بحد أقصى 240 حرفًا"}
-                  </span>
-                  <textarea
-                    value={decisionNote}
-                    onChange={event => setDecisionNote(event.target.value)}
-                    maxLength={240}
-                    rows={3}
-                    placeholder={
-                      selected.kind === "expense"
-                        ? "أضف ملاحظة اختيارية للموافقة..."
-                        : "مثال: تمت مراجعة الطلب وفق سياسة الفرع."
-                    }
-                  />
-                  <small>{decisionNote.length}/240</small>
-                </label>
-                <div className="dialog-info">
-                  <AlertCircle size={15} />
-                  <span>
-                    هذا إجراء تجريبي محلي. المراجعة الحقيقية تحتاج تحقق
-                    الصلاحيات وتسجيل القرار في Audit Log.
-                  </span>
-                </div>
-                <div className="approval-dialog-actions">
-                  <button
-                    className="button button-secondary"
-                    onClick={() => {
-                      if (selected.kind === "expense") {
-                        setDecisionNote("");
-                        setExpenseRejectionMode(true);
-                      } else {
-                        decide(selected.id, "rejected");
-                      }
-                    }}
-                  >
-                    <X size={15} /> رفض تجريبي
-                  </button>
-                  <button
-                    className="button button-primary"
-                    onClick={() => decide(selected.id, "approved")}
-                    disabled={!canApproveSelected}
-                  >
-                    <Check size={15} />{" "}
-                    {canApproveSelected ? "موافقة تجريبية" : "رفع للإدارة"}
-                  </button>
-                </div>
-              </>
-            )}
-          </section>
-        </div>
+          onCancelExpenseRejection={() => {
+            setExpenseRejectionMode(false);
+            setDecisionNote("");
+          }}
+        />
       )}
     </div>
   );
