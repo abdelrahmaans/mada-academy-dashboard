@@ -2,11 +2,12 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { lazy, Suspense } from "react";
-import { Route, Switch } from "wouter";
+import { Route, Switch, Router as WouterRouter } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 const Home = lazy(() => import("./pages/Home"));
 const Students = lazy(() => import("./pages/Students"));
+const Classes = lazy(() => import("./pages/Classes"));
 const Schedule = lazy(() => import("./pages/Schedule"));
 const Secretary = lazy(() => import("./pages/Secretary"));
 const SecretaryDesk = lazy(() => import("./pages/SecretaryDesk"));
@@ -26,38 +27,51 @@ const ExecutiveDashboard = lazy(() => import("./pages/ExecutiveDashboard"));
 const PlatformConsole = lazy(() => import("./pages/PlatformConsole"));
 const FamilyPortal = lazy(() => import("./pages/FamilyPortal"));
 const StudentPortal = lazy(() => import("./pages/StudentPortal"));
+const WorkspaceHub = lazy(() => import("./pages/WorkspaceHub"));
+
+const APP_ROUTES = [
+  ["/workspace", WorkspaceHub],
+  ["/", Home],
+  ["/students", Students],
+  ["/classes", Classes],
+  ["/schedule", Schedule],
+  ["/secretary", Secretary],
+  ["/secretary-desk", SecretaryDesk],
+  ["/finance", Finance],
+  ["/finance-desk", FinanceDesk],
+  ["/marketing-desk", MarketingDesk],
+  ["/team", Team],
+  ["/branch-operations", BranchOperations],
+  ["/approvals", Approvals],
+  ["/reports", Reports],
+  ["/instructor", Instructor],
+  ["/instructor-desk", InstructorDesk],
+  ["/head-instructors", HeadInstructors],
+  ["/academic-programs", AcademicPrograms],
+  ["/academy-owner", AcademyOwner],
+  ["/executive-dashboard", ExecutiveDashboard],
+  ["/platform-console", PlatformConsole],
+  ["/family-portal", FamilyPortal],
+  ["/student-portal", StudentPortal],
+] as const;
+
 function Router() {
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
   return (
     <Suspense
       fallback={<div className="route-loading">جارٍ تحميل الصفحة…</div>}
     >
-      <Switch>
-        <Route path={"/"} component={Home} />
-        <Route path={"/students"} component={Students} />
-        <Route path={"/schedule"} component={Schedule} />
-        <Route path={"/secretary"} component={Secretary} />
-        <Route path={"/secretary-desk"} component={SecretaryDesk} />
-        <Route path={"/finance"} component={Finance} />
-        <Route path={"/finance-desk"} component={FinanceDesk} />
-        <Route path={"/marketing-desk"} component={MarketingDesk} />
-        <Route path={"/team"} component={Team} />
-        <Route path={"/branch-operations"} component={BranchOperations} />
-        <Route path={"/approvals"} component={Approvals} />
-        <Route path={"/reports"} component={Reports} />
-        <Route path={"/instructor"} component={Instructor} />
-        <Route path={"/instructor-desk"} component={InstructorDesk} />
-        <Route path={"/secretary"} component={Secretary} />
-        <Route path={"/head-instructors"} component={HeadInstructors} />
-        <Route path={"/academic-programs"} component={AcademicPrograms} />
-        <Route path={"/academy-owner"} component={AcademyOwner} />
-        <Route path={"/executive-dashboard"} component={ExecutiveDashboard} />
-        <Route path={"/platform-console"} component={PlatformConsole} />
-        <Route path={"/family-portal"} component={FamilyPortal} />
-        <Route path={"/student-portal"} component={StudentPortal} />
-        <Route path={"/404"} component={NotFound} />
-        {/* Final fallback route */}
-        <Route component={NotFound} />
-      </Switch>
+      <WouterRouter base={basePath}>
+        <Switch>
+          {APP_ROUTES.map(([path, component]) => (
+            <Route key={path} path={path} component={component} />
+          ))}
+          <Route path={"/404"} component={NotFound} />
+          {/* Final fallback route */}
+          <Route component={NotFound} />
+        </Switch>
+      </WouterRouter>
     </Suspense>
   );
 }
