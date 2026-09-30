@@ -71,3 +71,16 @@ React أصبح متصلًا بالـASP.NET Core عبر `client/src/lib/apiClien
 أضيف endpoint بحث دقيق داخل نطاق الطالب عن حساب parent/student النشط بواسطة رقم الهاتف. يقبل E.164 أو رقمًا مصريًا محليًا، ويحوّل الأرقام العربية/الفارسية، ويعيد الاسم ونوع الحساب وآخر أربعة أرقام فقط. النتائج مؤهلة للربط بنفس الأكاديمية، ويستبعد حسابات بعض الأكاديميات الأخرى أو حساب الطالب المرتبط أصلًا بطالب مختلف. يستبدل UI إدخال UUID بنموذج بحث ثم اختيار؛ UUID لا يظهر في الواجهة.
 لا ينشئ البحث حسابًا جديدًا عند عدم وجود مطابقة؛ إنشاء الحساب/الدعوة وتعيين كلمة المرور يحتاج onboarding آمنًا وسيبقى بندًا مستقلًا.
 التحقق: Backend Release build ناجح؛ backend integration suite **22/22** (15 InMemory API tests و7 PostgreSQL 16 tests)؛ `pnpm check` و`pnpm test` (3/3) و`pnpm build` ناجحة. ما زالت تحذيرات إعداد Umami تظهر في البيئة المحلية فقط.
+
+
+---
+
+## 18. Consumer SMS OTP Onboarding — 30 سبتمبر 2026
+
+أضيفت دعوات حساب parent/student عبر الهاتف: staff-only إنشاء دعوة من طالب داخل نطاق الأكاديمية/الفرع، معاينة عامة محدودة، إعادة إرسال OTP بمعدل محدود، وقبول الدعوة لإنشاء الحساب والعضوية ورابط الطالب/ولي الأمر ثم إصدار JWT. الـOTP عشوائي، يُخزن HMAC فقط بمفتاح JWT، والرابط token عشوائي مخزن كـhash ويُنقل في URL fragment؛ البريد الإلكتروني أصبح اختيارياً لحساب المستهلك. تمت إضافة قيود/علاقات EF وmigration `AddConsumerPhoneOnboarding`.
+
+الواجهة: شاشة طلاب تعرض زر دعوة إذا لم يوجد حساب مطابق، وصفحة `/accept-invitation` عربية RTL تستكمل OTP وكلمة المرور وتدخل المستهلك إلى بوابته.
+
+**MVP بلا تكلفة:** لا يوجد provider SMS فعلي. الـDevelopment sender يعيد OTP عشوائياً للاختبار فقط؛ `UnconfiguredSmsMessageSender` في البيئات غير التطويرية يرفض الإرسال بـ503 ويسجل فشل التسليم، ولا توجد رموز ثابتة أو قبول وهمي. مزود لاحقاً يمكن ربطه دون تغيير API/UI عبر `ISmsMessageSender`؛ يجب ضبط `MADA_FRONTEND_URL` على أصل الواجهة الحي عبر HTTPS خارج Development.
+
+التحقق: **27/27** backend integration tests ناجحة على PostgreSQL 16.15 وInMemory، بما فيها test قبول الدعوة فعلياً على PostgreSQL؛ `pnpm check`، `pnpm test` **5/5**، `pnpm build` و`git diff --check` ناجحة. ما زالت تحذيرات Umami في build محلية فقط.

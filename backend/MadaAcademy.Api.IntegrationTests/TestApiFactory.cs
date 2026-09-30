@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
 using Microsoft.AspNetCore.Hosting;
@@ -12,21 +13,29 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace MadaAcademy.Api.IntegrationTests;
 
-public sealed class TestApiFactory(bool useInMemory) : WebApplicationFactory<Program>
+public sealed class TestApiFactory(bool useInMemory, bool unconfigureSms = false) : WebApplicationFactory<Program>
 {
     private readonly string _databaseName = $"mada-tests-{Guid.NewGuid():N}";
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
-        if (!useInMemory) return;
+        if (!useInMemory && !unconfigureSms) return;
 
         builder.ConfigureTestServices(services =>
         {
-            services.RemoveAll<MadaDbContext>();
-            services.RemoveAll<DbContextOptions<MadaDbContext>>();
-            services.RemoveAll<IDbContextOptionsConfiguration<MadaDbContext>>();
-            services.AddDbContext<MadaDbContext>(options => options.UseInMemoryDatabase(_databaseName));
+            if (useInMemory)
+            {
+                services.RemoveAll<MadaDbContext>();
+                services.RemoveAll<DbContextOptions<MadaDbContext>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<MadaDbContext>>();
+                services.AddDbContext<MadaDbContext>(options => options.UseInMemoryDatabase(_databaseName));
+            }
+            if (unconfigureSms)
+            {
+                services.RemoveAll<ISmsMessageSender>();
+                services.AddSingleton<ISmsMessageSender, UnconfiguredSmsMessageSender>();
+            }
         });
     }
 }

@@ -10,6 +10,7 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
     public DbSet<UserAccount> UserAccounts => Set<UserAccount>();
     public DbSet<Membership> Memberships => Set<Membership>();
     public DbSet<Invitation> Invitations => Set<Invitation>();
+    public DbSet<ConsumerInvitation> ConsumerInvitations => Set<ConsumerInvitation>();
     public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
     public DbSet<ApprovalRequest> ApprovalRequests => Set<ApprovalRequest>();
@@ -55,7 +56,7 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
         {
             entity.HasIndex(x => x.Email).IsUnique();
             entity.HasIndex(x => new { x.Phone, x.AccountType }).IsUnique();
-            entity.Property(x => x.Email).HasMaxLength(320).IsRequired();
+            entity.Property(x => x.Email).HasMaxLength(320).IsRequired(false);
             entity.Property(x => x.Phone).HasMaxLength(32).IsRequired();
             entity.Property(x => x.AccountType).HasMaxLength(16).IsRequired();
             entity.Property(x => x.PasswordHash).HasMaxLength(256);
@@ -80,6 +81,25 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
             entity.Property(x => x.RoleCode).HasMaxLength(32).IsRequired();
             entity.Property(x => x.TokenHash).HasMaxLength(128).IsRequired();
             entity.HasOne(x => x.AcceptedByUser).WithMany(x => x.Invitations).HasForeignKey(x => x.AcceptedByUserId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<ConsumerInvitation>(entity =>
+        {
+            entity.HasIndex(x => x.TokenHash).IsUnique();
+            entity.HasIndex(x => new { x.Phone, x.AccountType, x.Status });
+            entity.HasIndex(x => new { x.StudentId, x.AccountType, x.Status });
+            entity.HasIndex(x => new { x.Phone, x.AccountType }).IsUnique().HasFilter("\"Status\" = 'PENDING'");
+            entity.Property(x => x.Phone).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.AccountType).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.Relationship).HasMaxLength(64);
+            entity.Property(x => x.TokenHash).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.OtpHash).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            entity.HasOne<Student>().WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Branch>().WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<UserAccount>().WithMany().HasForeignKey(x => x.InvitedByUserId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne<UserAccount>().WithMany().HasForeignKey(x => x.AcceptedByUserId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<RefreshSession>(entity =>

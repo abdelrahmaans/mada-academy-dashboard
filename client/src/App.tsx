@@ -32,6 +32,7 @@ const StudentPortal = lazy(() => import("./pages/StudentPortal"));
 const WorkspaceHub = lazy(() => import("./pages/WorkspaceHub"));
 const AcademyBootstrap = lazy(() => import("./pages/AcademyBootstrap"));
 const Login = lazy(() => import("./pages/Login"));
+const ConsumerInvitationAccept = lazy(() => import("./pages/ConsumerInvitationAccept"));
 const AcademyRoles = lazy(() => import("./pages/AcademyRoles"));
 const AcademyBranches = lazy(() => import("./pages/AcademyBranches"));
 const AcademyClassrooms = lazy(() => import("./pages/AcademyClassrooms"));
@@ -54,6 +55,7 @@ function ProtectedAcademyClassrooms() {
 
 const APP_ROUTES = [
   ["/login", Login],
+  ["/accept-invitation", ConsumerInvitationAccept],
   ["/workspace", WorkspaceHub],
   ["/platform/academies/new", ProtectedAcademyBootstrap],
   ["/academy/roles", ProtectedAcademyRoles],

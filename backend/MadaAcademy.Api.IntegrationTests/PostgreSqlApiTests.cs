@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
 using MadaAcademy.Api.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -140,5 +142,48 @@ public sealed class PostgreSqlApiTests(PostgreSqlFixture fixture)
         Assert.Contains(parent.UserId.ToString(), body, StringComparison.OrdinalIgnoreCase);
         Assert.Contains($"•••• {parent.Phone[^4..]}", body, StringComparison.Ordinal);
         Assert.DoesNotContain(parent.Phone, body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ConsumerInvitation_CreatesAndAcceptsParentAccountOnPostgreSql()
+    {
+        using var client = fixture.Factory.CreateClient();
+        var staff = await TestData.CreateAccountAsync(fixture.Factory, "R02_BRANCH_MANAGER");
+        var studentId = await TestData.SeedStudentAsync(fixture.Factory, staff.TenantId, staff.BranchId, "PostgreSQL Invitation Student");
+        TestData.Authenticate(client, await TestData.LoginAsync(client, staff));
+
+        using var createResponse = await client.PostAsJsonAsync($"/api/v1/students/{studentId}/consumer-invitations", new
+        {
+            phone = "+201333333333",
+            accountType = "parent",
+            relationship = "الأب"
+        });
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        using var createJson = await createResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Invitation response is empty.");
+        var data = createJson.RootElement.GetProperty("data");
+        var code = data.GetProperty("developmentCode").GetString() ?? throw new InvalidOperationException("Development OTP was not returned by the test sender.");
+        var acceptUrl = data.GetProperty("debugAcceptUrl").GetString() ?? throw new InvalidOperationException("Development invitation URL is missing.");
+        var fragment = new Uri(acceptUrl).Fragment;
+        Assert.StartsWith("#token=", fragment, StringComparison.Ordinal);
+        var token = Uri.UnescapeDataString(fragment["#token=".Length..]);
+
+        using var previewResponse = await client.PostAsJsonAsync("/api/v1/consumer-invitations/preview", new { token });
+        Assert.Equal(HttpStatusCode.OK, previewResponse.StatusCode);
+        using var acceptResponse = await client.PostAsJsonAsync("/api/v1/consumer-invitations/accept", new
+        {
+            token,
+            code,
+            fullName = "والد طالب الاختبار",
+            password = "ParentPassword2026!"
+        });
+        Assert.Equal(HttpStatusCode.OK, acceptResponse.StatusCode);
+
+        using var scope = fixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+        var account = await db.UserAccounts.SingleAsync(item => item.Phone == "+201333333333" && item.AccountType == "parent");
+        Assert.Null(account.Email);
+        Assert.True(await db.Memberships.AnyAsync(item => item.UserAccountId == account.Id && item.TenantId == staff.TenantId && item.RoleCode == "R08_PARENT"));
+        Assert.True(await db.GuardianStudentLinks.AnyAsync(item => item.UserAccountId == account.Id && item.StudentId == studentId));
+        Assert.Equal("ACCEPTED", (await db.ConsumerInvitations.SingleAsync()).Status);
     }
 }

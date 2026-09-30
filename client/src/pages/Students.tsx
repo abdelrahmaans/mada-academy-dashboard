@@ -22,7 +22,9 @@ import {
   MoreHorizontal,
   Plus,
   Search,
+  Send,
   Settings,
+  ShieldCheck,
   Sparkles,
   UserPlus,
   Users,
@@ -32,7 +34,7 @@ import {
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { ErrorState, LoadingState } from "@/components/FeedbackStates";
-import { apiClient, type ConsumerAccountLookupRecord, type ConsumerLinksResponse, type StudentRecord } from "@/lib/apiClient";
+import { apiClient, type ConsumerAccountLookupRecord, type ConsumerInvitationDelivery, type ConsumerLinksResponse, type StudentRecord } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
 
 type StudentStatus = "active" | "on_hold" | "inactive" | "graduated";
@@ -339,6 +341,8 @@ function StudentPage() {
   const [lookupResults, setLookupResults] = useState<ConsumerAccountLookupRecord[] | null>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
+  const [invitationLoading, setInvitationLoading] = useState(false);
+  const [invitationResult, setInvitationResult] = useState<ConsumerInvitationDelivery | null>(null);
   const [linkingAccountId, setLinkingAccountId] = useState<string | null>(null);
   const [linkKind, setLinkKind] = useState<"guardian" | "student">("guardian");
   const [linkRelationship, setLinkRelationship] = useState("ولي أمر");
@@ -495,7 +499,7 @@ function StudentPage() {
   const searchConsumerAccounts = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!detailsStudent || !linkPhone.trim()) return;
-    setLookupLoading(true); setLookupError(null); setLookupResults(null);
+    setLookupLoading(true); setLookupError(null); setLookupResults(null); setInvitationResult(null);
     try {
       const result = await apiClient.searchConsumerAccounts(detailsStudent.id, linkPhone.trim(), linkKind === "student" ? "student" : "parent");
       setLookupResults(result.items);
@@ -503,6 +507,24 @@ function StudentPage() {
       setLookupError(error instanceof Error ? error.message : "تعذر البحث عن الحساب");
     } finally {
       setLookupLoading(false);
+    }
+  };
+
+  const inviteConsumerAccount = async () => {
+    if (!detailsStudent || !linkPhone.trim()) return;
+    setInvitationLoading(true); setLookupError(null); setInvitationResult(null);
+    try {
+      const result = await apiClient.createConsumerInvitation(detailsStudent.id, {
+        phone: linkPhone.trim(),
+        accountType: linkKind === "student" ? "student" : "parent",
+        relationship: linkKind === "guardian" ? linkRelationship : undefined,
+      });
+      setInvitationResult(result);
+      toast.success("تم إنشاء دعوة الحساب", { description: result.developmentCode ? "رمز الاختبار ظاهر أسفل البحث." : "ستصل الرسالة إذا كان إرسال SMS مفعّلًا في بيئة التشغيل." });
+    } catch (error) {
+      setLookupError(error instanceof Error ? error.message : "تعذر إرسال دعوة الحساب");
+    } finally {
+      setInvitationLoading(false);
     }
   };
 
@@ -1278,7 +1300,6 @@ function StudentPage() {
               <div>
                 <h2 id="student-detail-name">{detailsStudent.name}</h2>
                 <span>
-                  {detailsStudent.id} <i />{" "}
                   <span
                     className={`student-status status-${detailsStudent.status}`}
                   >
@@ -1324,6 +1345,7 @@ function StudentPage() {
             </div>
             {dataMode === "live" && <section className="student-link-panel">
               <div className="student-journey-heading"><div><strong>حسابات الطالب والأسرة</strong><span>إدارة الوصول إلى بوابتي الطالب وولي الأمر</span></div></div>
+              <div className="dialog-info"><ShieldCheck size={15} /><span>نسخة MVP بلا تكلفة SMS: في Development يظهر رمز عشوائي للاختبار فقط؛ لا يُقبل رمز ثابت في الإنتاج، ويظل الإرسال الحي مغلقًا حتى إعداد مزود رسائل.</span></div>
               {linksLoading && <div className="dialog-info">جارٍ تحميل الروابط الحالية…</div>}
               {linksError && <div className="dialog-info" role="alert">تعذر قراءة الروابط: {linksError}</div>}
               {consumerLinks && <div className="detail-grid">
@@ -1332,15 +1354,16 @@ function StudentPage() {
               </div>}
               <form onSubmit={searchConsumerAccounts}>
                 <div className="form-row">
-                  <label className="form-field"><span>نوع الربط</span><select value={linkKind} disabled={lookupLoading} onChange={event => { setLinkKind(event.target.value as "guardian" | "student"); setLookupResults(null); setLookupError(null); }}><option value="guardian">حساب ولي أمر</option><option value="student">حساب الطالب نفسه</option></select></label>
-                  <label className="form-field"><span>رقم الهاتف</span><input type="tel" inputMode="tel" autoComplete="tel" value={linkPhone} disabled={lookupLoading} onChange={event => { setLinkPhone(event.target.value); setLookupResults(null); setLookupError(null); }} placeholder="01012345678 أو +201012345678" dir="ltr" required /></label>
+                  <label className="form-field"><span>نوع الربط</span><select value={linkKind} disabled={lookupLoading || invitationLoading} onChange={event => { setLinkKind(event.target.value as "guardian" | "student"); setLookupResults(null); setLookupError(null); setInvitationResult(null); }}><option value="guardian">حساب ولي أمر</option><option value="student">حساب الطالب نفسه</option></select></label>
+                  <label className="form-field"><span>رقم الهاتف</span><input type="tel" inputMode="tel" autoComplete="tel" value={linkPhone} disabled={lookupLoading || invitationLoading} onChange={event => { setLinkPhone(event.target.value); setLookupResults(null); setLookupError(null); setInvitationResult(null); }} placeholder="01012345678 أو +201012345678" dir="ltr" required /></label>
                 </div>
                 {linkKind === "guardian" && <label className="form-field"><span>صلة القرابة</span><select value={linkRelationship} onChange={event => setLinkRelationship(event.target.value)}><option>ولي أمر</option><option>الأب</option><option>الأم</option><option>وصي</option></select></label>}
                 <div className="dialog-info"><FileText size={15} /><span>بحث دقيق داخل الحسابات النشطة من نفس الأكاديمية فقط. تظهر بيانات محدودة، ولا يتم كشف UUID أو بيانات حسابات أكاديميات أخرى.</span></div>
                 <button type="submit" className="button button-primary" disabled={lookupLoading || !linkPhone.trim()}><Search size={15} /> {lookupLoading ? "جارٍ البحث…" : "بحث عن الحساب"}</button>
               </form>
-              {lookupError && <div className="dialog-info" role="alert">تعذر البحث: {lookupError}</div>}
-              {lookupResults !== null && (lookupResults.length ? <div className="student-link-results" aria-live="polite">{lookupResults.map(account => <article key={account.id}><div><strong>{account.name || (account.accountType === "parent" ? "حساب ولي أمر" : "حساب طالب")}</strong><span dir="ltr">{account.maskedPhone}</span></div><button type="button" className="button button-secondary" disabled={linkingAccountId !== null || linksLoading} onClick={() => void linkConsumerAccount(account)}><UserPlus size={15} /> {linkingAccountId === account.id ? "جارٍ الربط…" : account.accountType === "parent" ? "ربط بولي الأمر" : "ربط بحساب الطالب"}</button></article>)}</div> : <div className="dialog-info" role="status">لم يوجد حساب نشط مؤهل بهذا الرقم في الأكاديمية. إنشاء الحسابات تلقائيًا غير مفعل؛ يلزم أولًا مسار onboarding/دعوة آمن.</div>)}
+              {lookupError && <div className="dialog-info" role="alert">تعذر البحث أو إرسال الدعوة: {lookupError}</div>}
+              {lookupResults !== null && (lookupResults.length ? <div className="student-link-results" aria-live="polite">{lookupResults.map(account => <article key={account.id}><div><strong>{account.name || (account.accountType === "parent" ? "حساب ولي أمر" : "حساب طالب")}</strong><span dir="ltr">{account.maskedPhone}</span></div><button type="button" className="button button-secondary" disabled={linkingAccountId !== null || linksLoading} onClick={() => void linkConsumerAccount(account)}><UserPlus size={15} /> {linkingAccountId === account.id ? "جارٍ الربط…" : account.accountType === "parent" ? "ربط بولي الأمر" : "ربط بحساب الطالب"}</button></article>)}</div> : <div className="dialog-info" role="status"><span>لم يوجد حساب نشط مؤهل بهذا الرقم داخل الأكاديمية.</span><button type="button" className="button button-secondary" onClick={() => void inviteConsumerAccount()} disabled={invitationLoading || !linkPhone.trim()}><Send size={15} /> {invitationLoading ? "جارٍ تجهيز الدعوة…" : "إرسال دعوة تفعيل OTP"}</button></div>)}
+              {invitationResult && <div className="dialog-info" role="status"><span>حالة الدعوة: {invitationResult.delivery === "development://sms" ? "اختبار محلي فقط — لا توجد رسالة SMS فعلية" : "تم إرسال الرسالة"}{invitationResult.developmentCode && <> · رمز الاختبار: <b dir="ltr">{invitationResult.developmentCode}</b></>}{invitationResult.debugAcceptUrl && <> · <a href={invitationResult.debugAcceptUrl}>فتح صفحة قبول الدعوة التجريبية</a></>}</span></div>}
             </section>}
             {dataMode !== "live" && (() => {
               const journey = getStudentJourney(detailsStudent);
