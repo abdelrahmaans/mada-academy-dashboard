@@ -64,4 +64,10 @@ React أصبح متصلًا بالـASP.NET Core عبر `client/src/lib/apiClien
 ## 16. Live Operations + Consumer Identity — 30 سبتمبر 2026
 على فرع `feature/live-operations-workflows` أضيفت روابط StudentAccount وGuardianStudentLink مع migrations وendpoints scoped لإدارتها وقراءة بيانات الطالب/ولي الأمر المرتبطة فقط. تم تضييق scope المدرب على الجلسات المسندة، وربط واجهات الجدول والكورسات والموافقات ومكتب المدرب وبوابتي الأسرة والطالب بالـAPI. درجات/ملاحظات المدرب لا تُعرض للمستهلكين حتى يُضاف مسار نشر ومراجعة صريح؛ والفواتير لا تعرض عينات في وضع LIVE. شاشة الطلاب تتيح إدارة الحسابات المرتبطة لحساب موجود باستخدام UUID.
 
-التحقق الحالي: **19/19** backend integration tests نجحت على PostgreSQL 16.15؛ `pnpm check` ناجح؛ `pnpm test` نجح **3/3**؛ و`pnpm build` ناجح. أضيف `.github/workflows/frontend-checks.yml` لتكرار فحوصات TypeScript والاختبارات والبناء على GitHub. بقي فتح PR لهذا الفرع وانتظار CI ثم دمجه بعد النجاح. ملاحظة: بناء الواجهة يظهر تحذيرات Umami لغياب `VITE_ANALYTICS_ENDPOINT` و`VITE_ANALYTICS_WEBSITE_ID` في بيئة البناء فقط؛ build ينتهي بنجاح.
+التحقق وقتها: **19/19** backend integration tests نجحت على PostgreSQL 16.15؛ `pnpm check` و`pnpm test` (3/3) و`pnpm build` نجحت. أضيف `.github/workflows/frontend-checks.yml`؛ ثم دُمج هذا العمل في PR #14 بعد نجاح CI. ملاحظة: بناء الواجهة يظهر تحذيرات Umami لغياب `VITE_ANALYTICS_ENDPOINT` و`VITE_ANALYTICS_WEBSITE_ID` في بيئة البناء فقط؛ build ينتهي بنجاح.
+
+---
+## 17. Consumer Account Phone Search — 30 سبتمبر 2026
+أضيف endpoint بحث دقيق داخل نطاق الطالب عن حساب parent/student النشط بواسطة رقم الهاتف. يقبل E.164 أو رقمًا مصريًا محليًا، ويحوّل الأرقام العربية/الفارسية، ويعيد الاسم ونوع الحساب وآخر أربعة أرقام فقط. النتائج مؤهلة للربط بنفس الأكاديمية، ويستبعد حسابات بعض الأكاديميات الأخرى أو حساب الطالب المرتبط أصلًا بطالب مختلف. يستبدل UI إدخال UUID بنموذج بحث ثم اختيار؛ UUID لا يظهر في الواجهة.
+لا ينشئ البحث حسابًا جديدًا عند عدم وجود مطابقة؛ إنشاء الحساب/الدعوة وتعيين كلمة المرور يحتاج onboarding آمنًا وسيبقى بندًا مستقلًا.
+التحقق: Backend Release build ناجح؛ backend integration suite **22/22** (15 InMemory API tests و7 PostgreSQL 16 tests)؛ `pnpm check` و`pnpm test` (3/3) و`pnpm build` ناجحة. ما زالت تحذيرات إعداد Umami تظهر في البيئة المحلية فقط.

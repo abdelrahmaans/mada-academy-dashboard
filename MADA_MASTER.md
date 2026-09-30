@@ -212,9 +212,9 @@ R00 إلى R09 مغطاة كواجهات prototype مع role code وscope labels
 
 
 ### 30 سبتمبر 2026 — Live Operations + Consumer Portals Checkpoint
-هذا checkpoint أحدث من التسلسل السابق ويغطي PR #13 بعد دمجه والـfeature branch الحالي `feature/live-operations-workflows`.
+هذا checkpoint سجّل تنفيذ فرع `feature/live-operations-workflows`؛ تم لاحقًا دمجه في PR #14. تفاصيل الحالة التالية تحدّث ذلك السجل.
 
-#### التنفيذ الحالي على فرع العمل
+#### التنفيذ الذي دُمج في PR #14
 - ربط `Schedule`, `Classes`, `Approvals`, و`InstructorDesk` بعقود الـAPI الحية؛ الواجهات تميّز بين DEMO/LIVE ولا تدّعي حفظ عمليات غير مدعومة.
 - تضييق قراءة جلسات/طلاب المدرب إلى الجلسات المسندة إليه، وإثراء استجابات الجدول/الموافقات بأسماء التشغيل.
 - إضافة حسابات المستهلكين `R08_PARENT` و`R09_STUDENT` وروابط `StudentAccountLink` و`GuardianStudentLink` مع endpoints لإدارة الروابط وقراءة الطلاب والجلسات ذات الصلة فقط.
@@ -229,7 +229,15 @@ R00 إلى R09 مغطاة كواجهات prototype مع role code وscope labels
 - `dotnet test backend/MadaAcademy.Api.IntegrationTests/...`: 19/19 ناجحة على PostgreSQL 16.15 (ومنها migrations وPostgreSQL-host checks).
 - `git diff --check` ناجح.
 
-#### المتبقي
-- إنشاء PR لفرع `feature/live-operations-workflows`، انتظار Frontend Checks وBackend Integration Tests، إصلاح أي فشل ثم دمجه بعد نجاح CI.
-- تقييم/نشر تقييمات المستهلك يتطلب إضافة نموذج موافقة/نشر صريح؛ حاليًا تظل الدرجات مخفية عن المستهلكين عمدًا.
-- إنشاء حسابات المستهلكين/اكتشافها عبر الهاتف غير مضاف؛ لوحة الربط الحالية تتطلب UUID لحساب موجود.
+#### المتبقي بعد PR #14
+- دعم إنشاء حساب مستهلك/دعوة تفعيل برقم الهاتف ضمن onboarding آمن؛ البحث عن الحسابات الموجودة نُفذ في checkpoint رقم 17.
+- تقييم/نشر تقييمات المستهلك يتطلب إضافة حالة مراجعة/نشر صريحة؛ تظل الدرجات مخفية عن المستهلكين حتى اكتمالها.
+- بناء API للفواتير/المدفوعات وربط بوابة الأسرة بها؛ الوضع الحي لا يعرض أرقامًا مالية تجريبية.
+- إضافة تدفقات تغيير/استعادة كلمة المرور ومزود OTP فعلي بدل adapter التطوير.
+- مراجعة بقية شاشات الأدوار بحثًا عن إجراءات DEMO-only وترحيل الأولوية منها إلى API مع تغطية صلاحياتها.
+
+### 30 سبتمبر 2026 — Consumer Account Phone Search Checkpoint
+- أضيف `GET /api/v1/students/{studentId}/consumer-accounts?phone=...&accountType=parent|student` للبحث الدقيق فقط؛ يتطلب دورًا مخولًا ويحترم tenant/branch scope.
+- تُطبّع أرقام E.164 والأرقام المصرية المكتوبة بالأرقام العربية/الفارسية، وتُعرض مطابقة نشطة مؤهلة من الأكاديمية نفسها بآخر أربعة أرقام فقط. لا تظهر UUIDs للمستخدم ولا تُكشف الحسابات ذات عضوية نشطة في أكاديمية أخرى.
+- استُبدل حقل UUID في نافذة الطالب ببحث واختيار نتيجة ثم تنفيذ الربط بالـID الداخلي. لا يُنشأ حساب تلقائيًا عند عدم العثور عليه؛ إنشاء الحساب يحتاج مسار دعوة/تفعيل آمنًا.
+- التحقق: `dotnet build ...Api.csproj -c Release` ناجح؛ backend integration suite **22/22** (15 InMemory و7 PostgreSQL 16)؛ `pnpm check` ناجح؛ `pnpm test` **3/3**؛ `pnpm build` ناجح مع تحذيرات إعداد Umami السابقة؛ `git diff --check` ناجح.

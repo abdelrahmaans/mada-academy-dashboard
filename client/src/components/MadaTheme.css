@@ -301,3 +301,72 @@ body,
 
 .workspace-bootstrap-link{display:inline-flex;align-items:center;gap:5px;margin-inline-start:auto;padding:8px 10px;border:1px solid #cce8e3;border-radius:8px;color:#0b8176;background:#f1faf8;font-size:9px;font-weight:900;text-decoration:none;white-space:nowrap}.workspace-bootstrap-link:hover{color:#fff;background:#0d9488}
 @media(max-width:620px){.workspace-bootstrap-link{margin-inline-start:0}}
+
+
+/* Consumer account lookup on the student detail dialog */
+.student-link-panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid #e2eceb;
+  border-radius: 14px;
+  background: #fbfdfd;
+}
+
+.student-link-panel form {
+  display: grid;
+  gap: 11px;
+}
+
+.student-link-panel .form-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.8fr) minmax(220px, 1.4fr);
+  gap: 12px;
+}
+
+.student-link-results {
+  display: grid;
+  gap: 8px;
+}
+
+.student-link-results article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #e5eeed;
+  border-radius: 11px;
+  background: #fff;
+}
+
+.student-link-results article > div {
+  display: grid;
+  gap: 4px;
+}
+
+.student-link-results article strong {
+  color: #203b47;
+  font-size: 13px;
+}
+
+.student-link-results article span {
+  color: #73868c;
+  font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  .student-link-panel {
+    padding: 12px;
+  }
+
+  .student-link-panel .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .student-link-results article {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

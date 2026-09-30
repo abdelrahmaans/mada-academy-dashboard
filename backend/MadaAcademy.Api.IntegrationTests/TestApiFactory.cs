@@ -44,8 +44,10 @@ public static class TestData
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
         var passwordHasher = scope.ServiceProvider.GetRequiredService<MadaAcademy.Api.Auth.PasswordHashService>();
-        db.Tenants.Add(new Tenant { Id = account.TenantId, Name = "Test Academy", Slug = $"academy-{account.TenantId:N}" });
-        db.Branches.Add(new Branch { Id = account.BranchId, TenantId = account.TenantId, Name = "Test Branch", Code = "MAIN" });
+        if (!await db.Tenants.AnyAsync(item => item.Id == account.TenantId))
+            db.Tenants.Add(new Tenant { Id = account.TenantId, Name = "Test Academy", Slug = $"academy-{account.TenantId:N}" });
+        if (!await db.Branches.AnyAsync(item => item.Id == account.BranchId))
+            db.Branches.Add(new Branch { Id = account.BranchId, TenantId = account.TenantId, Name = "Test Branch", Code = "MAIN" });
         db.UserAccounts.Add(new UserAccount
         {
             Id = account.UserId,
@@ -69,10 +71,10 @@ public static class TestData
         return account;
     }
 
-    public static async Task<TestAccount> CreateConsumerAccountAsync(TestApiFactory factory, Guid tenantId, string accountType, string roleCode)
+    public static async Task<TestAccount> CreateConsumerAccountAsync(TestApiFactory factory, Guid tenantId, string accountType, string roleCode, string? phone = null)
     {
         var account = new TestAccount(tenantId, Guid.Empty, Guid.NewGuid(), roleCode,
-            $"+202{Random.Shared.Next(0, 1_000_000_000):D9}", "Correct!Horse2026");
+            phone ?? $"+202{Random.Shared.Next(0, 1_000_000_000):D9}", "Correct!Horse2026");
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
         var passwordHasher = scope.ServiceProvider.GetRequiredService<MadaAcademy.Api.Auth.PasswordHashService>();

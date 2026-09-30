@@ -124,4 +124,21 @@ public sealed class PostgreSqlApiTests(PostgreSqlFixture fixture)
         var json = await client.GetStringAsync("/api/v1/students");
         Assert.DoesNotContain(hiddenName, json, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task ConsumerAccountLookup_ExecutesScopedExactPhoneQueryOnPostgreSql()
+    {
+        using var client = fixture.Factory.CreateClient();
+        var staff = await TestData.CreateAccountAsync(fixture.Factory, "R02_BRANCH_MANAGER");
+        var parent = await TestData.CreateConsumerAccountAsync(fixture.Factory, staff.TenantId, "parent", "R08_PARENT");
+        var studentId = await TestData.SeedStudentAsync(fixture.Factory, staff.TenantId, staff.BranchId, "PostgreSQL Phone Lookup Student");
+        TestData.Authenticate(client, await TestData.LoginAsync(client, staff));
+
+        var response = await client.GetAsync($"/api/v1/students/{studentId}/consumer-accounts?accountType=parent&phone={Uri.EscapeDataString(parent.Phone)}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains(parent.UserId.ToString(), body, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"•••• {parent.Phone[^4..]}", body, StringComparison.Ordinal);
+        Assert.DoesNotContain(parent.Phone, body, StringComparison.Ordinal);
+    }
 }

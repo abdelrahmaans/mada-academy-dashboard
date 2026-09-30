@@ -32,7 +32,7 @@ import {
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { ErrorState, LoadingState } from "@/components/FeedbackStates";
-import { apiClient, type ConsumerLinksResponse, type StudentRecord } from "@/lib/apiClient";
+import { apiClient, type ConsumerAccountLookupRecord, type ConsumerLinksResponse, type StudentRecord } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
 
 type StudentStatus = "active" | "on_hold" | "inactive" | "graduated";
@@ -335,7 +335,11 @@ function StudentPage() {
   const [consumerLinks, setConsumerLinks] = useState<ConsumerLinksResponse | null>(null);
   const [linksLoading, setLinksLoading] = useState(false);
   const [linksError, setLinksError] = useState<string | null>(null);
-  const [linkAccountId, setLinkAccountId] = useState("");
+  const [linkPhone, setLinkPhone] = useState("");
+  const [lookupResults, setLookupResults] = useState<ConsumerAccountLookupRecord[] | null>(null);
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+  const [linkingAccountId, setLinkingAccountId] = useState<string | null>(null);
   const [linkKind, setLinkKind] = useState<"guardian" | "student">("guardian");
   const [linkRelationship, setLinkRelationship] = useState("ولي أمر");
   const [studentName, setStudentName] = useState("");
@@ -372,6 +376,7 @@ function StudentPage() {
   }, []);
 
   useEffect(() => {
+    setLookupResults(null); setLookupError(null); setLinkPhone("");
     if (dataMode !== "live" || !detailsStudent) { setConsumerLinks(null); setLinksError(null); return; }
     let cancelled = false;
     setLinksLoading(true); setLinksError(null);
@@ -487,17 +492,33 @@ function StudentPage() {
     setPage(1);
   };
 
-  const submitConsumerLink = async (event: FormEvent<HTMLFormElement>) => {
+  const searchConsumerAccounts = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!detailsStudent || !linkAccountId.trim()) return;
+    if (!detailsStudent || !linkPhone.trim()) return;
+    setLookupLoading(true); setLookupError(null); setLookupResults(null);
     try {
-      if (linkKind === "student") await apiClient.linkStudentAccount(detailsStudent.id, linkAccountId.trim());
-      else await apiClient.linkGuardian(detailsStudent.id, { userAccountId: linkAccountId.trim(), relationship: linkRelationship });
+      const result = await apiClient.searchConsumerAccounts(detailsStudent.id, linkPhone.trim(), linkKind === "student" ? "student" : "parent");
+      setLookupResults(result.items);
+    } catch (error) {
+      setLookupError(error instanceof Error ? error.message : "تعذر البحث عن الحساب");
+    } finally {
+      setLookupLoading(false);
+    }
+  };
+
+  const linkConsumerAccount = async (account: ConsumerAccountLookupRecord) => {
+    if (!detailsStudent) return;
+    setLinkingAccountId(account.id);
+    try {
+      if (account.accountType === "student") await apiClient.linkStudentAccount(detailsStudent.id, account.id);
+      else await apiClient.linkGuardian(detailsStudent.id, { userAccountId: account.id, relationship: linkRelationship });
       setConsumerLinks(await apiClient.studentConsumerLinks(detailsStudent.id));
-      setLinkAccountId("");
-      toast.success(linkKind === "student" ? "تم ربط حساب الطالب" : "تم ربط حساب ولي الأمر");
+      setLookupResults(null); setLinkPhone("");
+      toast.success(account.accountType === "student" ? "تم ربط حساب الطالب" : "تم ربط حساب ولي الأمر");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "تعذر ربط الحساب");
+    } finally {
+      setLinkingAccountId(null);
     }
   };
 
@@ -1309,15 +1330,17 @@ function StudentPage() {
                 <div><small>حساب الطالب</small><strong>{consumerLinks.studentAccount ? `${consumerLinks.studentAccount.name ?? "حساب الطالب"} · ${consumerLinks.studentAccount.phone}` : "غير مرتبط"}</strong>{consumerLinks.studentAccount && <button type="button" className="button button-secondary" onClick={() => void unlinkConsumerAccount("student", consumerLinks.studentAccount!.id)}>إلغاء الربط</button>}</div>
                 <div><small>أولياء الأمور</small>{consumerLinks.guardians.length ? consumerLinks.guardians.map(guardian => <div key={guardian.id}><strong>{guardian.name ?? guardian.phone} · {guardian.relationship}</strong><button type="button" className="button button-secondary" onClick={() => void unlinkConsumerAccount("guardian", guardian.id)}>إلغاء الربط</button></div>) : <strong>لا يوجد حساب ولي أمر مرتبط</strong>}</div>
               </div>}
-              <form onSubmit={submitConsumerLink}>
+              <form onSubmit={searchConsumerAccounts}>
                 <div className="form-row">
-                  <label className="form-field"><span>نوع الربط</span><select value={linkKind} onChange={event => setLinkKind(event.target.value as "guardian" | "student")}><option value="guardian">حساب ولي أمر</option><option value="student">حساب الطالب نفسه</option></select></label>
-                  <label className="form-field"><span>معرّف الحساب الموجود</span><input value={linkAccountId} onChange={event => setLinkAccountId(event.target.value)} placeholder="UUID لحساب parent أو student" dir="ltr" required /></label>
+                  <label className="form-field"><span>نوع الربط</span><select value={linkKind} disabled={lookupLoading} onChange={event => { setLinkKind(event.target.value as "guardian" | "student"); setLookupResults(null); setLookupError(null); }}><option value="guardian">حساب ولي أمر</option><option value="student">حساب الطالب نفسه</option></select></label>
+                  <label className="form-field"><span>رقم الهاتف</span><input type="tel" inputMode="tel" autoComplete="tel" value={linkPhone} disabled={lookupLoading} onChange={event => { setLinkPhone(event.target.value); setLookupResults(null); setLookupError(null); }} placeholder="01012345678 أو +201012345678" dir="ltr" required /></label>
                 </div>
                 {linkKind === "guardian" && <label className="form-field"><span>صلة القرابة</span><select value={linkRelationship} onChange={event => setLinkRelationship(event.target.value)}><option>ولي أمر</option><option>الأب</option><option>الأم</option><option>وصي</option></select></label>}
-                <div className="dialog-info"><FileText size={15} /><span>يجب أن يكون حساب المستهلك موجودًا مسبقًا؛ تتحقق الـAPI من نوعه ونطاق الطالب قبل إنشاء الرابط.</span></div>
-                <button type="submit" className="button button-primary" disabled={linksLoading || !linkAccountId.trim()}><UserPlus size={15} /> ربط الحساب</button>
+                <div className="dialog-info"><FileText size={15} /><span>بحث دقيق داخل الحسابات النشطة من نفس الأكاديمية فقط. تظهر بيانات محدودة، ولا يتم كشف UUID أو بيانات حسابات أكاديميات أخرى.</span></div>
+                <button type="submit" className="button button-primary" disabled={lookupLoading || !linkPhone.trim()}><Search size={15} /> {lookupLoading ? "جارٍ البحث…" : "بحث عن الحساب"}</button>
               </form>
+              {lookupError && <div className="dialog-info" role="alert">تعذر البحث: {lookupError}</div>}
+              {lookupResults !== null && (lookupResults.length ? <div className="student-link-results" aria-live="polite">{lookupResults.map(account => <article key={account.id}><div><strong>{account.name || (account.accountType === "parent" ? "حساب ولي أمر" : "حساب طالب")}</strong><span dir="ltr">{account.maskedPhone}</span></div><button type="button" className="button button-secondary" disabled={linkingAccountId !== null || linksLoading} onClick={() => void linkConsumerAccount(account)}><UserPlus size={15} /> {linkingAccountId === account.id ? "جارٍ الربط…" : account.accountType === "parent" ? "ربط بولي الأمر" : "ربط بحساب الطالب"}</button></article>)}</div> : <div className="dialog-info" role="status">لم يوجد حساب نشط مؤهل بهذا الرقم في الأكاديمية. إنشاء الحسابات تلقائيًا غير مفعل؛ يلزم أولًا مسار onboarding/دعوة آمن.</div>)}
             </section>}
             {dataMode !== "live" && (() => {
               const journey = getStudentJourney(detailsStudent);

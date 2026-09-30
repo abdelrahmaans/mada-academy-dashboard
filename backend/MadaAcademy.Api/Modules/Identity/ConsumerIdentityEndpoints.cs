@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using System.Text.RegularExpressions;
+using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +13,7 @@ public static class ConsumerIdentityEndpoints
     {
         var staff = endpoints.MapGroup("/api/v1").RequireAuthorization("staff");
         staff.MapGet("/students/{studentId:guid}/consumer-links", ListLinksAsync);
+        staff.MapGet("/students/{studentId:guid}/consumer-accounts", SearchConsumerAccountsAsync);
         staff.MapPost("/students/{studentId:guid}/student-account", LinkStudentAccountAsync);
         staff.MapDelete("/students/{studentId:guid}/student-account", UnlinkStudentAccountAsync);
         staff.MapPost("/students/{studentId:guid}/guardians", LinkGuardianAsync);
@@ -35,6 +38,43 @@ public static class ConsumerIdentityEndpoints
             .OrderBy(item => item.name).ToListAsync(cancellationToken);
         return Results.Ok(new { data = new { studentId, studentAccount, guardians, totalGuardians = guardians.Count } });
     }
+
+    private static async Task<IResult> SearchConsumerAccountsAsync(Guid studentId, string? phone, string? accountType, ClaimsPrincipal actor, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!CanManageLinks(actor) || !TryScope(actor, out var tenantId, out var branchId)) return Forbidden("CONSUMER_LINK_MANAGEMENT_FORBIDDEN");
+        if (string.IsNullOrWhiteSpace(accountType) || (accountType != "parent" && accountType != "student"))
+            return Validation("accountType", "Account type must be parent or student.");
+        if (string.IsNullOrWhiteSpace(phone)) return Validation("phone", "Phone is required.");
+
+        var student = await FindScopedStudentAsync(db, studentId, tenantId, branchId, cancellationToken);
+        if (student is null) return NotFound("STUDENT_NOT_FOUND");
+        var normalizedPhone = OtpChallengeStore.Normalize(ToLatinDigits(phone));
+        if (!Regex.IsMatch(normalizedPhone, @"^\+[1-9][0-9]{7,14}$", RegexOptions.CultureInvariant))
+            return Validation("phone", "Enter a valid international phone number.");
+
+        var expectedRole = accountType == "parent" ? "R08_PARENT" : "R09_STUDENT";
+        var accountsQuery = db.UserAccounts.AsNoTracking().Where(account =>
+            account.Phone == normalizedPhone && account.AccountType == accountType && account.Status == "ACTIVE" &&
+            !db.Memberships.Any(membership => membership.UserAccountId == account.Id && membership.Status == "ACTIVE" &&
+                (membership.TenantId != tenantId || membership.RoleCode != expectedRole || membership.BranchId.HasValue || membership.ScopeLevel != "TENANT")));
+        if (accountType == "student")
+            accountsQuery = accountsQuery.Where(account => !db.StudentAccountLinks.Any(link => link.UserAccountId == account.Id && link.StudentId != studentId));
+
+        var found = await accountsQuery.OrderBy(account => account.DisplayName).Take(5)
+            .Select(account => new { id = account.Id, name = account.DisplayName, accountType = account.AccountType, phone = account.Phone })
+            .ToListAsync(cancellationToken);
+        var matches = found.Select(account => new { account.id, account.name, account.accountType, maskedPhone = MaskPhone(account.phone) }).ToArray();
+        return Results.Ok(new { data = new { items = matches, total = matches.Length } });
+    }
+
+    private static string ToLatinDigits(string value) => new(value.Select(character => character switch
+    {
+        >= '\u0660' and <= '\u0669' => (char)('0' + character - '\u0660'),
+        >= '\u06F0' and <= '\u06F9' => (char)('0' + character - '\u06F0'),
+        _ => character
+    }).ToArray());
+
+    private static string MaskPhone(string phone) => phone.Length <= 4 ? "••••" : $"•••• {phone[^4..]}";
 
     private static async Task<IResult> LinkStudentAccountAsync(Guid studentId, LinkConsumerAccountRequest request, ClaimsPrincipal actor, MadaDbContext db, CancellationToken cancellationToken)
     {
