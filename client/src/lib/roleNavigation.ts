@@ -21,8 +21,8 @@ export type RoleDefinition = {
 };
 
 /**
- * Shared UX registry. This is presentation metadata only; it is not API authorization.
- * Server-side scope enforcement must be added when the backend is introduced.
+ * Shared UX registry for navigation and display only; it is not API authorization.
+ * The backend remains authoritative for permissions and tenant/branch scope enforcement.
  */
 export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
   R00: {
@@ -71,8 +71,8 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     code: "R03",
     label: "رئيس المدربين",
     identityKind: "staff",
-    scopeLevel: "team",
-    defaultScopeLabel: "فريق المدربين والجلسات التابعة",
+    scopeLevel: "branch",
+    defaultScopeLabel: "فرع واحد · فريق المدربين والجلسات التابعة",
     homePath: "/head-instructors",
     navigation: [
       { path: "/head-instructors", label: "ملخص الفريق", purpose: "quality queue and team overview" },
@@ -122,8 +122,8 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     code: "R07",
     label: "مسؤول التسويق",
     identityKind: "staff",
-    scopeLevel: "tenant",
-    defaultScopeLabel: "المحتوى والحملات والـmarketing leads",
+    scopeLevel: "branch",
+    defaultScopeLabel: "فرع واحد · المحتوى والحملات والـmarketing leads",
     homePath: "/marketing-desk",
     navigation: [
       { path: "/marketing-desk", label: "مكتب التسويق", purpose: "campaigns, content, leads" },
