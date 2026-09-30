@@ -29,7 +29,7 @@ public sealed class Branch : EntityBase
 
 public sealed class UserAccount : EntityBase
 {
-    public required string Email { get; set; }
+    public string? Email { get; set; }
     public required string Phone { get; set; }
     public string AccountType { get; set; } = "staff";
     public string? DisplayName { get; set; }
@@ -65,6 +65,26 @@ public sealed class Invitation : EntityBase
     public DateTimeOffset ExpiresAt { get; set; }
     public Guid? AcceptedByUserId { get; set; }
     public UserAccount? AcceptedByUser { get; set; }
+}
+
+public sealed class ConsumerInvitation : EntityBase
+{
+    public Guid TenantId { get; set; }
+    public Guid BranchId { get; set; }
+    public Guid StudentId { get; set; }
+    public required string Phone { get; set; }
+    public required string AccountType { get; set; }
+    public string? Relationship { get; set; }
+    public required string TokenHash { get; set; }
+    public required string OtpHash { get; set; }
+    public DateTimeOffset OtpExpiresAt { get; set; }
+    public DateTimeOffset OtpLastSentAt { get; set; }
+    public int OtpAttempts { get; set; }
+    public int OtpSendCount { get; set; }
+    public DateTimeOffset ExpiresAt { get; set; }
+    public string Status { get; set; } = "PENDING";
+    public Guid? InvitedByUserId { get; set; }
+    public Guid? AcceptedByUserId { get; set; }
 }
 
 public sealed class RefreshSession : EntityBase

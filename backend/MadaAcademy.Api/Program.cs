@@ -17,6 +17,8 @@ builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecks();
 builder.Services.AddMadaPersistence(builder.Configuration);
 builder.Services.AddMadaAuthentication(jwtOptions);
+if (builder.Environment.IsDevelopment()) builder.Services.AddSingleton<ISmsMessageSender, DevelopmentSmsMessageSender>();
+else builder.Services.AddSingleton<ISmsMessageSender, UnconfiguredSmsMessageSender>();
 builder.Services.AddScoped<ConflictService>();
 builder.Services.AddSingleton<IAuditSink, DevelopmentAuditSink>();
 builder.Services.AddCors(options => options.AddPolicy("frontend", policy =>
@@ -46,6 +48,7 @@ app.UseAuthorization();
 app.MapHealthChecks("/api/v1/health");
 app.MapMadaAcademyIdentityEndpoints();
 app.MapMadaConsumerIdentityEndpoints();
+app.MapMadaConsumerInvitationEndpoints();
 app.MapMadaRoleEndpoints();
 app.MapMadaBranchEndpoints();
 app.MapMadaClassroomEndpoints();

@@ -7,7 +7,7 @@ export type AuthMe = {
   branchId?: string | null;
   scopeLevel: string;
   permissions?: string[];
-  user?: { id: string; displayName: string | null; email: string; phone: string };
+  user?: { id: string; displayName: string | null; email: string | null; phone: string };
   academy?: { id: string; name: string; slug: string; status: string; planCode: string };
   branches?: Array<{ id: string; name: string; code: string; status: string }>;
 };
@@ -196,12 +196,14 @@ export type ConsumerSessionRecord = {
 export type ConsumerSessionsResponse = { items: ConsumerSessionRecord[]; total: number };
 export type ConsumerLinksResponse = {
   studentId: string;
-  studentAccount: { id: string; name: string | null; phone: string; email: string } | null;
-  guardians: Array<{ id: string; name: string | null; phone: string; email: string; relationship: string; status: string }>;
+  studentAccount: { id: string; name: string | null; phone: string; email: string | null } | null;
+  guardians: Array<{ id: string; name: string | null; phone: string; email: string | null; relationship: string; status: string }>;
   totalGuardians: number;
 };
 export type ConsumerAccountLookupRecord = { id: string; name: string | null; accountType: "parent" | "student"; maskedPhone: string };
 export type ConsumerAccountLookupResponse = { items: ConsumerAccountLookupRecord[]; total: number };
+export type ConsumerInvitationPreview = { accountType: "parent" | "student"; maskedPhone: string; expiresAt: string; otpExpiresAt: string; displayNameRequired: boolean };
+export type ConsumerInvitationDelivery = { status?: string; maskedPhone: string; expiresAt?: string; otpExpiresAt: string; delivery: string; developmentCode?: string | null; debugAcceptUrl?: string | null };
 
 export class ApiRequestError extends Error {
   constructor(
@@ -293,6 +295,13 @@ export const apiClient = {
     saveTokens(response);
     return response;
   },
+  acceptConsumerInvitation: async (input: { token: string; code: string; fullName?: string; email?: string; password: string }) => {
+    const response = await request<TokenResponse>("/consumer-invitations/accept", { method: "POST", body: JSON.stringify(input) }, false);
+    saveTokens(response);
+    return response;
+  },
+  previewConsumerInvitation: (token: string) => request<ConsumerInvitationPreview>("/consumer-invitations/preview", { method: "POST", body: JSON.stringify({ token }) }, false),
+  resendConsumerInvitationCode: (token: string) => request<ConsumerInvitationDelivery>("/consumer-invitations/resend-code", { method: "POST", body: JSON.stringify({ token }) }, false),
   me: () => request<AuthMe>("/me"),
   bootstrapAcademy: (input: BootstrapAcademyInput) =>
     request<BootstrapAcademyResponse>("/platform/academies", {
@@ -355,6 +364,8 @@ export const apiClient = {
     const query = new URLSearchParams({ phone, accountType });
     return request<ConsumerAccountLookupResponse>(`/students/${studentId}/consumer-accounts?${query.toString()}`);
   },
+  createConsumerInvitation: (studentId: string, input: { phone: string; accountType: "parent" | "student"; relationship?: string }) =>
+    request<ConsumerInvitationDelivery>(`/students/${studentId}/consumer-invitations`, { method: "POST", body: JSON.stringify(input) }),
   linkStudentAccount: (studentId: string, userAccountId: string) => request<{ studentId: string; userAccountId: string; accountType: string; linked: boolean }>(`/students/${studentId}/student-account`, { method: "POST", body: JSON.stringify({ userAccountId }) }),
   unlinkStudentAccount: (studentId: string) => request<void>(`/students/${studentId}/student-account`, { method: "DELETE" }),
   linkGuardian: (studentId: string, input: { userAccountId: string; relationship: string }) => request<{ studentId: string; userAccountId: string; relationship: string; linked: boolean }>(`/students/${studentId}/guardians`, { method: "POST", body: JSON.stringify(input) }),
