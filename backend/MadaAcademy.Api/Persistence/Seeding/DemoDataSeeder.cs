@@ -1,3 +1,4 @@
+using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,15 +17,16 @@ public static class DemoDataSeeder
         var mainBranch = new Branch { Id = mainBranchId, TenantId = tenantId, Name = "Main Branch", Code = "MAIN" };
         var heliopolisBranch = new Branch { Id = heliopolisBranchId, TenantId = tenantId, Name = "Heliopolis Branch", Code = "HELIO" };
 
+        var demoPasswordHash = new PasswordHashService().Hash("Mada@2026");
         var users = new[]
         {
-            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000001"), Email = "platform.admin@mada.demo", Phone = "+201000000001", DisplayName = "Platform Admin", AccountType = "staff", Status = "ACTIVE" },
-            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000002"), Email = "owner@mada.demo", Phone = "+201000000002", DisplayName = "Mada Owner", AccountType = "staff", Status = "ACTIVE" },
-            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000003"), Email = "manager@mada.demo", Phone = "+201000000003", DisplayName = "Main Branch Manager", AccountType = "staff", Status = "ACTIVE" },
-            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000004"), Email = "head@mada.demo", Phone = "+201000000004", DisplayName = "Head Instructor", AccountType = "staff", Status = "ACTIVE" },
-            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000005"), Email = "secretary@mada.demo", Phone = "+201000000005", DisplayName = "Academy Secretary", AccountType = "staff", Status = "ACTIVE" },
-            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000006"), Email = "accountant@mada.demo", Phone = "+201000000006", DisplayName = "Academy Accountant", AccountType = "staff", Status = "ACTIVE" },
-            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000007"), Email = "media@mada.demo", Phone = "+201000000007", DisplayName = "Media Manager", AccountType = "staff", Status = "ACTIVE" }
+            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000001"), Email = "platform.admin@mada.demo", Phone = "+201000000001", DisplayName = "Platform Admin", AccountType = "staff", PasswordHash = demoPasswordHash, Status = "ACTIVE" },
+            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000002"), Email = "owner@mada.demo", Phone = "+201000000002", DisplayName = "Mada Owner", AccountType = "staff", PasswordHash = demoPasswordHash, Status = "ACTIVE" },
+            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000003"), Email = "manager@mada.demo", Phone = "+201000000003", DisplayName = "Main Branch Manager", AccountType = "staff", PasswordHash = demoPasswordHash, Status = "ACTIVE" },
+            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000004"), Email = "head@mada.demo", Phone = "+201000000004", DisplayName = "Head Instructor", AccountType = "staff", PasswordHash = demoPasswordHash, Status = "ACTIVE" },
+            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000005"), Email = "secretary@mada.demo", Phone = "+201000000005", DisplayName = "Academy Secretary", AccountType = "staff", PasswordHash = demoPasswordHash, Status = "ACTIVE" },
+            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000006"), Email = "accountant@mada.demo", Phone = "+201000000006", DisplayName = "Academy Accountant", AccountType = "staff", PasswordHash = demoPasswordHash, Status = "ACTIVE" },
+            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000007"), Email = "media@mada.demo", Phone = "+201000000007", DisplayName = "Media Manager", AccountType = "staff", PasswordHash = demoPasswordHash, Status = "ACTIVE" }
         };
 
         var memberships = new[]

@@ -9,6 +9,7 @@ import {
   type RoleScopeLevel,
 } from "@/contexts/RoleScopeContext";
 import { getRoleDefinition } from "@/lib/roleNavigation";
+import SessionLogoutButton from "@/components/SessionLogoutButton";
 import "./RoleDashboardShell.css";
 import "./RoleFoundation.css";
 
@@ -63,7 +64,10 @@ export default function RoleDashboardShell({
         data-role-home={roleDefinition.homePath}
         data-scope-level={scopeLevel}
       >
-        {children}
+        <>
+          <SessionLogoutButton />
+          {children}
+        </>
       </div>
     </RoleScopeProvider>
   );

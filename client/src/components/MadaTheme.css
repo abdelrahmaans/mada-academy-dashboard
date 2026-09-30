@@ -298,3 +298,6 @@ body,
 .workspace-hub::-webkit-scrollbar-thumb, .role-dashboard-shell::-webkit-scrollbar-thumb, .main-panel::-webkit-scrollbar-thumb, .workspace::-webkit-scrollbar-thumb, [class*="-content"]::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 999px; background: #86b9b5; background-clip: padding-box; }
 .workspace-hub::-webkit-scrollbar-thumb:hover, .role-dashboard-shell::-webkit-scrollbar-thumb:hover, .main-panel::-webkit-scrollbar-thumb:hover, .workspace::-webkit-scrollbar-thumb:hover, [class*="-content"]::-webkit-scrollbar-thumb:hover { background: #4e9b94; background-clip: padding-box; }
 @media (max-width: 620px) { .workspace-demo-heading { align-items: flex-start; flex-wrap: wrap; }.workspace-demo-status { margin-inline-start: 0; }.workspace-demo-controls { align-items: stretch; flex-direction: column; }.workspace-demo-controls label { min-width: 0; }.workspace-demo-controls button, .workspace-demo-scope { justify-content: center; } }
+
+.workspace-bootstrap-link{display:inline-flex;align-items:center;gap:5px;margin-inline-start:auto;padding:8px 10px;border:1px solid #cce8e3;border-radius:8px;color:#0b8176;background:#f1faf8;font-size:9px;font-weight:900;text-decoration:none;white-space:nowrap}.workspace-bootstrap-link:hover{color:#fff;background:#0d9488}
+@media(max-width:620px){.workspace-bootstrap-link{margin-inline-start:0}}

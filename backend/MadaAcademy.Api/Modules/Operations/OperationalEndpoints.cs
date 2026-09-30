@@ -1,0 +1,247 @@
+using System.Security.Claims;
+using MadaAcademy.Api.Persistence;
+using MadaAcademy.Api.Persistence.Entities;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
+
+namespace MadaAcademy.Api.Modules.Operations;
+
+public static class OperationalEndpoints
+{
+    public static IEndpointRouteBuilder MapMadaOperationalEndpoints(this IEndpointRouteBuilder endpoints)
+    {
+        var operations = endpoints.MapGroup("/api/v1").RequireAuthorization("staff");
+
+        operations.MapGet("/students", async Task<Results<Ok<ApiEnvelope<StudentListResponse>>, ProblemHttpResult>> (
+            ClaimsPrincipal user,
+            MadaDbContext db,
+            CancellationToken cancellationToken) =>
+        {
+            if (!TryGetScope(user, out var scope, out var scopeError)) return scopeError;
+
+            var query = db.Students.AsNoTracking()
+                .Where(student => student.TenantId == scope.TenantId)
+                .Where(student => scope.BranchId == null || student.BranchId == scope.BranchId.Value);
+
+            var students = await query
+                .OrderBy(student => student.FullName)
+                .Select(student => new StudentListItem(
+                    student.Id,
+                    student.BranchId,
+                    student.FullName,
+                    student.DateOfBirth,
+                    student.Status,
+                    db.StudentEnrollments.Count(enrollment => enrollment.StudentId == student.Id && enrollment.Status == "ACTIVE")))
+                .ToListAsync(cancellationToken);
+
+            return TypedResults.Ok(new ApiEnvelope<StudentListResponse>(
+                new StudentListResponse(students, students.Count, scope.ScopeLevel, scope.BranchId)));
+        });
+
+        operations.MapGet("/sessions", async Task<Results<Ok<ApiEnvelope<SessionListResponse>>, ProblemHttpResult>> (
+            ClaimsPrincipal user,
+            MadaDbContext db,
+            DateTimeOffset? from,
+            DateTimeOffset? to,
+            string? status,
+            CancellationToken cancellationToken) =>
+        {
+            if (!TryGetScope(user, out var scope, out var scopeError)) return scopeError;
+            if (from.HasValue && to.HasValue && from > to)
+                return Problem(400, "INVALID_DATE_RANGE", "The from date must be before the to date.");
+
+            var query = db.AcademySessions.AsNoTracking()
+                .Where(session => session.TenantId == scope.TenantId)
+                .Where(session => scope.BranchId == null || session.BranchId == scope.BranchId.Value);
+            if (from.HasValue) query = query.Where(session => session.EndAt >= from.Value);
+            if (to.HasValue) query = query.Where(session => session.StartAt <= to.Value);
+            if (!string.IsNullOrWhiteSpace(status)) query = query.Where(session => session.Status == status.ToUpperInvariant());
+
+            var sessions = await ProjectSessions(query)
+                .OrderBy(session => session.StartAt)
+                .ToListAsync(cancellationToken);
+
+            return TypedResults.Ok(new ApiEnvelope<SessionListResponse>(
+                new SessionListResponse(sessions, sessions.Count, scope.ScopeLevel, scope.BranchId)));
+        });
+
+        operations.MapGet("/sessions/{sessionId:guid}", async Task<Results<Ok<ApiEnvelope<SessionDetails>>, ProblemHttpResult>> (
+            Guid sessionId,
+            ClaimsPrincipal user,
+            MadaDbContext db,
+            CancellationToken cancellationToken) =>
+        {
+            if (!TryGetScope(user, out var scope, out var scopeError)) return scopeError;
+
+            var session = await ProjectSessions(db.AcademySessions.AsNoTracking()
+                    .Where(item => item.Id == sessionId)
+                    .Where(item => item.TenantId == scope.TenantId)
+                    .Where(item => scope.BranchId == null || item.BranchId == scope.BranchId.Value))
+                .SingleOrDefaultAsync(cancellationToken);
+
+            return session is null
+                ? Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.")
+                : TypedResults.Ok(new ApiEnvelope<SessionDetails>(session));
+        });
+
+        operations.MapGet("/sessions/{sessionId:guid}/attendance", async Task<Results<Ok<ApiEnvelope<AttendanceResponse>>, ProblemHttpResult>> (
+            Guid sessionId,
+            ClaimsPrincipal user,
+            MadaDbContext db,
+            CancellationToken cancellationToken) =>
+        {
+            if (!TryGetScope(user, out var scope, out var scopeError)) return scopeError;
+            var session = await FindScopedSession(db, sessionId, scope, cancellationToken);
+            if (session is null) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
+
+            var rows = await LoadAttendance(db, session, cancellationToken);
+            return TypedResults.Ok(new ApiEnvelope<AttendanceResponse>(
+                new AttendanceResponse(session.Id, session.Status, rows, rows.Count)));
+        });
+
+        operations.MapPut("/sessions/{sessionId:guid}/attendance", async Task<Results<Ok<ApiEnvelope<AttendanceResponse>>, ProblemHttpResult>> (
+            Guid sessionId,
+            AttendanceUpsertRequest request,
+            ClaimsPrincipal user,
+            MadaDbContext db,
+            CancellationToken cancellationToken) =>
+        {
+            if (!CanWriteAttendance(user))
+                return Problem(403, "ATTENDANCE_WRITE_FORBIDDEN", "Only instructors, head instructors, or branch managers can record attendance.");
+            var records = request.Records;
+            if (records is null || records.Count == 0)
+                return Problem(400, "ATTENDANCE_REQUIRED", "At least one attendance record is required.");
+            if (records.Select(record => record.StudentId).Distinct().Count() != records.Count)
+                return Problem(400, "DUPLICATE_STUDENT", "Each student may appear only once in an attendance request.");
+
+            if (!TryGetScope(user, out var scope, out var scopeError)) return scopeError;
+            var session = await FindScopedSession(db, sessionId, scope, cancellationToken);
+            if (session is null) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
+            if (session.Status is "CANCELLED" or "COMPLETED")
+                return Problem(409, "SESSION_NOT_EDITABLE", "Attendance can only be recorded for an active scheduled session.");
+
+            foreach (var record in records)
+            {
+                if (string.IsNullOrWhiteSpace(record.Status) || !AttendanceStatuses.Contains(record.Status.ToUpperInvariant()))
+                    return Problem(422, "INVALID_ATTENDANCE_STATUS", "Status must be PRESENT, LATE, ABSENT, or EXCUSED.");
+                if (record.Status.Equals("LATE", StringComparison.OrdinalIgnoreCase) && record.LateMinutes is <= 0)
+                    return Problem(422, "INVALID_LATE_MINUTES", "Late attendance requires a positive lateMinutes value.");
+                if (!record.Status.Equals("LATE", StringComparison.OrdinalIgnoreCase) && record.LateMinutes is not null)
+                    return Problem(422, "INVALID_LATE_MINUTES", "lateMinutes is only allowed for LATE attendance.");
+            }
+
+            var studentIds = records.Select(record => record.StudentId).ToArray();
+            var enrolledStudentIds = await db.StudentEnrollments
+                .Where(enrollment => enrollment.CourseOfferingId == session.CourseOfferingId && enrollment.Status == "ACTIVE" && studentIds.Contains(enrollment.StudentId))
+                .Select(enrollment => enrollment.StudentId)
+                .ToListAsync(cancellationToken);
+            var invalidStudent = studentIds.FirstOrDefault(studentId => !enrolledStudentIds.Contains(studentId));
+            if (invalidStudent != Guid.Empty)
+                return Problem(422, "STUDENT_NOT_ENROLLED", $"Student {invalidStudent} is not enrolled in this session.");
+
+            var existing = await db.SessionAttendances
+                .Where(attendance => attendance.SessionId == sessionId && studentIds.Contains(attendance.StudentId))
+                .ToDictionaryAsync(attendance => attendance.StudentId, cancellationToken);
+            foreach (var record in records)
+            {
+                if (existing.TryGetValue(record.StudentId, out var attendance))
+                {
+                    attendance.Status = record.Status.ToUpperInvariant();
+                    attendance.LateMinutes = record.LateMinutes;
+                    attendance.UpdatedAt = DateTimeOffset.UtcNow;
+                }
+                else
+                {
+                    db.SessionAttendances.Add(new SessionAttendance
+                    {
+                        SessionId = sessionId,
+                        StudentId = record.StudentId,
+                        Status = record.Status.ToUpperInvariant(),
+                        LateMinutes = record.LateMinutes
+                    });
+                }
+            }
+            await db.SaveChangesAsync(cancellationToken);
+
+            var rows = await LoadAttendance(db, session, cancellationToken);
+            return TypedResults.Ok(new ApiEnvelope<AttendanceResponse>(
+                new AttendanceResponse(session.Id, session.Status, rows, rows.Count)));
+        });
+
+        return endpoints;
+    }
+
+    private static IQueryable<SessionDetails> ProjectSessions(IQueryable<AcademySession> query) => query
+        .Select(session => new SessionDetails(
+            session.Id,
+            session.BranchId,
+            session.CourseOfferingId,
+            session.SessionNumber,
+            session.StartAt,
+            session.EndAt,
+            session.InstructorId,
+            session.ClassroomId,
+            session.Type,
+            session.Status,
+            session.Notes,
+            session.CompletedAt));
+
+    private static async Task<AcademySession?> FindScopedSession(MadaDbContext db, Guid sessionId, Scope scope, CancellationToken cancellationToken) =>
+        await db.AcademySessions.SingleOrDefaultAsync(session =>
+            session.Id == sessionId && session.TenantId == scope.TenantId &&
+            (scope.BranchId == null || session.BranchId == scope.BranchId.Value), cancellationToken);
+
+    private static async Task<List<AttendanceItem>> LoadAttendance(MadaDbContext db, AcademySession session, CancellationToken cancellationToken) =>
+        await LoadAttendanceCore(db, session, cancellationToken);
+
+    private static async Task<List<AttendanceItem>> LoadAttendanceCore(MadaDbContext db, AcademySession session, CancellationToken cancellationToken)
+    {
+        var roster = await db.StudentEnrollments.AsNoTracking()
+            .Where(enrollment => enrollment.CourseOfferingId == session.CourseOfferingId && enrollment.Status == "ACTIVE")
+            .Join(db.Students.AsNoTracking(), enrollment => enrollment.StudentId, student => student.Id,
+                (_, student) => new RosterStudent(student.Id, student.FullName))
+            .OrderBy(item => item.FullName)
+            .ToListAsync(cancellationToken);
+        var attendance = await db.SessionAttendances.AsNoTracking()
+            .Where(item => item.SessionId == session.Id)
+            .ToDictionaryAsync(item => item.StudentId, cancellationToken);
+        return roster.Select(student => attendance.TryGetValue(student.Id, out var mark)
+            ? new AttendanceItem(student.Id, student.FullName, mark.Status, mark.LateMinutes, mark.UpdatedAt)
+            : new AttendanceItem(student.Id, student.FullName, "UNMARKED", null, null)).ToList();
+    }
+
+    private static bool CanWriteAttendance(ClaimsPrincipal user) =>
+        user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R03_HEAD_INSTRUCTORS") || user.IsInRole("R04_INSTRUCTOR");
+
+    private static bool TryGetScope(ClaimsPrincipal user, out Scope scope, out ProblemHttpResult error)
+    {
+        if (!Guid.TryParse(user.FindFirstValue("tenantId"), out var tenantId))
+        {
+            scope = default;
+            error = Problem(403, "TENANT_SCOPE_REQUIRED", "The authenticated account has no tenant scope.");
+            return false;
+        }
+        var branchClaim = user.FindFirstValue("branchId");
+        scope = new Scope(tenantId, Guid.TryParse(branchClaim, out var branchId) ? branchId : null, user.FindFirstValue("scopeLevel") ?? "unknown");
+        error = default!;
+        return true;
+    }
+
+    private static ProblemHttpResult Problem(int status, string code, string detail) =>
+        TypedResults.Problem(statusCode: status, title: code, detail: detail,
+            extensions: new Dictionary<string, object?> { ["code"] = code });
+
+    private static readonly HashSet<string> AttendanceStatuses = ["PRESENT", "LATE", "ABSENT", "EXCUSED"];
+    private sealed record RosterStudent(Guid Id, string FullName);
+    private readonly record struct Scope(Guid TenantId, Guid? BranchId, string ScopeLevel);
+}
+
+public sealed record ApiEnvelope<T>(T Data);
+public sealed record StudentListResponse(IReadOnlyList<StudentListItem> Items, int Total, string ScopeLevel, Guid? BranchId);
+public sealed record StudentListItem(Guid Id, Guid BranchId, string FullName, DateOnly? DateOfBirth, string Status, int ActiveEnrollmentCount);
+public sealed record SessionListResponse(IReadOnlyList<SessionDetails> Items, int Total, string ScopeLevel, Guid? BranchId);
+public sealed record SessionDetails(Guid Id, Guid BranchId, Guid? CourseOfferingId, int SessionNumber, DateTimeOffset StartAt, DateTimeOffset EndAt, Guid InstructorId, Guid ClassroomId, string Type, string Status, string? Notes, DateTimeOffset? CompletedAt);
+public sealed record AttendanceResponse(Guid SessionId, string SessionStatus, IReadOnlyList<AttendanceItem> Items, int Total);
+public sealed record AttendanceItem(Guid StudentId, string StudentName, string Status, int? LateMinutes, DateTimeOffset? UpdatedAt);
+public sealed record AttendanceUpsertRequest(IReadOnlyList<AttendanceRecordRequest>? Records);
+public sealed record AttendanceRecordRequest(Guid StudentId, string Status, int? LateMinutes = null);

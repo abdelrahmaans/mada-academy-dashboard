@@ -17,6 +17,7 @@ import {
   MessageSquare,
   Plus,
   Search,
+  Settings2,
   ShieldCheck,
   Ticket,
   TrendingUp,
@@ -273,6 +274,9 @@ export default function AcademyOwner() {
           <OwnerNavButton active={view === "branches"} icon={<Building2 size={17} />} label="الفروع والأداء" count={BRANCH_ROLLUP.length} onClick={() => goToView("branches")} />
           <OwnerNavButton active={view === "tickets"} icon={<Headphones size={17} />} label="مركز التذاكر" count={tickets.filter(ticket => ticket.status !== "resolved").length} onClick={() => goToView("tickets")} />
           <OwnerNavButton active={view === "reports"} icon={<FileBarChart size={17} />} label="التقارير المجمعة" onClick={() => goToView("reports")} />
+          <button className="academy-owner-nav-button" onClick={() => navigate("/academy/branches")}><Building2 size={17} /><span>إدارة الفروع</span></button>
+          <button className="academy-owner-nav-button" onClick={() => navigate("/academy/classrooms")}><Settings2 size={17} /><span>القاعات الدراسية</span></button>
+          <button className="academy-owner-nav-button" onClick={() => navigate("/academy/roles")}><ShieldCheck size={17} /><span>المستخدمون والصلاحيات</span></button>
           <button className="academy-owner-nav-button" onClick={() => navigate("/executive-dashboard")}><TrendingUp size={17} /><span>لوحة الإدارة التنفيذية</span></button>
         </nav>
         <div className="academy-owner-sidebar-spacer" />
@@ -302,7 +306,7 @@ export default function AcademyOwner() {
           {view === "tickets" && <TicketCenterView tickets={visibleTickets} selectedTicket={selectedTicket} query={ticketQuery} setQuery={setTicketQuery} filter={ticketFilter} setFilter={setTicketFilter} onSelect={setSelectedTicketId} onStatus={updateTicketStatus} />}
           {view === "reports" && <ReportsView month={month} setMonth={setMonth} branch={branch} setBranch={setBranch} instructorId={instructorId} setInstructorId={setInstructorId} summary={summary} rollup={rollup} onDownload={downloadReport} />}
 
-          <footer className="academy-owner-footnote"><GraduationCap size={16} /><p>R01 يرى كل فروع أكاديميته ويستطيع متابعة التقارير والتذاكر والتصعيدات، لكنه لا يرى بيانات أي أكاديمية أخرى ولا يتجاوز صلاحيات R00.</p><button onClick={() => navigate("/team")}>معاينة فريق الفرع <ChevronLeft size={14} /></button></footer>
+          <footer className="academy-owner-footnote"><GraduationCap size={16} /><p>R01 يرى كل فروع أكاديميته ويستطيع متابعة التقارير والتذاكر والتصعيدات، لكنه لا يرى بيانات أي أكاديمية أخرى ولا يتجاوز صلاحيات R00.</p><div className="academy-owner-footnote-actions"><button onClick={() => navigate("/academy/roles")}><ShieldCheck size={14} /> إدارة المستخدمين والصلاحيات <ChevronLeft size={14} /></button><button onClick={() => navigate("/team")}>معاينة فريق الفرع <ChevronLeft size={14} /></button></div></footer>
         </div>
       </main>
     </RoleDashboardShell>

@@ -6,7 +6,7 @@ type AuthContextValue = {
   loading: boolean;
   error: string | null;
   connected: boolean;
-  loginWithOtp: (phone: string, code: string) => Promise<void>;
+  login: (phone: string, password: string) => Promise<void>;
   sendOtp: (phone: string) => Promise<string | undefined>;
   logout: () => Promise<void>;
   reload: () => Promise<void>;
@@ -45,10 +45,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     error,
     connected: Boolean(me),
     sendOtp: async phone => (await apiClient.sendOtp(phone)).developmentCode,
-    loginWithOtp: async (phone, code) => {
+    login: async (phone, password) => {
       setLoading(true);
       try {
-        await apiClient.verifyOtp(phone, code);
+        await apiClient.login(phone, password);
         setMe(await apiClient.me());
         setError(null);
       } catch (cause) {

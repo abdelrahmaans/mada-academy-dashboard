@@ -33,3 +33,28 @@ React أصبح متصلًا بالـASP.NET Core عبر `client/src/lib/apiClien
 تم إيقاف تفعيل login/JWT داخل React مؤقتًا. الوضع الافتراضي الآن هو `Demo Role Mode`: اختيار R00–R09 من Workspace Hub وفتح الصفحة الخاصة بالدور مباشرة، مع scope وnavigation tree واضحين لكل Role. ملفات API/Auth محفوظة للتفعيل لاحقًا بعد اكتمال الشاشات والـworkflow interactions والاختبار ببيانات حقيقية.
 
 تم تثبيت Mada shared theme والـcustom scrollbar على الأسطح الرئيسية والـcontent scroll containers بدل الشكل الافتراضي للمتصفح.
+
+---
+
+## 14. Students + Sessions + Attendance API Contract — 29 سبتمبر 2026
+
+تمت إضافة أول operational vertical-slice endpoints داخل `backend/MadaAcademy.Api/Modules/Operations/OperationalEndpoints.cs`:
+
+- `GET /api/v1/students`
+- `GET /api/v1/sessions`
+- `GET /api/v1/sessions/{sessionId}`
+- `GET /api/v1/sessions/{sessionId}/attendance`
+- `PUT /api/v1/sessions/{sessionId}/attendance`
+
+كل endpoints محمية بـstaff JWT، وتستمد `tenantId` و`branchId` من الـclaims بدل body/query. القراءة scoped حسب tenant/branch، وكتابة الحضور متاحة فقط لـR02/R03/R04. تم تطبيق validation للـstatus، late minutes، duplicate students، enrollment، وعدم تعديل الجلسات `CANCELLED` أو `COMPLETED`. العقد الكامل موثق في `backend/OPERATIONS_API_CONTRACT.md`.
+
+
+---
+
+## 15. Backend Integration Tests + CI — 30 سبتمبر 2026
+
+أضيف مشروع `backend/MadaAcademy.Api.IntegrationTests` مع 10 اختبارات API على EF InMemory و6 اختبارات PostgreSQL 16 حقيقية. تغطي التغطية الحالية المصادقة والصلاحيات، tenant/branch isolation، approval review، الحضور والتقييمات، refresh-token rotation/logout revocation، منع تكرار طلب substitution، وتطبيق migrations على schema اختبار منفصل `mada_integration_tests`.
+
+اكتشف التحقق أن EF model snapshot كان متأخرًا عن `MadaDbContext`؛ تمت مزامنته وإضافة migration `AlignCurrentModel` بدل تعطيل تحذير pending model changes. workflow `.github/workflows/backend-integration-tests.yml` يعمل على Pull Request وتغييرات `main`، بصلاحيات `contents: read` فقط، ويشغل PostgreSQL 16، migrations والـtests ثم backend Release build. عند الفشل يحتفظ بـTRX وtest/migration log كـartifact.
+
+التحقق المحلي: `dotnet build backend/MadaAcademy.sln --configuration Release` نجح، و`dotnet ef migrations has-pending-model-changes` أفاد بعدم وجود تغييرات معلقة، ونجحت الاختبارات **16/16** على PostgreSQL 16.15 وInMemory.

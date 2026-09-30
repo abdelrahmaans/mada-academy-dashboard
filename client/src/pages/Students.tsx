@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   Activity,
   ArrowDownToLine,
@@ -31,6 +31,8 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
+import { ErrorState, LoadingState } from "@/components/FeedbackStates";
+import { apiClient, type StudentRecord } from "@/lib/apiClient";
 
 type StudentStatus = "active" | "on_hold" | "inactive" | "graduated";
 type StudentSource =
@@ -202,6 +204,30 @@ const sourceLabels: Record<StudentSource, string> = {
 };
 const branches = ["كل الفروع", "مدينة نصر", "المعادي", "الشيخ زايد"];
 const PAGE_SIZE = 6;
+const LIVE_BRANCH_LABELS: Record<string, string> = {
+  "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb": "مدينة نصر",
+  "cccccccc-cccc-cccc-cccc-cccccccccccc": "مصر الجديدة",
+};
+function mapLiveStudent(record: StudentRecord): Student {
+  const status: StudentStatus = record.status === "ACTIVE" ? "active" : record.status === "SUSPENDED" ? "on_hold" : record.status === "GRADUATED" ? "graduated" : "inactive";
+  const initials = record.fullName.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join("");
+  return {
+    id: record.id,
+    name: record.fullName,
+    birthDate: record.dateOfBirth ?? "—",
+    gender: "male",
+    parentName: "غير متاح من عقد الطلاب الحالي",
+    parentPhone: "—",
+    relation: "ولي أمر",
+    branch: LIVE_BRANCH_LABELS[record.branchId] ?? `فرع ${record.branchId.slice(0, 8)}`,
+    course: record.activeEnrollmentCount > 0 ? "يوجد تسجيل نشط" : "لم يتم التسجيل في كورس",
+    source: "walk_in",
+    status,
+    joined: "من قاعدة البيانات",
+    initials,
+    color: status === "active" ? "teal" : "amber",
+  };
+}
 
 type StudentJourneySummary = {
   attendance: string;
@@ -292,6 +318,9 @@ function BrandMark() {
 function StudentPage() {
   const [, setLocation] = useLocation();
   const [students, setStudents] = useState(initialStudents);
+  const [dataMode, setDataMode] = useState<"demo" | "live">(apiClient.hasSession() ? "live" : "demo");
+  const [dataLoading, setDataLoading] = useState(apiClient.hasSession());
+  const [dataError, setDataError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StudentStatus | "all">(
     "all"
@@ -309,6 +338,29 @@ function StudentPage() {
   const [source, setSource] = useState<StudentSource>("walk_in");
   const [newBranch, setNewBranch] = useState("مدينة نصر");
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    if (!apiClient.hasSession()) return;
+    let cancelled = false;
+    setDataLoading(true);
+    apiClient.listStudents()
+      .then(response => {
+        if (cancelled) return;
+        setStudents(response.items.map(mapLiveStudent));
+        setDataMode("live");
+        setDataError(null);
+        setPage(1);
+      })
+      .catch(error => {
+        if (cancelled) return;
+        setDataMode("demo");
+        setDataError(error instanceof Error ? error.message : "تعذر الاتصال ببيانات الطلاب");
+      })
+      .finally(() => {
+        if (!cancelled) setDataLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   const filteredStudents = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("ar");
@@ -360,6 +412,10 @@ function StudentPage() {
 
   const submitStudent = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (dataMode === "live") {
+      toast("إضافة الطالب تحتاج endpoint التسجيل", { description: "تم ربط القراءة الحية أولًا؛ لن يتم إيهامك بأن الإضافة حُفظت." });
+      return;
+    }
     if (
       !studentName.trim() ||
       !birthDate ||
@@ -640,6 +696,20 @@ function StudentPage() {
             </div>
           </section>
 
+          {dataLoading && <LoadingState label="جارٍ تحميل الطلاب من الـAPI…" compact />}
+          {dataError && (
+            <ErrorState
+              compact
+              title="تعذر تحميل الطلاب من الـAPI"
+              description={`${dataError} · تم عرض بيانات DEMO بدلًا منها.`}
+            />
+          )}
+          {!dataLoading && !dataError && dataMode === "live" && (
+            <div className="role-feedback-state role-feedback-success role-feedback-compact" role="status">
+              البيانات LIVE من PostgreSQL · القراءة مقيدة بنطاق الحساب الحالي
+            </div>
+          )}
+
           <section className="student-stats-grid" aria-label="ملخص الطلاب">
             <article className="student-stat">
               <span className="student-stat-icon icon-teal">
@@ -706,7 +776,7 @@ function StudentPage() {
                 </span>
                 <div>
                   <h2>قائمة الطلاب</h2>
-                  <p>{filteredStudents.length} سجل معروض من بيانات العينة</p>
+                  <p>{filteredStudents.length} سجل معروض من {dataMode === "live" ? "الـAPI الحقيقي" : "بيانات العينة"}</p>
                 </div>
               </div>
               <button
@@ -815,13 +885,10 @@ function StudentPage() {
                 </thead>
                 <tbody>
                   {visibleStudents.map(student => {
-                    const age = Math.max(
-                      1,
-                      Math.floor(
-                        (Date.now() - new Date(student.birthDate).getTime()) /
-                          31557600000
-                      )
-                    );
+                    const birthTime = new Date(student.birthDate).getTime();
+                    const age = Number.isNaN(birthTime)
+                      ? null
+                      : Math.max(1, Math.floor((Date.now() - birthTime) / 31557600000));
                     return (
                       <tr key={student.id}>
                         <td data-label="الطالب">
@@ -856,7 +923,7 @@ function StudentPage() {
                           </span>
                         </td>
                         <td data-label="العمر">
-                          <span className="student-age">{age} سنة</span>
+                          <span className="student-age">{age === null ? "—" : `${age} سنة`}</span>
                         </td>
                         <td data-label="الفرع">
                           <span className="student-branch">
@@ -916,7 +983,7 @@ function StudentPage() {
                   {Math.min(page * PAGE_SIZE, filteredStudents.length)}
                 </b>{" "}
                 من <b>{filteredStudents.length}</b> نتيجة{" "}
-                <small>· سجلات تجريبية</small>
+                <small>· {dataMode === "live" ? "سجلات حقيقية" : "سجلات تجريبية"}</small>
               </span>
               <div className="pagination">
                 <button
@@ -950,8 +1017,9 @@ function StudentPage() {
           <div className="students-demo-note">
             <FileText size={14} />
             <span>
-              بيانات الطلاب المعروضة تجريبية ومبنية على حقول الـSchema؛ لا يتم
-              حفظها في قاعدة بيانات.
+              {dataMode === "live"
+                ? "الطلاب المعروضون من قاعدة البيانات. بيانات ولي الأمر والكورس التفصيلي ستضاف مع عقود التسجيل والأسرة القادمة."
+                : "بيانات الطلاب المعروضة تجريبية ومبنية على حقول الـSchema؛ لا يتم حفظها في قاعدة بيانات."}
             </span>
           </div>
           <footer className="workspace-footer">

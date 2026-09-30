@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   Activity,
   AlertCircle,
@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import { apiClient, type SchedulingClassroom } from "@/lib/apiClient";
 
 type SessionStatus =
   | "scheduled"
@@ -463,6 +464,8 @@ function SchedulePage() {
   const [dialogMode, setDialogMode] = useState<"add" | "edit" | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [detailsSession, setDetailsSession] = useState<Session | null>(null);
+  const [liveClassrooms, setLiveClassrooms] = useState<SchedulingClassroom[]>([]);
+  const [liveClassroomsReady, setLiveClassroomsReady] = useState(false);
   const [form, setForm] = useState<SessionForm>(() => ({
     date: toISODate(BASE_DATE),
     startTime: "16:00",
@@ -474,6 +477,9 @@ function SchedulePage() {
     branch: BRANCHES[0],
     type: "regular",
   }));
+  useEffect(() => {
+    apiClient.schedulingClassrooms().then(response => { setLiveClassrooms(response.items); setLiveClassroomsReady(true); }).catch(() => setLiveClassroomsReady(false));
+  }, []);
 
   const weekStart = useMemo(
     () => addDays(BASE_DATE, weekOffset * 7),
@@ -615,7 +621,7 @@ function SchedulePage() {
     setEditingId(null);
   };
 
-  const handleSessionSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSessionSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const start = minutesFromTime(form.startTime);
     const end = start + Number(form.duration);
@@ -631,7 +637,7 @@ function SchedulePage() {
       const overlaps = start < sessionEnd && sessionStart < end;
       return (
         overlaps &&
-        (session.room === form.room || session.instructor === form.instructor)
+        ((session.room === form.room && session.branch === form.branch) || session.instructor === form.instructor)
       );
     });
     if (conflict) {
@@ -643,6 +649,21 @@ function SchedulePage() {
         description: `الحصة تتداخل مع «${conflict.title}» في ${resource}. غيّر الوقت أو المورد قبل الحفظ.`,
       });
       return;
+    }
+    const liveRoom = liveClassrooms.find(room => room.name === form.room && room.branchName === form.branch);
+    if (liveRoom) {
+      const branchId = liveRoom.branchId;
+      const startAt = new Date(`${form.date}T${form.startTime}:00`).toISOString();
+      const endDate = new Date(`${form.date}T${form.startTime}:00`); endDate.setMinutes(endDate.getMinutes() + Number(form.duration));
+      try {
+        await apiClient.checkSchedulingConflict({ branchId, instructorId: "00000000-0000-0000-0000-000000000000", classroomId: liveRoom.id, startAt, endAt: endDate.toISOString() });
+      } catch (cause) {
+        const code = (cause as { code?: string }).code;
+        if (code === "SCHEDULING_CONFLICT" || cause instanceof Error && cause.message.includes("SCHEDULING_CONFLICT")) {
+          toast.error("لا يمكن حجز القاعة في هذا الموعد", { description: "هناك حصة أخرى متداخلة في نفس القاعة. اختر وقتًا أو قاعة أخرى." }); return;
+        }
+        toast.error("تعذر التحقق من توفر القاعة", { description: "لم يتم الحفظ حتى لا يتم تجاوز حماية التعارض." }); return;
+      }
     }
     if (dialogMode === "edit" && editingId) {
       setSessions(current =>
@@ -1443,9 +1464,10 @@ function SchedulePage() {
                       }))
                     }
                   >
-                    {ROOMS.map(item => (
-                      <option key={item}>{item}</option>
+                    {(liveClassroomsReady ? liveClassrooms.filter(item => item.branchName === form.branch) : []).map(item => (
+                      <option key={item.id}>{item.name}</option>
                     ))}
+                    {!liveClassroomsReady && ROOMS.map(item => <option key={item}>{item}</option>)}
                   </select>
                 </label>
               </div>
@@ -1461,7 +1483,7 @@ function SchedulePage() {
                       }))
                     }
                   >
-                    {BRANCHES.map(item => (
+                    {Array.from(new Set((liveClassroomsReady ? liveClassrooms.map(item => item.branchName) : BRANCHES))).map(item => (
                       <option key={item}>{item}</option>
                     ))}
                   </select>

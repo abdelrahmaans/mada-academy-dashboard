@@ -587,12 +587,9 @@ export default function PlatformConsole() {
       <button
         className="pc-primary-button"
         type="button"
-        onClick={() => {
-          setCreateError("");
-          setCreateOpen(true);
-        }}
+        onClick={() => navigate("/platform/academies/new")}
       >
-        <Plus size={17} aria-hidden="true" /> إضافة أكاديمية
+        <Plus size={17} aria-hidden="true" /> إنشاء أكاديمية
       </button>
     );
 
@@ -762,9 +759,8 @@ export default function PlatformConsole() {
           <div className="pc-demo-banner" role="note">
             <span className="pc-demo-mark">DEMO</span>
             <span>
-              <strong>معاينة واجهة فقط.</strong> كل الأسماء والأرقام محلية
-              وتوضيحية؛ لا يتم إنشاء حسابات أو إرسال دعوات أو تنفيذ اشتراكات
-              فعلية.
+              <strong>بيانات العرض توضيحية.</strong> زر إنشاء الأكاديمية يفتح
+              مسار الـBootstrap الحقيقي ويتطلب صلاحية R00.
             </span>
           </div>
           <div className="pc-security-banner" role="note">
@@ -892,9 +888,9 @@ export default function PlatformConsole() {
                   <button
                     className="pc-primary-button pc-primary-compact"
                     type="button"
-                    onClick={() => setCreateOpen(true)}
-                  >
-                    <Plus size={16} /> إضافة أكاديمية
+                        onClick={() => navigate("/platform/academies/new")}
+                      >
+                        <Plus size={16} /> إنشاء أكاديمية
                   </button>
                 }
               />

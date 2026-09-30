@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowUpLeft, ExternalLink, Layers3, PlayCircle, ShieldCheck, Users } from "lucide-react";
+import { ArrowUpLeft, Building2, ExternalLink, Layers3, PlayCircle, ShieldCheck, Users } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { ROLE_DEFINITIONS, type RoleDefinition } from "@/lib/roleNavigation";
 import type { RoleCode } from "@/contexts/RoleScopeContext";
@@ -42,7 +42,7 @@ export default function WorkspaceHub() {
   return (
     <main className="workspace-hub" dir="rtl">
       <header className="workspace-hub-hero"><div><span className="workspace-hub-kicker"><Layers3 size={14} /> Mada Academy Workspace</span><h1>غرفة متابعة كل الأدوار</h1><p>اختبر كل Role من شجرته الحقيقية، راجع الـscope والصفحات، ثم انتقل بين الأسطح قبل تشغيل الدخول والـBackend.</p></div><div className="workspace-hub-summary"><strong>R00 → R09</strong><span>10 Role surfaces</span><a className="workspace-engine-link" href={ANGULAR_PREVIEW_URL} target="_blank" rel="noreferrer"><ExternalLink size={13} /> جرّب Angular Preview</a></div></header>
-      <section className="workspace-hub-howto"><div><Users size={17} /><strong>طريقة الاستخدام</strong></div><p>اختار الدور من الـPlayground أو افتح أي بطاقة. كل صفحة تعرض الـscope الخاص بها وروابط الـnavigation المسموحة لهذا الدور فقط.</p></section>
+      <section className="workspace-hub-howto"><div><Users size={17} /><strong>طريقة الاستخدام</strong></div><p>اختار الدور من الـPlayground أو افتح أي بطاقة. كل صفحة تعرض الـscope الخاص بها وروابط الـnavigation المسموحة لهذا الدور فقط.</p><Link href="/platform/academies/new" className="workspace-bootstrap-link"><Building2 size={14} /> إنشاء أكاديمية جديدة</Link></section>
       <DemoRolePlayground />
       <section className="workspace-tree" aria-label="شجرة الأدوار">{GROUPS.map(group => <div className="workspace-group" key={group.title}><div className="workspace-group-heading"><div><h2>{group.title}</h2><p>{group.description}</p></div><span>{group.roles.length} roles</span></div><div className="workspace-role-grid">{group.roles.map(code => <RoleCard key={code} role={ROLE_DEFINITIONS[code]} />)}</div></div>)}</section>
       <footer className="workspace-hub-footer"><span>Demo Role Mode هو الوضع الافتراضي · Login وBackend بعد تثبيت الـFrontend.</span><span className="workspace-engine-footer"><a href={ANGULAR_PREVIEW_URL} target="_blank" rel="noreferrer">فتح نسخة Angular</a><Link href="/">العودة لملخص التشغيل <ArrowUpLeft size={13} /></Link></span></footer>

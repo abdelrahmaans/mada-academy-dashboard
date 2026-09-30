@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MadaAcademy.Api.Auth;
 
-public sealed class AuthService(MadaDbContext db, JwtTokenService tokens, OtpChallengeStore otp)
+public sealed class AuthService(MadaDbContext db, JwtTokenService tokens, OtpChallengeStore otp, PasswordHashService passwords)
 {
     public OtpSendResponse SendOtp(OtpSendRequest request) => otp.Issue(request.Phone, request.AccountType);
 
@@ -13,7 +13,7 @@ public sealed class AuthService(MadaDbContext db, JwtTokenService tokens, OtpCha
         if (!otp.Verify(request.Phone, request.AccountType, request.Code)) return null;
         var phone = OtpChallengeStore.Normalize(request.Phone);
         var user = await db.UserAccounts.SingleOrDefaultAsync(x => x.Phone == phone && x.AccountType == request.AccountType, cancellationToken);
-        if (user is null || user.Status is "TERMINATED" or "SUSPENDED") return null;
+        if (user is null || user.Status != "ACTIVE") return null;
         var membership = await db.Memberships.Where(x => x.UserAccountId == user.Id && x.Status == "ACTIVE").OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(cancellationToken);
         if (membership is null) return null;
 
@@ -29,11 +29,25 @@ public sealed class AuthService(MadaDbContext db, JwtTokenService tokens, OtpCha
         return response;
     }
 
+    public async Task<AuthTokenResponse?> LoginWithPasswordAsync(PasswordLoginRequest request, CancellationToken cancellationToken)
+    {
+        var phone = OtpChallengeStore.Normalize(request.Phone);
+        var user = await db.UserAccounts.SingleOrDefaultAsync(x => x.Phone == phone && x.AccountType == request.AccountType, cancellationToken);
+        if (user is null || user.Status != "ACTIVE" || !passwords.Verify(request.Password, user.PasswordHash)) return null;
+        var membership = await db.Memberships.Where(x => x.UserAccountId == user.Id && x.Status == "ACTIVE").OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(cancellationToken);
+        if (membership is null) return null;
+        user.LastLoginAt = DateTimeOffset.UtcNow;
+        var response = tokens.Issue(user, membership);
+        db.RefreshSessions.Add(new RefreshSession { UserAccountId = user.Id, TokenHash = JwtTokenService.HashRefreshToken(response.RefreshToken), ExpiresAt = response.RefreshTokenExpiresAt });
+        await db.SaveChangesAsync(cancellationToken);
+        return response;
+    }
+
     public async Task<AuthTokenResponse?> RefreshAsync(RefreshRequest request, CancellationToken cancellationToken)
     {
         var hash = JwtTokenService.HashRefreshToken(request.RefreshToken);
         var session = await db.RefreshSessions.Include(x => x.UserAccount).SingleOrDefaultAsync(x => x.TokenHash == hash, cancellationToken);
-        if (session is null || session.RevokedAt is not null || session.ExpiresAt <= DateTimeOffset.UtcNow || session.UserAccount is null) return null;
+        if (session is null || session.RevokedAt is not null || session.ExpiresAt <= DateTimeOffset.UtcNow || session.UserAccount is null || session.UserAccount.Status != "ACTIVE") return null;
         var membership = await db.Memberships.Where(x => x.UserAccountId == session.UserAccountId && x.Status == "ACTIVE").OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(cancellationToken);
         if (membership is null) return null;
 
