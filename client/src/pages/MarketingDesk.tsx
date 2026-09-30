@@ -316,8 +316,8 @@ export default function MarketingDesk() {
       className="app-shell marketing-desk-shell"
       roleCode="R07"
       roleLabel="مسؤول التسويق"
-      scopeLevel="tenant"
-      scopeLabel="تسويق الأكاديمية"
+      scopeLevel="branch"
+      scopeLabel="تسويق الفرع المصرح به"
       tenantName="أكاديمية مدى"
       branchName={branch}
     >

@@ -861,8 +861,8 @@ export default function HeadInstructors() {
       className="academic-shell"
       roleCode="R03"
       roleLabel="رئيس المدربين"
-      scopeLevel="team"
-      scopeLabel="فريق المدربين والجلسات التابعة"
+      scopeLevel="branch"
+      scopeLabel="فرع واحد · فريق المدربين والجلسات التابعة"
       branchName={BRANCH}
     >
       <button

@@ -31,9 +31,9 @@ function DemoRolePlayground() {
 
   return (
     <section className="workspace-demo-card" aria-label="تجربة الأدوار المؤقتة">
-      <div className="workspace-demo-heading"><span className="workspace-demo-icon"><PlayCircle size={18} /></span><div><strong>Demo Role Mode · بدون Login حاليًا</strong><span>اختبر الـRole والـScope والـnavigation قبل ربط الـBackend</span></div><span className="workspace-demo-status">FRONTEND FIRST</span></div>
-      <div className="workspace-demo-controls"><label><span>اختار الدور</span><select value={selectedRole} onChange={event => setSelectedRole(event.target.value as RoleCode)}>{ROLE_ORDER.map(code => <option key={code} value={code}>{code} · {ROLE_DEFINITIONS[code].label}</option>)}</select></label><div className="workspace-demo-scope"><ShieldCheck size={14} /><span><b>{role.scopeLevel}</b> · {role.defaultScopeLabel}</span></div><button type="button" onClick={() => setLocation(role.homePath)}>فتح الـWorkspace <ArrowUpLeft size={14} /></button></div>
-      <small>البيانات الحالية توضيحية ومحلية داخل الواجهة. Authentication وAPI integration مؤجلان بعد تثبيت كل الصفحات والرولز.</small>
+      <div className="workspace-demo-heading"><span className="workspace-demo-icon"><PlayCircle size={18} /></span><div><strong>معاينة الدور · Role Preview</strong><span>اختبر التنقل وscope العرض؛ اختيار الدور لا يغيّر هوية الجلسة أو صلاحيات الـAPI.</span></div><span className="workspace-demo-status">PREVIEW ONLY</span></div>
+      <div className="workspace-demo-controls"><label><span>الدور المراد معاينته</span><select value={selectedRole} onChange={event => setSelectedRole(event.target.value as RoleCode)}>{ROLE_ORDER.map(code => <option key={code} value={code}>{code} · {ROLE_DEFINITIONS[code].label}</option>)}</select></label><div className="workspace-demo-scope"><ShieldCheck size={14} /><span><b>{role.scopeLevel}</b> · {role.defaultScopeLabel}</span></div><button type="button" onClick={() => setLocation(role.homePath)}>فتح واجهة الدور <ArrowUpLeft size={14} /></button></div>
+      <small>المعاينة لا تمنح صلاحيات. الأسطح المتصلة تستخدم الـAPI عند وجود جلسة صالحة، أما الشاشات غير الموصولة فتبقى DEMO بوضوح.</small>
     </section>
   );
 }
@@ -41,11 +41,11 @@ function DemoRolePlayground() {
 export default function WorkspaceHub() {
   return (
     <main className="workspace-hub" dir="rtl">
-      <header className="workspace-hub-hero"><div><span className="workspace-hub-kicker"><Layers3 size={14} /> Mada Academy Workspace</span><h1>غرفة متابعة كل الأدوار</h1><p>اختبر كل Role من شجرته الحقيقية، راجع الـscope والصفحات، ثم انتقل بين الأسطح قبل تشغيل الدخول والـBackend.</p></div><div className="workspace-hub-summary"><strong>R00 → R09</strong><span>10 Role surfaces</span><a className="workspace-engine-link" href={ANGULAR_PREVIEW_URL} target="_blank" rel="noreferrer"><ExternalLink size={13} /> جرّب Angular Preview</a></div></header>
-      <section className="workspace-hub-howto"><div><Users size={17} /><strong>طريقة الاستخدام</strong></div><p>اختار الدور من الـPlayground أو افتح أي بطاقة. كل صفحة تعرض الـscope الخاص بها وروابط الـnavigation المسموحة لهذا الدور فقط.</p><Link href="/platform/academies/new" className="workspace-bootstrap-link"><Building2 size={14} /> إنشاء أكاديمية جديدة</Link></section>
+      <header className="workspace-hub-hero"><div><span className="workspace-hub-kicker"><Layers3 size={14} /> Mada Academy Workspace</span><h1>غرفة متابعة كل الأدوار</h1><p>راجع أسطح R00–R09 ونطاقاتها التعريفية؛ تسجيل الدخول والـAPI يعملان في المسارات المتصلة، بينما بقية الواجهات تظل في وضع المعاينة.</p></div><div className="workspace-hub-summary"><strong>R00 → R09</strong><span>10 Role surfaces</span><a className="workspace-engine-link" href={ANGULAR_PREVIEW_URL} target="_blank" rel="noreferrer"><ExternalLink size={13} /> جرّب Angular Preview</a></div></header>
+      <section className="workspace-hub-howto"><div><Users size={17} /><strong>طريقة الاستخدام</strong></div><p>اختار الدور لمعاينة واجهته، أو استخدم تسجيل الدخول الفعلي. بطاقة الدور وروابطها للتنقل فقط؛ الصلاحيات الحقيقية يفرضها الباك إند.</p><Link href="/platform/academies/new" className="workspace-bootstrap-link"><Building2 size={14} /> إنشاء أكاديمية جديدة</Link></section>
       <DemoRolePlayground />
       <section className="workspace-tree" aria-label="شجرة الأدوار">{GROUPS.map(group => <div className="workspace-group" key={group.title}><div className="workspace-group-heading"><div><h2>{group.title}</h2><p>{group.description}</p></div><span>{group.roles.length} roles</span></div><div className="workspace-role-grid">{group.roles.map(code => <RoleCard key={code} role={ROLE_DEFINITIONS[code]} />)}</div></div>)}</section>
-      <footer className="workspace-hub-footer"><span>Demo Role Mode هو الوضع الافتراضي · Login وBackend بعد تثبيت الـFrontend.</span><span className="workspace-engine-footer"><a href={ANGULAR_PREVIEW_URL} target="_blank" rel="noreferrer">فتح نسخة Angular</a><Link href="/">العودة لملخص التشغيل <ArrowUpLeft size={13} /></Link></span></footer>
+      <footer className="workspace-hub-footer"><span>اختيار الدور للمعاينة فقط؛ JWT وصلاحيات الـAPI هي مصدر الحقيقة عند تسجيل الدخول.</span><span className="workspace-engine-footer"><a href={ANGULAR_PREVIEW_URL} target="_blank" rel="noreferrer">فتح نسخة Angular</a><Link href="/">العودة لملخص التشغيل <ArrowUpLeft size={13} /></Link></span></footer>
     </main>
   );
 }
