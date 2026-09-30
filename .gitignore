@@ -118,3 +118,7 @@ client/public/__manus__/version.json
 
 # Angular CLI cache
 **/.angular/
+
+# .NET test output
+**/TestResults/
+artifacts/

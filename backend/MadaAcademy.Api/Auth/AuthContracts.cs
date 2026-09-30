@@ -4,6 +4,7 @@ namespace MadaAcademy.Api.Auth;
 
 public sealed record OtpSendRequest(string Phone, string AccountType = "staff");
 public sealed record OtpVerifyRequest(string Phone, string Code, string AccountType = "staff");
+public sealed record PasswordLoginRequest(string Phone, string Password, string AccountType = "staff");
 public sealed record RefreshRequest(string RefreshToken);
 public sealed record LogoutRequest(string RefreshToken);
 public sealed record DevSeedRequest(string Phone, string Email, string DisplayName, string RoleCode, Guid TenantId, Guid? BranchId);
@@ -40,6 +41,18 @@ public sealed class OtpChallengeStore(JwtOptions options)
         }
     }
 
-    public static string Normalize(string phone) => phone.Trim().Replace(" ", string.Empty).Replace("-", string.Empty);
+    public static string Normalize(string phone)
+    {
+        var normalized = phone.Trim()
+            .Replace(" ", string.Empty)
+            .Replace("-", string.Empty)
+            .Replace("(", string.Empty)
+            .Replace(")", string.Empty);
+        if (normalized.StartsWith("00", StringComparison.Ordinal)) normalized = "+" + normalized[2..];
+        if (normalized.StartsWith("20", StringComparison.Ordinal)) normalized = "+" + normalized;
+        if (normalized.StartsWith("0", StringComparison.Ordinal) && normalized.Length == 11)
+            normalized = "+20" + normalized[1..];
+        return normalized;
+    }
     private sealed record Challenge(string Code, DateTimeOffset ExpiresAt, int Attempts);
 }

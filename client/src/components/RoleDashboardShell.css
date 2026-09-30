@@ -1,24 +1,31 @@
-.role-dashboard-shell {
-  --role-shell-scope: var(--teal, #0d9488);
-}
 
-.role-dashboard-shell[data-demo="true"] {
-  --role-shell-scope: var(--teal, #0d9488);
+.session-logout-button {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: 228px;
+  min-height: 40px;
+  padding: 0 13px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgb(255 255 255 / 9%), rgb(255 255 255 / 4%));
+  color: #c8d6df;
+  box-shadow: 0 8px 22px rgb(5 15 29 / 22%);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  transition: border-color .18s ease, color .18s ease, background .18s ease, transform .18s ease;
 }
-
-.role-dashboard-shell[data-scope-level="platform"] {
-  --role-shell-scope: #6366f1;
+.session-logout-button:hover {
+  border-color: rgb(83 205 187 / 45%);
+  background: rgb(13 148 136 / 18%);
+  color: #8be1d3;
+  transform: translateY(-1px);
 }
-
-.role-dashboard-shell[data-scope-level="tenant"] {
-  --role-shell-scope: #0d9488;
-}
-
-.role-dashboard-shell[data-scope-level="branch"] {
-  --role-shell-scope: #0284c7;
-}
-
-.role-dashboard-shell[data-scope-level="family"],
-.role-dashboard-shell[data-scope-level="self"] {
-  --role-shell-scope: #7c3aed;
+@media (max-width: 700px) {
+  .session-logout-button { left: 12px; bottom: 12px; width: 204px; min-height: 38px; }
 }

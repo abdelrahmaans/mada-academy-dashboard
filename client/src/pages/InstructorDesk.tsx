@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { AlertCircle, ArrowRight, BookOpen, CalendarCheck, CalendarDays, Check, CheckCircle2, ChevronLeft, CircleHelp, Clock3, GraduationCap, LayoutDashboard, LogOut, MapPin, Menu, MessageCircle, Save, Search, Settings, ShieldCheck, Star, Target, Users, X } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -6,6 +6,8 @@ import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import StatusBadge from "@/components/StatusBadge";
+import { ErrorState, LoadingState } from "@/components/FeedbackStates";
+import { apiClient, type AttendanceResponse, type SessionRecord } from "@/lib/apiClient";
 
 type DeskView = "today" | "attendance" | "evaluation";
 type AttendanceStatus = "unmarked" | "present" | "absent" | "late" | "excused";
@@ -31,11 +33,34 @@ const SESSION_STATUS: Record<SessionStatus, string> = { live: "جارية الآ
 const ATTENDANCE_LABEL: Record<AttendanceStatus, string> = { unmarked: "لم يسجل", present: "حاضر", absent: "غائب", late: "متأخر", excused: "بعذر" };
 const RUBRIC = [{ id: "understanding", label: "استيعاب الفكرة", hint: "المفاهيم والخطوات الأساسية" }, { id: "practice", label: "التطبيق العملي", hint: "تنفيذ المهمة واستخدام الأدوات" }, { id: "collaboration", label: "التعاون والمبادرة", hint: "المشاركة والتعاون مع الزملاء" }];
 const INITIAL_ATTENDANCE: Record<string, AttendanceStatus> = { "ST-0248": "present", "ST-0246": "present", "ST-0244": "late", "ST-0242": "unmarked", "ST-0240": "unmarked" };
+function formatLiveTime(value: string) { return new Intl.DateTimeFormat("ar-EG", { hour: "numeric", minute: "2-digit" }).format(new Date(value)); }
+function formatLiveDay(value: string) { return new Intl.DateTimeFormat("ar-EG", { weekday: "long", day: "numeric", month: "long" }).format(new Date(value)); }
+function mapLiveAttendanceStatus(status: string): AttendanceStatus { return status === "PRESENT" ? "present" : status === "LATE" ? "late" : status === "ABSENT" ? "absent" : status === "EXCUSED" ? "excused" : "unmarked"; }
+function mapLiveSession(record: SessionRecord, attendance: AttendanceResponse): Session {
+  const now = Date.now();
+  const start = new Date(record.startAt).getTime();
+  const end = new Date(record.endAt).getTime();
+  const status: SessionStatus = record.status === "COMPLETED" ? "completed" : start <= now && now <= end ? "live" : "upcoming";
+  return {
+    id: record.id,
+    title: `جلسة ${record.sessionNumber || "تشغيلية"}`,
+    level: "بيانات الجلسة من الـAPI",
+    day: formatLiveDay(record.startAt),
+    time: `${formatLiveTime(record.startAt)} – ${formatLiveTime(record.endAt)}`,
+    room: `قاعة ${record.classroomId.slice(0, 8)}`,
+    status,
+    students: attendance.items.map(item => ({ id: item.studentId, name: item.studentName, initials: item.studentName.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join(""), age: 0, parent: "ولي الأمر غير متاح من العقد الحالي" })),
+  };
+}
 
 export default function InstructorDesk() {
   const [, navigate] = useLocation();
   const [view, setView] = useState<DeskView>("today");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sessions, setSessions] = useState(SESSIONS);
+  const [dataMode, setDataMode] = useState<"demo" | "live">(apiClient.hasSession() ? "live" : "demo");
+  const [dataLoading, setDataLoading] = useState(apiClient.hasSession());
+  const [dataError, setDataError] = useState<string | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState(SESSIONS[0].id);
   const [selectedStudentId, setSelectedStudentId] = useState(STUDENTS[0].id);
   const [attendance, setAttendance] = useState(INITIAL_ATTENDANCE);
@@ -44,21 +69,79 @@ export default function InstructorDesk() {
   const [scores, setScores] = useState<Record<string, number>>({ understanding: 4, practice: 4, collaboration: 4 });
   const [comment, setComment] = useState("");
   const [query, setQuery] = useState("");
-  const selectedSession = SESSIONS.find(item => item.id === selectedSessionId) ?? SESSIONS[0];
-  const selectedStudent = selectedSession.students.find(item => item.id === selectedStudentId) ?? selectedSession.students[0];
+  const applyAttendance = (response: AttendanceResponse) => {
+    setAttendance(Object.fromEntries(response.items.map(item => [item.studentId, mapLiveAttendanceStatus(item.status)])));
+  };
+  useEffect(() => {
+    if (!apiClient.hasSession()) return;
+    let cancelled = false;
+    setDataLoading(true);
+    apiClient.listSessions()
+      .then(async response => {
+        const loaded = await Promise.all(response.items.map(async record => {
+          const attendanceResponse = await apiClient.getSessionAttendance(record.id);
+          return { session: mapLiveSession(record, attendanceResponse), attendanceResponse };
+        }));
+        if (cancelled) return;
+        const nextSessions = loaded.map(item => item.session);
+        setSessions(nextSessions.length ? nextSessions : SESSIONS);
+        if (nextSessions.length) {
+          setSelectedSessionId(nextSessions[0].id);
+          setSelectedStudentId(nextSessions[0].students[0]?.id ?? "");
+          applyAttendance(loaded[0].attendanceResponse);
+        }
+        setDataMode("live");
+        setDataError(null);
+      })
+      .catch(error => {
+        if (cancelled) return;
+        setDataMode("demo");
+        setDataError(error instanceof Error ? error.message : "تعذر تحميل جلسات المدرب");
+      })
+      .finally(() => { if (!cancelled) setDataLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+  const selectedSession = sessions.find(item => item.id === selectedSessionId) ?? sessions[0] ?? SESSIONS[0];
+  const selectedStudent = selectedSession.students.find(item => item.id === selectedStudentId) ?? selectedSession.students[0] ?? STUDENTS[0];
   const visibleStudents = useMemo(() => selectedSession.students.filter(item => !query.trim() || `${item.name} ${item.id}`.toLocaleLowerCase("ar").includes(query.trim().toLocaleLowerCase("ar"))), [query, selectedSession]);
   const attendanceStats = useMemo(() => { const statuses = selectedSession.students.map(item => attendance[item.id] ?? "unmarked"); return { present: statuses.filter(status => status === "present").length, late: statuses.filter(status => status === "late").length, absent: statuses.filter(status => status === "absent" || status === "excused").length, unmarked: statuses.filter(status => status === "unmarked").length }; }, [attendance, selectedSession]);
   const selectedEvaluation = evaluations[`${selectedSession.id}:${selectedStudent.id}`];
   const selectView = (next: DeskView) => { setView(next); setMobileOpen(false); setQuery(""); };
-  const selectSession = (id: string) => { setSelectedSessionId(id); setAttendanceSaved(false); setView("attendance"); setQuery(""); };
+  const selectSession = (id: string) => {
+    setSelectedSessionId(id);
+    setAttendanceSaved(false);
+    setView("attendance");
+    setQuery("");
+    if (dataMode === "live") void apiClient.getSessionAttendance(id).then(applyAttendance).catch(error => setDataError(error instanceof Error ? error.message : "تعذر تحميل الحضور"));
+  };
   const changeAttendance = (studentId: string, status: AttendanceStatus) => { setAttendance(current => ({ ...current, [studentId]: status })); setAttendanceSaved(false); };
-  const saveAttendance = (event: FormEvent) => { event.preventDefault(); if (attendanceStats.unmarked > 0) { toast.error("أكمل تسجيل كل الطلاب", { description: `ما زال ${attendanceStats.unmarked} طالب بدون حالة.` }); return; } setAttendanceSaved(true); toast.success("تم حفظ الحضور للمراجعة", { description: "الحفظ محلي في المعاينة، وسيحتاج API قبل الإنتاج." }); };
+  const saveAttendance = async (event: FormEvent) => {
+    event.preventDefault();
+    if (attendanceStats.unmarked > 0) { toast.error("أكمل تسجيل كل الطلاب", { description: `ما زال ${attendanceStats.unmarked} طالب بدون حالة.` }); return; }
+    if (dataMode === "live") {
+      try {
+        const records = selectedSession.students.map(student => {
+          const status = attendance[student.id] ?? "unmarked";
+          return { studentId: student.id, status: status === "present" ? "PRESENT" : status === "late" ? "LATE" : status === "absent" ? "ABSENT" : "EXCUSED", lateMinutes: status === "late" ? 1 : null } as const;
+        });
+        const response = await apiClient.upsertSessionAttendance(selectedSession.id, records);
+        applyAttendance(response);
+        setAttendanceSaved(true);
+        toast.success("تم حفظ الحضور في قاعدة البيانات", { description: "تمت إعادة قراءة الحالة من الـAPI الحقيقي." });
+      } catch (error) {
+        toast.error("تعذر حفظ الحضور", { description: error instanceof Error ? error.message : "حاول مرة أخرى" });
+      }
+      return;
+    }
+    setAttendanceSaved(true);
+    toast.success("تم حفظ الحضور للمراجعة", { description: "الحفظ محلي في المعاينة فقط." });
+  };
   const chooseStudent = (id: string) => { setSelectedStudentId(id); const saved = evaluations[`${selectedSession.id}:${id}`]; setScores(saved?.scores ?? { understanding: 4, practice: 4, collaboration: 4 }); setComment(saved?.comment ?? ""); };
   const saveEvaluation = (event: FormEvent) => { event.preventDefault(); if (!comment.trim()) { toast.error("أضف ملاحظة بنّاءة قبل حفظ التقييم", { description: "اذكر ما أتقنه الطالب والخطوة التالية المقترحة." }); return; } const key = `${selectedSession.id}:${selectedStudent.id}`; setEvaluations(current => ({ ...current, [key]: { scores, comment: comment.trim(), saved: true } })); toast.success("تم حفظ التقييم", { description: "بطاقة الطالب جاهزة للمراجعة والمشاركة بعد ربط النظام." }); };
   return <RoleDashboardShell className="app-shell instructor-desk-shell" roleCode="R04" roleLabel="المدرب" scopeLevel="assigned" scopeLabel="الجلسات والطلاب المسندون" tenantName="أكاديمية مدى" branchName="فرع مدينة نصر">
     {mobileOpen && <button className="mobile-scrim" aria-label="إغلاق القائمة" onClick={() => setMobileOpen(false)} />}
     <aside className={`sidebar ${mobileOpen ? "sidebar-open" : ""}`}><div className="sidebar-top"><button className="instructor-desk-brand" onClick={() => navigate("/instructor")}><strong>مدى</strong><small>مساحة المدرب · R04</small></button><button className="icon-button sidebar-close" aria-label="إغلاق القائمة" onClick={() => setMobileOpen(false)}><X size={19} /></button></div><div className="academy-switcher"><span className="academy-avatar"><GraduationCap size={20} /></span><span className="academy-meta"><strong>أكاديمية مدى</strong><small>مريم حسن · مدينة نصر</small></span></div><div className="nav-caption">مساحة الحصة</div><nav className="primary-nav"><button className={`nav-link ${view === "today" ? "active" : ""}`} onClick={() => selectView("today")}><LayoutDashboard size={19} /><span>حصصي اليوم</span></button><button className={`nav-link ${view === "attendance" ? "active" : ""}`} onClick={() => selectView("attendance")}><CalendarCheck size={19} /><span>تسجيل الحضور</span><span className="nav-count">{attendanceStats.unmarked}</span></button><button className={`nav-link ${view === "evaluation" ? "active" : ""}`} onClick={() => selectView("evaluation")}><Star size={19} /><span>التقييمات</span><span className="nav-count">{Object.keys(evaluations).length}</span></button></nav><div className="nav-caption nav-caption-spaced">روابط مساعدة</div><nav className="primary-nav"><button className="nav-link" onClick={() => navigate("/head-instructors")}><Users size={19} /><span>رئيس المدربين</span></button><button className="nav-link" onClick={() => navigate("/schedule")}><CalendarDays size={19} /><span>جدول الفرع</span></button></nav><div className="sidebar-spacer" /><div className="sidebar-help"><span className="help-icon"><CircleHelp size={18} /></span><div><strong>تحتاج دعمًا؟</strong><span>اطلب مساعدة من رئيس المدربين</span></div><ChevronLeft size={16} /></div><div className="sidebar-bottom"><button className="nav-link" onClick={() => toast("الإعدادات قيد التجهيز")}><Settings size={19} /><span>الإعدادات</span></button><button className="nav-link" onClick={() => toast("تم تسجيل الخروج التجريبي")}><LogOut size={19} /><span>تسجيل الخروج</span></button></div></aside>
-    <main className="main-panel"><header className="topbar"><div className="topbar-right"><button className="icon-button mobile-menu-button" aria-label="فتح القائمة" onClick={() => setMobileOpen(true)}><Menu size={21} /></button><div className="branch-select assigned-branch"><span className="branch-icon"><MapPin size={17} /></span><span>جلساتي · مدينة نصر</span></div></div><span className="instructor-desk-scope"><ShieldCheck size={14} /> وصول محدود للجلسات المسندة</span></header><div className="workspace instructor-desk-content"><PageHeader className="welcome-row" copyClassName="welcome-copy" actionsClassName="welcome-actions" eyebrow={<span className="eyebrow"><i className="eyebrow-dot" /> مساحة المدرب · R04</span>} title={VIEW_TITLES[view]} description={VIEW_COPY[view]} actions={<span className="instructor-desk-date"><CalendarDays size={14} /> السبت 26 سبتمبر 2026</span>} /><RoleScopeCard className="instructor-desk-scope-card" /><div className="instructor-desk-banner"><ShieldCheck size={15} /><span><strong>نطاقك:</strong> تظهر لك الجلسات والطلاب المسندون إليك فقط. لا يمكنك تعديل بيانات التسجيل أو رؤية الماليات.</span></div>{view === "today" && <TodayView sessions={SESSIONS} selectedId={selectedSessionId} onOpen={selectSession} onAttendance={() => selectView("attendance")} onEvaluation={() => selectView("evaluation")} attendanceUnmarked={attendanceStats.unmarked} />}{view === "attendance" && <AttendanceView session={selectedSession} sessions={SESSIONS} selectedId={selectedSessionId} onSession={id => { setSelectedSessionId(id); setAttendanceSaved(false); }} students={visibleStudents} query={query} setQuery={setQuery} attendance={attendance} onStatus={changeAttendance} stats={attendanceStats} saved={attendanceSaved} onSubmit={saveAttendance} onNext={() => selectView("evaluation")} />}{view === "evaluation" && <EvaluationView session={selectedSession} sessions={SESSIONS} selectedId={selectedSessionId} onSession={id => { setSelectedSessionId(id); chooseStudent(SESSIONS.find(item => item.id === id)?.students[0]?.id ?? ""); }} students={selectedSession.students} selectedStudent={selectedStudent} selectedStudentId={selectedStudent.id} onStudent={chooseStudent} evaluations={evaluations} scores={scores} setScores={setScores} comment={comment} setComment={setComment} onSubmit={saveEvaluation} />} </div></main>
+    <main className="main-panel"><header className="topbar"><div className="topbar-right"><button className="icon-button mobile-menu-button" aria-label="فتح القائمة" onClick={() => setMobileOpen(true)}><Menu size={21} /></button><div className="branch-select assigned-branch"><span className="branch-icon"><MapPin size={17} /></span><span>جلساتي · مدينة نصر</span></div></div><span className="instructor-desk-scope"><ShieldCheck size={14} /> وصول محدود للجلسات المسندة</span></header><div className="workspace instructor-desk-content"><PageHeader className="welcome-row" copyClassName="welcome-copy" actionsClassName="welcome-actions" eyebrow={<span className="eyebrow"><i className="eyebrow-dot" /> مساحة المدرب · R04</span>} title={VIEW_TITLES[view]} description={VIEW_COPY[view]} actions={<span className="instructor-desk-date"><CalendarDays size={14} /> السبت 26 سبتمبر 2026</span>} /><RoleScopeCard className="instructor-desk-scope-card" /><div className="instructor-desk-banner"><ShieldCheck size={15} /><span><strong>نطاقك:</strong> تظهر لك الجلسات والطلاب المسندون إليك فقط. لا يمكنك تعديل بيانات التسجيل أو رؤية الماليات.</span></div>{dataLoading && <LoadingState label="جارٍ تحميل الجلسات والحضور من الـAPI…" compact />}{dataError && <ErrorState compact title="تعذر تحميل جلسات المدرب" description={`${dataError} · تم عرض بيانات DEMO بدلًا منها.`} />}{!dataLoading && !dataError && dataMode === "live" && <div className="role-feedback-state role-feedback-success role-feedback-compact" role="status">الجلسات والحضور LIVE من PostgreSQL · النطاق مأخوذ من حساب المدرب</div>}{view === "today" && <TodayView sessions={sessions} selectedId={selectedSessionId} onOpen={selectSession} onAttendance={() => selectView("attendance")} onEvaluation={() => selectView("evaluation")} attendanceUnmarked={attendanceStats.unmarked} />}{view === "attendance" && <AttendanceView session={selectedSession} sessions={sessions} selectedId={selectedSessionId} onSession={id => { setSelectedSessionId(id); setAttendanceSaved(false); if (dataMode === "live") void apiClient.getSessionAttendance(id).then(applyAttendance); }} students={visibleStudents} query={query} setQuery={setQuery} attendance={attendance} onStatus={changeAttendance} stats={attendanceStats} saved={attendanceSaved} onSubmit={saveAttendance} onNext={() => selectView("evaluation")} />}{view === "evaluation" && <EvaluationView session={selectedSession} sessions={sessions} selectedId={selectedSessionId} onSession={id => { setSelectedSessionId(id); chooseStudent(sessions.find(item => item.id === id)?.students[0]?.id ?? ""); }} students={selectedSession.students} selectedStudent={selectedStudent} selectedStudentId={selectedStudent.id} onStudent={chooseStudent} evaluations={evaluations} scores={scores} setScores={setScores} comment={comment} setComment={setComment} onSubmit={saveEvaluation} />} </div></main>
   </RoleDashboardShell>;
 }
 const VIEW_TITLES: Record<DeskView, string> = { today: "حصصي اليوم", attendance: "تسجيل الحضور", evaluation: "تقييم الطلاب" };

@@ -11,6 +11,7 @@ public static class AuthenticationRegistration
         services.AddSingleton(options);
         services.AddSingleton<JwtTokenService>();
         services.AddSingleton<OtpChallengeStore>();
+        services.AddSingleton<PasswordHashService>();
         services.AddScoped<AuthService>();
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(jwt =>
         {

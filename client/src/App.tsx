@@ -4,7 +4,9 @@ import NotFound from "@/pages/NotFound";
 import { lazy, Suspense } from "react";
 import { Route, Switch, Router as WouterRouter } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
+import ProtectedRoute from "./components/ProtectedRoute";
 import { ThemeProvider } from "./contexts/ThemeContext";
+
 const Home = lazy(() => import("./pages/Home"));
 const Students = lazy(() => import("./pages/Students"));
 const Classes = lazy(() => import("./pages/Classes"));
@@ -28,9 +30,35 @@ const PlatformConsole = lazy(() => import("./pages/PlatformConsole"));
 const FamilyPortal = lazy(() => import("./pages/FamilyPortal"));
 const StudentPortal = lazy(() => import("./pages/StudentPortal"));
 const WorkspaceHub = lazy(() => import("./pages/WorkspaceHub"));
+const AcademyBootstrap = lazy(() => import("./pages/AcademyBootstrap"));
+const Login = lazy(() => import("./pages/Login"));
+const AcademyRoles = lazy(() => import("./pages/AcademyRoles"));
+const AcademyBranches = lazy(() => import("./pages/AcademyBranches"));
+const AcademyClassrooms = lazy(() => import("./pages/AcademyClassrooms"));
+
+function ProtectedAcademyBootstrap() {
+  return <ProtectedRoute roles={["R00_PLATFORM_ADMIN"]}><AcademyBootstrap /></ProtectedRoute>;
+}
+
+function ProtectedAcademyRoles() {
+  return <ProtectedRoute roles={["R01_ACADEMY_OWNER"]} permission="roles.manage"><AcademyRoles /></ProtectedRoute>;
+}
+
+function ProtectedAcademyBranches() {
+  return <ProtectedRoute roles={["R01_ACADEMY_OWNER"]} permission="branch.create"><AcademyBranches /></ProtectedRoute>;
+}
+
+function ProtectedAcademyClassrooms() {
+  return <ProtectedRoute roles={["R01_ACADEMY_OWNER"]} permission="classrooms.manage"><AcademyClassrooms /></ProtectedRoute>;
+}
 
 const APP_ROUTES = [
+  ["/login", Login],
   ["/workspace", WorkspaceHub],
+  ["/platform/academies/new", ProtectedAcademyBootstrap],
+  ["/academy/roles", ProtectedAcademyRoles],
+  ["/academy/branches", ProtectedAcademyBranches],
+  ["/academy/classrooms", ProtectedAcademyClassrooms],
   ["/", Home],
   ["/students", Students],
   ["/classes", Classes],
@@ -57,18 +85,12 @@ const APP_ROUTES = [
 
 function Router() {
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-
   return (
-    <Suspense
-      fallback={<div className="route-loading">جارٍ تحميل الصفحة…</div>}
-    >
+    <Suspense fallback={<div className="route-loading">جارٍ تحميل الصفحة…</div>}>
       <WouterRouter base={basePath}>
         <Switch>
-          {APP_ROUTES.map(([path, component]) => (
-            <Route key={path} path={path} component={component} />
-          ))}
-          <Route path={"/404"} component={NotFound} />
-          {/* Final fallback route */}
+          {APP_ROUTES.map(([path, component]) => <Route key={path} path={path} component={component} />)}
+          <Route path="/404" component={NotFound} />
           <Route component={NotFound} />
         </Switch>
       </WouterRouter>
@@ -76,18 +98,10 @@ function Router() {
   );
 }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
-
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
+      <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
           <Router />

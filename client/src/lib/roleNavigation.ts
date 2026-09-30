@@ -46,6 +46,9 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     navigation: [
       { path: "/executive-dashboard", label: "اللوحة التنفيذية", purpose: "academy rollup and decisions" },
       { path: "/academy-owner", label: "إدارة الأكاديمية", purpose: "branches, team, tickets" },
+      { path: "/academy/branches", label: "إدارة الفروع", purpose: "branch lifecycle and assignment" },
+      { path: "/academy/classrooms", label: "القاعات الدراسية", purpose: "classrooms, capacity and readiness" },
+      { path: "/academy/roles", label: "المستخدمون والصلاحيات", purpose: "members, roles, permissions" },
       { path: "/reports", label: "التقارير", purpose: "scoped reports and export" },
     ],
   },

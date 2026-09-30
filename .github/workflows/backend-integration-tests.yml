@@ -1,0 +1,74 @@
+name: Backend Integration Tests
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-integration-tests.yml"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-integration-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-tests:
+    name: PostgreSQL integration tests and backend build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mada_academy_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d mada_academy_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: Host=127.0.0.1;Port=5432;Database=mada_academy_ci;Username=postgres;Password=postgres
+      MADA_JWT_SIGNING_KEY: ci-only-not-a-production-secret-32bytes-minimum
+      ASPNETCORE_ENVIRONMENT: Development
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.401
+
+      - name: Restore
+        run: dotnet restore backend/MadaAcademy.Api.IntegrationTests/MadaAcademy.Api.IntegrationTests.csproj
+
+      - name: Run API and PostgreSQL integration tests
+        shell: bash
+        run: |
+          mkdir -p artifacts/test-results
+          set -o pipefail
+          dotnet test backend/MadaAcademy.Api.IntegrationTests/MadaAcademy.Api.IntegrationTests.csproj \
+            --configuration Release \
+            --logger "trx;LogFileName=backend-integration-tests.trx" \
+            --results-directory artifacts/test-results 2>&1 | tee artifacts/backend-test-and-migration.log
+
+      - name: Build backend
+        run: dotnet build backend/MadaAcademy.Api/MadaAcademy.Api.csproj --configuration Release --no-restore
+
+      - name: Upload diagnostics when a job step fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-integration-failure-diagnostics
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 7

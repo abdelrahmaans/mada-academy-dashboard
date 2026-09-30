@@ -15,6 +15,7 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
     public DbSet<ApprovalRequest> ApprovalRequests => Set<ApprovalRequest>();
     public DbSet<StateTransitionEvent> StateTransitions => Set<StateTransitionEvent>();
     public DbSet<Classroom> Classrooms => Set<Classroom>();
+    public DbSet<ClassroomResource> ClassroomResources => Set<ClassroomResource>();
     public DbSet<CourseTemplate> CourseTemplates => Set<CourseTemplate>();
     public DbSet<CourseOffering> CourseOfferings => Set<CourseOffering>();
     public DbSet<AcademySession> AcademySessions => Set<AcademySession>();
@@ -23,6 +24,9 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
     public DbSet<Student> Students => Set<Student>();
     public DbSet<StudentEnrollment> StudentEnrollments => Set<StudentEnrollment>();
     public DbSet<SessionAttendance> SessionAttendances => Set<SessionAttendance>();
+    public DbSet<SessionSubstitutionProposal> SessionSubstitutionProposals => Set<SessionSubstitutionProposal>();
+    public DbSet<SessionEvaluation> SessionEvaluations => Set<SessionEvaluation>();
+    public DbSet<InAppNotification> InAppNotifications => Set<InAppNotification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -52,6 +56,7 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
             entity.Property(x => x.Email).HasMaxLength(320).IsRequired();
             entity.Property(x => x.Phone).HasMaxLength(32).IsRequired();
             entity.Property(x => x.AccountType).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.PasswordHash).HasMaxLength(256);
             entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
         });
 
@@ -115,6 +120,14 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
             entity.HasIndex(x => new { x.BranchId, x.Name }).IsUnique();
             entity.Property(x => x.Name).HasMaxLength(120).IsRequired();
         });
+        modelBuilder.Entity<ClassroomResource>(entity =>
+        {
+            entity.HasIndex(x => new { x.ClassroomId, x.Kind, x.Name }).IsUnique();
+            entity.Property(x => x.Kind).HasMaxLength(24).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Notes).HasMaxLength(500);
+        });
         modelBuilder.Entity<CourseTemplate>(entity =>
         {
             entity.HasIndex(x => new { x.TenantId, x.Name });
@@ -154,6 +167,26 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
         modelBuilder.Entity<SessionAttendance>(entity =>
         {
             entity.HasIndex(x => new { x.SessionId, x.StudentId }).IsUnique();
+        });
+        modelBuilder.Entity<SessionSubstitutionProposal>(entity =>
+        {
+            entity.HasIndex(x => new { x.ApprovalRequestId, x.ProposedInstructorId }).IsUnique();
+            entity.Property(x => x.State).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Message).HasMaxLength(1000);
+        });
+        modelBuilder.Entity<SessionEvaluation>(entity =>
+        {
+            entity.HasIndex(x => new { x.SessionId, x.StudentId }).IsUnique();
+            entity.Property(x => x.Notes).HasMaxLength(2000);
+        });
+        modelBuilder.Entity<InAppNotification>(entity =>
+        {
+            entity.HasIndex(x => new { x.RecipientUserId, x.IsRead, x.CreatedAt });
+            entity.Property(x => x.Type).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Title).HasMaxLength(160).IsRequired();
+            entity.Property(x => x.Body).HasMaxLength(1000).IsRequired();
+            entity.Property(x => x.TargetType).HasMaxLength(64);
+            entity.Property(x => x.TargetId).HasMaxLength(120);
         });
     }
 }

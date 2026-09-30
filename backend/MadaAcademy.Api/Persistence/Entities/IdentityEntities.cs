@@ -33,6 +33,7 @@ public sealed class UserAccount : EntityBase
     public required string Phone { get; set; }
     public string AccountType { get; set; } = "staff";
     public string? DisplayName { get; set; }
+    public string? PasswordHash { get; set; }
     public string Status { get; set; } = "INVITED";
     public DateTimeOffset? LastLoginAt { get; set; }
     public ICollection<Membership> Memberships { get; set; } = new List<Membership>();

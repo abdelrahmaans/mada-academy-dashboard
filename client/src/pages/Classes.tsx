@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   Activity,
   ArrowDownToLine,
@@ -29,6 +29,7 @@ import {
   X,
 } from "lucide-react";
 import { useLocation } from "wouter";
+import { apiClient, type SchedulingClassroom } from "@/lib/apiClient";
 import { toast } from "sonner";
 
 type Track =
@@ -348,6 +349,11 @@ function ClassesPage() {
   ]);
   const [startTime, setStartTime] = useState("10:00");
   const [endTime, setEndTime] = useState("11:30");
+  const [liveClassrooms, setLiveClassrooms] = useState<SchedulingClassroom[]>([]);
+  const [liveRoomsReady, setLiveRoomsReady] = useState(false);
+  useEffect(() => {
+    apiClient.schedulingClassrooms().then(response => { setLiveClassrooms(response.items); setLiveRoomsReady(true); }).catch(() => setLiveRoomsReady(false));
+  }, []);
 
   const filteredCourses = useMemo(
     () =>
@@ -480,6 +486,11 @@ function ClassesPage() {
     }
     if (endTime <= startTime) {
       toast.error("وقت نهاية الحصة لازم يكون بعد بدايتها");
+      return;
+    }
+    const duplicateRoomSlot = offerings.find(item => item.branch === offeringBranch && item.classroom === classroom.trim() && item.days.some(day => scheduleDays.includes(day)) && startTime < item.endTime && endTime > item.startTime);
+    if (duplicateRoomSlot) {
+      toast.error("تعارض حجز القاعة", { description: `القاعة محجوزة بالفعل مع «${duplicateRoomSlot.courseName}» في يوم مشترك. غيّر القاعة أو الوقت.` });
       return;
     }
     const course =
@@ -1427,11 +1438,7 @@ function ClassesPage() {
                   <span>
                     المعمل / القاعة <b>*</b>
                   </span>
-                  <input
-                    value={classroom}
-                    onChange={event => setClassroom(event.target.value)}
-                    placeholder="معمل 1"
-                  />
+                  {liveRoomsReady ? <select value={classroom} onChange={event => setClassroom(event.target.value)}>{liveClassrooms.filter(room => room.branchName === offeringBranch).map(room => <option key={room.id}>{room.name}</option>)}</select> : <input value={classroom} onChange={event => setClassroom(event.target.value)} placeholder="معمل 1" />}
                 </label>
               </div>
               <fieldset className="weekday-field">

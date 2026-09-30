@@ -158,3 +158,54 @@ R00 إلى R09 مغطاة كواجهات prototype مع role code وscope labels
 ### 29 سبتمبر 2026 — Frontend First / Demo Role Mode
 
 قرار مرحلي: لا login فعلي الآن. React يعمل افتراضيًا في Demo Role Mode حتى تكتمل كل Role surfaces والـscope tree والـUI interactions. بعد تثبيت الواجهة سيتم إعادة تفعيل API/Auth ثم الاختبار بالـdatabase data. تم توحيد الثيم والـscrollbar كجزء من التصميم.
+
+### 29 سبتمبر 2026 — Students/Sessions/Attendance API Contract
+
+تم تنفيذ أول API contract للـBranch Operations MVP داخل `backend/MadaAcademy.Api/Modules/Operations/OperationalEndpoints.cs`، ويشمل قراءة الطلاب والجلسات وتفاصيل الجلسة والحضور، بالإضافة إلى upsert للحضور للطلاب المسجلين فقط. كل الاستعلامات تفرض tenant/branch scope من JWT claims، وكتابة الحضور مقصورة على R02/R03/R04. تم توثيق الـpayloads وحالات الخطأ في `backend/OPERATIONS_API_CONTRACT.md`.
+
+تمت إضافة typed methods إلى `client/src/lib/apiClient.ts` لـstudents/sessions/attendance، وربط `/students` و`/instructor-desk` بالـAPI الحقيقي عند وجود JWT. الصفحتان تعرضان loading/error/live feedback، وتعودان إلى Demo fixtures عند غياب الجلسة أو فشل الاتصال. قراءة الحضور live، و`PUT` الحضور يحفظ في PostgreSQL ثم يعيد القراءة للتحقق.
+
+تم تنفيذ `POST /api/v1/platform/academies` لـR00، وينشئ Tenant + أول Branch + مستخدم ومس membership لـR01 + AuditEvent، مع validation وduplicate conflicts. تم توسيع `GET /api/v1/me` ليعيد user/academy/branches/roleLabel/permissions، وإضافة `AcademyBootstrap` screen وربطها بالـAPI عبر `/platform/academies/new`، مع AuthProvider global وsuccess/error states.
+
+تم تنفيذ طبقة Login/OTP على `/login` مع session bootstrap وrole-based redirect، وإضافة `ProtectedRoute` لمسار Bootstrap ومسار `/academy/roles`. تم تنفيذ أدوار وصلاحيات الأكاديمية: `GET /academy/roles`، أعضاء الأكاديمية، إضافة عضو، تغيير الدور والنطاق، وتفعيل/إيقاف العضو، مع tenant scope وAudit Events ومنع R01 من منح R00. تمت إضافة شاشة `AcademyRoles` وربطها من Academy Owner navigation.
+
+تم تعديل قرار الدخول في الـMVP: الـprimary auth أصبح `POST /api/v1/auth/login` برقم الهاتف وكلمة المرور، مع PBKDF2 hash وrefresh sessions وRoute Guard. تم إضافة كلمة مرور للـBootstrap owner ولأعضاء الأكاديمية الجدد، وترحيل `UserAccounts.PasswordHash`. OTP ما زال موجودًا في الـbackend كمرحلة لاحقة لكنه لم يعد مستخدمًا من شاشة الدخول الأساسية.
+
+الخطوة التالية: تطبيق password reset/change flow، ثم اختبار auth وRoles API على PostgreSQL فعليًا وتحويل Academy Owner Dashboard من Demo إلى `/me` وبيانات الفروع والأعضاء الحقيقية.
+
+
+### 30 سبتمبر 2026 — Current Agent Handoff / Session Lifecycle MVP Checkpoint
+
+هذا القسم هو المرجع الأحدث ويتغلب على أي أقسام تاريخية أقدم تقول إن الـBackend غير موجود أو أن الـAPI مؤجل.
+
+#### الحالة الحالية
+- React هو الـdefault frontend، وAngular موجود كـpreview/reference منفصل داخل `client-angular/`.
+- ASP.NET Core / .NET 10 backend فعلي داخل `backend/MadaAcademy.Api/` مع EF Core، JWT access/refresh، password login، tenant/branch scope، migrations، وdevelopment memory/PostgreSQL modes.
+- تم تنفيذ bootstrap الأكاديمية، إدارة الأدوار والمستخدمين، الفروع، القاعات، موارد القاعات، الطلاب، الجلسات، الحضور، وفحص التعارض.
+- تم تنفيذ `POST /api/v1/scheduling/sessions` للحفظ الفعلي بعد conflict check، و`POST /api/v1/scheduling/groups` لإنشاء الجروب وتوليد كل الجلسات.
+- تم تنفيذ طلبات EXTRA/MAKEUP، substitution requests، عروض المدربين المتاحين، approvals، evaluations، وin-app notifications.
+
+#### آخر ملفات التنفيذ المهمة
+- `backend/MadaAcademy.Api/Modules/Scheduling/SessionWorkflowEndpoints.cs`
+- `backend/MadaAcademy.Api/Persistence/Entities/SessionWorkflowEntities.cs`
+- `backend/MadaAcademy.Api/Persistence/MadaDbContext.cs`
+- `client/src/lib/apiClient.ts`
+- `backend/SESSION_LIFECYCLE_API_CONTRACT.md`
+
+#### ما تم التحقق منه
+- Backend build ناجح.
+- `pnpm check` ناجح.
+- `pnpm test`: 3 tests passed.
+- Live smoke: إنشاء Session وحفظها، ثم رفض الحجز المتداخل بـ`409 SCHEDULING_CONFLICT`.
+- Live smoke: طلب MAKEUP ثم approval وتحويل السيشن إلى `SCHEDULED` وإنشاء notifications.
+
+#### الخطوة التالية الإلزامية
+1. استبدال local demo save في `client/src/pages/Schedule.tsx` بـ`apiClient.createSession`.
+2. ربط شاشة `client/src/pages/Classes.tsx` بـ`apiClient.createGroup` مع multi-select للطلاب وتوليد preview لعدد الجلسات.
+3. بناء شاشة approval queue حقيقية تربط `apiClient.listApprovals` و`apiClient.decideApproval`.
+4. ربط Instructor Desk بالحضور والتقييمات وطلبات substitution.
+5. إضافة consumer identity linking: `StudentAccount` / `GuardianStudentLink` حتى تصل الجلسات والحضور والتقييمات للطالب وولي الأمر، لأن Student الحالي لا يحتوي user/guardian relation.
+6. إضافة integration/authorization tests لكل role وtenant/branch isolation، ثم تحديث migration snapshot الرسمي عند توفر `dotnet-ef`.
+
+#### قاعدة الاستمرار
+لا يتم حذف الـdemo fixtures دفعة واحدة. كل vertical slice يتحول من fixture إلى API مع الحفاظ على loading/empty/error/pending/approved/rejected/audit feedback، وتبقى أي surface غير موصولة موسومة DEMO بوضوح.
