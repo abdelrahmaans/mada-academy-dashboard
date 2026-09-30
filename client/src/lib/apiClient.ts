@@ -200,6 +200,8 @@ export type ConsumerLinksResponse = {
   guardians: Array<{ id: string; name: string | null; phone: string; email: string; relationship: string; status: string }>;
   totalGuardians: number;
 };
+export type ConsumerAccountLookupRecord = { id: string; name: string | null; accountType: "parent" | "student"; maskedPhone: string };
+export type ConsumerAccountLookupResponse = { items: ConsumerAccountLookupRecord[]; total: number };
 
 export class ApiRequestError extends Error {
   constructor(
@@ -349,6 +351,10 @@ export const apiClient = {
   consumerStudents: () => request<ConsumerStudentsResponse>("/consumer/me/students"),
   consumerSessions: (studentId?: string) => request<ConsumerSessionsResponse>(`/consumer/me/sessions${studentId ? `?studentId=${encodeURIComponent(studentId)}` : ""}`),
   studentConsumerLinks: (studentId: string) => request<ConsumerLinksResponse>(`/students/${studentId}/consumer-links`),
+  searchConsumerAccounts: (studentId: string, phone: string, accountType: "parent" | "student") => {
+    const query = new URLSearchParams({ phone, accountType });
+    return request<ConsumerAccountLookupResponse>(`/students/${studentId}/consumer-accounts?${query.toString()}`);
+  },
   linkStudentAccount: (studentId: string, userAccountId: string) => request<{ studentId: string; userAccountId: string; accountType: string; linked: boolean }>(`/students/${studentId}/student-account`, { method: "POST", body: JSON.stringify({ userAccountId }) }),
   unlinkStudentAccount: (studentId: string) => request<void>(`/students/${studentId}/student-account`, { method: "DELETE" }),
   linkGuardian: (studentId: string, input: { userAccountId: string; relationship: string }) => request<{ studentId: string; userAccountId: string; relationship: string; linked: boolean }>(`/students/${studentId}/guardians`, { method: "POST", body: JSON.stringify(input) }),

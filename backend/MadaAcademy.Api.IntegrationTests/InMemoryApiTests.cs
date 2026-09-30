@@ -224,4 +224,51 @@ public sealed class InMemoryApiTests
         Assert.DoesNotContain("Foreign Student", children, StringComparison.Ordinal);
         Assert.Equal(HttpStatusCode.NotFound, (await studentClient.GetAsync($"/api/v1/consumer/me/sessions?studentId={otherTenantStudentId}")).StatusCode);
     }
+
+    [Fact]
+    public async Task ConsumerAccountLookup_NormalizesArabicDigitsAndReturnsMaskedExactMatch()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var manager = factory.CreateClient();
+        var staff = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
+        var parent = await TestData.CreateConsumerAccountAsync(factory, staff.TenantId, "parent", "R08_PARENT", "+201012345678");
+        var studentId = await TestData.SeedStudentAsync(factory, staff.TenantId, staff.BranchId, "Phone Lookup Student");
+        TestData.Authenticate(manager, await TestData.LoginAsync(manager, staff));
+
+        var response = await manager.GetAsync($"/api/v1/students/{studentId}/consumer-accounts?accountType=parent&phone={Uri.EscapeDataString("٠١٠١٢٣٤٥٦٧٨")}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains(parent.UserId.ToString(), body, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("•••• 5678", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("+201012345678", body, StringComparison.Ordinal);
+        Assert.Contains("Consumer Test User", body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ConsumerAccountLookup_HidesAccountsAssignedToAnotherAcademyAndRejectsUnauthorizedRoles()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var manager = factory.CreateClient();
+        var staff = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
+        var parent = await TestData.CreateConsumerAccountAsync(factory, staff.TenantId, "parent", "R08_PARENT", "+201011112222");
+        var studentId = await TestData.SeedStudentAsync(factory, staff.TenantId, staff.BranchId, "Scoped Lookup Student");
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            var otherTenantId = Guid.NewGuid();
+            db.Tenants.Add(new Tenant { Id = otherTenantId, Name = "Other Academy", Slug = $"other-{otherTenantId:N}" });
+            db.Memberships.Add(new Membership { UserAccountId = parent.UserId, TenantId = otherTenantId, RoleCode = "R08_PARENT", ScopeLevel = "TENANT", Status = "ACTIVE" });
+            await db.SaveChangesAsync();
+        }
+        TestData.Authenticate(manager, await TestData.LoginAsync(manager, staff));
+        var response = await manager.GetAsync($"/api/v1/students/{studentId}/consumer-accounts?accountType=parent&phone=%2B201011112222");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("\"total\":0", await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+
+        using var instructor = factory.CreateClient();
+        var instructorAccount = await TestData.CreateAccountAsync(factory, "R04_INSTRUCTOR", staff.TenantId, staff.BranchId);
+        TestData.Authenticate(instructor, await TestData.LoginAsync(instructor, instructorAccount));
+        var forbidden = await instructor.GetAsync($"/api/v1/students/{studentId}/consumer-accounts?accountType=parent&phone=%2B201011112222");
+        Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
+    }
 }
