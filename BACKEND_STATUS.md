@@ -58,3 +58,10 @@ React أصبح متصلًا بالـASP.NET Core عبر `client/src/lib/apiClien
 اكتشف التحقق أن EF model snapshot كان متأخرًا عن `MadaDbContext`؛ تمت مزامنته وإضافة migration `AlignCurrentModel` بدل تعطيل تحذير pending model changes. workflow `.github/workflows/backend-integration-tests.yml` يعمل على Pull Request وتغييرات `main`، بصلاحيات `contents: read` فقط، ويشغل PostgreSQL 16، migrations والـtests ثم backend Release build. عند الفشل يحتفظ بـTRX وtest/migration log كـartifact.
 
 التحقق المحلي: `dotnet build backend/MadaAcademy.sln --configuration Release` نجح، و`dotnet ef migrations has-pending-model-changes` أفاد بعدم وجود تغييرات معلقة، ونجحت الاختبارات **16/16** على PostgreSQL 16.15 وInMemory.
+
+
+---
+## 16. Live Operations + Consumer Identity — 30 سبتمبر 2026
+على فرع `feature/live-operations-workflows` أضيفت روابط StudentAccount وGuardianStudentLink مع migrations وendpoints scoped لإدارتها وقراءة بيانات الطالب/ولي الأمر المرتبطة فقط. تم تضييق scope المدرب على الجلسات المسندة، وربط واجهات الجدول والكورسات والموافقات ومكتب المدرب وبوابتي الأسرة والطالب بالـAPI. درجات/ملاحظات المدرب لا تُعرض للمستهلكين حتى يُضاف مسار نشر ومراجعة صريح؛ والفواتير لا تعرض عينات في وضع LIVE. شاشة الطلاب تتيح إدارة الحسابات المرتبطة لحساب موجود باستخدام UUID.
+
+التحقق الحالي: **19/19** backend integration tests نجحت على PostgreSQL 16.15؛ `pnpm check` ناجح؛ `pnpm test` نجح **3/3**؛ و`pnpm build` ناجح. أضيف `.github/workflows/frontend-checks.yml` لتكرار فحوصات TypeScript والاختبارات والبناء على GitHub. بقي فتح PR لهذا الفرع وانتظار CI ثم دمجه بعد النجاح. ملاحظة: بناء الواجهة يظهر تحذيرات Umami لغياب `VITE_ANALYTICS_ENDPOINT` و`VITE_ANALYTICS_WEBSITE_ID` في بيئة البناء فقط؛ build ينتهي بنجاح.

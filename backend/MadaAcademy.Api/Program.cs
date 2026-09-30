@@ -45,6 +45,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapHealthChecks("/api/v1/health");
 app.MapMadaAcademyIdentityEndpoints();
+app.MapMadaConsumerIdentityEndpoints();
 app.MapMadaRoleEndpoints();
 app.MapMadaBranchEndpoints();
 app.MapMadaClassroomEndpoints();
@@ -68,8 +69,8 @@ app.MapPost("/api/v1/auth/otp/verify", async (OtpVerifyRequest request, AuthServ
 
 app.MapPost("/api/v1/auth/login", async (PasswordLoginRequest request, AuthService auth, CancellationToken cancellationToken) =>
 {
-    if (string.IsNullOrWhiteSpace(request.Phone) || string.IsNullOrWhiteSpace(request.Password) || request.AccountType != "staff")
-        return Results.BadRequest(new { error = new { code = "INVALID_LOGIN_REQUEST", message = "Phone and password are required." } });
+    if (string.IsNullOrWhiteSpace(request.Phone) || string.IsNullOrWhiteSpace(request.Password) || request.AccountType is not ("staff" or "parent" or "student"))
+        return Results.BadRequest(new { error = new { code = "INVALID_LOGIN_REQUEST", message = "Phone, password, and a supported accountType (staff, parent, or student) are required." } });
     var tokens = await auth.LoginWithPasswordAsync(request, cancellationToken);
     return tokens is null ? Results.Unauthorized() : Results.Ok(new { data = tokens });
 });

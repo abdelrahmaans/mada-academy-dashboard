@@ -69,13 +69,34 @@ public static class TestData
         return account;
     }
 
+    public static async Task<TestAccount> CreateConsumerAccountAsync(TestApiFactory factory, Guid tenantId, string accountType, string roleCode)
+    {
+        var account = new TestAccount(tenantId, Guid.Empty, Guid.NewGuid(), roleCode,
+            $"+202{Random.Shared.Next(0, 1_000_000_000):D9}", "Correct!Horse2026");
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+        var passwordHasher = scope.ServiceProvider.GetRequiredService<MadaAcademy.Api.Auth.PasswordHashService>();
+        db.UserAccounts.Add(new UserAccount
+        {
+            Id = account.UserId,
+            Email = $"{account.UserId:N}@consumer.example.test",
+            Phone = account.Phone,
+            DisplayName = "Consumer Test User",
+            AccountType = accountType,
+            PasswordHash = passwordHasher.Hash(account.Password),
+            Status = "ACTIVE"
+        });
+        await db.SaveChangesAsync();
+        return account;
+    }
+
     public static async Task<TokenPair> LoginAsync(HttpClient client, TestAccount account)
     {
         var response = await client.PostAsJsonAsync("/api/v1/auth/login", new
         {
             phone = account.Phone,
             password = account.Password,
-            accountType = "staff"
+            accountType = account.RoleCode == "R08_PARENT" ? "parent" : account.RoleCode == "R09_STUDENT" ? "student" : "staff"
         });
         response.EnsureSuccessStatusCode();
         var envelope = await response.Content.ReadFromJsonAsync<TokenEnvelope>();
@@ -85,11 +106,13 @@ public static class TestData
     public static void Authenticate(HttpClient client, TokenPair tokens)
         => client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
 
-    public static async Task SeedStudentAsync(TestApiFactory factory, Guid tenantId, Guid branchId, string name)
+    public static async Task<Guid> SeedStudentAsync(TestApiFactory factory, Guid tenantId, Guid branchId, string name)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
-        db.Students.Add(new Student { TenantId = tenantId, BranchId = branchId, FullName = name });
+        var student = new Student { TenantId = tenantId, BranchId = branchId, FullName = name };
+        db.Students.Add(student);
         await db.SaveChangesAsync();
+        return student.Id;
     }
 }

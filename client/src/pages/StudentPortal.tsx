@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Activity,
   Award,
@@ -25,15 +25,19 @@ import StudentProgressCard, {
   type StudentAchievement,
 } from "@/components/StudentProgressCard";
 import { RoleScopeProvider } from "@/contexts/RoleScopeContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { apiClient, type ConsumerSessionRecord } from "@/lib/apiClient";
+import { useLocation } from "wouter";
 import "@/components/RoleFoundation.css";
 
 type StudentTab = "home" | "sessions" | "progress";
+type PortalSession = { date: string; title: string; unit: string; room: string; status: string; attendanceStatus?: string; startAt?: string; score?: number | null; notes?: string | null };
 const INITIAL_ACHIEVEMENTS: StudentAchievement[] = [
   { title: "مستكشف الحلول", detail: "أنهيت ٣ تحديات تطبيقية", unlocked: true },
   { title: "منتظم في التعلم", detail: "حضرت ٤ جلسات متتالية", unlocked: true },
   { title: "بطل الوحدة", detail: "أكمل الوحدة الحالية", unlocked: false },
 ];
-const sessions = [
+const DEMO_SESSIONS: PortalSession[] = [
   {
     date: "الأحد · ١٢:٠٠ م",
     title: "روبوتكس مستوى 2",
@@ -57,11 +61,32 @@ const sessions = [
   },
 ];
 
+function mapConsumerSession(item: ConsumerSessionRecord): PortalSession {
+  return {
+    date: `${new Date(item.startAt).toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "short" })} · ${new Date(item.startAt).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}`,
+    title: item.courseName, unit: `جلسة ${item.sessionNumber}`, room: `${item.classroomName} · ${item.branchName}`,
+    status: item.status === "COMPLETED" ? "مكتملة" : new Date(item.startAt).getTime() > Date.now() ? "قادمة" : "مجدولة",
+    attendanceStatus: item.attendanceStatus, startAt: item.startAt, score: item.score, notes: item.notes,
+  };
+}
+function completedSessionsText(items: PortalSession[]) {
+  return `${items.filter(item => item.status === "مكتملة").length} من ${items.length}`;
+}
+
 export default function StudentPortal() {
+  const { me, logout } = useAuth();
+  const [, navigate] = useLocation();
   const [tab, setTab] = useState<StudentTab>("home");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [progress, setProgress] = useState(72);
   const [achievementState, setAchievementState] = useState(INITIAL_ACHIEVEMENTS);
+  const [studentName, setStudentName] = useState(apiClient.hasSession() ? me?.user?.displayName ?? "جارٍ التحميل…" : "ياسين محمد علي");
+  const [courseName, setCourseName] = useState(apiClient.hasSession() ? "جارٍ التحميل…" : "روبوتكس مستوى 2");
+  const [sessions, setSessions] = useState<PortalSession[]>(apiClient.hasSession() ? [] : DEMO_SESSIONS);
+  const [liveMode, setLiveMode] = useState(apiClient.hasSession());
+  const [dataLoading, setDataLoading] = useState(apiClient.hasSession());
+  const [dataError, setDataError] = useState<string | null>(null);
+  const [hasStudentProfile, setHasStudentProfile] = useState(!apiClient.hasSession());
   const nav = [
     { id: "home" as const, label: "رحلتي", icon: Home },
     { id: "sessions" as const, label: "جلساتي", icon: CalendarDays },
@@ -71,6 +96,31 @@ export default function StudentPortal() {
     setTab(next);
     setMobileOpen(false);
   };
+  useEffect(() => {
+    if (!apiClient.hasSession()) return;
+    let cancelled = false;
+    setLiveMode(true); setDataLoading(true); setSessions([]);
+    Promise.all([apiClient.consumerStudents(), apiClient.consumerSessions()])
+      .then(([students, response]) => {
+        if (cancelled) return;
+        const student = students.items[0];
+        const ownRecords = student ? response.items.filter(item => item.studentId === student.id) : [];
+        setHasStudentProfile(Boolean(student));
+        setStudentName(student?.name ?? me?.user?.displayName ?? "الطالب");
+        setCourseName(ownRecords[0]?.courseName ?? "لا توجد مجموعة مسجلة");
+        setSessions(ownRecords.map(mapConsumerSession));
+        setDataError(null);
+      })
+      .catch(error => { if (!cancelled) { setSessions([]); setHasStudentProfile(false); setDataError(error instanceof Error ? error.message : "تعذر تحميل بيانات الطالب"); } })
+      .finally(() => { if (!cancelled) setDataLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+  const completedSessions = sessions.filter(item => item.status === "مكتملة").length;
+  const attendanceRecords = sessions.filter(item => item.attendanceStatus && item.attendanceStatus !== "UNMARKED");
+  const attendanceRate = attendanceRecords.length ? Math.round(attendanceRecords.filter(item => item.attendanceStatus === "PRESENT" || item.attendanceStatus === "LATE").length / attendanceRecords.length * 100) : 0;
+  const liveProgress = sessions.length ? Math.round(completedSessions / sessions.length * 100) : 0;
+  const nextSession = sessions.filter(item => item.startAt && new Date(item.startAt).getTime() >= Date.now()).sort((a, b) => (a.startAt ?? "").localeCompare(b.startAt ?? ""))[0];
+  const lastEvaluation = sessions.filter(item => item.score !== null && item.score !== undefined).sort((a, b) => (b.startAt ?? "").localeCompare(a.startAt ?? ""))[0];
   const completeCheckpoint = () => {
     setProgress(current => Math.max(current, 84));
     setAchievementState(current =>
@@ -90,7 +140,7 @@ export default function StudentPortal() {
       scopeLabel="حساب الطالب فقط"
       identityKind="consumer"
       tenantName="أكاديمية مدى"
-      demo
+      demo={!liveMode}
     >
       <div className="student-portal" dir="rtl">
       {mobileOpen && (
@@ -113,10 +163,10 @@ export default function StudentPortal() {
           </button>
         </div>
         <div className="student-profile">
-          <span className="student-avatar">يع</span>
+            <span className="student-avatar">{studentName.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join("")}</span>
           <div>
-            <strong>ياسين محمد علي</strong>
-            <small>روبوتكس مستوى 2</small>
+              <strong>{studentName}</strong>
+              <small>{courseName}</small>
           </div>
         </div>
         <div className="student-nav-label">مساحتي التعليمية</div>
@@ -156,7 +206,7 @@ export default function StudentPortal() {
         <button
           type="button"
           className="student-logout"
-          onClick={() => toast("تسجيل الخروج التجريبي")}
+          onClick={() => { void logout().then(() => navigate("/login")); }}
         >
           <LogOut size={16} /> تسجيل الخروج
         </button>
@@ -187,7 +237,7 @@ export default function StudentPortal() {
           <div className="student-welcome">
             <div>
               <span className="student-kicker">
-                <GraduationCap size={13} /> أهلًا يا ياسين
+                <GraduationCap size={13} /> أهلًا {studentName}
               </span>
               <h1>
                 {tab === "home"
@@ -196,7 +246,7 @@ export default function StudentPortal() {
               </h1>
               <p>شاهد تقدمك وجلساتك وإنجازاتك من مساحة بسيطة ومركزة.</p>
             </div>
-            <span className="student-demo">DEMO · حساب الطالب</span>
+            <span className="student-demo">{liveMode ? "LIVE · حساب الطالب" : "DEMO · حساب الطالب"}</span>
           </div>
           <div className="student-boundary">
             <ShieldCheck size={14} />
@@ -205,37 +255,49 @@ export default function StudentPortal() {
               أدوات إدارية.
             </span>
           </div>
+          {dataLoading && <div className="student-note">جارٍ تحميل الجلسات المرتبطة بحسابك…</div>}
+          {dataError && <div className="student-note" role="alert">تعذر تحميل بيانات الطالب: {dataError}</div>}
+          {!dataLoading && !dataError && liveMode && !hasStudentProfile && <div className="student-note" role="status">لا يوجد ملف طالب مرتبط بهذا الحساب حتى الآن. تواصل مع الأكاديمية لربط الملف الصحيح.</div>}
+          {hasStudentProfile && !dataLoading && !dataError && <>
           {tab === "home" && (
             <HomeTab
               onNavigate={select}
-              progress={progress}
-              achievements={achievementState}
+              progress={liveMode ? liveProgress : progress}
+              achievements={liveMode ? [] : achievementState}
+              liveMode={liveMode}
+              courseName={courseName}
+              sessions={sessions}
+              attendanceRate={attendanceRate}
+              nextSession={nextSession}
+              latestEvaluation={lastEvaluation}
             />
           )}
-          {tab === "sessions" && <SessionsTab />}
+          {tab === "sessions" && <SessionsTab sessions={sessions} liveMode={liveMode} courseName={courseName} />}
           {tab === "progress" && (
             <ProgressTab
-              progress={progress}
-              achievements={achievementState}
+              progress={liveMode ? liveProgress : progress}
+              achievements={liveMode ? [] : achievementState}
               onCompleteCheckpoint={completeCheckpoint}
+              liveMode={liveMode}
+              sessions={sessions}
+              courseName={courseName}
             />
           )}
+          </>}
         </div>
       </main>
       </div>
     </RoleScopeProvider>
   );
 }
-function HomeTab({ onNavigate, progress, achievements }: { onNavigate: (tab: StudentTab) => void; progress: number; achievements: StudentAchievement[] }) {
+function HomeTab({ onNavigate, progress, achievements, liveMode, courseName, sessions, attendanceRate, nextSession, latestEvaluation }: { onNavigate: (tab: StudentTab) => void; progress: number; achievements: StudentAchievement[]; liveMode: boolean; courseName: string; sessions: PortalSession[]; attendanceRate: number; nextSession?: PortalSession; latestEvaluation?: PortalSession }) {
   return (
     <>
       <section className="student-hero-card">
         <div>
           <span>الجلسة القادمة</span>
-          <h2>روبوتكس مستوى 2</h2>
-          <p>
-            <CalendarDays size={14} /> الأحد · ١٢:٠٠ م · معمل ١
-          </p>
+          <h2>{liveMode ? courseName : "روبوتكس مستوى 2"}</h2>
+          <p><CalendarDays size={14} /> {liveMode ? (nextSession ? `${nextSession.date} · ${nextSession.room}` : "لا توجد جلسة قادمة مسجلة") : "الأحد · ١٢:٠٠ م · معمل ١"}</p>
           <button type="button" onClick={() => onNavigate("sessions")}>
             عرض كل الجلسات <ChevronLeft size={13} />
           </button>
@@ -248,32 +310,32 @@ function HomeTab({ onNavigate, progress, achievements }: { onNavigate: (tab: Stu
         <Stat
           icon={<CalendarDays size={16} />}
           label="الحضور"
-          value="88%"
-          note="من آخر ٨ جلسات"
+          value={liveMode ? `${attendanceRate}%` : "88%"}
+          note={liveMode ? "من سجلات الحضور المحفوظة" : "من آخر ٨ جلسات"}
           tone="teal"
         />
         <Stat
           icon={<Trophy size={16} />}
           label="التقدم"
           value={`${progress}%`}
-          note="في المسار الحالي"
+          note={liveMode ? `${sessions.filter(item => item.status === "مكتملة").length} من ${sessions.length} جلسة مكتملة` : "في المسار الحالي"}
           tone="violet"
         />
         <Stat
           icon={<Star size={16} />}
           label="آخر تقييم"
-          value="4.3 / 5"
-          note="مراجعة أكاديمية"
+          value={liveMode ? (latestEvaluation?.score == null ? "لا يوجد" : `${(latestEvaluation.score / 20).toFixed(1)} / 5`) : "4.3 / 5"}
+          note={liveMode ? "تقييم منشور فقط" : "مراجعة أكاديمية"}
           tone="amber"
         />
       </div>
       <div className="student-home-grid">
-        <StudentProgressCard
+        {liveMode ? <section className="student-panel"><PanelTitle icon={<Trophy size={15} />} title="تقدم الجلسات" /><p>{completedSessionsText(sessions)} من الجلسات المسندة أُنجزت حتى الآن.</p></section> : <StudentProgressCard
           progress={progress}
           currentUnit="الحساسات والحركة"
           nextCheckpoint={achievements.find(item => item.title === "بطل الوحدة")?.unlocked ? "تم اجتيازه" : "تحدي الوحدة"}
           achievements={achievements}
-        />
+        />}
         <section className="student-panel">
           <PanelTitle
             icon={<CalendarDays size={15} />}
@@ -285,6 +347,7 @@ function HomeTab({ onNavigate, progress, achievements }: { onNavigate: (tab: Stu
             }
           />
           <div className="student-activity">
+            {liveMode ? sessions.slice(0, 3).map((item, index) => <ActivityRow key={`${item.date}-${index}`} icon={<CalendarDays size={15} />} title={`${item.title} · ${item.status}`} detail={`${item.date} · الحضور: ${item.attendanceStatus === "UNMARKED" ? "لم يسجل" : item.attendanceStatus ?? "غير متاح"}`} tone={item.status === "مكتملة" ? "teal" : "blue"} />) : <>
             <ActivityRow
               icon={<CheckCircle2 size={15} />}
               title="أكملت جلسة دوائر التحكم"
@@ -303,30 +366,31 @@ function HomeTab({ onNavigate, progress, achievements }: { onNavigate: (tab: Stu
               detail="منذ أسبوع"
               tone="amber"
             />
+            </>}
           </div>
         </section>
       </div>
     </>
   );
 }
-function SessionsTab() {
+function SessionsTab({ sessions, liveMode, courseName }: { sessions: PortalSession[]; liveMode: boolean; courseName: string }) {
   return (
     <section className="student-panel student-detail-panel">
       <PanelTitle
         icon={<CalendarDays size={15} />}
         title="جلساتي"
-        action={<span className="student-context">روبوتكس مستوى 2</span>}
+        action={<span className="student-context">{courseName}</span>}
       />
       <div className="student-session-list">
-        {sessions.map(session => (
+        {sessions.map((session, index) => (
           <article
             className="student-session"
-            key={`${session.date}-${session.unit}`}
+            key={`${session.date}-${session.unit}-${index}`}
           >
             <span
-              className={`student-session-icon ${session.status === "قادمة" ? "upcoming" : "done"}`}
+              className={`student-session-icon ${session.status === "قادمة" || session.status === "مجدولة" ? "upcoming" : "done"}`}
             >
-              {session.status === "قادمة" ? (
+              {session.status === "قادمة" || session.status === "مجدولة" ? (
                 <Clock3 size={16} />
               ) : (
                 <CheckCircle2 size={16} />
@@ -339,20 +403,19 @@ function SessionsTab() {
               </small>
               <span>{session.unit}</span>
             </div>
-            <b className={session.status === "قادمة" ? "upcoming" : "done"}>
+            <b className={session.status === "قادمة" || session.status === "مجدولة" ? "upcoming" : "done"}>
               {session.status}
             </b>
           </article>
         ))}
       </div>
-      <div className="student-note">
-        <ShieldCheck size={14} /> الجلسات المعروضة هي الجلسات المسندة إلى حسابك
-        فقط.
-      </div>
+      {liveMode && sessions.length === 0 && <div className="student-note">لا توجد جلسات مرتبطة بملفك حتى الآن.</div>}
+      <div className="student-note"><ShieldCheck size={14} /> الجلسات المعروضة هي الجلسات المسندة إلى حسابك فقط.</div>
     </section>
   );
 }
-function ProgressTab({ progress, achievements, onCompleteCheckpoint }: { progress: number; achievements: StudentAchievement[]; onCompleteCheckpoint: () => void }) {
+function ProgressTab({ progress, achievements, onCompleteCheckpoint, liveMode, sessions, courseName }: { progress: number; achievements: StudentAchievement[]; onCompleteCheckpoint: () => void; liveMode: boolean; sessions: PortalSession[]; courseName: string }) {
+  if (liveMode) return <div className="student-progress-layout"><section className="student-panel"><PanelTitle icon={<Trophy size={15} />} title="تقدم الجلسات" /><div className="student-course-map"><CourseStep title={courseName} state="المسار المسند" /><CourseStep title="جلسات مكتملة" state={`${sessions.filter(item => item.status === "مكتملة").length} من ${sessions.length}`} /><CourseStep title="نسبة الإنجاز" state={`${progress}%`} /></div><div className="student-note"><ShieldCheck size={14} /> يعتمد التقدم هنا على الجلسات المسجلة فقط؛ الإنجازات اليدوية غير مفعلة.</div></section></div>;
   const checkpointComplete = achievements.find(item => item.title === "بطل الوحدة")?.unlocked ?? false;
   return (
     <div className="student-progress-layout">

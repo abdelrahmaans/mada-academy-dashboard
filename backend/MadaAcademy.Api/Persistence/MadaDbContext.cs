@@ -23,6 +23,8 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
     public DbSet<KitAssignment> KitAssignments => Set<KitAssignment>();
     public DbSet<Student> Students => Set<Student>();
     public DbSet<StudentEnrollment> StudentEnrollments => Set<StudentEnrollment>();
+    public DbSet<StudentAccountLink> StudentAccountLinks => Set<StudentAccountLink>();
+    public DbSet<GuardianStudentLink> GuardianStudentLinks => Set<GuardianStudentLink>();
     public DbSet<SessionAttendance> SessionAttendances => Set<SessionAttendance>();
     public DbSet<SessionSubstitutionProposal> SessionSubstitutionProposals => Set<SessionSubstitutionProposal>();
     public DbSet<SessionEvaluation> SessionEvaluations => Set<SessionEvaluation>();
@@ -163,6 +165,22 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
         modelBuilder.Entity<StudentEnrollment>(entity =>
         {
             entity.HasIndex(x => new { x.StudentId, x.CourseOfferingId }).IsUnique();
+        });
+        modelBuilder.Entity<StudentAccountLink>(entity =>
+        {
+            entity.HasIndex(x => x.StudentId).IsUnique();
+            entity.HasIndex(x => new { x.UserAccountId, x.TenantId }).IsUnique();
+            entity.HasOne<Student>().WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<UserAccount>().WithMany().HasForeignKey(x => x.UserAccountId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<GuardianStudentLink>(entity =>
+        {
+            entity.HasIndex(x => new { x.UserAccountId, x.StudentId }).IsUnique();
+            entity.HasIndex(x => new { x.TenantId, x.StudentId, x.Status });
+            entity.Property(x => x.Relationship).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            entity.HasOne<Student>().WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<UserAccount>().WithMany().HasForeignKey(x => x.UserAccountId).OnDelete(DeleteBehavior.Cascade);
         });
         modelBuilder.Entity<SessionAttendance>(entity =>
         {

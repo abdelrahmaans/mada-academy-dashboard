@@ -1,5 +1,6 @@
 import {
   ArrowDownToLine,
+  CalendarDays,
   CheckCircle2,
   ChevronLeft,
   FileText,
@@ -10,7 +11,7 @@ import {
   X,
 } from "lucide-react";
 
-export type ApprovalKind = "discount" | "substitute" | "expense";
+export type ApprovalKind = "discount" | "substitute" | "expense" | "session";
 export type ApprovalStatus = "pending" | "approved" | "rejected";
 
 export type ApprovalItem = {
@@ -41,6 +42,10 @@ export type ApprovalItem = {
   decidedAtSort?: number;
   decidedBy?: string;
   decisionNote?: string;
+  requestType?: string;
+  targetId?: string;
+  proposedInstructorId?: string | null;
+  live?: boolean;
 };
 
 export const APPROVAL_STATUS_LABELS: Record<ApprovalStatus, string> = {
@@ -58,10 +63,10 @@ function formatMoney(value: number) {
 function ApprovalTypeIcon({ kind }: { kind: ApprovalKind }) {
   return (
     <div
-      className={`approval-type-icon ${kind === "discount" ? "approval-discount-icon" : kind === "expense" ? "approval-expense-icon" : "approval-substitute-icon"}`}
+      className={`approval-type-icon ${kind === "discount" ? "approval-discount-icon" : kind === "expense" ? "approval-expense-icon" : kind === "session" ? "approval-session-icon" : "approval-substitute-icon"}`}
       aria-hidden="true"
     >
-      {kind === "discount" ? (
+      {kind === "session" ? <CalendarDays size={18} /> : kind === "discount" ? (
         <FileText size={18} />
       ) : kind === "expense" ? (
         <Wallet size={18} />
@@ -97,6 +102,9 @@ function ApprovalDetailStrip({ item }: { item: ApprovalItem }) {
     );
   }
 
+  if (item.kind === "session") {
+    return <div className="approval-detail-strip"><span>{item.requestType ?? "طلب جلسة"}</span><i /><span>الجلسة المستهدفة</span><bdi dir="ltr">{item.targetId}</bdi></div>;
+  }
   return (
     <div className="approval-detail-strip">
       <span>الأساسي: {item.instructor}</span>
@@ -137,6 +145,9 @@ function ApprovalSideSummary({ item }: { item: ApprovalItem }) {
     );
   }
 
+  if (item.kind === "session") {
+    return <><small>طلب جلسة تشغيلية</small><strong>{item.sessionDate ?? "بانتظار المراجعة"}</strong><span>{item.sessionTime ?? item.requestType}</span></>;
+  }
   return (
     <>
       <small>موعد الحصة</small>

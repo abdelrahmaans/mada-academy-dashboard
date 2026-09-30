@@ -1,6 +1,7 @@
 import {
   AlertCircle,
   Check,
+  CalendarDays,
   FileText,
   UserCheck,
   Wallet,
@@ -23,7 +24,7 @@ function ApprovalTypeIcon({ kind }: { kind: ApprovalItem["kind"] }) {
       className={`approval-type-icon ${kind === "discount" ? "approval-discount-icon" : kind === "expense" ? "approval-expense-icon" : "approval-substitute-icon"}`}
       aria-hidden="true"
     >
-      {kind === "discount" ? (
+      {kind === "session" ? <CalendarDays size={18} /> : kind === "discount" ? (
         <FileText size={18} />
       ) : kind === "expense" ? (
         <Wallet size={18} />
@@ -75,6 +76,7 @@ export type DecisionDialogProps = {
   discountLimit: number;
   decisionNote: string;
   expenseRejectionMode: boolean;
+  liveMode?: boolean;
   onDecisionNoteChange: (value: string) => void;
   onClose: () => void;
   onDecide: (status: "approved" | "rejected") => void;
@@ -88,6 +90,7 @@ export default function DecisionDialog({
   discountLimit,
   decisionNote,
   expenseRejectionMode,
+  liveMode = false,
   onDecisionNoteChange,
   onClose,
   onDecide,
@@ -162,6 +165,12 @@ export default function DecisionDialog({
                 <small>التصنيف</small>
                 <strong>{item.expenseCategory}</strong>
               </span>
+            </>
+          ) : item.kind === "session" ? (
+            <>
+              <span><small>نوع الطلب</small><strong>{item.requestType ?? "طلب جلسة"}</strong></span>
+              <span><small>معرّف الجلسة</small><strong dir="ltr">{item.targetId}</strong></span>
+              <span><small>الفرع</small><strong>{item.branch}</strong></span>
             </>
           ) : (
             <>
@@ -265,28 +274,26 @@ export default function DecisionDialog({
             />
             <div className="dialog-info">
               <AlertCircle size={15} />
-              <span>
-                هذا إجراء تجريبي محلي. المراجعة الحقيقية تحتاج تحقق الصلاحيات
-                وتسجيل القرار في Audit Log.
-              </span>
+                <span>{liveMode ? "سيُرسل القرار إلى الخادم ويُحفظ في سجل حالة الطلب." : "هذا إجراء تجريبي محلي؛ لا يُحفظ على الخادم."}</span>
             </div>
             <div className="approval-dialog-actions">
               <button
                 className="button button-secondary"
+                disabled={item.status !== "pending"}
                 onClick={() => {
                   if (item.kind === "expense") onStartExpenseRejection();
                   else onDecide("rejected");
                 }}
               >
-                <X size={15} /> رفض تجريبي
+                <X size={15} /> {liveMode ? "رفض الطلب" : "رفض تجريبي"}
               </button>
               <button
                 className="button button-primary"
                 onClick={() => onDecide("approved")}
-                disabled={!canApprove}
+                disabled={!canApprove || item.status !== "pending"}
               >
                 <Check size={15} />{" "}
-                {canApprove ? "موافقة تجريبية" : "رفع للإدارة"}
+                {canApprove ? (liveMode ? "اعتماد الطلب" : "موافقة تجريبية") : "ينتظر اختيار مدرب بديل"}
               </button>
             </div>
           </>

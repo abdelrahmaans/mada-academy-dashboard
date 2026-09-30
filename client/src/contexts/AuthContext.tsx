@@ -6,8 +6,8 @@ type AuthContextValue = {
   loading: boolean;
   error: string | null;
   connected: boolean;
-  login: (phone: string, password: string) => Promise<void>;
-  sendOtp: (phone: string) => Promise<string | undefined>;
+  login: (phone: string, password: string, accountType?: "staff" | "parent" | "student") => Promise<void>;
+  sendOtp: (phone: string, accountType?: "staff" | "parent" | "student") => Promise<string | undefined>;
   logout: () => Promise<void>;
   reload: () => Promise<void>;
 };
@@ -44,11 +44,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     error,
     connected: Boolean(me),
-    sendOtp: async phone => (await apiClient.sendOtp(phone)).developmentCode,
-    login: async (phone, password) => {
+    sendOtp: async (phone, accountType = "staff") => (await apiClient.sendOtp(phone, accountType)).developmentCode,
+    login: async (phone, password, accountType = "staff") => {
       setLoading(true);
       try {
-        await apiClient.login(phone, password);
+        await apiClient.login(phone, password, accountType);
         setMe(await apiClient.me());
         setError(null);
       } catch (cause) {
