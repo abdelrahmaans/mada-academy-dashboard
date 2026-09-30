@@ -25,3 +25,21 @@ public sealed class SessionAttendance : EntityBase
     public string Status { get; set; } = "PRESENT";
     public int? LateMinutes { get; set; }
 }
+
+public sealed class StudentAccountLink : EntityBase
+{
+    public Guid TenantId { get; set; }
+    public Guid StudentId { get; set; }
+    public Guid UserAccountId { get; set; }
+    public Guid? CreatedByUserId { get; set; }
+}
+
+public sealed class GuardianStudentLink : EntityBase
+{
+    public Guid TenantId { get; set; }
+    public Guid StudentId { get; set; }
+    public Guid UserAccountId { get; set; }
+    public Guid? CreatedByUserId { get; set; }
+    public required string Relationship { get; set; }
+    public string Status { get; set; } = "ACTIVE";
+}

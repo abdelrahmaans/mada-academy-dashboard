@@ -14,6 +14,10 @@ public static class SessionWorkflowEndpoints
     public static IEndpointRouteBuilder MapMadaSessionWorkflowEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var scheduling = endpoints.MapGroup("/api/v1/scheduling").RequireAuthorization("staff");
+        scheduling.MapGet("/course-templates", ListCourseTemplatesAsync);
+        scheduling.MapPost("/course-templates", CreateCourseTemplateAsync);
+        scheduling.MapGet("/groups", ListGroupsAsync);
+        scheduling.MapGet("/instructors", ListInstructorsAsync);
         scheduling.MapPost("/sessions", CreateSessionAsync);
         scheduling.MapPost("/groups", CreateGroupAsync);
         scheduling.MapPost("/session-requests", RequestSessionAsync);
@@ -25,6 +29,80 @@ public static class SessionWorkflowEndpoints
         scheduling.MapGet("/notifications", ListNotificationsAsync);
         scheduling.MapPost("/notifications/{notificationId:guid}/read", MarkNotificationReadAsync);
         return endpoints;
+    }
+
+    private static async Task<IResult> ListCourseTemplatesAsync(ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!CanCreateGroup(user) || !Scope(user, out var tenantId, out _)) return Forbidden("SCHEDULING_READ_FORBIDDEN");
+        var items = await db.CourseTemplates.AsNoTracking()
+            .Where(item => item.TenantId == tenantId && item.Status != "ARCHIVED")
+            .OrderBy(item => item.Name)
+            .Select(item => new { item.Id, item.Name, item.Track, item.Type, item.AgeGroup, item.Level, item.TotalSessions, item.SessionDurationHours, item.BasePricePiastres, item.Status })
+            .ToListAsync(cancellationToken);
+        return Results.Ok(new { data = new { items, total = items.Count } });
+    }
+
+    private static async Task<IResult> CreateCourseTemplateAsync(CreateCourseTemplateRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!CanCreateGroup(user) || !Scope(user, out var tenantId, out _)) return Forbidden("SCHEDULING_WRITE_FORBIDDEN");
+        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 160 || request.TotalSessions < 1 || request.SessionDurationHours <= 0 || request.BasePricePiastres < 0)
+            return Validation("course", "Name, positive session count and duration, and a non-negative price are required.");
+        var course = new CourseTemplate
+        {
+            TenantId = tenantId,
+            Name = request.Name.Trim(),
+            Track = string.IsNullOrWhiteSpace(request.Track) ? "general" : request.Track.Trim().ToLowerInvariant(),
+            Type = string.IsNullOrWhiteSpace(request.Type) ? "hard" : request.Type.Trim().ToLowerInvariant(),
+            AgeGroup = string.IsNullOrWhiteSpace(request.AgeGroup) ? "all" : request.AgeGroup.Trim(),
+            Level = string.IsNullOrWhiteSpace(request.Level) ? "beginner" : request.Level.Trim().ToLowerInvariant(),
+            TotalSessions = request.TotalSessions,
+            SessionDurationHours = request.SessionDurationHours,
+            BasePricePiastres = request.BasePricePiastres,
+            Status = "DRAFT"
+        };
+        db.CourseTemplates.Add(course);
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.Created($"/api/v1/scheduling/course-templates/{course.Id}", new { data = new { course.Id, course.Name, course.Track, course.Type, course.AgeGroup, course.Level, course.TotalSessions, course.SessionDurationHours, course.BasePricePiastres, course.Status } });
+    }
+
+    private static async Task<IResult> ListGroupsAsync(ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!CanCreateGroup(user) || !Scope(user, out var tenantId, out var branchScope)) return Forbidden("SCHEDULING_READ_FORBIDDEN");
+        var items = await (from offering in db.CourseOfferings.AsNoTracking()
+                           join template in db.CourseTemplates.AsNoTracking() on offering.CourseTemplateId equals template.Id
+                           join branch in db.Branches.AsNoTracking() on offering.BranchId equals branch.Id
+                           join classroom in db.Classrooms.AsNoTracking() on offering.ClassroomId equals classroom.Id
+                           join instructor in db.UserAccounts.AsNoTracking() on offering.InstructorId equals instructor.Id
+                           where offering.TenantId == tenantId && (!branchScope.HasValue || offering.BranchId == branchScope.Value)
+                           orderby offering.StartDate descending
+                           select new
+                           {
+                               offering.Id, offering.CourseTemplateId, courseName = template.Name, track = template.Track,
+                               branchId = offering.BranchId, branchName = branch.Name,
+                               instructorId = offering.InstructorId, instructorName = instructor.DisplayName,
+                               classroomId = offering.ClassroomId, classroomName = classroom.Name,
+                               startDate = offering.StartDate, endDate = offering.EndDate,
+                               weeklyScheduleJson = offering.WeeklyScheduleJson, offering.Status, offering.MaxStudents,
+                               enrolledStudents = db.StudentEnrollments.Count(enrollment => enrollment.CourseOfferingId == offering.Id && enrollment.Status == "ACTIVE")
+                           }).ToListAsync(cancellationToken);
+        return Results.Ok(new { data = new { items, total = items.Count } });
+    }
+
+    private static async Task<IResult> ListInstructorsAsync(ClaimsPrincipal user, MadaDbContext db, Guid? branchId, CancellationToken cancellationToken)
+    {
+        if (!CanCreateGroup(user) || !Scope(user, out var tenantId, out var branchScope)) return Forbidden("SCHEDULING_READ_FORBIDDEN");
+        if (branchScope.HasValue && branchId.HasValue && branchScope != branchId) return Forbidden("BRANCH_SCOPE_DENIED");
+        var selectedBranch = branchScope ?? branchId;
+        var items = await db.Memberships.AsNoTracking()
+            .Where(item => item.TenantId == tenantId && item.Status == "ACTIVE" &&
+                (item.RoleCode == "R03_HEAD_INSTRUCTORS" || item.RoleCode == "R04_INSTRUCTOR") &&
+                (!selectedBranch.HasValue || item.BranchId == null || item.BranchId == selectedBranch) &&
+                item.UserAccount != null && item.UserAccount.AccountType == "staff" && item.UserAccount.Status == "ACTIVE")
+            .OrderBy(item => item.UserAccount!.DisplayName)
+            .Select(item => new { id = item.UserAccountId, name = item.UserAccount!.DisplayName, item.RoleCode, item.BranchId })
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        return Results.Ok(new { data = new { items, total = items.Count, branchId = selectedBranch } });
     }
 
     private static async Task<IResult> CreateSessionAsync(CreateSessionRequest request, ClaimsPrincipal user, MadaDbContext db, ConflictService conflicts, CancellationToken cancellationToken)
@@ -144,11 +222,50 @@ public static class SessionWorkflowEndpoints
         return Results.Accepted(null, new { data = new { approvalId, proposedInstructorId = actorId.Value } });
     }
 
-    private static async Task<IResult> ListApprovalsAsync(ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    private static async Task<IResult> ListApprovalsAsync(ClaimsPrincipal user, MadaDbContext db, string? state, CancellationToken cancellationToken)
     {
         if (!CanDecide(user) || !Scope(user, out var tenantId, out var branchScope)) return Forbidden("APPROVAL_REVIEW_FORBIDDEN");
-        var approvals = await db.ApprovalRequests.AsNoTracking().Where(item => item.TenantId == tenantId && item.State == "PENDING" && (!branchScope.HasValue || item.BranchId == branchScope.Value)).OrderBy(item => item.CreatedAt).ToListAsync(cancellationToken);
-        return Results.Ok(new { data = new { items = approvals, total = approvals.Count } });
+        var normalizedState = string.IsNullOrWhiteSpace(state) || state.Equals("ALL", StringComparison.OrdinalIgnoreCase) ? null : state.Trim().ToUpperInvariant();
+        if (normalizedState is not null && normalizedState is not ("PENDING" or "APPROVED" or "REJECTED")) return Validation("state", "State must be ALL, PENDING, APPROVED, or REJECTED.");
+        var approvals = await db.ApprovalRequests.AsNoTracking()
+            .Where(item => item.TenantId == tenantId && (!branchScope.HasValue || item.BranchId == branchScope.Value) && (normalizedState == null || item.State == normalizedState))
+            .OrderByDescending(item => item.CreatedAt)
+            .ToListAsync(cancellationToken);
+        var approvalIds = approvals.Select(item => item.Id).ToArray();
+        var proposals = await db.SessionSubstitutionProposals.AsNoTracking()
+            .Where(item => approvalIds.Contains(item.ApprovalRequestId) && item.State == "PENDING")
+            .GroupBy(item => item.ApprovalRequestId)
+            .Select(group => new { ApprovalId = group.Key, InstructorId = group.Select(item => item.ProposedInstructorId).FirstOrDefault() })
+            .ToDictionaryAsync(item => item.ApprovalId, item => (Guid?)item.InstructorId, cancellationToken);
+        var targetSessionIds = approvals.Where(item => item.TargetType == "SESSION").Select(item => Guid.TryParse(item.TargetId, out var id) ? id : Guid.Empty).Where(id => id != Guid.Empty).Distinct().ToArray();
+        var sessionContext = await db.AcademySessions.AsNoTracking().Where(item => item.TenantId == tenantId && targetSessionIds.Contains(item.Id))
+            .Select(item => new
+            {
+                item.Id, item.StartAt, item.EndAt, item.SessionNumber,
+                branchName = db.Branches.Where(branch => branch.Id == item.BranchId).Select(branch => branch.Name).FirstOrDefault(),
+                instructorName = db.UserAccounts.Where(account => account.Id == item.InstructorId).Select(account => account.DisplayName).FirstOrDefault(),
+                courseName = db.CourseOfferings.Where(offering => offering.Id == item.CourseOfferingId).Join(db.CourseTemplates, offering => offering.CourseTemplateId, course => course.Id, (_, course) => course.Name).FirstOrDefault()
+            }).ToDictionaryAsync(item => item.Id, cancellationToken);
+        var branchIds = approvals.Where(item => item.BranchId.HasValue).Select(item => item.BranchId!.Value).Distinct().ToArray();
+        var branchNames = await db.Branches.AsNoTracking().Where(item => branchIds.Contains(item.Id)).ToDictionaryAsync(item => item.Id, item => item.Name, cancellationToken);
+        var items = approvals.Select(item =>
+        {
+            var hasTarget = Guid.TryParse(item.TargetId, out var targetId);
+            sessionContext.TryGetValue(hasTarget ? targetId : Guid.Empty, out var context);
+            return new
+            {
+                item.Id, item.TenantId, item.BranchId, item.RequestType, item.TargetType, item.TargetId,
+                item.SubmittedByRole, item.State, item.Reason, item.CreatedAt, item.DecidedAt, item.DecidedByUserId,
+                proposedInstructorId = proposals.GetValueOrDefault(item.Id),
+                branchName = item.BranchId.HasValue ? branchNames.GetValueOrDefault(item.BranchId.Value) : null,
+                sessionStartAt = context?.StartAt,
+                sessionEndAt = context?.EndAt,
+                sessionNumber = context?.SessionNumber,
+                courseName = context?.courseName,
+                instructorName = context?.instructorName
+            };
+        }).ToList();
+        return Results.Ok(new { data = new { items, total = items.Count } });
     }
 
     private static async Task<IResult> DecideApprovalAsync(Guid approvalId, ApprovalDecision request, ClaimsPrincipal user, MadaDbContext db, ConflictService conflicts, CancellationToken cancellationToken)
@@ -225,6 +342,7 @@ public static class SessionWorkflowEndpoints
 }
 
 public sealed record CreateGroupRequest(Guid BranchId, Guid CourseTemplateId, Guid InstructorId, Guid ClassroomId, DateOnly StartDate, DateOnly EndDate, IReadOnlyList<int> DaysOfWeek, TimeOnly StartTime, int DurationMinutes, int MaxStudents, IReadOnlyList<Guid>? StudentIds = null, int FinalPricePiastres = 0, string? Notes = null);
+public sealed record CreateCourseTemplateRequest(string Name, string Track, string Type, string AgeGroup, string Level, int TotalSessions, decimal SessionDurationHours, int BasePricePiastres);
 public sealed record CreateSessionRequest(Guid BranchId, Guid ClassroomId, Guid InstructorId, DateTimeOffset StartAt, DateTimeOffset EndAt, int SessionNumber, Guid? CourseOfferingId = null, string? Type = "REGULAR", string? Notes = null, IReadOnlyList<Guid>? StudentIds = null, IReadOnlyList<KitRequest>? Kits = null);
 public sealed record RequestSessionRequest(string Type, Guid BranchId, Guid ClassroomId, DateTimeOffset StartAt, DateTimeOffset EndAt, int SessionNumber, IReadOnlyList<Guid>? StudentIds = null, Guid? CourseOfferingId = null, Guid? InstructorId = null, string? Reason = null, string? Notes = null);
 public sealed record SubstitutionRequest(string Reason);

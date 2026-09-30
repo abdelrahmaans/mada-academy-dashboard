@@ -142,4 +142,86 @@ public sealed class InMemoryApiTests
         Assert.Equal(HttpStatusCode.Accepted, first.StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
     }
+
+    [Fact]
+    public async Task InstructorReads_AreLimitedToSessionsAndStudentsAssignedToThatInstructor()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var client = factory.CreateClient();
+        var account = await TestData.CreateAccountAsync(factory, "R04_INSTRUCTOR");
+        var assignedStudentId = Guid.NewGuid();
+        var otherStudentId = Guid.NewGuid();
+        var assignedOfferingId = Guid.NewGuid();
+        var otherOfferingId = Guid.NewGuid();
+        var assignedSessionId = Guid.NewGuid();
+        var otherSessionId = Guid.NewGuid();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            db.Students.AddRange(
+                new Student { Id = assignedStudentId, TenantId = account.TenantId, BranchId = account.BranchId, FullName = "Assigned Student" },
+                new Student { Id = otherStudentId, TenantId = account.TenantId, BranchId = account.BranchId, FullName = "Other Instructor Student" });
+            db.CourseOfferings.AddRange(
+                new CourseOffering { Id = assignedOfferingId, TenantId = account.TenantId, BranchId = account.BranchId, CourseTemplateId = Guid.NewGuid(), InstructorId = account.UserId, ClassroomId = Guid.NewGuid(), StartDate = DateOnly.FromDateTime(DateTime.UtcNow), EndDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7)), MaxStudents = 8 },
+                new CourseOffering { Id = otherOfferingId, TenantId = account.TenantId, BranchId = account.BranchId, CourseTemplateId = Guid.NewGuid(), InstructorId = Guid.NewGuid(), ClassroomId = Guid.NewGuid(), StartDate = DateOnly.FromDateTime(DateTime.UtcNow), EndDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7)), MaxStudents = 8 });
+            db.StudentEnrollments.AddRange(
+                new StudentEnrollment { StudentId = assignedStudentId, CourseOfferingId = assignedOfferingId },
+                new StudentEnrollment { StudentId = otherStudentId, CourseOfferingId = otherOfferingId });
+            db.AcademySessions.AddRange(
+                new AcademySession { Id = assignedSessionId, TenantId = account.TenantId, BranchId = account.BranchId, CourseOfferingId = assignedOfferingId, InstructorId = account.UserId, ClassroomId = Guid.NewGuid(), SessionNumber = 1, StartAt = DateTimeOffset.UtcNow.AddDays(1), EndAt = DateTimeOffset.UtcNow.AddDays(1).AddHours(1) },
+                new AcademySession { Id = otherSessionId, TenantId = account.TenantId, BranchId = account.BranchId, CourseOfferingId = otherOfferingId, InstructorId = Guid.NewGuid(), ClassroomId = Guid.NewGuid(), SessionNumber = 1, StartAt = DateTimeOffset.UtcNow.AddDays(2), EndAt = DateTimeOffset.UtcNow.AddDays(2).AddHours(1) });
+            await db.SaveChangesAsync();
+        }
+        TestData.Authenticate(client, await TestData.LoginAsync(client, account));
+        var sessions = await client.GetStringAsync("/api/v1/sessions");
+        Assert.Contains(assignedSessionId.ToString(), sessions, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(otherSessionId.ToString(), sessions, StringComparison.OrdinalIgnoreCase);
+        var students = await client.GetStringAsync("/api/v1/students");
+        Assert.Contains("Assigned Student", students, StringComparison.Ordinal);
+        Assert.DoesNotContain("Other Instructor Student", students, StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/v1/sessions/{otherSessionId}/attendance")).StatusCode);
+    }
+
+    [Fact]
+    public async Task GuardianLink_OnlyExposesLinkedStudentAndConsumerMeWorks()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var manager = factory.CreateClient();
+        var staff = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
+        var parent = await TestData.CreateConsumerAccountAsync(factory, staff.TenantId, "parent", "R08_PARENT");
+        var linkedStudent = await TestData.SeedStudentAsync(factory, staff.TenantId, staff.BranchId, "Linked Child");
+        var unlinkedStudent = await TestData.SeedStudentAsync(factory, staff.TenantId, staff.BranchId, "Unlinked Child");
+        TestData.Authenticate(manager, await TestData.LoginAsync(manager, staff));
+        var linkResponse = await manager.PostAsJsonAsync($"/api/v1/students/{linkedStudent}/guardians", new { userAccountId = parent.UserId, relationship = "Mother" });
+        Assert.Equal(HttpStatusCode.OK, linkResponse.StatusCode);
+
+        using var parentClient = factory.CreateClient();
+        TestData.Authenticate(parentClient, await TestData.LoginAsync(parentClient, parent));
+        var me = await parentClient.GetStringAsync("/api/v1/me");
+        Assert.Contains("R08_PARENT", me, StringComparison.Ordinal);
+        var children = await parentClient.GetStringAsync("/api/v1/consumer/me/students");
+        Assert.Contains("Linked Child", children, StringComparison.Ordinal);
+        Assert.DoesNotContain("Unlinked Child", children, StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.NotFound, (await parentClient.GetAsync($"/api/v1/consumer/me/sessions?studentId={unlinkedStudent}")).StatusCode);
+    }
+
+    [Fact]
+    public async Task StudentAccountLink_RejectsCrossTenantAndDoesNotExposeOtherStudent()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var manager = factory.CreateClient();
+        var staff = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
+        var studentAccount = await TestData.CreateConsumerAccountAsync(factory, staff.TenantId, "student", "R09_STUDENT");
+        var studentId = await TestData.SeedStudentAsync(factory, staff.TenantId, staff.BranchId, "Student Account Link");
+        var otherTenantStudentId = await TestData.SeedStudentAsync(factory, Guid.NewGuid(), Guid.NewGuid(), "Foreign Student");
+        TestData.Authenticate(manager, await TestData.LoginAsync(manager, staff));
+        Assert.Equal(HttpStatusCode.OK, (await manager.PostAsJsonAsync($"/api/v1/students/{studentId}/student-account", new { userAccountId = studentAccount.UserId })).StatusCode);
+
+        using var studentClient = factory.CreateClient();
+        TestData.Authenticate(studentClient, await TestData.LoginAsync(studentClient, studentAccount));
+        var children = await studentClient.GetStringAsync("/api/v1/consumer/me/students");
+        Assert.Contains("Student Account Link", children, StringComparison.Ordinal);
+        Assert.DoesNotContain("Foreign Student", children, StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.NotFound, (await studentClient.GetAsync($"/api/v1/consumer/me/sessions?studentId={otherTenantStudentId}")).StatusCode);
+    }
 }

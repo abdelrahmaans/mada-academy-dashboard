@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertCircle,
@@ -19,10 +19,13 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useLocation } from "wouter";
 import ChildrenSwitcher, {
   type FamilyChild,
 } from "@/components/ChildrenSwitcher";
 import { RoleScopeProvider } from "@/contexts/RoleScopeContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { apiClient, type ConsumerSessionRecord, type ConsumerStudentRecord } from "@/lib/apiClient";
 import "@/components/RoleFoundation.css";
 
 type PortalTab = "overview" | "attendance" | "evaluations" | "invoices";
@@ -34,6 +37,7 @@ type ChildData = FamilyChild & {
   lastEvaluation: string;
   invoiceStatus: string;
   invoiceDue: string;
+  sessionRecords?: ConsumerSessionRecord[];
 };
 
 const CHILDREN: ChildData[] = [
@@ -69,15 +73,53 @@ const CHILDREN: ChildData[] = [
   },
 ];
 
+function mapFamilyChild(student: ConsumerStudentRecord, records: ConsumerSessionRecord[], index: number): ChildData {
+  const ownSessions = records.filter(item => item.studentId === student.id);
+  const marked = ownSessions.filter(item => item.attendanceStatus !== "UNMARKED");
+  const attended = marked.filter(item => item.attendanceStatus === "PRESENT" || item.attendanceStatus === "LATE").length;
+  const completed = ownSessions.filter(item => item.status === "COMPLETED").length;
+  const next = ownSessions.filter(item => new Date(item.startAt).getTime() >= Date.now() && item.status !== "CANCELLED").sort((a, b) => a.startAt.localeCompare(b.startAt))[0];
+  const lastEvaluation = ownSessions.filter(item => item.score !== null).sort((a, b) => b.startAt.localeCompare(a.startAt))[0];
+  const mostRecent = ownSessions[0];
+  const initials = student.name.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join("");
+  return {
+    id: student.id, name: student.name, initials, color: index % 2 ? "violet" : "teal",
+    course: mostRecent?.courseName ?? "لا توجد مجموعة مسجلة", branch: student.branchName ?? "—",
+    attendance: marked.length ? Math.round(attended / marked.length * 100) : 0,
+    progress: ownSessions.length ? Math.round(completed / ownSessions.length * 100) : 0,
+    nextSession: next ? `${new Date(next.startAt).toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "short" })} · ${new Date(next.startAt).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}` : "لا توجد جلسة قادمة مسجلة",
+    nextRoom: next?.classroomName ?? "—",
+    lastEvaluation: lastEvaluation ? `آخر تقييم · ${((lastEvaluation.score ?? 0) / 20).toFixed(1)} / 5` : "لا يوجد تقييم منشور",
+    invoiceStatus: "غير متاح", invoiceDue: "بيانات الفواتير غير موصولة بهذه البوابة.", sessionRecords: ownSessions,
+  };
+}
+
 export default function FamilyPortal() {
-  const [selectedId, setSelectedId] = useState(CHILDREN[0].id);
+  const { me, logout } = useAuth();
+  const [, navigate] = useLocation();
+  const [children, setChildren] = useState<ChildData[]>(apiClient.hasSession() ? [] : CHILDREN);
+  const [liveMode, setLiveMode] = useState(apiClient.hasSession());
+  const [dataLoading, setDataLoading] = useState(apiClient.hasSession());
+  const [dataError, setDataError] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState(apiClient.hasSession() ? "" : CHILDREN[0].id);
   const [tab, setTab] = useState<PortalTab>("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [supportRequested, setSupportRequested] = useState(false);
-  const child = useMemo(
-    () => CHILDREN.find(item => item.id === selectedId) ?? CHILDREN[0],
-    [selectedId]
-  );
+  const child = useMemo(() => children.find(item => item.id === selectedId) ?? children[0], [children, selectedId]);
+  useEffect(() => {
+    if (!apiClient.hasSession()) return;
+    let cancelled = false;
+    setLiveMode(true); setDataLoading(true); setChildren([]);
+    Promise.all([apiClient.consumerStudents(), apiClient.consumerSessions()])
+      .then(([students, sessions]) => {
+        if (cancelled) return;
+        const mapped = students.items.map((student, index) => mapFamilyChild(student, sessions.items, index));
+        setChildren(mapped); setSelectedId(mapped[0]?.id ?? ""); setDataError(null);
+      })
+      .catch(error => { if (!cancelled) { setChildren([]); setDataError(error instanceof Error ? error.message : "تعذر تحميل بيانات الأسرة"); } })
+      .finally(() => { if (!cancelled) setDataLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
   const tabs: Array<{ id: PortalTab; label: string; icon: typeof Home }> = [
     { id: "overview", label: "ملخص الطفل", icon: Home },
     { id: "attendance", label: "الحضور", icon: CalendarDays },
@@ -97,7 +139,7 @@ export default function FamilyPortal() {
       scopeLabel="الأطفال المرتبطون فقط"
       identityKind="consumer"
       tenantName="أكاديمية مدى"
-      demo
+      demo={!liveMode}
     >
       <div className="family-portal" dir="rtl">
       {mobileOpen && (
@@ -122,8 +164,8 @@ export default function FamilyPortal() {
         <div className="family-parent-card">
           <span className="family-parent-avatar">م</span>
           <div>
-            <strong>محمد علي</strong>
-            <small>ولي الأمر · طفلان مرتبطان</small>
+            <strong>{me?.user?.displayName || "ولي الأمر"}</strong>
+            <small>ولي الأمر · {children.length} طفل مرتبط</small>
           </div>
         </div>
         <div className="family-portal-label">مساحة الأسرة</div>
@@ -166,7 +208,7 @@ export default function FamilyPortal() {
         <button
           type="button"
           className="family-portal-logout"
-          onClick={() => toast("تسجيل الخروج التجريبي")}
+          onClick={() => { void logout().then(() => navigate("/login")); }}
         >
           <LogOut size={17} /> تسجيل الخروج
         </button>
@@ -199,17 +241,19 @@ export default function FamilyPortal() {
               <span className="family-kicker">
                 <ShieldCheck size={13} /> R08 · Parent Portal
               </span>
-              <h1>أهلًا يا محمد، تابع رحلة أطفالك</h1>
+              <h1>أهلًا {me?.user?.displayName || "بكم"}، تابع رحلة أطفالك</h1>
               <p>الحضور والتقدم والتقييمات والفواتير المرتبطة بأطفالك فقط.</p>
             </div>
-            <span className="family-demo-badge">DEMO · معاينة محلية</span>
+            <span className="family-demo-badge">{liveMode ? "LIVE · بيانات الحساب" : "DEMO · معاينة محلية"}</span>
           </div>
-          <ChildrenSwitcher
-            children={CHILDREN}
+          {dataLoading && <div className="family-info-note">جارٍ تحميل الأطفال والجلسات المرتبطة بحسابك…</div>}
+          {dataError && <div className="family-info-note" role="alert">تعذر تحميل بيانات الأسرة: {dataError}</div>}
+          {children.length > 0 && <ChildrenSwitcher
+            children={children}
             selectedId={selectedId}
             onSelect={selectChild}
-          />
-          <section className="family-selected-child">
+          />}
+          {child && <section className="family-selected-child">
             <span className={`family-child-avatar large ${child.color}`}>
               {child.initials}
             </span>
@@ -223,11 +267,12 @@ export default function FamilyPortal() {
             <span className="family-active-status">
               <CheckCircle2 size={13} /> تسجيل نشط
             </span>
-          </section>
-          {tab === "overview" && <Overview child={child} onTab={setTab} />}
-          {tab === "attendance" && <Attendance child={child} />}
-          {tab === "evaluations" && <Evaluations child={child} />}
-          {tab === "invoices" && <Invoices child={child} supportRequested={supportRequested} onRequestSupport={() => { setSupportRequested(true); toast.success("تم إرسال طلب المتابعة", { description: "ستراجعه الأكاديمية قبل أي تعديل على الفاتورة." }); }} />}
+          </section>}
+          {!dataLoading && !dataError && !child && <div className="family-info-note" role="status">لا توجد ملفات أطفال مرتبطة بهذا الحساب. تواصل مع الأكاديمية لربط الملف الصحيح.</div>}
+          {child && tab === "overview" && <Overview child={child} onTab={setTab} liveMode={liveMode} />}
+          {child && tab === "attendance" && <Attendance child={child} liveMode={liveMode} />}
+          {child && tab === "evaluations" && <Evaluations child={child} liveMode={liveMode} />}
+          {child && tab === "invoices" && (liveMode ? <section className="family-portal-panel family-detail-panel"><PanelTitle icon={<Wallet size={16} />} title="الفواتير والمدفوعات" /><div className="family-info-note"><AlertCircle size={14} /> بيانات الفواتير غير متاحة من الـAPI الحالي؛ لم نعرض أي مبالغ تجريبية على حساب حقيقي.</div></section> : <Invoices child={child} supportRequested={supportRequested} onRequestSupport={() => { setSupportRequested(true); toast.success("تم تسجيل طلب المراجعة في المعاينة فقط."); }} />)}
           <footer className="family-portal-privacy">
             <ShieldCheck size={14} />
             <span>
@@ -245,9 +290,11 @@ export default function FamilyPortal() {
 function Overview({
   child,
   onTab,
+  liveMode,
 }: {
   child: ChildData;
   onTab: (tab: PortalTab) => void;
+  liveMode: boolean;
 }) {
   return (
     <>
@@ -275,7 +322,7 @@ function Overview({
         />
         <Metric
           icon={<Wallet size={17} />}
-          label="الحالة المالية"
+          label={liveMode ? "الفواتير" : "الحالة المالية"}
           value={child.invoiceStatus}
           note={child.invoiceDue}
           tone="blue"
@@ -329,8 +376,8 @@ function Overview({
     </>
   );
 }
-function Attendance({ child }: { child: ChildData }) {
-  const days = [
+function Attendance({ child, liveMode }: { child: ChildData; liveMode: boolean }) {
+  const demoDays = [
     { value: 88, label: "متأخر" },
     { value: 100, label: "حاضر" },
     { value: 75, label: "حضور جزئي" },
@@ -340,22 +387,26 @@ function Attendance({ child }: { child: ChildData }) {
     { value: 88, label: "متأخر" },
     { value: 100, label: "حاضر" },
   ];
+  const days = liveMode
+    ? (child.sessionRecords ?? []).slice(0, 8).map(item => ({ value: item.attendanceStatus === "PRESENT" ? 100 : item.attendanceStatus === "LATE" ? 80 : item.attendanceStatus === "EXCUSED" ? 100 : 0, label: item.attendanceStatus === "PRESENT" ? "حاضر" : item.attendanceStatus === "LATE" ? "متأخر" : item.attendanceStatus === "EXCUSED" ? "بعذر" : item.attendanceStatus === "ABSENT" ? "غائب" : "لم يسجل", date: new Date(item.startAt).toLocaleDateString("ar-EG", { day: "numeric", month: "short" }) }))
+    : demoDays;
   return (
     <section className="family-portal-panel family-detail-panel">
       <PanelTitle
         icon={<CalendarDays size={16} />}
         title="سجل الحضور"
-        action={<span className="family-context">آخر ٨ جلسات</span>}
+        action={<span className="family-context">{liveMode ? "من سجل الجلسات" : "آخر ٨ جلسات"}</span>}
       />
       <div className="family-attendance-hero">
         <strong>{child.attendance}%</strong>
         <span>انتظام الحضور</span>
-        <small>مؤشر توضيحي مرتبط بالطفل المحدد</small>
+        <small>{liveMode ? "محسوب من سجلات الحضور المحفوظة" : "مؤشر توضيحي مرتبط بالطفل المحدد"}</small>
       </div>
+      {liveMode && days.length === 0 && <div className="family-info-note">لا توجد سجلات حضور لهذا الطفل بعد.</div>}
       <div className="family-attendance-list">
         {days.map((day, index) => (
           <div key={index}>
-            <span>الجلسة {index + 1}</span>
+            <span>{liveMode ? ((day as { date?: string }).date ?? `الجلسة ${index + 1}`) : `الجلسة ${index + 1}`}</span>
             <i>
               <em style={{ width: `${day.value}%` }} />
             </i>
@@ -370,14 +421,17 @@ function Attendance({ child }: { child: ChildData }) {
     </section>
   );
 }
-function Evaluations({ child }: { child: ChildData }) {
+function Evaluations({ child, liveMode }: { child: ChildData; liveMode: boolean }) {
+  const evaluation = (child.sessionRecords ?? []).filter(item => item.score !== null).sort((a, b) => b.startAt.localeCompare(a.startAt))[0];
   return (
     <section className="family-portal-panel family-detail-panel">
       <PanelTitle
         icon={<Star size={16} />}
         title="التقييمات الأكاديمية"
-        action={<span className="family-context">مرئية بعد المراجعة</span>}
+        action={<span className="family-context">{liveMode ? "النتائج المنشورة" : "مرئية بعد المراجعة"}</span>}
       />
+      {liveMode && (evaluation ? <><div className="family-rubric-grid"><Rubric label="التقييم العام" value={((evaluation.score ?? 0) / 20).toFixed(1)} /></div><div className="family-evaluation-message"><MessageCircle size={17} /><div><strong>ملاحظة المدرب · {evaluation.courseName}</strong><p>{evaluation.notes || "لا توجد ملاحظة نصية."}</p></div></div></> : <div className="family-info-note">لا يوجد تقييم منشور لهذا الطفل حتى الآن.</div>)}
+      {!liveMode && <>
       <div className="family-rubric-grid">
         <Rubric label="استيعاب الفكرة" value="4.5" />
         <Rubric label="التطبيق العملي" value="4.2" />
@@ -393,9 +447,9 @@ function Evaluations({ child }: { child: ChildData }) {
           </p>
         </div>
       </div>
+      </>}
       <div className="family-info-note">
-        <ShieldCheck size={14} /> التقييم الذي يظهر هنا تمت مراجعته أكاديميًا؛
-        طلب التصحيح يحتاج تواصلًا مع الأكاديمية.
+        <ShieldCheck size={14} /> {liveMode ? "تظهر هنا المعلومات التي أتاحها النظام لحساب الأسرة فقط." : "التقييم الذي يظهر هنا تمت مراجعته أكاديميًا؛ طلب التصحيح يحتاج تواصلًا مع الأكاديمية."}
       </div>
     </section>
   );

@@ -18,7 +18,7 @@ public static class AcademyIdentityEndpoints
             .RequireAuthorization("platform-admin");
 
         api.MapGet("/me", GetMeAsync)
-            .RequireAuthorization("staff");
+            .RequireAuthorization();
 
         return endpoints;
     }
@@ -104,7 +104,12 @@ public static class AcademyIdentityEndpoints
             !Guid.TryParse(principal.FindFirstValue("tenantId"), out var tenantId))
             return Results.Problem(statusCode: 403, title: "Missing identity scope", extensions: new Dictionary<string, object?> { ["code"] = "MISSING_IDENTITY_SCOPE" });
 
+        var accountType = principal.FindFirstValue("accountType") ?? string.Empty;
         var role = principal.FindFirstValue("role") ?? string.Empty;
+        if (accountType is not ("staff" or "parent" or "student") ||
+            accountType == "parent" && role != "R08_PARENT" ||
+            accountType == "student" && role != "R09_STUDENT")
+            return Results.Problem(statusCode: 403, title: "Invalid account role", extensions: new Dictionary<string, object?> { ["code"] = "INVALID_ACCOUNT_ROLE" });
         var membership = await db.Memberships.AsNoTracking()
             .Include(item => item.UserAccount)
             .Include(item => item.Tenant)
@@ -136,7 +141,7 @@ public static class AcademyIdentityEndpoints
                 permissions = PermissionsFor(membership.RoleCode),
                 user = new { membership.UserAccount.Id, membership.UserAccount.DisplayName, membership.UserAccount.Email, membership.UserAccount.Phone },
                 academy = new { membership.Tenant.Id, membership.Tenant.Name, membership.Tenant.Slug, membership.Tenant.Status, membership.Tenant.PlanCode },
-                branches
+                branches = accountType == "staff" ? branches : []
             }
         });
     }
@@ -177,6 +182,8 @@ public static class AcademyIdentityEndpoints
         "R02_BRANCH_MANAGER" => ["branch.read", "students.read", "students.create", "sessions.read", "sessions.create", "attendance.read", "attendance.write"],
         "R03_HEAD_INSTRUCTORS" => ["branch.read", "sessions.read", "attendance.read", "attendance.write", "evaluations.write"],
         "R04_INSTRUCTOR" => ["sessions.assigned.read", "attendance.read", "attendance.write", "evaluations.write"],
+        "R08_PARENT" => ["consumer.students.read", "consumer.sessions.read", "consumer.evaluations.read"],
+        "R09_STUDENT" => ["consumer.self.read", "consumer.sessions.read", "consumer.evaluations.read"],
         _ => []
     };
 
@@ -187,6 +194,8 @@ public static class AcademyIdentityEndpoints
         ["R02_BRANCH_MANAGER"] = "مدير الفرع",
         ["R03_HEAD_INSTRUCTORS"] = "رئيس المدربين",
         ["R04_INSTRUCTOR"] = "المدرب"
+        , ["R08_PARENT"] = "ولي الأمر",
+        ["R09_STUDENT"] = "الطالب"
     };
 }
 

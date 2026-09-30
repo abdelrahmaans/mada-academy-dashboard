@@ -98,6 +98,19 @@ export type DashboardSummary = {
   branchCount: number;
   upcoming: Array<{ id: string; sessionNumber: number; startAt: string; status: string }>;
 };
+export type CourseTemplateRecord = {
+  id: string; name: string; track: string; type: string; ageGroup: string; level: string;
+  totalSessions: number; sessionDurationHours: number; basePricePiastres: number; status: string;
+};
+export type CourseTemplatesResponse = { items: CourseTemplateRecord[]; total: number };
+export type SchedulingInstructor = { id: string; name: string | null; roleCode: string; branchId: string | null };
+export type SchedulingInstructorsResponse = { items: SchedulingInstructor[]; total: number; branchId: string | null };
+export type GroupRecord = {
+  id: string; courseTemplateId: string; courseName: string; track: string; branchId: string; branchName: string;
+  instructorId: string; instructorName: string | null; classroomId: string; classroomName: string;
+  startDate: string; endDate: string; weeklyScheduleJson: string; status: string; maxStudents: number; enrolledStudents: number;
+};
+export type GroupsResponse = { items: GroupRecord[]; total: number };
 
 export type StudentRecord = {
   id: string;
@@ -128,6 +141,10 @@ export type SessionRecord = {
   status: string;
   notes: string | null;
   completedAt: string | null;
+  instructorName?: string | null;
+  classroomName?: string | null;
+  branchName?: string | null;
+  courseName?: string | null;
 };
 
 export type SessionListResponse = {
@@ -144,7 +161,7 @@ export type CreateGroupInput = {
   finalPricePiastres?: number; notes?: string;
 };
 export type CreateGroupResponse = { groupId: string; courseTemplateId: string; sessionsCreated: number; studentCount: number; classroomId: string; instructorId: string };
-export type ApprovalRequestRecord = { id: string; tenantId: string; branchId: string | null; requestType: string; targetType: string; targetId: string; submittedByRole: string; state: string; reason: string | null; createdAt: string; decidedAt: string | null };
+export type ApprovalRequestRecord = { id: string; tenantId: string; branchId: string | null; branchName?: string | null; requestType: string; targetType: string; targetId: string; submittedByRole: string; state: string; reason: string | null; createdAt: string; decidedAt: string | null; decidedByUserId: string | null; proposedInstructorId: string | null; sessionStartAt?: string | null; sessionEndAt?: string | null; sessionNumber?: number | null; courseName?: string | null; instructorName?: string | null };
 export type ApprovalListResponse = { items: ApprovalRequestRecord[]; total: number };
 export type NotificationRecord = { id: string; tenantId: string; branchId: string | null; recipientUserId: string; type: string; title: string; body: string; targetType: string | null; targetId: string | null; isRead: boolean; createdAt: string };
 export type NotificationListResponse = { items: NotificationRecord[]; total: number };
@@ -168,6 +185,20 @@ export type AttendanceRecordInput = {
   studentId: string;
   status: Exclude<AttendanceItem["status"], "UNMARKED">;
   lateMinutes?: number | null;
+};
+export type ConsumerStudentRecord = { id: string; name: string; branchId: string; branchName: string | null; relationship: string };
+export type ConsumerStudentsResponse = { items: ConsumerStudentRecord[]; total: number };
+export type ConsumerSessionRecord = {
+  sessionId: string; studentId: string; studentName: string; sessionNumber: number; startAt: string; endAt: string;
+  status: string; courseName: string; branchName: string; classroomName: string; attendanceStatus: string;
+  score: number | null; notes: string | null;
+};
+export type ConsumerSessionsResponse = { items: ConsumerSessionRecord[]; total: number };
+export type ConsumerLinksResponse = {
+  studentId: string;
+  studentAccount: { id: string; name: string | null; phone: string; email: string } | null;
+  guardians: Array<{ id: string; name: string | null; phone: string; email: string; relationship: string; status: string }>;
+  totalGuardians: number;
 };
 
 export class ApiRequestError extends Error {
@@ -249,14 +280,14 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
 export const apiClient = {
   baseUrl: API_BASE,
   hasSession: () => Boolean(accessToken),
-  login: async (phone: string, password: string) => {
-    const response = await request<TokenResponse>("/auth/login", { method: "POST", body: JSON.stringify({ phone, password, accountType: "staff" }) }, false);
+  login: async (phone: string, password: string, accountType: "staff" | "parent" | "student" = "staff") => {
+    const response = await request<TokenResponse>("/auth/login", { method: "POST", body: JSON.stringify({ phone, password, accountType }) }, false);
     saveTokens(response);
     return response;
   },
-  sendOtp: (phone: string) => request<{ expiresAt: string; developmentCode?: string }>("/auth/otp/send", { method: "POST", body: JSON.stringify({ phone, accountType: "staff" }) }),
-  verifyOtp: async (phone: string, code: string) => {
-    const response = await request<TokenResponse>("/auth/otp/verify", { method: "POST", body: JSON.stringify({ phone, code, accountType: "staff" }) }, false);
+  sendOtp: (phone: string, accountType: "staff" | "parent" | "student" = "staff") => request<{ expiresAt: string; developmentCode?: string }>("/auth/otp/send", { method: "POST", body: JSON.stringify({ phone, accountType }) }),
+  verifyOtp: async (phone: string, code: string, accountType: "staff" | "parent" | "student" = "staff") => {
+    const response = await request<TokenResponse>("/auth/otp/verify", { method: "POST", body: JSON.stringify({ phone, code, accountType }) }, false);
     saveTokens(response);
     return response;
   },
@@ -288,6 +319,10 @@ export const apiClient = {
     request<ClassroomResource>(`/academy/classrooms/${classroomId}/resources/${resourceId}`, { method: "PUT", body: JSON.stringify(input) }),
   deleteClassroomResource: (classroomId: string, resourceId: string) => request<void>(`/academy/classrooms/${classroomId}/resources/${resourceId}`, { method: "DELETE" }),
   schedulingClassrooms: (branchId?: string) => request<SchedulingClassroomsResponse>(`/scheduling/classrooms${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`),
+  schedulingInstructors: (branchId?: string) => request<SchedulingInstructorsResponse>(`/scheduling/instructors${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`),
+  courseTemplates: () => request<CourseTemplatesResponse>("/scheduling/course-templates"),
+  createCourseTemplate: (input: Omit<CourseTemplateRecord, "id" | "status">) => request<CourseTemplateRecord>("/scheduling/course-templates", { method: "POST", body: JSON.stringify(input) }),
+  listGroups: () => request<GroupsResponse>("/scheduling/groups"),
   checkSchedulingConflict: (input: { branchId: string; instructorId: string; classroomId: string; startAt: string; endAt: string; studentIds?: string[]; kits?: Array<{ kitId: string; quantity: number }> }) =>
     request<{ hasConflict: boolean; conflicts: { instructorSessions: string[]; classroomSessions: string[]; students: string[]; kits: string[]; branchHours: boolean } }>("/scheduling/check-conflict", { method: "POST", body: JSON.stringify({ ...input, studentIds: input.studentIds ?? [], kits: input.kits ?? [] }) }),
   createGroup: (input: CreateGroupInput) => request<CreateGroupResponse>("/scheduling/groups", { method: "POST", body: JSON.stringify(input) }),
@@ -297,7 +332,7 @@ export const apiClient = {
     request<{ approvalId: string; sessionId: string; state: string; type?: string }>("/scheduling/session-requests", { method: "POST", body: JSON.stringify(input) }),
   requestSubstitution: (sessionId: string, reason: string) => request<{ approvalId: string; sessionId: string; state: string }>(`/scheduling/sessions/${sessionId}/substitution-requests`, { method: "POST", body: JSON.stringify({ reason }) }),
   proposeSubstitute: (approvalId: string, message?: string) => request<{ approvalId: string; proposedInstructorId: string }>(`/scheduling/approvals/${approvalId}/proposals`, { method: "POST", body: JSON.stringify({ message }) }),
-  listApprovals: () => request<ApprovalListResponse>("/scheduling/approvals"),
+  listApprovals: (state: "ALL" | "PENDING" | "APPROVED" | "REJECTED" = "ALL") => request<ApprovalListResponse>(`/scheduling/approvals?state=${state}`),
   decideApproval: (approvalId: string, input: { decision: "APPROVED" | "REJECTED"; assignedInstructorId?: string; reason?: string }) => request<{ approvalId: string; state: string; sessionId: string; sessionStatus: string; substituteInstructorId: string | null }>(`/scheduling/approvals/${approvalId}/decision`, { method: "POST", body: JSON.stringify(input) }),
   saveSessionEvaluations: (sessionId: string, items: Array<{ studentId: string; score?: number | null; notes?: string }>) => request<{ sessionId: string; saved: number }>(`/scheduling/sessions/${sessionId}/evaluations`, { method: "PUT", body: JSON.stringify({ items }) }),
   listNotifications: (unreadOnly = false) => request<NotificationListResponse>(`/scheduling/notifications?unreadOnly=${unreadOnly}`),
@@ -311,6 +346,13 @@ export const apiClient = {
     request<{ membershipId: string; status: string; userStatus: string }>(`/academy/members/${membershipId}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
   dashboardSummary: () => request<DashboardSummary>("/dashboard/summary"),
   listStudents: () => request<StudentListResponse>("/students"),
+  consumerStudents: () => request<ConsumerStudentsResponse>("/consumer/me/students"),
+  consumerSessions: (studentId?: string) => request<ConsumerSessionsResponse>(`/consumer/me/sessions${studentId ? `?studentId=${encodeURIComponent(studentId)}` : ""}`),
+  studentConsumerLinks: (studentId: string) => request<ConsumerLinksResponse>(`/students/${studentId}/consumer-links`),
+  linkStudentAccount: (studentId: string, userAccountId: string) => request<{ studentId: string; userAccountId: string; accountType: string; linked: boolean }>(`/students/${studentId}/student-account`, { method: "POST", body: JSON.stringify({ userAccountId }) }),
+  unlinkStudentAccount: (studentId: string) => request<void>(`/students/${studentId}/student-account`, { method: "DELETE" }),
+  linkGuardian: (studentId: string, input: { userAccountId: string; relationship: string }) => request<{ studentId: string; userAccountId: string; relationship: string; linked: boolean }>(`/students/${studentId}/guardians`, { method: "POST", body: JSON.stringify(input) }),
+  unlinkGuardian: (studentId: string, userAccountId: string) => request<void>(`/students/${studentId}/guardians/${userAccountId}`, { method: "DELETE" }),
   listSessions: (params: { from?: string; to?: string; status?: string } = {}) => {
     const query = new URLSearchParams();
     if (params.from) query.set("from", params.from);

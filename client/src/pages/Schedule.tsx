@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
-import { apiClient, type SchedulingClassroom } from "@/lib/apiClient";
+import { apiClient, type SchedulingClassroom, type SchedulingInstructor, type SessionRecord } from "@/lib/apiClient";
 
 type SessionStatus =
   | "scheduled"
@@ -52,6 +52,9 @@ type Session = {
   capacity: number;
   status: SessionStatus;
   type: SessionType;
+  branchId?: string;
+  classroomId?: string;
+  instructorId?: string;
 };
 type SessionTemplate = Omit<Session, "date" | "status"> & {
   day: number;
@@ -68,7 +71,35 @@ type SessionForm = Pick<
   | "room"
   | "branch"
   | "type"
->;
+> & { branchId?: string; classroomId?: string; instructorId?: string };
+
+function sessionFromApi(record: SessionRecord): Session {
+  const start = new Date(record.startAt);
+  const end = new Date(record.endAt);
+  const date = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
+  const startTime = `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`;
+  const duration = Math.max(1, Math.round((end.getTime() - start.getTime()) / 60000));
+  const status: SessionStatus = record.status === "COMPLETED" ? "completed" : record.status === "CANCELLED" ? "cancelled" : record.status === "PENDING_APPROVAL" ? "pending_approval" : "scheduled";
+  const type: SessionType = record.type === "COMPETITION_TRAINING" ? "competition_training" : record.type === "COMPETITION_DAY" ? "competition_day" : "regular";
+  return {
+    id: record.id,
+    date,
+    startTime,
+    duration,
+    title: record.courseName || `جلسة رقم ${record.sessionNumber}`,
+    level: record.notes || "جلسة مسجلة على النظام",
+    instructor: record.instructorName || record.instructorId,
+    room: record.classroomName || record.classroomId,
+    branch: record.branchName || record.branchId,
+    enrolled: 0,
+    capacity: 0,
+    status,
+    type,
+    branchId: record.branchId,
+    classroomId: record.classroomId,
+    instructorId: record.instructorId,
+  };
+}
 
 const DAY_NAMES = [
   "السبت",
@@ -464,8 +495,11 @@ function SchedulePage() {
   const [dialogMode, setDialogMode] = useState<"add" | "edit" | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [detailsSession, setDetailsSession] = useState<Session | null>(null);
+  const [liveMode, setLiveMode] = useState(() => apiClient.hasSession());
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [liveClassrooms, setLiveClassrooms] = useState<SchedulingClassroom[]>([]);
   const [liveClassroomsReady, setLiveClassroomsReady] = useState(false);
+  const [liveInstructors, setLiveInstructors] = useState<SchedulingInstructor[]>([]);
   const [form, setForm] = useState<SessionForm>(() => ({
     date: toISODate(BASE_DATE),
     startTime: "16:00",
@@ -478,8 +512,28 @@ function SchedulePage() {
     type: "regular",
   }));
   useEffect(() => {
-    apiClient.schedulingClassrooms().then(response => { setLiveClassrooms(response.items); setLiveClassroomsReady(true); }).catch(() => setLiveClassroomsReady(false));
+    if (!apiClient.hasSession()) { setLiveMode(false); return; }
+    setLiveMode(true);
+    setSessions([]);
+    setLoadError(null);
+    Promise.all([apiClient.listSessions(), apiClient.schedulingClassrooms(), apiClient.schedulingInstructors()])
+      .then(([sessionResponse, classroomResponse, instructorResponse]) => {
+        setLiveClassrooms(classroomResponse.items);
+        setLiveInstructors(instructorResponse.items);
+        setLiveClassroomsReady(true);
+        setSessions(sessionResponse.items.map(sessionFromApi));
+      })
+      .catch(cause => {
+        setLiveClassrooms([]);
+        setLiveInstructors([]);
+        setLiveClassroomsReady(false);
+        setSessions([]);
+        setLoadError(cause instanceof Error ? cause.message : "تعذر تحميل بيانات الجدول من الخادم.");
+      });
   }, []);
+
+  const liveBranches = Array.from(new Map(liveClassrooms.map(room => [room.branchId, room.branchName])).entries()).map(([id, name]) => ({ id, name }));
+  const selectedLiveRooms = liveClassrooms.filter(room => room.branchId === form.branchId && room.status === "AVAILABLE");
 
   const weekStart = useMemo(
     () => addDays(BASE_DATE, weekOffset * 7),
@@ -584,6 +638,8 @@ function SchedulePage() {
 
   const openAddDialog = () => {
     const date = view === "day" ? days[selectedDay].iso : toISODate(weekStart);
+    const defaultRoom = liveClassrooms.find(room => room.branchName === branch) ?? liveClassrooms[0];
+    const defaultInstructor = liveInstructors[0];
     setEditingId(null);
     setForm({
       date,
@@ -591,15 +647,22 @@ function SchedulePage() {
       duration: 90,
       title: "",
       level: "المستوى التمهيدي",
-      instructor: INSTRUCTORS[0],
-      room: ROOMS[0],
-      branch: branch === "كل الفروع" ? BRANCHES[0] : branch,
+      instructor: defaultInstructor?.name ?? INSTRUCTORS[0],
+      instructorId: defaultInstructor?.id,
+      room: defaultRoom?.name ?? ROOMS[0],
+      classroomId: defaultRoom?.id,
+      branch: defaultRoom?.branchName ?? (branch === "كل الفروع" ? BRANCHES[0] : branch),
+      branchId: defaultRoom?.branchId,
       type: "regular",
     });
     setDialogMode("add");
   };
 
   const openEditDialog = (session: Session) => {
+    if (liveMode) {
+      toast.info("تعديل الجلسة من الجدول غير متاح عبر الـAPI الحالي", { description: "لن يتم حفظ أي تعديل محلي على جلسة خادمية." });
+      return;
+    }
     setEditingId(session.id);
     setForm({
       date: session.date,
@@ -623,6 +686,57 @@ function SchedulePage() {
 
   const handleSessionSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (liveMode) {
+      if (dialogMode === "edit") {
+        toast.error("لا يتوفر endpoint لتعديل الجلسة بعد.");
+        return;
+      }
+      const liveRoom = liveClassrooms.find(room => room.id === form.classroomId);
+      const liveInstructor = liveInstructors.find(instructor => instructor.id === form.instructorId);
+      if (!liveRoom || !liveInstructor) {
+        toast.error("اختر مدربًا وقاعة متاحة من بيانات الأكاديمية الحية.");
+        return;
+      }
+      const startsAt = new Date(`${form.date}T${form.startTime}:00`);
+      const endsAt = new Date(startsAt);
+      endsAt.setMinutes(endsAt.getMinutes() + Number(form.duration));
+      try {
+        const response = await apiClient.createSession({
+          branchId: liveRoom.branchId,
+          classroomId: liveRoom.id,
+          instructorId: liveInstructor.id,
+          startAt: startsAt.toISOString(),
+          endAt: endsAt.toISOString(),
+          sessionNumber: 1,
+          type: form.type.toUpperCase(),
+          notes: form.title.trim(),
+        });
+        const created: Session = {
+          ...form,
+          id: response.sessionId,
+          title: form.title.trim(),
+          instructor: liveInstructor.name ?? liveInstructor.id,
+          room: liveRoom.name,
+          branch: liveRoom.branchName,
+          branchId: liveRoom.branchId,
+          classroomId: liveRoom.id,
+          instructorId: liveInstructor.id,
+          duration: Number(form.duration),
+          enrolled: 0,
+          capacity: liveRoom.capacity,
+          status: "scheduled",
+        };
+        setSessions(current => [created, ...current]);
+        const chosenDate = fromISODate(form.date);
+        setWeekOffset(Math.floor((chosenDate.getTime() - BASE_DATE.getTime()) / (7 * 24 * 60 * 60 * 1000)));
+        setSelectedDay((chosenDate.getDay() + 1) % 7);
+        toast.success("تم حفظ الجلسة على الخادم", { description: `رقم الجلسة: ${response.sessionNumber} · ${response.status}` });
+        closeDialog();
+      } catch (cause) {
+        toast.error("تعذر حفظ الجلسة", { description: cause instanceof Error ? cause.message : "فشل الاتصال بالخادم." });
+      }
+      return;
+    }
     const start = minutesFromTime(form.startTime);
     const end = start + Number(form.duration);
     const conflict = sessions.find(session => {
@@ -649,21 +763,6 @@ function SchedulePage() {
         description: `الحصة تتداخل مع «${conflict.title}» في ${resource}. غيّر الوقت أو المورد قبل الحفظ.`,
       });
       return;
-    }
-    const liveRoom = liveClassrooms.find(room => room.name === form.room && room.branchName === form.branch);
-    if (liveRoom) {
-      const branchId = liveRoom.branchId;
-      const startAt = new Date(`${form.date}T${form.startTime}:00`).toISOString();
-      const endDate = new Date(`${form.date}T${form.startTime}:00`); endDate.setMinutes(endDate.getMinutes() + Number(form.duration));
-      try {
-        await apiClient.checkSchedulingConflict({ branchId, instructorId: "00000000-0000-0000-0000-000000000000", classroomId: liveRoom.id, startAt, endAt: endDate.toISOString() });
-      } catch (cause) {
-        const code = (cause as { code?: string }).code;
-        if (code === "SCHEDULING_CONFLICT" || cause instanceof Error && cause.message.includes("SCHEDULING_CONFLICT")) {
-          toast.error("لا يمكن حجز القاعة في هذا الموعد", { description: "هناك حصة أخرى متداخلة في نفس القاعة. اختر وقتًا أو قاعة أخرى." }); return;
-        }
-        toast.error("تعذر التحقق من توفر القاعة", { description: "لم يتم الحفظ حتى لا يتم تجاوز حماية التعارض." }); return;
-      }
     }
     if (dialogMode === "edit" && editingId) {
       setSessions(current =>
@@ -703,6 +802,10 @@ function SchedulePage() {
   };
 
   const cancelSession = (session: Session) => {
+    if (liveMode) {
+      toast.info("إلغاء الجلسة غير متاح من هذه الشاشة", { description: "لا يوجد endpoint إلغاء في الـAPI الحالي؛ لم يتغير سجل الخادم." });
+      return;
+    }
     setSessions(current =>
       current.map(item =>
         item.id === session.id ? { ...item, status: "cancelled" } : item
@@ -857,7 +960,7 @@ function SchedulePage() {
                   >
                     كل الفروع
                   </button>
-                  {BRANCHES.map(item => (
+                  {(liveMode ? liveBranches.map(item => item.name) : BRANCHES).map(item => (
                     <button
                       className={branch === item ? "selected" : ""}
                       key={item}
@@ -920,6 +1023,11 @@ function SchedulePage() {
               </div>
               <h1>الجدول</h1>
               <p>نظّم حصص الأسبوع وتابع الكوتشيز والقاعات من شاشة واحدة.</p>
+              <div className="students-demo-note" role="status">
+                <strong>{liveMode ? "بيانات حية من الخادم" : "DEMO · بيانات توضيحية"}</strong>
+                <span>{liveMode ? "الحفظ ينشئ جلسة جديدة على الـAPI؛ التعديل والإلغاء غير متاحين من هذه الشاشة." : "الإضافات والتعديلات محلية للعرض التجريبي فقط."}</span>
+              </div>
+              {loadError && <div className="students-demo-note" role="alert"><strong>تعذر تحميل الجدول</strong><span>{loadError}</span></div>}
             </div>
             <div className="welcome-actions">
               <button
@@ -1380,7 +1488,7 @@ function SchedulePage() {
             <h2 id="schedule-form-title">
               {dialogMode === "edit" ? "تعديل الحصة" : "إضافة حصة للجدول"}
             </h2>
-            <p>بيانات توضيحية تُحفظ محليًا أثناء العرض فقط.</p>
+            <p>{liveMode ? "سيتم حفظ جلسة جديدة على الخادم بعد التحقق من الصلاحية والتعارض." : "وضع العرض التجريبي: التغييرات تُحفظ محليًا فقط."}</p>
             <form onSubmit={handleSessionSubmit}>
               <label className="form-field">
                 <span>
@@ -1438,16 +1546,15 @@ function SchedulePage() {
                     الكوتش <b>*</b>
                   </span>
                   <select
-                    value={form.instructor}
-                    onChange={event =>
-                      setForm(current => ({
-                        ...current,
-                        instructor: event.target.value,
-                      }))
-                    }
+                    value={liveMode ? form.instructorId ?? "" : form.instructor}
+                    onChange={event => {
+                      const selected = liveInstructors.find(item => item.id === event.target.value);
+                      setForm(current => ({ ...current, instructorId: liveMode ? event.target.value : undefined, instructor: selected?.name ?? event.target.value }));
+                    }}
                   >
-                    {INSTRUCTORS.map(item => (
-                      <option key={item}>{item}</option>
+                    {liveMode && <option value="">اختر مدربًا</option>}
+                    {(liveMode ? liveInstructors.filter(item => !item.branchId || item.branchId === form.branchId).map(item => ({ value: item.id, label: item.name ?? item.id })) : INSTRUCTORS.map(item => ({ value: item, label: item }))).map(item => (
+                      <option key={item.value} value={item.value}>{item.label}</option>
                     ))}
                   </select>
                 </label>
@@ -1456,18 +1563,16 @@ function SchedulePage() {
                     القاعة <b>*</b>
                   </span>
                   <select
-                    value={form.room}
-                    onChange={event =>
-                      setForm(current => ({
-                        ...current,
-                        room: event.target.value,
-                      }))
-                    }
+                    value={liveMode ? form.classroomId ?? "" : form.room}
+                    onChange={event => {
+                      const selected = liveClassrooms.find(item => item.id === event.target.value);
+                      setForm(current => ({ ...current, classroomId: liveMode ? event.target.value : undefined, room: selected?.name ?? event.target.value }));
+                    }}
                   >
-                    {(liveClassroomsReady ? liveClassrooms.filter(item => item.branchName === form.branch) : []).map(item => (
-                      <option key={item.id}>{item.name}</option>
+                    {liveMode && <option value="">اختر قاعة متاحة</option>}
+                    {(liveMode ? selectedLiveRooms.map(item => ({ value: item.id, label: item.name })) : ROOMS.map(item => ({ value: item, label: item }))).map(item => (
+                      <option key={item.value} value={item.value}>{item.label}</option>
                     ))}
-                    {!liveClassroomsReady && ROOMS.map(item => <option key={item}>{item}</option>)}
                   </select>
                 </label>
               </div>
@@ -1475,16 +1580,15 @@ function SchedulePage() {
                 <label className="form-field">
                   <span>الفرع</span>
                   <select
-                    value={form.branch}
-                    onChange={event =>
-                      setForm(current => ({
-                        ...current,
-                        branch: event.target.value,
-                      }))
-                    }
+                    value={liveMode ? form.branchId ?? "" : form.branch}
+                    onChange={event => {
+                      const selected = liveBranches.find(item => item.id === event.target.value);
+                      const nextRoom = liveClassrooms.find(room => room.branchId === event.target.value && room.status === "AVAILABLE");
+                      setForm(current => ({ ...current, branchId: liveMode ? event.target.value : undefined, branch: selected?.name ?? event.target.value, classroomId: nextRoom?.id, room: nextRoom?.name ?? current.room }));
+                    }}
                   >
-                    {Array.from(new Set((liveClassroomsReady ? liveClassrooms.map(item => item.branchName) : BRANCHES))).map(item => (
-                      <option key={item}>{item}</option>
+                    {(liveMode ? liveBranches.map(item => ({ value: item.id, label: item.name })) : BRANCHES.map(item => ({ value: item, label: item }))).map(item => (
+                      <option key={item.value} value={item.value}>{item.label}</option>
                     ))}
                   </select>
                 </label>

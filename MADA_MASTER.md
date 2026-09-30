@@ -209,3 +209,27 @@ R00 إلى R09 مغطاة كواجهات prototype مع role code وscope labels
 
 #### قاعدة الاستمرار
 لا يتم حذف الـdemo fixtures دفعة واحدة. كل vertical slice يتحول من fixture إلى API مع الحفاظ على loading/empty/error/pending/approved/rejected/audit feedback، وتبقى أي surface غير موصولة موسومة DEMO بوضوح.
+
+
+### 30 سبتمبر 2026 — Live Operations + Consumer Portals Checkpoint
+هذا checkpoint أحدث من التسلسل السابق ويغطي PR #13 بعد دمجه والـfeature branch الحالي `feature/live-operations-workflows`.
+
+#### التنفيذ الحالي على فرع العمل
+- ربط `Schedule`, `Classes`, `Approvals`, و`InstructorDesk` بعقود الـAPI الحية؛ الواجهات تميّز بين DEMO/LIVE ولا تدّعي حفظ عمليات غير مدعومة.
+- تضييق قراءة جلسات/طلاب المدرب إلى الجلسات المسندة إليه، وإثراء استجابات الجدول/الموافقات بأسماء التشغيل.
+- إضافة حسابات المستهلكين `R08_PARENT` و`R09_STUDENT` وروابط `StudentAccountLink` و`GuardianStudentLink` مع endpoints لإدارة الروابط وقراءة الطلاب والجلسات ذات الصلة فقط.
+- إضافة لوحة في ملف الطالب لعرض/إدارة الحسابات المرتبطة، وتوصيل بوابتي الأسرة والطالب بالبيانات المقيدة بالحساب. فواتير الأسرة لا تعرض أرقامًا تجريبية في وضع LIVE.
+- لا تُكشف درجات/ملاحظات المدرب لحساب المستهلك حتى وجود حالة نشر/مراجعة صريحة في النموذج.
+- إضافة GitHub Actions للواجهة `.github/workflows/frontend-checks.yml` إلى جانب اختبارات backend/PostgreSQL.
+
+#### التحقق المحلي
+- `pnpm check` ناجح.
+- `pnpm test`: 3/3 ناجحة.
+- `pnpm build` ناجح؛ توجد تحذيرات سابقة للمشروع عن متغيرات Umami غير المضبوطة في بيئة البناء.
+- `dotnet test backend/MadaAcademy.Api.IntegrationTests/...`: 19/19 ناجحة على PostgreSQL 16.15 (ومنها migrations وPostgreSQL-host checks).
+- `git diff --check` ناجح.
+
+#### المتبقي
+- إنشاء PR لفرع `feature/live-operations-workflows`، انتظار Frontend Checks وBackend Integration Tests، إصلاح أي فشل ثم دمجه بعد نجاح CI.
+- تقييم/نشر تقييمات المستهلك يتطلب إضافة نموذج موافقة/نشر صريح؛ حاليًا تظل الدرجات مخفية عن المستهلكين عمدًا.
+- إنشاء حسابات المستهلكين/اكتشافها عبر الهاتف غير مضاف؛ لوحة الربط الحالية تتطلب UUID لحساب موجود.

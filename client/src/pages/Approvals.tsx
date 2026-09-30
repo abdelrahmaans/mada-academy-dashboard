@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertCircle,
@@ -41,6 +41,8 @@ import DecisionDialog from "@/components/DecisionDialog";
 import NotificationCenter, {
   type NotificationItem,
 } from "@/components/NotificationCenter";
+import { apiClient, type ApprovalRequestRecord, type NotificationRecord } from "@/lib/apiClient";
+import { useAuth } from "@/contexts/AuthContext";
 
 type QueueTab = "all" | ApprovalKind;
 type ApprovalSort = "priority" | "oldest" | "newest";
@@ -191,10 +193,44 @@ function formatMoney(value: number) {
   );
 }
 
+function approvalFromApi(record: ApprovalRequestRecord): ApprovalItem {
+  const isSubstitution = record.requestType === "INSTRUCTOR_SUBSTITUTION";
+  const typeName = record.requestType === "EXTRA" ? "جلسة إضافية" : record.requestType === "MAKEUP" ? "جلسة تعويضية" : "طلب مدرب بديل";
+  const start = record.sessionStartAt ? new Date(record.sessionStartAt) : null;
+  const end = record.sessionEndAt ? new Date(record.sessionEndAt) : null;
+  const time = start ? `${start.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}${end ? ` – ${end.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}` : ""}` : undefined;
+  return {
+    id: record.id, kind: isSubstitution ? "substitute" : "session", title: typeName,
+    summary: record.reason || (record.courseName ? `${record.courseName} · جلسة ${record.sessionNumber ?? ""}` : "طلب تشغيلي مسجل على الخادم"),
+    branch: record.branchName ?? record.branchId ?? "كل الفروع", requestedBy: record.instructorName ?? record.submittedByRole,
+    submittedAt: new Date(record.createdAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" }),
+    submittedAtSort: record.createdAt, status: record.state.toLowerCase() as ApprovalStatus,
+    decidedAt: record.decidedAt ? new Date(record.decidedAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" }) : undefined,
+    decidedAtSort: record.decidedAt ? new Date(record.decidedAt).getTime() : undefined,
+    decidedBy: record.decidedByUserId ?? undefined, decisionNote: record.reason ?? undefined,
+    requestType: record.requestType, targetId: record.targetId, proposedInstructorId: record.proposedInstructorId,
+    course: record.courseName ?? undefined, instructor: record.instructorName ?? undefined,
+    substitute: record.proposedInstructorId ?? undefined,
+    sessionDate: start?.toLocaleDateString("ar-EG", { dateStyle: "medium" }), sessionTime: time, live: true,
+  };
+}
+
+function notificationFromApi(record: NotificationRecord): NotificationItem {
+  const isApproval = record.type.includes("APPROVAL") || record.type.includes("SUBSTITUTION");
+  return {
+    id: record.id, kind: isApproval ? "approval" : "warning", title: record.title, description: record.body,
+    time: new Date(record.createdAt).toLocaleString("ar-EG", { dateStyle: "short", timeStyle: "short" }),
+    unread: !record.isRead, actionLabel: isApproval ? "فتح الطلبات" : undefined,
+  };
+}
+
 export default function Approvals() {
   const [, navigate] = useLocation();
+  const { logout } = useAuth();
   const [requests, setRequests] = useState(INITIAL_REQUESTS);
-  const branch = "مدينة نصر";
+  const [liveMode, setLiveMode] = useState(() => apiClient.hasSession());
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const branch = liveMode ? "كل الفروع" : "مدينة نصر";
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState<QueueTab>("all");
@@ -207,12 +243,30 @@ export default function Approvals() {
   const [expenseRejectionMode, setExpenseRejectionMode] = useState(false);
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
   const canApproveSelected =
-    selected?.kind !== "discount" ||
-    (selected.discountValue ?? 0) <= BRANCH_MANAGER_DISCOUNT_LIMIT;
+    selected?.kind === "substitute" ? Boolean(selected.proposedInstructorId) : selected?.kind !== "discount" || (selected.discountValue ?? 0) <= BRANCH_MANAGER_DISCOUNT_LIMIT;
+
+  useEffect(() => {
+    if (!apiClient.hasSession()) { setLiveMode(false); return; }
+    setLiveMode(true);
+    setRequests([]);
+    setNotifications([]);
+    setLoadError(null);
+    Promise.all([apiClient.listApprovals(), apiClient.listNotifications()])
+      .then(([approvalResponse, notificationResponse]) => {
+        const supported = approvalResponse.items.filter(item => item.targetType === "SESSION" && ["EXTRA", "MAKEUP", "INSTRUCTOR_SUBSTITUTION"].includes(item.requestType));
+        setRequests(supported.map(approvalFromApi));
+        setNotifications(notificationResponse.items.map(notificationFromApi));
+      })
+      .catch(cause => {
+        setRequests([]);
+        setNotifications([]);
+        setLoadError(cause instanceof Error ? cause.message : "تعذر تحميل الموافقات والإشعارات من الخادم.");
+      });
+  }, []);
 
   const branchRequests = useMemo(
-    () => requests.filter(item => item.branch === branch),
-    [requests, branch]
+    () => liveMode ? requests : requests.filter(item => item.branch === branch),
+    [requests, branch, liveMode]
   );
   const visibleRequests = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("ar");
@@ -260,6 +314,7 @@ export default function Approvals() {
   const pendingExpenses = pending.filter(
     item => item.kind === "expense"
   ).length;
+  const pendingSessionRequests = pending.filter(item => item.kind === "session").length;
   const reviewedRequests = branchRequests
     .filter(item => item.status !== "pending")
     .sort((a, b) => (b.decidedAtSort ?? 0) - (a.decidedAtSort ?? 0));
@@ -287,10 +342,15 @@ export default function Approvals() {
     });
     setMobileNavOpen(false);
   };
-  const handleNotificationAction = (notification: NotificationItem) => {
+  const handleNotificationAction = async (notification: NotificationItem) => {
+    let marked = !liveMode;
+    if (liveMode) {
+      try { await apiClient.markNotificationRead(notification.id); marked = true; }
+      catch (cause) { toast.error("تعذر تحديث حالة الإشعار", { description: cause instanceof Error ? cause.message : "فشل الاتصال بالخادم." }); }
+    }
     setNotifications(current =>
       current.map(item =>
-        item.id === notification.id ? { ...item, unread: false } : item
+        item.id === notification.id ? { ...item, unread: marked ? false : item.unread } : item
       )
     );
     if (notification.id.includes("expense")) setTab("expense");
@@ -298,20 +358,27 @@ export default function Approvals() {
     else setTab("all");
     setQuery("");
     toast.success("تم فتح قائمة الموافقات", {
-      description: "البيانات توضيحية ومحلية داخل هذه المعاينة.",
+      description: liveMode ? "تم فتح قائمة الطلبات المسجلة على الخادم." : "البيانات توضيحية ومحلية داخل هذه المعاينة.",
     });
   };
-  const markAllNotificationsRead = () => {
-    setNotifications(current =>
-      current.map(item => ({ ...item, unread: false }))
-    );
+  const markAllNotificationsRead = async () => {
+    let successfullyMarked: Set<string> | null = null;
+    if (liveMode) {
+      const unreadIds = notifications.filter(item => item.unread).map(item => item.id);
+      const results = await Promise.allSettled(unreadIds.map(id => apiClient.markNotificationRead(id)));
+      successfullyMarked = new Set(unreadIds.filter((_, index) => results[index]?.status === "fulfilled"));
+      if (results.some(result => result.status === "rejected")) {
+        toast.error("تعذر تحديث بعض الإشعارات على الخادم.");
+      }
+    }
+    setNotifications(current => current.map(item => ({ ...item, unread: successfullyMarked ? successfullyMarked.has(item.id) ? false : item.unread : false })));
   };
   const openReview = (item: ApprovalItem) => {
     setDecisionNote("");
     setExpenseRejectionMode(false);
     setSelected(item);
   };
-  const decide = (id: string, status: "approved" | "rejected") => {
+  const decide = async (id: string, status: "approved" | "rejected") => {
     const item = requests.find(request => request.id === id);
     if (!item) return;
     if (
@@ -326,6 +393,27 @@ export default function Approvals() {
     }
     if (status === "rejected" && !decisionNote.trim()) {
       toast.error("اكتب سبب الرفض قبل إغلاق الطلب");
+      return;
+    }
+    if (item.live && liveMode) {
+      if (item.kind === "substitute" && status === "approved" && !item.proposedInstructorId) {
+        toast.error("لا يمكن اعتماد الاستبدال قبل اقتراح مدرب بديل.");
+        return;
+      }
+      try {
+        await apiClient.decideApproval(id, {
+          decision: status.toUpperCase() as "APPROVED" | "REJECTED",
+          assignedInstructorId: status === "approved" && item.kind === "substitute" ? item.proposedInstructorId ?? undefined : undefined,
+          reason: decisionNote.trim() || undefined,
+        });
+        const decidedAtDate = new Date();
+        const decidedAt = new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium", timeStyle: "short" }).format(decidedAtDate);
+        setRequests(current => current.map(request => request.id === id ? { ...request, status, decidedAt, decidedAtSort: decidedAtDate.getTime(), decidedBy: "المستخدم الحالي", decisionNote: decisionNote.trim() || undefined } : request));
+        setSelected(null); setDecisionNote(""); setExpenseRejectionMode(false);
+        toast.success(status === "approved" ? "تم اعتماد الطلب على الخادم" : "تم رفض الطلب على الخادم");
+      } catch (cause) {
+        toast.error("تعذر تسجيل القرار", { description: cause instanceof Error ? cause.message : "فشل الاتصال بالخادم." });
+      }
       return;
     }
     const decidedAtDate = new Date();
@@ -494,7 +582,7 @@ export default function Approvals() {
           </button>
           <button
             className="nav-link"
-            onClick={() => toast("تسجيل الخروج التجريبي")}
+            onClick={() => { void logout().then(() => navigate("/login")); }}
           >
             <LogOut size={19} />
             <span>تسجيل الخروج</span>
@@ -517,12 +605,12 @@ export default function Approvals() {
             </button>
             <div
               className="branch-select assigned-branch"
-              aria-label={`النطاق: فرع ${branch}`}
+              aria-label={liveMode ? "النطاق المصرح به" : `النطاق: فرع ${branch}`}
             >
               <span className="branch-icon">
                 <MapPin size={17} />
               </span>
-              <span>فرع {branch}</span>
+              <span>{liveMode ? "النطاق المصرح به" : `فرع ${branch}`}</span>
             </div>
             <label className="top-search">
               <Search size={18} />
@@ -540,6 +628,7 @@ export default function Approvals() {
               notifications={notifications}
               onAction={handleNotificationAction}
               onMarkAllRead={markAllNotificationsRead}
+              demo={!liveMode}
             />
             <span className="topbar-divider" />
             <button
@@ -565,13 +654,10 @@ export default function Approvals() {
           <section className="students-welcome approvals-welcome">
             <div>
               <div className="eyebrow">
-                <span className="eyebrow-dot" /> قرارات مدير الفرع · طلبات تحتاج
-                مراجعة
+                <span className="eyebrow-dot" /> {liveMode ? "طلبات الجلسات المسجلة على الخادم" : "قرارات مدير الفرع · طلبات تحتاج مراجعة"}
               </div>
               <h1>الموافقات</h1>
-              <p>
-                راجع طلبات الخصم وتغيير مدرب الحصة قبل اعتمادها لفرع {branch}.
-              </p>
+              <p>{liveMode ? "راجع طلبات الجلسات وطلبات البديل ضمن نطاق صلاحيتك." : `راجع طلبات الخصم وتغيير مدرب الحصة قبل اعتمادها لفرع ${branch}.`}</p>
             </div>
             <div className="welcome-actions">
               <button className="button button-secondary" onClick={downloadCsv}>
@@ -582,15 +668,15 @@ export default function Approvals() {
               </span>
             </div>
           </section>
+          {loadError && <section className="team-demo-note approvals-demo-note" role="alert"><AlertCircle size={16} /><span>تعذر تحميل الموافقات والإشعارات: {loadError}</span></section>}
           <section className="team-demo-note approvals-demo-note" role="note">
             <AlertCircle size={16} />
             <span>
-              بيانات توضيحية محلية. الموافقة أو الرفض يغيّر حالة الطلب داخل هذه
-              المعاينة فقط ولا يحفظ قرارًا رسميًا.
+              {liveMode ? "الطلبات التشغيلية تُقرأ من الـAPI. يمكن تسجيل القرار من هذه الشاشة؛ الخصومات والمصروفات لا يدعمها هذا endpoint." : "بيانات توضيحية محلية. الموافقة أو الرفض يغيّر حالة الطلب داخل هذه المعاينة فقط ولا يحفظ قرارًا رسميًا."}
             </span>
-            <span className="demo-tag">DEMO</span>
+            {!liveMode && <span className="demo-tag">DEMO</span>}
           </section>
-          <section
+          {!liveMode && <section
             className="manager-policy-card"
             aria-label="صلاحيات مدير الفرع"
           >
@@ -607,7 +693,7 @@ export default function Approvals() {
             <span className="manager-policy-escalation">
               ما فوق {BRANCH_MANAGER_DISCOUNT_LIMIT}% <b>يُرفع للإدارة</b>
             </span>
-          </section>
+          </section>}
 
           <section
             className="finance-stats-grid approval-stats"
@@ -620,7 +706,7 @@ export default function Approvals() {
               <span className="finance-stat-label">بانتظار قرارك</span>
               <div>
                 <strong>{pending.length}</strong>
-                <small>طلب داخل الفرع</small>
+                <small>{liveMode ? "طلب ضمن نطاقك" : "طلب داخل الفرع"}</small>
               </div>
               <small>ابدأ بالأقدم أو الأكثر تأثيرًا</small>
             </article>
@@ -628,12 +714,12 @@ export default function Approvals() {
               <span className="finance-stat-icon icon-blue">
                 <FileText size={18} />
               </span>
-              <span className="finance-stat-label">طلبات الخصم</span>
+              <span className="finance-stat-label">{liveMode ? "طلبات جلسة" : "طلبات الخصم"}</span>
               <div>
-                <strong>{pendingDiscounts}</strong>
+                <strong>{liveMode ? pendingSessionRequests : pendingDiscounts}</strong>
                 <small>تحتاج مراجعة</small>
               </div>
-              <small>خصم إخوة أو حملة توضيحية</small>
+              <small>{liveMode ? "إضافية أو تعويضية" : "خصم إخوة أو حملة توضيحية"}</small>
             </article>
             <article className="finance-stat">
               <span className="finance-stat-icon icon-violet">
@@ -652,10 +738,10 @@ export default function Approvals() {
               </span>
               <span className="finance-stat-label">مصروفات تحتاج تأكيدًا</span>
               <div>
-                <strong>{pendingExpenses}</strong>
-                <small>ترفعها المحاسبة</small>
+                <strong>{liveMode ? "—" : pendingExpenses}</strong>
+                <small>{liveMode ? "غير مدعومة هنا" : "ترفعها المحاسبة"}</small>
               </div>
-              <small>تظهر في الماليات بعد اعتمادك</small>
+              <small>{liveMode ? "تحتاج endpoint مالي منفصل" : "تظهر في الماليات بعد اعتمادك"}</small>
             </article>
             <article className="finance-stat">
               <span className="finance-stat-icon icon-teal">
@@ -665,13 +751,10 @@ export default function Approvals() {
               <div>
                 <strong>
                   {
-                    requests.filter(
-                      item =>
-                        item.status !== "pending" && item.branch === branch
-                    ).length
+                    reviewedRequests.length
                   }
                 </strong>
-                <small>في هذه المعاينة</small>
+                <small>{liveMode ? "من الخادم" : "في هذه المعاينة"}</small>
               </div>
               <small>يمكن متابعة سجل القرار في كل بطاقة</small>
             </article>
@@ -696,7 +779,11 @@ export default function Approvals() {
               <ApprovalQueueTabs
                 activeTab={tab}
                 onChange={setTab}
-                tabs={[
+                tabs={liveMode ? [
+                  { id: "all", label: "كل الطلبات", count: branchRequests.length },
+                  { id: "session", label: "طلبات الجلسات", count: pendingSessionRequests },
+                  { id: "substitute", label: "مدرب بديل", count: pendingSubstitutes },
+                ] : [
                   {
                     id: "all",
                     label: "كل الطلبات",
@@ -798,10 +885,7 @@ export default function Approvals() {
               </div>
             )}
             <div className="team-table-footer">
-              <span>
-                قائمة توضيحية · {visibleRequests.length} من{" "}
-                {branchRequests.length} طلب
-              </span>
+              <span>{liveMode ? "طلبات الخادم" : "قائمة توضيحية"} · {visibleRequests.length} من {branchRequests.length} طلب</span>
               <span>النطاق: {branch}</span>
             </div>
           </section>
@@ -848,6 +932,7 @@ export default function Approvals() {
           discountLimit={BRANCH_MANAGER_DISCOUNT_LIMIT}
           decisionNote={decisionNote}
           expenseRejectionMode={expenseRejectionMode}
+          liveMode={liveMode}
           onDecisionNoteChange={setDecisionNote}
           onClose={closeReview}
           onDecide={status => decide(selected.id, status)}
