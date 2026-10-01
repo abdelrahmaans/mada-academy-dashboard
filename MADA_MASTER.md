@@ -271,3 +271,13 @@ R00 إلى R09 مغطاة كواجهات prototype مع role code وscope labels
 - بوابة الأسرة/الطالب لا تعيد `score` أو `notes` إلا للحالة `PUBLISHED`. الواجهة العربية RTL في InstructorDesk تميز المسودة والحالة والإرسال؛ HeadInstructors يعرض queue حقيقية عند وجود جلسة API ولا يعرض بطاقات التقييم التجريبية في تبويب/ملخص التقييمات الحي. بوابة الأسرة في LIVE تعرض أن الفواتير غير متاحة ولا تعرض مبالغ DEMO.
 - التحقق المحلي: `pnpm check` ناجح؛ Vitest **5/5**؛ `pnpm build` ناجح؛ backend integration tests **29/29** ناجحة على PostgreSQL 16 وInMemory، بما فيها migration، submit/review/publish، عزل R03 حسب الفرع، وظهور الدرجات للمستهلك بعد النشر فقط؛ `dotnet ef migrations has-pending-model-changes` لا يجد تغييرات؛ `git diff --check` ناجح.
 - الخطوة الوظيفية التالية: بناء Invoices/Payments API وربط Family Portal. استعادة كلمة المرور وOTP SMS الفعلي تتطلبان قرار/إعداد خدمة، وتبقى نسخة MVP الحالية fail-closed بلا تكلفة.
+
+
+### 1 أكتوبر 2026 — Current Handoff + Next Milestone
+
+- دمج PR #18 (`feat: add evaluation review and publication workflow`) في `main`؛ merge commit `92bec875`. اجتازت CI على GitHub الفحوصات المطلوبة، وسجل التحقق المحلي 29/29 backend integration tests على PostgreSQL/InMemory، وVitest 5/5، و`pnpm check`, `pnpm build`, وEF pending-model check.
+- المصدر التنفيذي يبقى React + Vite؛ Angular مرجع فقط. آخر ميزات LIVE المؤكدة تشمل التشغيل/الجداول/الموافقات/مكتب المدرب، روابط هوية المستهلك، الدعوات، ونشر التقييمات. راجع `PROJECT_STATUS.md` بدل الاستنتاج من صفحات العرض التجريبي.
+- **المرحلة التالية:** فواتير داخلية وسجلات دفعات بالطرق cash/Visa/InstaPay/Vodafone Cash، وإثباتات خاصة، ثم ربط Family Portal؛ لا يوجد أي invoice/payment API أو upload حقيقي حتى الآن. تفاصيل التنفيذ والموانع ومعايير القبول في `NEXT_PHASE_PLAN.md` و`INVOICES_PAYMENTS_MVP_PLAN.md`.
+- OTP/SMS الحقيقي غير مضبوط: Development فقط يولد رمزًا عشوائيًا لأغراض الاختبار، وما عدا Development يفشل مغلقًا. أعد `OTP_MVP_TEMPORARY_PLAN.md` مسار pilot مساعدًا يدويًا ومحدودًا خلف flag وallowlist؛ لم ينفذ بعد، وليس بديلًا دائمًا لمزود SMS.
+- استعادة كلمة المرور، تخزين إثبات الدفع الخاص، صلاحيات R05 المالية الدقيقة، توصيل الماليات للمستهلك، وتدقيق صفحات demo/route guards ما زالت فجوات معلنة.
+- نقطة البدء للوكيل التالي: `AGENT_START_HERE.md`، والحالة المفصلة: `PROJECT_STATUS.md`. الحزمة القديمة في مجلد ملفات المشروع المشتركة مؤرخة 30 سبتمبر 2026 ولا تعكس الدمج الأخير.

@@ -103,3 +103,15 @@ React أصبح متصلًا بالـASP.NET Core عبر `client/src/lib/apiClien
 الواجهة: InstructorDesk يدعم حفظ المسودة/الإرسال ويقرأ الحالة وملاحظة المراجع؛ HeadInstructors يحمّل queue حقيقية في LIVE ولا يعرض أمثلة التقييم في summary الحي؛ واجهة الأسرة لا تعرض مبالغ مالية تجريبية في LIVE حتى إضافة API الفواتير.
 
 التحقق: **29/29** backend integration tests ناجحة على PostgreSQL 16 وInMemory؛ `pnpm check`، Vitest **5/5**، `pnpm build`، `dotnet ef migrations has-pending-model-changes` و`git diff --check` ناجحة.
+
+
+---
+
+## 20. Current Backend Handoff — 1 October 2026
+
+- Current merged base: PR #18, commit `92bec875` (`feature/evaluation-review-publish`). GitHub CI passed. Latest recorded local validation: **29/29** backend integration tests on PostgreSQL 16 + InMemory; frontend Vitest **5/5**, `pnpm check`, `pnpm build`, and `dotnet ef migrations has-pending-model-changes` passed.
+- Current persisted slices include identity/JWT, tenant/branch-scoped operations and scheduling, consumer account links/invitations, and review/publication of session evaluations. Consumer sessions expose evaluation score/notes only after `PUBLISHED`.
+- **No invoice, payment, payment-evidence entity/API, or actual private file upload exists.** `FinanceDesk` and `Finance` still contain prototype/demo financial state. The evidence file picker currently holds a filename locally only. Family Portal correctly does not show demo financial amounts in LIVE.
+- **OTP:** `DevelopmentSmsMessageSender` is registered only in ASP.NET Development; non-Development uses `UnconfiguredSmsMessageSender` and returns a closed failure when no provider is configured. Never switch production to Development or add a shared code. The staff-assisted, allowlisted manual pilot is only a plan in `OTP_MVP_TEMPORARY_PLAN.md`, not a backend behavior.
+- **Next backend milestone:** implement branch-scoped invoice/payments schema and endpoints, narrow permissions for R05/R06, durable private evidence storage with scoped download, consumer invoice reads restricted by active account links, then PostgreSQL/InMemory isolation and concurrency tests. The financial contract and open blockers are in `NEXT_PHASE_PLAN.md` and `INVOICES_PAYMENTS_MVP_PLAN.md`.
+- Still not implemented: password recovery, production SMS provider, payment processing/reconciliation, official tax invoicing, expense APIs, and broad live reporting. Do not represent these as supported.
