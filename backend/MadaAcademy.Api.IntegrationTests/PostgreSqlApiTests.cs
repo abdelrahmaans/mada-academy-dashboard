@@ -129,6 +129,42 @@ public sealed class PostgreSqlApiTests(PostgreSqlFixture fixture)
     }
 
     [Fact]
+    public async Task DashboardSummary_IsBranchScopedForManagerAndTenantScopedForOwnerOnPostgreSql()
+    {
+        var manager = await TestData.CreateAccountAsync(fixture.Factory, "R02_BRANCH_MANAGER");
+        var owner = await TestData.CreateAccountAsync(fixture.Factory, "R01_ACADEMY_OWNER", manager.TenantId, manager.BranchId);
+        var otherBranchId = Guid.NewGuid();
+        int activeTenantBranchCount;
+        using (var scope = fixture.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            db.Branches.Add(new Branch { Id = otherBranchId, TenantId = manager.TenantId, Name = "PostgreSQL Other Dashboard Branch", Code = $"B{Guid.NewGuid():N}"[..10] });
+            await db.SaveChangesAsync();
+            activeTenantBranchCount = await db.Branches.CountAsync(branch => branch.TenantId == manager.TenantId && branch.Status == "ACTIVE");
+        }
+        await TestData.SeedStudentAsync(fixture.Factory, manager.TenantId, manager.BranchId, "PostgreSQL Dashboard Visible Student");
+        await TestData.SeedStudentAsync(fixture.Factory, manager.TenantId, otherBranchId, "PostgreSQL Dashboard Hidden Student");
+
+        using var managerClient = fixture.Factory.CreateClient();
+        TestData.Authenticate(managerClient, await TestData.LoginAsync(managerClient, manager));
+        using var managerResponse = await managerClient.GetAsync("/api/v1/dashboard/summary");
+        Assert.Equal(HttpStatusCode.OK, managerResponse.StatusCode);
+        using var managerJson = await managerResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Manager dashboard response is empty.");
+        var managerData = managerJson.RootElement.GetProperty("data");
+        Assert.Equal(1, managerData.GetProperty("students").GetInt32());
+        Assert.Equal(1, managerData.GetProperty("branchCount").GetInt32());
+
+        using var ownerClient = fixture.Factory.CreateClient();
+        TestData.Authenticate(ownerClient, await TestData.LoginAsync(ownerClient, owner));
+        using var ownerResponse = await ownerClient.GetAsync("/api/v1/dashboard/summary");
+        Assert.Equal(HttpStatusCode.OK, ownerResponse.StatusCode);
+        using var ownerJson = await ownerResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Owner dashboard response is empty.");
+        var ownerData = ownerJson.RootElement.GetProperty("data");
+        Assert.Equal(2, ownerData.GetProperty("students").GetInt32());
+        Assert.Equal(activeTenantBranchCount, ownerData.GetProperty("branchCount").GetInt32());
+    }
+
+    [Fact]
     public async Task ConsumerAccountLookup_ExecutesScopedExactPhoneQueryOnPostgreSql()
     {
         using var client = fixture.Factory.CreateClient();

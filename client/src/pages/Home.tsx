@@ -38,6 +38,10 @@ import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import SharedStatusBadge from "@/components/StatusBadge";
+import { useAuth } from "@/contexts/AuthContext";
+import { apiClient } from "@/lib/apiClient";
+import HomeLive from "./HomeLive";
+import "@/components/PreviewBanner.css";
 
 type Session = {
   time: string;
@@ -120,7 +124,7 @@ function BrandMark() {
   );
 }
 
-function App() {
+function HomePreview() {
   const [, navigate] = useLocation();
   const [query, setQuery] = useState("");
   const branch = "فرع مدينة نصر";
@@ -436,6 +440,7 @@ function App() {
         </header>
 
         <div className="workspace">
+          <div className="r02-preview-banner" role="note"><strong>PREVIEW / DEMO</strong> بيانات هذه الشاشة وأفعالها محلية توضيحية فقط ولا تُحفظ في النظام.</div>
           <PageHeader
             className="welcome-row"
             copyClassName="welcome-copy"
@@ -966,4 +971,13 @@ function ClipboardIcon() {
   return <FileText size={17} />;
 }
 
-export default App;
+export default function Home() {
+  const { me, loading, error } = useAuth();
+  if (loading) return <main className="r02-home-auth-state" dir="rtl" role="status">جارٍ التحقق من الجلسة وتحميل لوحة الفرع…</main>;
+  if (apiClient.hasSession()) {
+    if (me?.role === "R02_BRANCH_MANAGER") return <HomeLive me={me} />;
+    return <main className="r02-home-auth-state r02-home-auth-error" dir="rtl" role="alert">هذه اللوحة متاحة لمدير الفرع فقط. استخدم مساحة الدور المرتبط بحسابك.</main>;
+  }
+  if (error) return <main className="r02-home-auth-state r02-home-auth-error" dir="rtl" role="alert">انتهت الجلسة أو تعذر التحقق منها. سجّل الدخول مجددًا لعرض بيانات حقيقية؛ لن نعرض بيانات تجريبية بدلًا منها.</main>;
+  return <HomePreview />;
+}

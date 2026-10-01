@@ -152,18 +152,29 @@ app.MapGet("/api/v1/tenants/{tenantId:guid}/scope-check", (Guid tenantId, HttpCo
 
 app.MapGet("/api/v1/dashboard/summary", async (HttpContext context, MadaDbContext db, CancellationToken cancellationToken) =>
 {
+    if (!context.User.IsInRole("R01_ACADEMY_OWNER") && !context.User.IsInRole("R02_BRANCH_MANAGER")) return Results.Forbid();
     if (!Guid.TryParse(context.User.FindFirstValue("tenantId"), out var tenantId)) return Results.Problem(statusCode: 403, title: "Missing tenant scope");
-    var branchClaim = context.User.FindFirstValue("branchId"); var hasBranchScope = Guid.TryParse(branchClaim, out var branchId);
-    var students = db.Students.Where(x => x.TenantId == tenantId);
+    var hasBranchScope = context.User.IsInRole("R02_BRANCH_MANAGER");
+    var branchId = Guid.TryParse(context.User.FindFirstValue("branchId"), out var parsedBranchId) ? parsedBranchId : (Guid?)null;
+    if (hasBranchScope && !branchId.HasValue) return Results.Forbid();
+    var scopedBranchId = branchId.GetValueOrDefault();
+    var students = db.Students.Where(x => x.TenantId == tenantId && (!hasBranchScope || x.BranchId == scopedBranchId));
     var enrollments = db.StudentEnrollments.Where(x => x.StudentId != Guid.Empty).Join(students, x => x.StudentId, x => x.Id, (enrollment, _) => enrollment);
-    var sessions = db.AcademySessions.Where(x => x.TenantId == tenantId && (!hasBranchScope || x.BranchId == branchId));
+    var sessions = db.AcademySessions.Where(x => x.TenantId == tenantId && (!hasBranchScope || x.BranchId == scopedBranchId));
     var upcoming = await sessions.Where(x => x.StartAt > DateTimeOffset.UtcNow && x.Status != "CANCELLED").OrderBy(x => x.StartAt).Take(5).Select(x => new { x.Id, x.SessionNumber, x.StartAt, x.Status }).ToListAsync(cancellationToken);
     return Results.Ok(new { data = new { students = await students.CountAsync(cancellationToken), activeEnrollments = await enrollments.CountAsync(x => x.Status == "ACTIVE", cancellationToken), upcomingSessions = await sessions.CountAsync(x => x.StartAt > DateTimeOffset.UtcNow && x.Status != "CANCELLED", cancellationToken), completedSessions = await sessions.CountAsync(x => x.Status == "COMPLETED", cancellationToken), branchCount = hasBranchScope ? 1 : await db.Branches.CountAsync(x => x.TenantId == tenantId && x.Status == "ACTIVE", cancellationToken), upcoming } });
 }).RequireAuthorization("staff");
 
-app.MapPost("/api/v1/scheduling/check-conflict", async (ConflictCheckRequest request, ConflictService conflicts, HttpContext context, CancellationToken cancellationToken) =>
+app.MapPost("/api/v1/scheduling/check-conflict", async (ConflictCheckRequest request, ConflictService conflicts, HttpContext context, MadaDbContext db, CancellationToken cancellationToken) =>
 {
-    if (!context.User.IsInRole("R02_BRANCH_MANAGER") && !context.User.IsInRole("R03_HEAD_INSTRUCTORS") && !context.User.IsInRole("R01_ACADEMY_OWNER")) return Results.Forbid();
+    var isTenantScoped = context.User.IsInRole("R01_ACADEMY_OWNER");
+    var isBranchScoped = context.User.IsInRole("R02_BRANCH_MANAGER") || context.User.IsInRole("R03_HEAD_INSTRUCTORS");
+    if (!isTenantScoped && !isBranchScoped) return Results.Forbid();
+    if (!Guid.TryParse(context.User.FindFirstValue("tenantId"), out var tenantId)) return Results.Forbid();
+    if (isBranchScoped && (!Guid.TryParse(context.User.FindFirstValue("branchId"), out var claimedBranchId) || claimedBranchId != request.BranchId))
+        return Results.Problem(statusCode: 403, title: "Branch scope denied", extensions: new Dictionary<string, object?> { ["code"] = "BRANCH_SCOPE_DENIED" });
+    if (!await db.Branches.AnyAsync(branch => branch.Id == request.BranchId && branch.TenantId == tenantId && branch.Status == "ACTIVE", cancellationToken))
+        return Results.NotFound(new { error = new { code = "BRANCH_NOT_FOUND", message = "الفرع غير موجود داخل الأكاديمية." } });
     var result = await conflicts.CheckAsync(request, cancellationToken);
     return result.HasConflict ? Results.Conflict(new { error = new { code = "SCHEDULING_CONFLICT", details = result.Conflicts } }) : Results.Ok(new { data = result });
 }).RequireAuthorization("staff");

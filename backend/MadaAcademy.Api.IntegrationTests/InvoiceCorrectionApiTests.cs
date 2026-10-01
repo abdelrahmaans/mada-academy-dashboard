@@ -86,6 +86,32 @@ public sealed class InvoiceCorrectionApiTests
         Assert.DoesNotContain("Hidden correction", response, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task BranchManager_CannotSeeOrDecideInvoiceCorrectionFromAnotherBranch()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        var manager = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
+        var otherBranch = Guid.NewGuid();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            db.Branches.Add(new Branch { Id = otherBranch, TenantId = manager.TenantId, Name = "Other Branch", Code = "OTHER" });
+            await db.SaveChangesAsync();
+        }
+        var visibleCorrectionId = await SeedCorrectionAsync(factory, manager.TenantId, manager.BranchId, "Visible branch correction");
+        var hiddenCorrectionId = await SeedCorrectionAsync(factory, manager.TenantId, otherBranch, "Hidden branch correction");
+        using var client = factory.CreateClient();
+        TestData.Authenticate(client, await TestData.LoginAsync(client, manager));
+
+        using var response = await client.GetAsync("/api/v1/finance/invoice-corrections?state=PENDING");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains(visibleCorrectionId.ToString(), body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(hiddenCorrectionId.ToString(), body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Hidden branch correction", body, StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.PostAsJsonAsync($"/api/v1/finance/invoice-corrections/{hiddenCorrectionId}/decision", new { decision = "APPROVED", reason = "Not in this branch." })).StatusCode);
+    }
+
     private static async Task<Guid> SeedInvoiceAsync(TestApiFactory factory, Guid tenantId, Guid branchId, int total)
     {
         using var scope = factory.Services.CreateScope();
