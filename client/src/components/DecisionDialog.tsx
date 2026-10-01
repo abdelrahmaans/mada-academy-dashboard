@@ -223,25 +223,23 @@ export default function DecisionDialog({
               <span>
                 <strong>رفض المصروف يتطلب سببًا</strong>
                 <small>
-                  سيُسجّل السبب مع اسم مدير الفرع ووقت القرار في سجل القرارات.
+                  {liveMode ? "سيُسجّل السبب مع حساب المعتمد والفرع ووقت القرار على الخادم." : "هذا قرار تجريبي محلي ولا يُحفظ على الخادم."}
                 </small>
               </span>
             </div>
             <ReasonField
               id="expense-rejection-reason"
               label="سبب الرفض"
-              helper="إلزامي · بحد أقصى 240 حرفًا"
+              helper="إلزامي · بحد أقصى 500 حرف"
               value={decisionNote}
               onChange={onDecisionNoteChange}
+              maxLength={500}
               placeholder="اذكر سبب عدم اعتماد هذا المصروف..."
               required
             />
             <div className="dialog-info">
               <AlertCircle size={15} />
-              <span>
-                هذا القرار تجريبي ومحلي؛ لا يؤثر على سجل المصروفات أو إجماليات
-                الماليات ولا يُحفظ على خادم.
-              </span>
+              <span>{liveMode ? "سيُرسل سبب الرفض إلى الخادم ويُحفظ مع سجل المصروفات." : "هذا القرار تجريبي ومحلي؛ لا يؤثر على سجل المصروفات أو إجماليات الماليات ولا يُحفظ على خادم."}</span>
             </div>
             <div className="approval-dialog-actions approval-expense-rejection-actions">
               <button
@@ -262,18 +260,24 @@ export default function DecisionDialog({
           </form>
         ) : (
           <>
-            <ReasonField
+              <ReasonField
               id="approval-decision-note"
-              label="ملاحظة القرار"
-              helper={
-                item.kind === "expense"
-                  ? "اختيارية للموافقة؛ الرفض يتطلب سببًا"
+              label={liveMode && (item.kind === "expense" || item.kind === "correction") ? "سبب القرار" : "ملاحظة القرار"}
+                helper={
+                  liveMode && (item.kind === "expense" || item.kind === "correction")
+                  ? `إلزامي للموافقة والرفض · بحد أقصى ${item.kind === "expense" ? 500 : 1000} حرف`
+                  : item.kind === "expense"
+                  ? "اختيارية في المعاينة؛ الرفض يتطلب سببًا"
                   : "اختياري · بحد أقصى 240 حرفًا"
-              }
-              value={decisionNote}
-              onChange={onDecisionNoteChange}
+                }
+                value={decisionNote}
+                onChange={onDecisionNoteChange}
+                maxLength={liveMode && item.kind === "expense" ? 500 : liveMode && item.kind === "correction" ? 1000 : 240}
+              required={liveMode && (item.kind === "expense" || item.kind === "correction")}
               placeholder={
-                item.kind === "expense"
+                liveMode && (item.kind === "expense" || item.kind === "correction")
+                  ? "اكتب مبرر القرار الذي سيُحفظ في سجل التدقيق..."
+                  : item.kind === "expense"
                   ? "أضف ملاحظة اختيارية للموافقة..."
                   : "مثال: تمت مراجعة الطلب وفق سياسة الفرع."
               }
@@ -285,7 +289,7 @@ export default function DecisionDialog({
             <div className="approval-dialog-actions">
               <button
                 className="button button-secondary"
-                disabled={item.status !== "pending"}
+                disabled={item.status !== "pending" || (liveMode && (item.kind === "expense" || item.kind === "correction") && !decisionNote.trim())}
                 onClick={() => {
                   if (item.kind === "expense") onStartExpenseRejection();
                   else onDecide("rejected");
@@ -296,7 +300,7 @@ export default function DecisionDialog({
               <button
                 className="button button-primary"
                 onClick={() => onDecide("approved")}
-                disabled={!canApprove || item.status !== "pending"}
+                disabled={!canApprove || item.status !== "pending" || (liveMode && (item.kind === "expense" || item.kind === "correction") && !decisionNote.trim())}
               >
                 <Check size={15} />{" "}
                 {canApprove ? (liveMode ? "اعتماد الطلب" : "موافقة تجريبية") : "ينتظر اختيار مدرب بديل"}

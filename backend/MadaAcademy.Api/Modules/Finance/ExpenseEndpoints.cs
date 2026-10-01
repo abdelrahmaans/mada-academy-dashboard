@@ -69,28 +69,28 @@ public static class ExpenseEndpoints
         return Results.Created($"/api/v1/finance/expenses/{expense.Id}", new { data = ToResponse(expense) });
     }
 
-    private static async Task<IResult> ApproveAsync(Guid expenseId, HttpContext context, MadaDbContext db, CancellationToken cancellationToken)
-        => await DecideAsync(expenseId, true, null, context, db, cancellationToken);
+    private static async Task<IResult> ApproveAsync(Guid expenseId, ExpenseDecisionRequest request, HttpContext context, MadaDbContext db, CancellationToken cancellationToken)
+        => await DecideAsync(expenseId, true, request.Reason, context, db, cancellationToken);
 
-    private static async Task<IResult> RejectAsync(Guid expenseId, RejectExpenseRequest request, HttpContext context, MadaDbContext db, CancellationToken cancellationToken)
+    private static async Task<IResult> RejectAsync(Guid expenseId, ExpenseDecisionRequest request, HttpContext context, MadaDbContext db, CancellationToken cancellationToken)
         => await DecideAsync(expenseId, false, request.Reason, context, db, cancellationToken);
 
     private static async Task<IResult> DecideAsync(Guid expenseId, bool approve, string? reason, HttpContext context, MadaDbContext db, CancellationToken cancellationToken)
     {
         if (!TryScope(context.User, out var scope, out var error) || !CanApprove(context.User)) return error ?? Forbidden("EXPENSE_APPROVAL_FORBIDDEN");
         if (!Guid.TryParse(context.User.FindFirstValue("sub"), out var actorId)) return Forbidden("ACTOR_REQUIRED");
-        if (!approve && (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500)) return Validation("reason", "A rejection reason is required and must be at most 500 characters.");
         var expense = await db.Expenses.Include(x => x.ApprovalRequest).SingleOrDefaultAsync(x => x.Id == expenseId && x.TenantId == scope.TenantId && (!scope.BranchId.HasValue || x.BranchId == scope.BranchId.Value), cancellationToken);
         if (expense?.ApprovalRequest is null || expense.Status != "PENDING" || expense.ApprovalRequest.State != "PENDING") return NotFound("EXPENSE_NOT_FOUND");
         if (expense.CreatedByUserId == actorId) return Conflict("EXPENSE_MAKER_CHECKER_REQUIRED");
+        if (string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 500) return Validation("reason", "A decision reason is required and must be at most 500 characters.");
         var next = approve ? "APPROVED" : "REJECTED";
         expense.Status = next;
         expense.ApprovalRequest.State = next;
         expense.ApprovalRequest.DecidedByUserId = actorId;
         expense.ApprovalRequest.DecidedAt = DateTimeOffset.UtcNow;
-        expense.ApprovalRequest.Reason = reason?.Trim() ?? expense.ApprovalRequest.Reason;
-        db.StateTransitions.Add(new StateTransitionEvent { AggregateType = "EXPENSE", AggregateId = expense.Id.ToString(), FromState = "PENDING", ToState = next, ActorUserId = actorId, Reason = reason });
-        db.AuditEvents.Add(new AuditEvent { ActorUserId = actorId, TenantId = expense.TenantId, BranchId = expense.BranchId, Action = $"EXPENSE_{next}", TargetType = "EXPENSE", TargetId = expense.Id.ToString(), Reason = reason });
+        expense.ApprovalRequest.Reason = reason.Trim();
+        db.StateTransitions.Add(new StateTransitionEvent { AggregateType = "EXPENSE", AggregateId = expense.Id.ToString(), FromState = "PENDING", ToState = next, ActorUserId = actorId, Reason = reason.Trim() });
+        db.AuditEvents.Add(new AuditEvent { ActorUserId = actorId, TenantId = expense.TenantId, BranchId = expense.BranchId, Action = $"EXPENSE_{next}", TargetType = "EXPENSE", TargetId = expense.Id.ToString(), Reason = reason.Trim() });
         await db.SaveChangesAsync(cancellationToken);
         return Results.Ok(new { data = ToResponse(expense) });
     }
@@ -124,7 +124,7 @@ public static class ExpenseEndpoints
         return stream is null ? NotFound("EVIDENCE_NOT_FOUND") : Results.File(stream, expense.Evidence.ContentType, expense.Evidence.DisplayFileName, enableRangeProcessing: true);
     }
 
-    private static object ToResponse(Expense expense) => new { id = expense.Id, tenantId = expense.TenantId, branchId = expense.BranchId, branchName = expense.Branch?.Name, description = expense.Description, category = expense.Category, amountPiastres = expense.AmountPiastres, spentOn = expense.SpentOn, status = expense.Status, createdByUserId = expense.CreatedByUserId, approvalRequestId = expense.ApprovalRequestId ?? expense.ApprovalRequest?.Id, approvalReason = expense.ApprovalRequest?.Reason, decidedAt = expense.ApprovalRequest?.DecidedAt, decidedByUserId = expense.ApprovalRequest?.DecidedByUserId, evidenceStatus = expense.Evidence is null ? "NOT_ATTACHED" : "ATTACHED", evidenceFileName = expense.Evidence?.DisplayFileName };
+    private static object ToResponse(Expense expense) => new { id = expense.Id, tenantId = expense.TenantId, branchId = expense.BranchId, branchName = expense.Branch?.Name, description = expense.Description, category = expense.Category, amountPiastres = expense.AmountPiastres, spentOn = expense.SpentOn, createdAt = expense.CreatedAt, status = expense.Status, createdByUserId = expense.CreatedByUserId, approvalRequestId = expense.ApprovalRequestId ?? expense.ApprovalRequest?.Id, approvalReason = expense.ApprovalRequest?.Reason, decidedAt = expense.ApprovalRequest?.DecidedAt, decidedByUserId = expense.ApprovalRequest?.DecidedByUserId, evidenceStatus = expense.Evidence is null ? "NOT_ATTACHED" : "ATTACHED", evidenceFileName = expense.Evidence?.DisplayFileName };
     private static bool CanRead(ClaimsPrincipal user) => user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R05_SECRETARY") || user.IsInRole("R06_ACCOUNTANT");
     private static bool CanWrite(ClaimsPrincipal user) => user.IsInRole("R05_SECRETARY") || user.IsInRole("R06_ACCOUNTANT");
     private static bool CanApprove(ClaimsPrincipal user) => user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R06_ACCOUNTANT");
@@ -143,4 +143,4 @@ public static class ExpenseEndpoints
 }
 
 public sealed record CreateExpenseRequest(string Description, string Category, int AmountPiastres, DateOnly? SpentOn = null, string? Note = null);
-public sealed record RejectExpenseRequest(string Reason);
+public sealed record ExpenseDecisionRequest(string Reason);

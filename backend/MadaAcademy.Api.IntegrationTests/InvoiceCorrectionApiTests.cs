@@ -34,13 +34,21 @@ public sealed class InvoiceCorrectionApiTests
         Assert.Contains("\"totalPiastres\":10000", before, StringComparison.Ordinal);
         using var managerClient = factory.CreateClient();
         TestData.Authenticate(managerClient, await TestData.LoginAsync(managerClient, manager));
-        var decision = await managerClient.PostAsJsonAsync($"/api/v1/finance/invoice-corrections/{correctionId}/decision", new { decision = "APPROVED" });
+        Assert.Equal(HttpStatusCode.BadRequest, (await managerClient.PostAsJsonAsync($"/api/v1/finance/invoice-corrections/{correctionId}/decision", new { decision = "APPROVED", reason = " " })).StatusCode);
+        const string decisionReason = "Reviewed supporting documents and confirmed the correction.";
+        var decision = await managerClient.PostAsJsonAsync($"/api/v1/finance/invoice-corrections/{correctionId}/decision", new { decision = "APPROVED", reason = decisionReason });
         Assert.Equal(HttpStatusCode.OK, decision.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await managerClient.GetAsync($"/api/v1/finance/invoices/{invoiceId}")).StatusCode);
         var after = await requesterClient.GetStringAsync($"/api/v1/finance/invoices/{invoiceId}");
         Assert.Contains("\"totalPiastres\":12000", after, StringComparison.Ordinal);
         Assert.Contains("Corrected tuition", after, StringComparison.Ordinal);
         Assert.Contains("\"paidPiastres\":5000", after, StringComparison.Ordinal);
+        using var auditScope = factory.Services.CreateScope();
+        var auditDb = auditScope.ServiceProvider.GetRequiredService<MadaDbContext>();
+        var audit = await auditDb.AuditEvents.SingleAsync(x => x.TargetType == "INVOICE" && x.Action == "INVOICE_CORRECTION_APPROVED" && x.TargetId == invoiceId.ToString());
+        Assert.Equal(manager.UserId, audit.ActorUserId);
+        Assert.Equal(manager.BranchId, audit.BranchId);
+        Assert.Equal(decisionReason, audit.Reason);
     }
 
     [Fact]
