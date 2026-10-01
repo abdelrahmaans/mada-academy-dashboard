@@ -1,6 +1,7 @@
 using System.Data;
 using System.Security.Claims;
 using System.Text.Json;
+using System.Text;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
 using MadaAcademy.Api.Storage;
@@ -19,6 +20,8 @@ public static class FinanceEndpoints
     {
         var api = endpoints.MapGroup("/api/v1/finance").RequireAuthorization("staff");
         api.MapGet("/invoices", ListInvoicesAsync);
+        api.MapGet("/reports/summary", ReportsSummaryAsync);
+        api.MapGet("/reports/summary.csv", ReportsCsvAsync);
         api.MapGet("/invoices/{invoiceId:guid}", GetInvoiceAsync);
         api.MapPost("/invoices", CreateInvoiceAsync);
         api.MapPost("/invoices/{invoiceId:guid}/payments", CreatePaymentAsync);
@@ -176,6 +179,44 @@ public static class FinanceEndpoints
             .Where(x => x.TenantId == tenantId && studentIds.Contains(x.StudentId)).OrderByDescending(x => x.IssueDate).ToListAsync(cancellationToken);
         return Results.Ok(new { data = new { items = invoices.Select(ToResponse), total = invoices.Count } });
     }
+
+    private static async Task<IResult> ReportsSummaryAsync(HttpContext context, MadaDbContext db, DateOnly? from, DateOnly? to, Guid? branchId, CancellationToken cancellationToken)
+    {
+        if (!TryStaffScope(context.User, out var scope, out var error)) return error;
+        if (from.HasValue && to.HasValue && from.Value > to.Value) return Validation("dateRange", "from cannot be after to.");
+        if (branchId.HasValue && scope.BranchId.HasValue && branchId.Value != scope.BranchId.Value) return NotFound("REPORT_NOT_FOUND");
+        var effectiveBranch = branchId ?? scope.BranchId;
+        var invoices = await db.Invoices.AsNoTracking().Include(x => x.Payments).Include(x => x.Branch).Where(x => x.TenantId == scope.TenantId && (!effectiveBranch.HasValue || x.BranchId == effectiveBranch.Value) && (!from.HasValue || x.IssueDate >= from.Value) && (!to.HasValue || x.IssueDate <= to.Value)).ToListAsync(cancellationToken);
+        var expenses = await db.Expenses.AsNoTracking().Include(x => x.Branch).Where(x => x.TenantId == scope.TenantId && (!effectiveBranch.HasValue || x.BranchId == effectiveBranch.Value) && x.Status == "APPROVED" && (!from.HasValue || x.SpentOn >= from.Value) && (!to.HasValue || x.SpentOn <= to.Value)).ToListAsync(cancellationToken);
+        var report = BuildReport(invoices, expenses, from, to);
+        return Results.Ok(new { data = report });
+    }
+
+    private static async Task<IResult> ReportsCsvAsync(HttpContext context, MadaDbContext db, DateOnly? from, DateOnly? to, Guid? branchId, CancellationToken cancellationToken)
+    {
+        if (!TryStaffScope(context.User, out var scope, out var error)) return error;
+        if (from.HasValue && to.HasValue && from.Value > to.Value) return Validation("dateRange", "from cannot be after to.");
+        if (branchId.HasValue && scope.BranchId.HasValue && branchId.Value != scope.BranchId.Value) return NotFound("REPORT_NOT_FOUND");
+        var effectiveBranch = branchId ?? scope.BranchId;
+        var invoices = await db.Invoices.AsNoTracking().Include(x => x.Payments).Include(x => x.Branch).Where(x => x.TenantId == scope.TenantId && (!effectiveBranch.HasValue || x.BranchId == effectiveBranch.Value) && (!from.HasValue || x.IssueDate >= from.Value) && (!to.HasValue || x.IssueDate <= to.Value)).ToListAsync(cancellationToken);
+        var expenses = await db.Expenses.AsNoTracking().Include(x => x.Branch).Where(x => x.TenantId == scope.TenantId && (!effectiveBranch.HasValue || x.BranchId == effectiveBranch.Value) && x.Status == "APPROVED" && (!from.HasValue || x.SpentOn >= from.Value) && (!to.HasValue || x.SpentOn <= to.Value)).ToListAsync(cancellationToken);
+        var builder = new StringBuilder("branch_id,branch_name,invoice_count,collected_piastres,approved_expenses_piastres,net_piastres\n");
+        foreach (var branch in BuildReport(invoices, expenses, from, to).Branches) builder.Append(string.Join(',', branch.BranchId, Csv(branch.BranchName), branch.InvoiceCount, branch.CollectedPiastres, branch.ApprovedExpensesPiastres, branch.NetPiastres)).Append('\n');
+        return Results.File(Encoding.UTF8.GetBytes(builder.ToString()), "text/csv; charset=utf-8", $"mada-financial-report-{DateTime.UtcNow:yyyyMMdd}.csv");
+    }
+
+    private static FinancialReport BuildReport(List<Invoice> invoices, List<Expense> expenses, DateOnly? from, DateOnly? to)
+    {
+        var totalBilled = invoices.Sum(x => (long)x.TotalPiastres);
+        var totalCollected = invoices.SelectMany(x => x.Payments).Where(x => (!from.HasValue || x.ReceivedOn >= from.Value) && (!to.HasValue || x.ReceivedOn <= to.Value)).Sum(x => (long)x.AmountPiastres);
+        var totalExpenses = expenses.Sum(x => (long)x.AmountPiastres);
+        var branches = invoices.Select(x => new { x.BranchId, BranchName = x.Branch?.Name ?? x.BranchId.ToString() }).Concat(expenses.Select(x => new { x.BranchId, BranchName = x.Branch?.Name ?? x.BranchId.ToString() })).GroupBy(x => new { x.BranchId, x.BranchName }).Select(group => { var branchInvoices = invoices.Where(x => x.BranchId == group.Key.BranchId).ToList(); var branchExpenses = expenses.Where(x => x.BranchId == group.Key.BranchId).Sum(x => (long)x.AmountPiastres); var branchCollected = branchInvoices.SelectMany(x => x.Payments).Where(x => (!from.HasValue || x.ReceivedOn >= from.Value) && (!to.HasValue || x.ReceivedOn <= to.Value)).Sum(x => (long)x.AmountPiastres); return new FinancialReportBranch(group.Key.BranchId, group.Key.BranchName, branchInvoices.Count, branchCollected, branchExpenses, branchCollected - branchExpenses); }).OrderBy(x => x.BranchName).ToList();
+        return new FinancialReport(from, to, totalBilled, totalCollected, Math.Max(0, totalBilled - totalCollected), totalExpenses, totalCollected - totalExpenses, branches);
+    }
+
+    private static string Csv(string value) => value.Contains(',') || value.Contains('"') ? $"\"{value.Replace("\"", "\"\"", StringComparison.Ordinal)}\"" : value;
+    private sealed record FinancialReport(DateOnly? From, DateOnly? To, long TotalBilledPiastres, long TotalCollectedPiastres, long TotalOutstandingPiastres, long ApprovedExpensesPiastres, long NetPiastres, IReadOnlyList<FinancialReportBranch> Branches);
+    private sealed record FinancialReportBranch(Guid BranchId, string BranchName, int InvoiceCount, long CollectedPiastres, long ApprovedExpensesPiastres, long NetPiastres);
 
     private static async Task<string> NextInvoiceNumberAsync(MadaDbContext db, Guid branchId, CancellationToken cancellationToken)
     {

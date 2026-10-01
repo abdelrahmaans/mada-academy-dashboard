@@ -220,6 +220,7 @@ export type FinanceInvoice = { id: string; invoiceNumber: string; tenantId: stri
 export type FinanceInvoicesResponse = { items: FinanceInvoice[]; total: number };
 export type FinanceExpense = { id: string; tenantId: string; branchId: string; branchName?: string | null; description: string; category: string; amountPiastres: number; spentOn: string; status: string; createdByUserId: string; approvalRequestId?: string | null; approvalReason?: string | null; decidedAt?: string | null; decidedByUserId?: string | null; evidenceStatus: string; evidenceFileName?: string | null };
 export type FinanceExpensesResponse = { items: FinanceExpense[]; total: number };
+export type FinanceReport = { from: string | null; to: string | null; totalBilledPiastres: number; totalCollectedPiastres: number; totalOutstandingPiastres: number; approvedExpensesPiastres: number; netPiastres: number; branches: Array<{ branchId: string; branchName: string; invoiceCount: number; collectedPiastres: number; approvedExpensesPiastres: number; netPiastres: number }> };
 export type InvoiceCorrection = { id: string; tenantId: string; branchId: string; invoiceId: string; invoiceNumber?: string | null; studentName?: string | null; approvalRequestId: string; requestedByUserId: string; currentTotalPiastres: number; currentDueDate: string; proposedTotalPiastres: number; proposedDueDate: string; reason: string; status: string; decidedAt?: string | null; decidedByUserId?: string | null; createdAt: string };
 export type InvoiceCorrectionsResponse = { items: InvoiceCorrection[]; total: number };
 
@@ -416,6 +417,8 @@ export const apiClient = {
   },
   createFinanceInvoice: (input: { studentId: string; dueDate: string; enrollmentId?: string; lines: Array<{ description: string; amountPiastres: number }> }) => request<FinanceInvoice>("/finance/invoices", { method: "POST", body: JSON.stringify(input) }),
   createFinancePayment: (invoiceId: string, input: { amountPiastres: number; method: string; receivedOn?: string; externalReference?: string; note?: string }) => request<{ payment: FinancePayment; invoiceId: string }>(`/finance/invoices/${invoiceId}/payments`, { method: "POST", body: JSON.stringify(input) }),
+  financeReport: (params: { from?: string; to?: string; branchId?: string } = {}) => { const query = new URLSearchParams(); if (params.from) query.set("from", params.from); if (params.to) query.set("to", params.to); if (params.branchId) query.set("branchId", params.branchId); const suffix = query.toString() ? `?${query}` : ""; return request<FinanceReport>(`/finance/reports/summary${suffix}`); },
+  downloadFinanceReport: async (params: { from?: string; to?: string; branchId?: string } = {}) => { const query = new URLSearchParams(); if (params.from) query.set("from", params.from); if (params.to) query.set("to", params.to); if (params.branchId) query.set("branchId", params.branchId); const response = await fetch(`${API_BASE}/finance/reports/summary.csv?${query}`, { headers: accessToken ? { authorization: `Bearer ${accessToken}` } : undefined }); if (!response.ok) throw new ApiRequestError("تعذر تصدير التقرير المالي", response.status); return response.blob(); },
   financeExpenses: (params: { status?: string; branchId?: string } = {}) => {
     const query = new URLSearchParams();
     if (params.status) query.set("status", params.status);
