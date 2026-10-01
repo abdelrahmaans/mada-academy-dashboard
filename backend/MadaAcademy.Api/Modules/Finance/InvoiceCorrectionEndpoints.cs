@@ -63,13 +63,13 @@ public static class InvoiceCorrectionEndpoints
     {
         if (!TryScope(context.User, out var scope, out var error)) return error;
         if (request.Decision is not ("APPROVED" or "REJECTED")) return Validation("decision", "Decision must be APPROVED or REJECTED.");
-        if (request.Decision == "REJECTED" && (string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Trim().Length > 1000)) return Validation("reason", "A rejection reason is required and must be at most 1000 characters.");
         if (!Guid.TryParse(context.User.FindFirstValue("sub"), out var actorId)) return Forbidden("ACTOR_REQUIRED");
         var correction = await db.InvoiceCorrectionRequests.Include(x => x.ApprovalRequest).Include(x => x.Invoice).ThenInclude(x => x!.Lines).Include(x => x.Invoice).ThenInclude(x => x!.Payments)
             .SingleOrDefaultAsync(x => x.Id == correctionId && x.TenantId == scope.TenantId && (!scope.BranchId.HasValue || x.BranchId == scope.BranchId.Value), cancellationToken);
         if (correction?.ApprovalRequest is null || correction.Invoice is null || correction.Status != "PENDING" || correction.ApprovalRequest.State != "PENDING") return NotFound("INVOICE_CORRECTION_NOT_FOUND");
         if (correction.RequestedByUserId == actorId) return Conflict("INVOICE_CORRECTION_MAKER_CHECKER_REQUIRED");
         if (!CanDecide(context.User)) return Forbidden("INVOICE_CORRECTION_DECISION_FORBIDDEN");
+        if (string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Trim().Length > 1000) return Validation("reason", "A decision reason is required and must be at most 1000 characters.");
         var next = request.Decision;
         correction.Status = next;
         correction.ApprovalRequest.State = next;
@@ -77,7 +77,7 @@ public static class InvoiceCorrectionEndpoints
         correction.DecidedAt = DateTimeOffset.UtcNow;
         correction.ApprovalRequest.DecidedByUserId = actorId;
         correction.ApprovalRequest.DecidedAt = correction.DecidedAt;
-        correction.ApprovalRequest.Reason = request.Reason?.Trim() ?? correction.ApprovalRequest.Reason;
+        correction.ApprovalRequest.Reason = request.Reason.Trim();
         if (next == "APPROVED")
         {
             var paid = correction.Invoice.Payments.Sum(x => (long)x.AmountPiastres);
@@ -103,8 +103,8 @@ public static class InvoiceCorrectionEndpoints
             correction.Invoice.DueDate = correction.ProposedDueDate;
             correction.Invoice.Status = paid >= correction.Invoice.TotalPiastres ? "PAID" : paid > 0 ? "PARTIAL" : "UNPAID";
         }
-        db.StateTransitions.Add(new StateTransitionEvent { AggregateType = "INVOICE_CORRECTION", AggregateId = correction.Id.ToString(), FromState = "PENDING", ToState = next, ActorUserId = actorId, Reason = request.Reason?.Trim() });
-        db.AuditEvents.Add(new AuditEvent { ActorUserId = actorId, TenantId = correction.TenantId, BranchId = correction.BranchId, Action = $"INVOICE_CORRECTION_{next}", TargetType = "INVOICE", TargetId = correction.InvoiceId.ToString(), Reason = request.Reason?.Trim(), MetadataJson = JsonSerializer.Serialize(new { correction.Id, correction.ProposedTotalPiastres, correction.ProposedDueDate }) });
+        db.StateTransitions.Add(new StateTransitionEvent { AggregateType = "INVOICE_CORRECTION", AggregateId = correction.Id.ToString(), FromState = "PENDING", ToState = next, ActorUserId = actorId, Reason = request.Reason.Trim() });
+        db.AuditEvents.Add(new AuditEvent { ActorUserId = actorId, TenantId = correction.TenantId, BranchId = correction.BranchId, Action = $"INVOICE_CORRECTION_{next}", TargetType = "INVOICE", TargetId = correction.InvoiceId.ToString(), Reason = request.Reason.Trim(), MetadataJson = JsonSerializer.Serialize(new { correction.Id, correction.ProposedTotalPiastres, correction.ProposedDueDate }) });
         await db.SaveChangesAsync(cancellationToken);
         return Results.Ok(new { data = ToResponse(correction) });
     }

@@ -41,7 +41,7 @@ import DecisionDialog from "@/components/DecisionDialog";
 import NotificationCenter, {
   type NotificationItem,
 } from "@/components/NotificationCenter";
-import { apiClient, type ApprovalRequestRecord, type InvoiceCorrection, type NotificationRecord } from "@/lib/apiClient";
+import { apiClient, type ApprovalRequestRecord, type FinanceExpense, type InvoiceCorrection, type NotificationRecord } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
 
 type QueueTab = "all" | ApprovalKind;
@@ -227,13 +227,38 @@ function correctionFromApi(record: InvoiceCorrection): ApprovalItem {
   return { id: record.id, kind: "correction", title: "تصحيح فاتورة يحتاج اعتمادًا", summary: record.reason, branch: record.branchId, requestedBy: "المحاسبة", submittedAt: new Date(record.createdAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" }), submittedAtSort: record.createdAt, status: record.status.toLowerCase() as ApprovalStatus, decidedAt: record.decidedAt ? new Date(record.decidedAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" }) : undefined, decidedAtSort: record.decidedAt ? new Date(record.decidedAt).getTime() : undefined, decidedBy: record.decidedByUserId ?? undefined, decisionNote: record.reason, targetId: record.id, correctionInvoice: record.invoiceNumber ?? record.invoiceId, correctionCurrentAmount: Math.round(record.currentTotalPiastres / 100), correctionProposedAmount: Math.round(record.proposedTotalPiastres / 100), live: true };
 }
 
+function expenseFromApi(record: FinanceExpense): ApprovalItem {
+  return {
+    id: record.id,
+    kind: "expense",
+    title: "مصروف يحتاج اعتمادًا",
+    summary: record.description,
+    branch: record.branchName ?? record.branchId,
+    requestedBy: "مقدم الطلب",
+    submittedAt: new Date(record.createdAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" }),
+    submittedAtSort: record.createdAt,
+    status: record.status.toLowerCase() as ApprovalStatus,
+    decidedAt: record.decidedAt ? new Date(record.decidedAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" }) : undefined,
+    decidedAtSort: record.decidedAt ? new Date(record.decidedAt).getTime() : undefined,
+    decidedBy: record.decidedByUserId ?? undefined,
+    decisionNote: record.approvalReason ?? undefined,
+    expenseDescription: record.description,
+    expenseAmount: Math.round(record.amountPiastres / 100),
+    expenseCategory: record.category,
+    targetId: record.id,
+    live: true,
+  };
+}
+
 export default function Approvals() {
   const [, navigate] = useLocation();
-  const { logout } = useAuth();
+  const { logout, me } = useAuth();
   const [requests, setRequests] = useState(INITIAL_REQUESTS);
   const [liveMode, setLiveMode] = useState(() => apiClient.hasSession());
   const [loadError, setLoadError] = useState<string | null>(null);
-  const branch = liveMode ? "كل الفروع" : "مدينة نصر";
+  const branch = liveMode
+    ? me?.branches?.find(item => item.id === me.branchId)?.name ?? me?.branches?.[0]?.name ?? "الفرع المصرح"
+    : "مدينة نصر";
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState<QueueTab>("all");
@@ -254,10 +279,10 @@ export default function Approvals() {
     setRequests([]);
     setNotifications([]);
     setLoadError(null);
-    Promise.all([apiClient.listApprovals(), apiClient.listNotifications(), apiClient.invoiceCorrections()])
-      .then(([approvalResponse, notificationResponse, correctionResponse]) => {
+    Promise.all([apiClient.listApprovals(), apiClient.listNotifications(), apiClient.invoiceCorrections(), apiClient.financeExpenses({ status: "ALL" })])
+      .then(([approvalResponse, notificationResponse, correctionResponse, expenseResponse]) => {
         const supported = approvalResponse.items.filter(item => item.targetType === "SESSION" && ["EXTRA", "MAKEUP", "INSTRUCTOR_SUBSTITUTION"].includes(item.requestType));
-        setRequests([...supported.map(approvalFromApi), ...correctionResponse.items.map(correctionFromApi)]);
+        setRequests([...supported.map(approvalFromApi), ...correctionResponse.items.map(correctionFromApi), ...expenseResponse.items.map(expenseFromApi)]);
         setNotifications(notificationResponse.items.map(notificationFromApi));
       })
       .catch(cause => {
@@ -325,7 +350,7 @@ export default function Approvals() {
     id: `decision-${item.id}`,
     title: item.title,
     description: item.decisionNote
-      ? `${item.status === "rejected" && item.kind === "expense" ? "سبب الرفض: " : "ملاحظة القرار: "}${item.decisionNote}`
+      ? `${item.kind === "expense" || item.kind === "correction" ? "سبب القرار: " : "ملاحظة القرار: "}${item.decisionNote}`
       : undefined,
     actor: item.decidedBy ?? "مدير الفرع",
     timestamp: item.decidedAt ?? "قرار توضيحي سابق",
@@ -398,14 +423,21 @@ export default function Approvals() {
       toast.error("اكتب سبب الرفض قبل إغلاق الطلب");
       return;
     }
+    if (item.live && liveMode && status === "approved" && ["expense", "correction"].includes(item.kind) && !decisionNote.trim()) {
+      toast.error("اكتب مبرر الاعتماد قبل إغلاق الطلب");
+      return;
+    }
     if (item.live && liveMode) {
       if (item.kind === "substitute" && status === "approved" && !item.proposedInstructorId) {
         toast.error("لا يمكن اعتماد الاستبدال قبل اقتراح مدرب بديل.");
         return;
       }
       try {
-        if (item.kind === "correction") {
-          await apiClient.decideInvoiceCorrection(id, { decision: status.toUpperCase() as "APPROVED" | "REJECTED", reason: decisionNote.trim() || undefined });
+        if (item.kind === "expense") {
+          if (status === "approved") await apiClient.approveFinanceExpense(id, decisionNote.trim());
+          else await apiClient.rejectFinanceExpense(id, decisionNote.trim());
+        } else if (item.kind === "correction") {
+          await apiClient.decideInvoiceCorrection(id, { decision: status.toUpperCase() as "APPROVED" | "REJECTED", reason: decisionNote.trim() });
         } else {
           await apiClient.decideApproval(id, {
             decision: status.toUpperCase() as "APPROVED" | "REJECTED",
@@ -917,7 +949,7 @@ export default function Approvals() {
             </div>
             <AuditTimeline
               events={auditEvents}
-              emptyLabel="لا توجد قرارات مسجلة في بيانات العرض بعد."
+              emptyLabel={liveMode ? "لا توجد قرارات محفوظة في هذا النطاق بعد." : "لا توجد قرارات مسجلة في بيانات العرض بعد."}
             />
           </section>
           <div className="finance-footer-note">
@@ -925,9 +957,9 @@ export default function Approvals() {
               <AlertCircle size={14} />
             </span>
             <p>
-              الخصومات مرتبطة بكيان AppliedDiscount وحقول approval_status،
-              وتبديل المدرب مرتبط بحالة الحصة pending_approval. قواعد الاستحقاق
-              ومصفوفة الصلاحيات التفصيلية لم تُحدد بعد في API Contracts.
+              {liveMode
+                ? "الموافقات المعروضة محمّلة من واجهات الخادم ومقيّدة بنطاق الحساب؛ قرارات المصروفات والتصحيحات تحفظ السبب والمستخدم والفرع في سجل التدقيق."
+                : "الخصومات والجلسات في هذه المعاينة توضيحية فقط؛ لا تُحفظ قراراتها على الخادم."}
             </p>
           </div>
         </div>

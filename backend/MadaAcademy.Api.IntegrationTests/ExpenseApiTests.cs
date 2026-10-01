@@ -24,16 +24,21 @@ public sealed class ExpenseApiTests
         var json = await created.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Expense response missing.");
         var expenseId = json.RootElement.GetProperty("data").GetProperty("id").GetGuid();
         Assert.Equal("PENDING", json.RootElement.GetProperty("data").GetProperty("status").GetString());
-        Assert.Equal(HttpStatusCode.Conflict, (await creatorClient.PostAsync($"/api/v1/finance/expenses/{expenseId}/approve", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await creatorClient.PostAsJsonAsync($"/api/v1/finance/expenses/{expenseId}/approve", new { reason = "Attempted self-approval" })).StatusCode);
         using var approverClient = factory.CreateClient();
         TestData.Authenticate(approverClient, await TestData.LoginAsync(approverClient, approver));
-        var approved = await approverClient.PostAsync($"/api/v1/finance/expenses/{expenseId}/approve", null);
+        Assert.Equal(HttpStatusCode.BadRequest, (await approverClient.PostAsJsonAsync($"/api/v1/finance/expenses/{expenseId}/approve", new { reason = " " })).StatusCode);
+        const string decisionReason = "Receipt checked against the branch budget.";
+        var approved = await approverClient.PostAsJsonAsync($"/api/v1/finance/expenses/{expenseId}/approve", new { reason = decisionReason });
         Assert.Equal(HttpStatusCode.OK, approved.StatusCode);
         Assert.Contains("\"status\":\"APPROVED\"", await approved.Content.ReadAsStringAsync(), StringComparison.Ordinal);
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
         Assert.Equal(1, await db.StateTransitions.CountAsync(x => x.AggregateType == "EXPENSE" && x.AggregateId == expenseId.ToString() && x.ToState == "APPROVED"));
-        Assert.Equal(1, await db.AuditEvents.CountAsync(x => x.TargetType == "EXPENSE" && x.Action == "EXPENSE_APPROVED"));
+        var audit = await db.AuditEvents.SingleAsync(x => x.TargetType == "EXPENSE" && x.Action == "EXPENSE_APPROVED");
+        Assert.Equal(approver.UserId, audit.ActorUserId);
+        Assert.Equal(approver.BranchId, audit.BranchId);
+        Assert.Equal(decisionReason, audit.Reason);
     }
 
     [Fact]
