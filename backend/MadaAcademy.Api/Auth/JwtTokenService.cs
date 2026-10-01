@@ -17,7 +17,7 @@ public sealed record AuthTokenResponse(
 
 public sealed class JwtTokenService(JwtOptions options)
 {
-    public AuthTokenResponse Issue(UserAccount user, Membership membership)
+    public AuthTokenResponse Issue(UserAccount user, Membership membership, Guid sessionId)
     {
         var now = DateTimeOffset.UtcNow;
         var accessExpires = now.AddMinutes(options.AccessTokenMinutes);
@@ -28,6 +28,7 @@ public sealed class JwtTokenService(JwtOptions options)
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new("sessionId", sessionId.ToString()),
             new("accountType", user.AccountType),
             new("role", membership.RoleCode),
             new(ClaimTypes.Role, membership.RoleCode),

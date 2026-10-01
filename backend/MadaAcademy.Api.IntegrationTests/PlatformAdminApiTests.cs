@@ -34,8 +34,8 @@ public sealed class PlatformAdminApiTests
                 new { status = "PAUSED", reason = "Unauthorized attempt" })).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden,
             (await academyClient.PostAsync(
-                $"/api/v1/platform/users/{accountant.UserId}/sessions/revoke",
-                content: null)).StatusCode);
+                $"/api/v1/platform/academies/{accountant.TenantId}/users/{accountant.UserId}/sessions/revoke",
+                JsonContent.Create(new { reason = "Unauthorized attempt" }))).StatusCode);
 
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
@@ -48,9 +48,12 @@ public sealed class PlatformAdminApiTests
     {
         using var factory = new TestApiFactory(useInMemory: true);
         using var client = factory.CreateClient();
+        using var ownerClient = factory.CreateClient();
         var platformAdmin = await TestData.CreateAccountAsync(factory, "R00_PLATFORM_ADMIN");
         var academyOwner = await TestData.CreateAccountAsync(factory, "R01_ACADEMY_OWNER");
         TestData.Authenticate(client, await TestData.LoginAsync(client, platformAdmin));
+        var ownerTokens = await TestData.LoginAsync(ownerClient, academyOwner);
+        TestData.Authenticate(ownerClient, ownerTokens);
 
         var academiesResponse = await client.GetAsync("/api/v1/platform/academies");
         Assert.Equal(HttpStatusCode.OK, academiesResponse.StatusCode);
@@ -62,6 +65,9 @@ public sealed class PlatformAdminApiTests
             new { status = "PAUSED", reason = "Support review" });
         Assert.Equal(HttpStatusCode.OK, changeResponse.StatusCode);
         Assert.Contains("PAUSED", await changeResponse.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await ownerClient.GetAsync("/api/v1/me")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await ownerClient.PostAsJsonAsync("/api/v1/auth/refresh", new { refreshToken = ownerTokens.RefreshToken })).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/v1/auth/login", new { phone = academyOwner.Phone, password = academyOwner.Password, accountType = "staff" })).StatusCode);
 
         var invalidResponse = await client.PatchAsJsonAsync(
             $"/api/v1/platform/academies/{academyOwner.TenantId}/status",
@@ -72,6 +78,7 @@ public sealed class PlatformAdminApiTests
         var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
         var tenant = await db.Tenants.SingleAsync(item => item.Id == academyOwner.TenantId);
         Assert.Equal("PAUSED", tenant.Status);
+        Assert.All(await db.RefreshSessions.Where(item => item.UserAccountId == academyOwner.UserId).ToListAsync(), session => Assert.NotNull(session.RevokedAt));
 
         var auditEvent = await db.AuditEvents.SingleAsync(item =>
             item.Action == "PLATFORM_TENANT_STATUS_CHANGED" && item.TargetId == academyOwner.TenantId.ToString());
@@ -87,31 +94,28 @@ public sealed class PlatformAdminApiTests
     {
         using var factory = new TestApiFactory(useInMemory: true);
         using var client = factory.CreateClient();
+        using var targetClient = factory.CreateClient();
         var platformAdmin = await TestData.CreateAccountAsync(factory, "R00_PLATFORM_ADMIN");
         var targetUser = await TestData.CreateAccountAsync(factory, "R06_ACCOUNTANT");
         TestData.Authenticate(client, await TestData.LoginAsync(client, platformAdmin));
+        TestData.Authenticate(targetClient, await TestData.LoginAsync(targetClient, targetUser));
 
-        var targetSessionId = Guid.NewGuid();
+        Guid targetSessionId;
         using (var seedScope = factory.Services.CreateScope())
         {
             var db = seedScope.ServiceProvider.GetRequiredService<MadaDbContext>();
-            db.RefreshSessions.Add(new RefreshSession
-            {
-                Id = targetSessionId,
-                UserAccountId = targetUser.UserId,
-                TokenHash = $"test-{Guid.NewGuid():N}",
-                ExpiresAt = DateTimeOffset.UtcNow.AddDays(1)
-            });
-            await db.SaveChangesAsync();
+            targetSessionId = await db.RefreshSessions.Where(item => item.UserAccountId == targetUser.UserId && item.RevokedAt == null).Select(item => item.Id).SingleAsync();
         }
 
         var response = await client.PostAsync(
-            $"/api/v1/platform/users/{targetUser.UserId}/sessions/revoke",
-            content: null);
+            $"/api/v1/platform/academies/{targetUser.TenantId}/users/{targetUser.UserId}/sessions/revoke",
+            JsonContent.Create(new { reason = "Security review" }));
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var responseJson = await response.Content.ReadAsStringAsync();
         using var responseDocument = JsonDocument.Parse(responseJson);
         Assert.Equal(1, responseDocument.RootElement.GetProperty("data").GetProperty("revokedCount").GetInt32());
+        Assert.Equal(HttpStatusCode.Unauthorized, (await targetClient.GetAsync("/api/v1/me")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/v1/me")).StatusCode);
 
         using var verifyScope = factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<MadaDbContext>();
@@ -123,6 +127,73 @@ public sealed class PlatformAdminApiTests
         var auditEvent = await verifyDb.AuditEvents.SingleAsync(item =>
             item.Action == "PLATFORM_USER_SESSIONS_REVOKED" && item.TargetId == targetUser.UserId.ToString());
         Assert.Equal(platformAdmin.UserId, auditEvent.ActorUserId);
+        Assert.Equal(targetUser.TenantId, auditEvent.TenantId);
+        Assert.Equal("Security review", auditEvent.Reason);
         Assert.Contains("1", auditEvent.MetadataJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task PlatformAdmin_CanSearchAndDisableMemberWithinTenant_WithAuditAndImmediateAccessRevocation()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var platformClient = factory.CreateClient();
+        using var memberClient = factory.CreateClient();
+        var platformAdmin = await TestData.CreateAccountAsync(factory, "R00_PLATFORM_ADMIN");
+        var owner = await TestData.CreateAccountAsync(factory, "R01_ACADEMY_OWNER");
+        var unrelatedOwner = await TestData.CreateAccountAsync(factory, "R01_ACADEMY_OWNER");
+        TestData.Authenticate(platformClient, await TestData.LoginAsync(platformClient, platformAdmin));
+        TestData.Authenticate(memberClient, await TestData.LoginAsync(memberClient, owner));
+
+        Guid membershipId;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            membershipId = await db.Memberships.Where(item => item.TenantId == owner.TenantId && item.UserAccountId == owner.UserId).Select(item => item.Id).SingleAsync();
+        }
+
+        using var searchResponse = await platformClient.GetAsync($"/api/v1/platform/academies/{owner.TenantId}/members?search={Uri.EscapeDataString(owner.Phone)}");
+        Assert.Equal(HttpStatusCode.OK, searchResponse.StatusCode);
+        using var membersDocument = await searchResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Member search response is empty.");
+        var member = membersDocument.RootElement.GetProperty("data").GetProperty("items")[0];
+        Assert.Equal(owner.UserId, member.GetProperty("userId").GetGuid());
+        Assert.True(member.GetProperty("activeSessions").GetInt32() >= 1);
+        Assert.True(member.GetProperty("lastLoginAt").ValueKind == JsonValueKind.String);
+        Assert.DoesNotContain(owner.Phone, member.GetProperty("maskedPhone").GetString(), StringComparison.Ordinal);
+
+        using var crossTenantResponse = await platformClient.PatchAsJsonAsync(
+            $"/api/v1/platform/academies/{unrelatedOwner.TenantId}/members/{membershipId}/status",
+            new { status = "REVOKED", reason = "Security review" });
+        Assert.Equal(HttpStatusCode.NotFound, crossTenantResponse.StatusCode);
+
+        using var disableResponse = await platformClient.PatchAsJsonAsync(
+            $"/api/v1/platform/academies/{owner.TenantId}/members/{membershipId}/status",
+            new { status = "REVOKED", reason = "Security review" });
+        Assert.Equal(HttpStatusCode.OK, disableResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await memberClient.GetAsync("/api/v1/me")).StatusCode);
+
+        using var activityResponse = await platformClient.GetAsync($"/api/v1/platform/academies/{owner.TenantId}/activity");
+        Assert.Equal(HttpStatusCode.OK, activityResponse.StatusCode);
+        using var activityDocument = await activityResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Tenant activity response is empty.");
+        var activity = activityDocument.RootElement.GetProperty("data").GetProperty("items").EnumerateArray().First(item => item.GetProperty("action").GetString() == "PLATFORM_MEMBER_STATUS_CHANGED");
+        Assert.Equal(owner.TenantId, activity.GetProperty("tenantId").GetGuid());
+        Assert.Equal("Security review", activity.GetProperty("reason").GetString());
+        Assert.Equal(platformAdmin.UserId, activity.GetProperty("actorUserId").GetGuid());
+    }
+
+    [Fact]
+    public async Task PlatformRoles_AreListedWithoutSelfAssignmentOrTenantPrivilegeEscalation()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var client = factory.CreateClient();
+        var platformAdmin = await TestData.CreateAccountAsync(factory, "R00_PLATFORM_ADMIN");
+        TestData.Authenticate(client, await TestData.LoginAsync(client, platformAdmin));
+
+        using var rolesResponse = await client.GetAsync("/api/v1/platform/roles");
+        Assert.Equal(HttpStatusCode.OK, rolesResponse.StatusCode);
+        using var rolesDocument = await rolesResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Platform role response is empty.");
+        var role = rolesDocument.RootElement.GetProperty("data").GetProperty("items")[0];
+        Assert.Equal("R00_PLATFORM_ADMIN", role.GetProperty("code").GetString());
+        Assert.False(role.GetProperty("canSelfAssign").GetBoolean());
+        Assert.Equal("CONTROLLED_OUT_OF_BAND", role.GetProperty("assignmentMode").GetString());
     }
 }
