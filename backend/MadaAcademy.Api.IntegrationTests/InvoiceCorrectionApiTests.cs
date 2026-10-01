@@ -36,7 +36,8 @@ public sealed class InvoiceCorrectionApiTests
         TestData.Authenticate(managerClient, await TestData.LoginAsync(managerClient, manager));
         var decision = await managerClient.PostAsJsonAsync($"/api/v1/finance/invoice-corrections/{correctionId}/decision", new { decision = "APPROVED" });
         Assert.Equal(HttpStatusCode.OK, decision.StatusCode);
-        var after = await managerClient.GetStringAsync($"/api/v1/finance/invoices/{invoiceId}");
+        Assert.Equal(HttpStatusCode.Forbidden, (await managerClient.GetAsync($"/api/v1/finance/invoices/{invoiceId}")).StatusCode);
+        var after = await requesterClient.GetStringAsync($"/api/v1/finance/invoices/{invoiceId}");
         Assert.Contains("\"totalPiastres\":12000", after, StringComparison.Ordinal);
         Assert.Contains("Corrected tuition", after, StringComparison.Ordinal);
         Assert.Contains("\"paidPiastres\":5000", after, StringComparison.Ordinal);

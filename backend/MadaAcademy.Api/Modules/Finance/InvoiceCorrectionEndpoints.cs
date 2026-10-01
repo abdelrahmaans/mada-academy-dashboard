@@ -20,6 +20,7 @@ public static class InvoiceCorrectionEndpoints
     private static async Task<IResult> ListAsync(HttpContext context, MadaDbContext db, string? state, CancellationToken cancellationToken)
     {
         if (!TryScope(context.User, out var scope, out var error)) return error;
+        if (!CanRead(context.User)) return Forbidden("INVOICE_CORRECTION_READ_FORBIDDEN");
         var normalized = string.IsNullOrWhiteSpace(state) || state.Equals("ALL", StringComparison.OrdinalIgnoreCase) ? null : state.Trim().ToUpperInvariant();
         if (normalized is not null && normalized is not ("PENDING" or "APPROVED" or "REJECTED")) return Validation("state", "State must be ALL, PENDING, APPROVED, or REJECTED.");
         var requests = await db.InvoiceCorrectionRequests.AsNoTracking()
@@ -119,6 +120,7 @@ public static class InvoiceCorrectionEndpoints
         createdAt = request.CreatedAt
     };
 
+    private static bool CanRead(ClaimsPrincipal user) => CanRequest(user) || CanDecide(user);
     private static bool CanRequest(ClaimsPrincipal user) => user.IsInRole("R05_SECRETARY") || user.IsInRole("R06_ACCOUNTANT");
     private static bool CanDecide(ClaimsPrincipal user) => user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER");
     private static bool TryScope(ClaimsPrincipal user, out StaffScope scope, out IResult error)

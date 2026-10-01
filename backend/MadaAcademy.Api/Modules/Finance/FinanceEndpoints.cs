@@ -35,6 +35,7 @@ public static class FinanceEndpoints
     private static async Task<IResult> ListInvoicesAsync(HttpContext context, MadaDbContext db, string? query, string? status, Guid? studentId, CancellationToken cancellationToken)
     {
         if (!TryStaffScope(context.User, out var scope, out var error)) return error;
+        if (!CanReadInvoices(context.User)) return Forbidden("INVOICE_READ_FORBIDDEN");
         var invoices = await db.Invoices.AsNoTracking()
             .Include(x => x.Student).Include(x => x.Payments).Include(x => x.Lines)
             .Where(x => x.TenantId == scope.TenantId && (!scope.BranchId.HasValue || x.BranchId == scope.BranchId.Value))
@@ -48,6 +49,7 @@ public static class FinanceEndpoints
     private static async Task<IResult> GetInvoiceAsync(Guid invoiceId, HttpContext context, MadaDbContext db, CancellationToken cancellationToken)
     {
         if (!TryStaffScope(context.User, out var scope, out var error)) return error;
+        if (!CanReadInvoices(context.User)) return Forbidden("INVOICE_READ_FORBIDDEN");
         var invoice = await db.Invoices.AsNoTracking().Include(x => x.Student).Include(x => x.Payments).ThenInclude(x => x.Evidence).Include(x => x.Lines)
             .SingleOrDefaultAsync(x => x.Id == invoiceId && x.TenantId == scope.TenantId && (!scope.BranchId.HasValue || x.BranchId == scope.BranchId.Value), cancellationToken);
         return invoice is null ? NotFound("INVOICE_NOT_FOUND") : Results.Ok(new { data = ToResponse(invoice) });
@@ -183,6 +185,7 @@ public static class FinanceEndpoints
     private static async Task<IResult> ReportsSummaryAsync(HttpContext context, MadaDbContext db, DateOnly? from, DateOnly? to, Guid? branchId, CancellationToken cancellationToken)
     {
         if (!TryStaffScope(context.User, out var scope, out var error)) return error;
+        if (!CanReadFinancialReports(context.User)) return Forbidden("FINANCE_REPORT_READ_FORBIDDEN");
         if (from.HasValue && to.HasValue && from.Value > to.Value) return Validation("dateRange", "from cannot be after to.");
         if (branchId.HasValue && scope.BranchId.HasValue && branchId.Value != scope.BranchId.Value) return NotFound("REPORT_NOT_FOUND");
         var effectiveBranch = branchId ?? scope.BranchId;
@@ -195,6 +198,7 @@ public static class FinanceEndpoints
     private static async Task<IResult> ReportsCsvAsync(HttpContext context, MadaDbContext db, DateOnly? from, DateOnly? to, Guid? branchId, CancellationToken cancellationToken)
     {
         if (!TryStaffScope(context.User, out var scope, out var error)) return error;
+        if (!CanReadFinancialReports(context.User)) return Forbidden("FINANCE_REPORT_READ_FORBIDDEN");
         if (from.HasValue && to.HasValue && from.Value > to.Value) return Validation("dateRange", "from cannot be after to.");
         if (branchId.HasValue && scope.BranchId.HasValue && branchId.Value != scope.BranchId.Value) return NotFound("REPORT_NOT_FOUND");
         var effectiveBranch = branchId ?? scope.BranchId;
@@ -233,6 +237,8 @@ public static class FinanceEndpoints
     }
 
     private static object ToPaymentResponse(PaymentTransaction payment) => new { id = payment.Id, invoiceId = payment.InvoiceId, amountPiastres = payment.AmountPiastres, method = payment.Method, receivedOn = payment.ReceivedOn, externalReference = payment.ExternalReference, note = payment.Note, createdAt = payment.CreatedAt, evidenceStatus = payment.Evidence is null ? "NOT_ATTACHED" : "ATTACHED", evidenceFileName = payment.Evidence?.DisplayFileName };
+    private static bool CanReadInvoices(ClaimsPrincipal user) => user.IsInRole("R05_SECRETARY") || user.IsInRole("R06_ACCOUNTANT");
+    private static bool CanReadFinancialReports(ClaimsPrincipal user) => user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R06_ACCOUNTANT");
     private static bool CanWriteInvoices(ClaimsPrincipal user) => user.IsInRole("R05_SECRETARY") || user.IsInRole("R06_ACCOUNTANT");
     private static bool CanWritePayments(ClaimsPrincipal user) => user.IsInRole("R05_SECRETARY") || user.IsInRole("R06_ACCOUNTANT");
     private static bool CanReadEvidence(ClaimsPrincipal user) => user.IsInRole("R05_SECRETARY") || user.IsInRole("R06_ACCOUNTANT");
