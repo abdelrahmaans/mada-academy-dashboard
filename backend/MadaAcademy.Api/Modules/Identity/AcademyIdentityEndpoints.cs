@@ -182,6 +182,9 @@ public static class AcademyIdentityEndpoints
         "R02_BRANCH_MANAGER" => ["branch.read", "students.read", "students.create", "sessions.read", "sessions.create", "attendance.read", "attendance.write"],
         "R03_HEAD_INSTRUCTORS" => ["branch.read", "sessions.read", "attendance.read", "attendance.write", "evaluations.write", "evaluations.review"],
         "R04_INSTRUCTOR" => ["sessions.assigned.read", "attendance.read", "attendance.write", "evaluations.write"],
+        "R05_SECRETARY" => ["branch.read", "students.read", "students.create", "sessions.read", "staff.read", "invoices.read", "invoices.create", "payments.create", "payments.evidence.read", "payments.evidence.write"],
+        "R06_ACCOUNTANT" => ["branch.read", "students.read", "sessions.read", "finance.read", "invoices.read", "invoices.create", "payments.create", "payments.evidence.read", "payments.evidence.write", "reports.read"],
+        "R07_MEDIA_MANAGER" => ["branch.read", "marketing.read", "marketing.write", "reports.read"],
         "R08_PARENT" => ["consumer.students.read", "consumer.sessions.read", "consumer.evaluations.read"],
         "R09_STUDENT" => ["consumer.self.read", "consumer.sessions.read", "consumer.evaluations.read"],
         _ => []
@@ -193,8 +196,11 @@ public static class AcademyIdentityEndpoints
         ["R01_ACADEMY_OWNER"] = "مسؤول الأكاديمية",
         ["R02_BRANCH_MANAGER"] = "مدير الفرع",
         ["R03_HEAD_INSTRUCTORS"] = "رئيس المدربين",
-        ["R04_INSTRUCTOR"] = "المدرب"
-        , ["R08_PARENT"] = "ولي الأمر",
+        ["R04_INSTRUCTOR"] = "المدرب",
+        ["R05_SECRETARY"] = "السكرتير",
+        ["R06_ACCOUNTANT"] = "المحاسب",
+        ["R07_MEDIA_MANAGER"] = "مسؤول التسويق",
+        ["R08_PARENT"] = "ولي الأمر",
         ["R09_STUDENT"] = "الطالب"
     };
 }

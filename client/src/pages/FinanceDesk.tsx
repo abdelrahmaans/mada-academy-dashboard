@@ -1,10 +1,11 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { AlertCircle, ArrowDownToLine, ArrowUpLeft, BarChart3, CalendarDays, Check, CheckCircle2, ChevronLeft, CircleHelp, Clock3, CreditCard, FileCheck2, FileText, LayoutDashboard, LogOut, MapPin, Menu, Plus, Search, Settings, ShieldCheck, TrendingDown, TrendingUp, Wallet, X } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
+import { apiClient, type FinanceInvoice } from "@/lib/apiClient";
 
 type View = "overview" | "collections" | "expenses" | "reports";
 type InvoiceStatus = "partial" | "overdue" | "paid" | "unpaid";
@@ -26,6 +27,7 @@ const INITIAL_EXPENSES: Expense[] = [
 const STATUS_LABEL: Record<InvoiceStatus, string> = { partial: "مدفوعة جزئيًا", overdue: "متأخرة", paid: "مدفوعة", unpaid: "غير مدفوعة" };
 const EXPENSE_LABEL: Record<ExpenseStatus, string> = { pending: "بانتظار الاعتماد", approved: "معتمد", rejected: "مرفوض" };
 function money(value: number) { return new Intl.NumberFormat("en-US").format(value); }
+function mapFinanceInvoice(invoice: FinanceInvoice): Invoice { return { id: invoice.id, number: invoice.invoiceNumber, student: invoice.studentName ?? "طالب", parent: "—", branch: invoice.branchId, course: invoice.lines[0]?.description ?? "—", total: Math.round(invoice.totalPiastres / 100), collected: Math.round(invoice.paidPiastres / 100), due: invoice.dueDate }; }
 function invoiceStatus(invoice: Invoice): InvoiceStatus { if (invoice.collected >= invoice.total) return "paid"; if (invoice.collected === 0 && invoice.due.includes("20")) return "overdue"; return invoice.collected > 0 ? "partial" : "unpaid"; }
 
 export default function FinanceDesk() {
@@ -43,7 +45,14 @@ export default function FinanceDesk() {
   const [expenseBranch, setExpenseBranch] = useState("مدينة نصر");
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
-  const scopedInvoices = invoices.filter(item => item.branch === branch);
+  const [liveMode, setLiveMode] = useState(apiClient.hasSession());
+  useEffect(() => {
+    if (!apiClient.hasSession()) return;
+    let cancelled = false;
+    apiClient.financeInvoices().then(response => { if (!cancelled) { setInvoices(response.items.map(mapFinanceInvoice)); setLiveMode(true); } }).catch(error => { if (!cancelled) toast.error(error instanceof Error ? error.message : "تعذر تحميل الفواتير"); });
+    return () => { cancelled = true; };
+  }, []);
+  const scopedInvoices = liveMode ? invoices : invoices.filter(item => item.branch === branch);
   const scopedExpenses = expenses.filter(item => item.branch === branch);
   const filteredInvoices = scopedInvoices.filter(item => !query.trim() || `${item.number} ${item.student} ${item.parent}`.toLocaleLowerCase("ar").includes(query.trim().toLocaleLowerCase("ar")));
   const filteredExpenses = scopedExpenses.filter(item => !query.trim() || `${item.description} ${item.createdBy} ${item.category}`.toLocaleLowerCase("ar").includes(query.trim().toLocaleLowerCase("ar")));
@@ -53,7 +62,7 @@ export default function FinanceDesk() {
   const pendingCount = scopedExpenses.filter(item => item.status === "pending").length;
   const net = collected - approvedExpenses;
   const selectView = (next: View) => { setView(next); setMobileOpen(false); setQuery(""); };
-  const recordPayment = (event: FormEvent) => { event.preventDefault(); const amount = Number(paymentAmount); const invoice = invoices.find(item => item.id === paymentInvoice); const remaining = invoice ? invoice.total - invoice.collected : 0; if (!invoice || !amount || amount <= 0) { toast.error("أدخل مبلغ تحصيل صحيح"); return; } if (amount > remaining) { toast.error("المبلغ أكبر من الرصيد المتبقي", { description: `المتاح للتحصيل ${money(remaining)} ج.م فقط.` }); return; } setInvoices(current => current.map(item => item.id === paymentInvoice ? { ...item, collected: item.collected + amount } : item)); toast.success("تم تسجيل التحصيل", { description: `${money(amount)} ج.م · تم تحديث الرصيد محليًا، ويُسجل كدفعة جديدة عند ربط API.` }); setPaymentAmount(""); };
+  const recordPayment = (event: FormEvent) => { event.preventDefault(); const amount = Number(paymentAmount); const invoice = invoices.find(item => item.id === paymentInvoice); const remaining = invoice ? invoice.total - invoice.collected : 0; if (!invoice || !amount || amount <= 0) { toast.error("أدخل مبلغ تحصيل صحيح"); return; } if (amount > remaining) { toast.error("المبلغ أكبر من الرصيد المتبقي", { description: `المتاح للتحصيل ${money(remaining)} ج.م فقط.` }); return; } if (liveMode) { void apiClient.createFinancePayment(invoice.id, { amountPiastres: amount * 100, method: "CASH" }).then(() => { setInvoices(current => current.map(item => item.id === invoice.id ? { ...item, collected: item.collected + amount } : item)); toast.success("تم تسجيل التحصيل على الـAPI"); setPaymentAmount(""); }).catch(error => toast.error(error instanceof Error ? error.message : "تعذر تسجيل التحصيل")); return; } setInvoices(current => current.map(item => item.id === paymentInvoice ? { ...item, collected: item.collected + amount } : item)); toast.success("تم تسجيل التحصيل", { description: `${money(amount)} ج.م · تم تحديث الرصيد محليًا.` }); setPaymentAmount(""); };
   const createExpense = (event: FormEvent) => { event.preventDefault(); const amount = Number(expenseAmount); if (!expenseDescription.trim() || !amount || amount <= 0) { toast.error("أدخل وصف المصروف والمبلغ"); return; } setExpenses(current => [{ id: `EXP-${current.length + 110}`, description: expenseDescription, branch: expenseBranch, category: "تشغيل وصيانة", amount, date: "اليوم", status: "pending", createdBy: "المحاسب" }, ...current]); toast.success("تم رفع المصروف للمراجعة", { description: "لن يدخل الإجماليات المعتمدة قبل قرار الاعتماد." }); setExpenseDescription(""); setExpenseAmount(""); };
   const rejectExpense = (event: FormEvent) => { event.preventDefault(); if (!rejecting || !rejectReason.trim()) { toast.error("سبب الرفض إلزامي"); return; } setExpenses(current => current.map(item => item.id === rejecting ? { ...item, status: "rejected", reason: rejectReason } : item)); toast.success("تم رفض المصروف بسبب موثق"); setRejecting(null); setRejectReason(""); };
   return <RoleDashboardShell className="app-shell finance-desk-shell" roleCode="R06" roleLabel="المحاسب" scopeLevel="branch" scopeLabel="المالية داخل الفروع المصرح بها" tenantName="أكاديمية مدى" branchName="الفروع المصرح بها">

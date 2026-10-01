@@ -25,7 +25,7 @@ import ChildrenSwitcher, {
 } from "@/components/ChildrenSwitcher";
 import { RoleScopeProvider } from "@/contexts/RoleScopeContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { apiClient, type ConsumerSessionRecord, type ConsumerStudentRecord } from "@/lib/apiClient";
+import { apiClient, type ConsumerSessionRecord, type ConsumerStudentRecord, type FinanceInvoice } from "@/lib/apiClient";
 import "@/components/RoleFoundation.css";
 
 type PortalTab = "overview" | "attendance" | "evaluations" | "invoices";
@@ -38,6 +38,7 @@ type ChildData = FamilyChild & {
   invoiceStatus: string;
   invoiceDue: string;
   sessionRecords?: ConsumerSessionRecord[];
+  invoices?: FinanceInvoice[];
 };
 
 const CHILDREN: ChildData[] = [
@@ -90,7 +91,7 @@ function mapFamilyChild(student: ConsumerStudentRecord, records: ConsumerSession
     nextSession: next ? `${new Date(next.startAt).toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "short" })} · ${new Date(next.startAt).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}` : "لا توجد جلسة قادمة مسجلة",
     nextRoom: next?.classroomName ?? "—",
     lastEvaluation: lastEvaluation ? `آخر تقييم · ${((lastEvaluation.score ?? 0) / 20).toFixed(1)} / 5` : "لا يوجد تقييم منشور",
-    invoiceStatus: "غير متاح", invoiceDue: "بيانات الفواتير غير موصولة بهذه البوابة.", sessionRecords: ownSessions,
+    invoiceStatus: "غير متاح", invoiceDue: "بيانات الفواتير غير موصولة بهذه البوابة.", sessionRecords: ownSessions, invoices: [],
   };
 }
 
@@ -110,10 +111,16 @@ export default function FamilyPortal() {
     if (!apiClient.hasSession()) return;
     let cancelled = false;
     setLiveMode(true); setDataLoading(true); setChildren([]);
-    Promise.all([apiClient.consumerStudents(), apiClient.consumerSessions()])
-      .then(([students, sessions]) => {
+    Promise.all([apiClient.consumerStudents(), apiClient.consumerSessions(), apiClient.consumerInvoices()])
+      .then(([students, sessions, invoiceResponse]) => {
         if (cancelled) return;
         const mapped = students.items.map((student, index) => mapFamilyChild(student, sessions.items, index));
+        for (const item of mapped) {
+          item.invoices = invoiceResponse.items.filter(invoice => invoice.studentId === item.id);
+          const outstanding = item.invoices.reduce((sum, invoice) => sum + invoice.remainingPiastres, 0);
+          item.invoiceStatus = item.invoices.length === 0 ? "لا توجد فواتير" : outstanding > 0 ? "قسط متبقٍ" : "مدفوع";
+          item.invoiceDue = item.invoices.find(invoice => invoice.remainingPiastres > 0)?.dueDate ?? "لا توجد مستحقات حالية";
+        }
         setChildren(mapped); setSelectedId(mapped[0]?.id ?? ""); setDataError(null);
       })
       .catch(error => { if (!cancelled) { setChildren([]); setDataError(error instanceof Error ? error.message : "تعذر تحميل بيانات الأسرة"); } })
@@ -272,7 +279,7 @@ export default function FamilyPortal() {
           {child && tab === "overview" && <Overview child={child} onTab={setTab} liveMode={liveMode} />}
           {child && tab === "attendance" && <Attendance child={child} liveMode={liveMode} />}
           {child && tab === "evaluations" && <Evaluations child={child} liveMode={liveMode} />}
-          {child && tab === "invoices" && (liveMode ? <section className="family-portal-panel family-detail-panel"><PanelTitle icon={<Wallet size={16} />} title="الفواتير والمدفوعات" /><div className="family-info-note"><AlertCircle size={14} /> بيانات الفواتير غير متاحة من الـAPI الحالي؛ لم نعرض أي مبالغ تجريبية على حساب حقيقي.</div></section> : <Invoices child={child} supportRequested={supportRequested} onRequestSupport={() => { setSupportRequested(true); toast.success("تم تسجيل طلب المراجعة في المعاينة فقط."); }} />)}
+          {child && tab === "invoices" && (liveMode ? <LiveInvoices invoices={child.invoices ?? []} /> : <Invoices child={child} supportRequested={supportRequested} onRequestSupport={() => { setSupportRequested(true); toast.success("تم تسجيل طلب المراجعة في المعاينة فقط."); }} />)}
           <footer className="family-portal-privacy">
             <ShieldCheck size={14} />
             <span>
@@ -454,6 +461,13 @@ function Evaluations({ child, liveMode }: { child: ChildData; liveMode: boolean 
     </section>
   );
 }
+function LiveInvoices({ invoices }: { invoices: FinanceInvoice[] }) {
+  return <section className="family-portal-panel family-detail-panel"><PanelTitle icon={<Wallet size={16} />} title="الفواتير والمدفوعات" />
+    {invoices.length === 0 ? <div className="family-info-note"><AlertCircle size={14} /> لا توجد فواتير مرتبطة بهذا الملف حاليًا.</div> : <div className="family-invoice-list">{invoices.map(invoice => <article className="family-invoice-card" key={invoice.id}><div><strong>{invoice.invoiceNumber}</strong><small>استحقاق {invoice.dueDate} · {invoice.status}</small></div><div><b>{(invoice.remainingPiastres / 100).toLocaleString("ar-EG")} ج.م متبقي</b><small>الإجمالي {(invoice.totalPiastres / 100).toLocaleString("ar-EG")} · المدفوع {(invoice.paidPiastres / 100).toLocaleString("ar-EG")}</small></div></article>)}</div>}
+    <div className="family-info-note"><ShieldCheck size={14} /> عرض للقراءة فقط؛ تسجيل التحصيل وإثباتاته يتم عبر الأكاديمية.</div>
+  </section>;
+}
+
 function Invoices({ child, supportRequested, onRequestSupport }: { child: ChildData; supportRequested: boolean; onRequestSupport: () => void }) {
   const paid = child.invoiceStatus.includes("مدفوع");
   return (

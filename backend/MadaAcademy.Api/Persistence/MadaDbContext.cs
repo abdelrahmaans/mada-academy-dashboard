@@ -30,6 +30,10 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
     public DbSet<SessionSubstitutionProposal> SessionSubstitutionProposals => Set<SessionSubstitutionProposal>();
     public DbSet<SessionEvaluation> SessionEvaluations => Set<SessionEvaluation>();
     public DbSet<InAppNotification> InAppNotifications => Set<InAppNotification>();
+    public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<InvoiceLine> InvoiceLines => Set<InvoiceLine>();
+    public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
+    public DbSet<PaymentEvidence> PaymentEvidences => Set<PaymentEvidence>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -228,6 +232,42 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
             entity.Property(x => x.Body).HasMaxLength(1000).IsRequired();
             entity.Property(x => x.TargetType).HasMaxLength(64);
             entity.Property(x => x.TargetId).HasMaxLength(120);
+        });
+        modelBuilder.Entity<Invoice>(entity =>
+        {
+            entity.HasIndex(x => x.InvoiceNumber).IsUnique();
+            entity.HasIndex(x => new { x.TenantId, x.BranchId, x.Status, x.DueDate });
+            entity.HasIndex(x => new { x.StudentId, x.IssueDate });
+            entity.Property(x => x.InvoiceNumber).HasMaxLength(48).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(24).IsRequired();
+            entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Branch>().WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<Student>().WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<StudentEnrollment>().WithMany().HasForeignKey(x => x.EnrollmentId).OnDelete(DeleteBehavior.SetNull);
+        });
+        modelBuilder.Entity<InvoiceLine>(entity =>
+        {
+            entity.HasIndex(x => new { x.InvoiceId, x.LineNumber }).IsUnique();
+            entity.Property(x => x.Description).HasMaxLength(240).IsRequired();
+            entity.HasOne(x => x.Invoice).WithMany(x => x.Lines).HasForeignKey(x => x.InvoiceId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<PaymentTransaction>(entity =>
+        {
+            entity.HasIndex(x => new { x.InvoiceId, x.CreatedAt });
+            entity.HasIndex(x => new { x.TenantId, x.BranchId, x.ReceivedOn });
+            entity.Property(x => x.Method).HasMaxLength(24).IsRequired();
+            entity.Property(x => x.ExternalReference).HasMaxLength(120);
+            entity.Property(x => x.Note).HasMaxLength(500);
+            entity.HasOne(x => x.Invoice).WithMany(x => x.Payments).HasForeignKey(x => x.InvoiceId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<PaymentEvidence>(entity =>
+        {
+            entity.HasIndex(x => x.PaymentTransactionId).IsUnique();
+            entity.Property(x => x.StorageKey).HasMaxLength(240).IsRequired();
+            entity.Property(x => x.DisplayFileName).HasMaxLength(180).IsRequired();
+            entity.Property(x => x.ContentType).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.Sha256).HasMaxLength(64).IsRequired();
+            entity.HasOne(x => x.PaymentTransaction).WithOne(x => x.Evidence).HasForeignKey<PaymentEvidence>(x => x.PaymentTransactionId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
