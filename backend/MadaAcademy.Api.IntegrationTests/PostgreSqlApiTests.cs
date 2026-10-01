@@ -237,4 +237,40 @@ public sealed class PostgreSqlApiTests(PostgreSqlFixture fixture)
         Assert.Contains("\"score\":88", published, StringComparison.Ordinal);
         Assert.Contains("اتقان ممتاز", published, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public async Task ExecutiveDashboard_AggregatesTenantMetricsOnPostgreSql()
+    {
+        using var client = fixture.Factory.CreateClient();
+        var owner = await TestData.CreateAccountAsync(fixture.Factory, "R01_ACADEMY_OWNER");
+        var studentId = await TestData.SeedStudentAsync(fixture.Factory, owner.TenantId, owner.BranchId, "Executive Dashboard Student");
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var sessionId = Guid.NewGuid();
+        var invoiceId = Guid.NewGuid();
+        using (var scope = fixture.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            db.StudentEnrollments.Add(new StudentEnrollment { StudentId = studentId, CourseOfferingId = Guid.NewGuid(), FinalPricePiastres = 5_000, Status = "ACTIVE" });
+            db.AcademySessions.Add(new AcademySession { Id = sessionId, TenantId = owner.TenantId, BranchId = owner.BranchId, SessionNumber = 1, StartAt = DateTimeOffset.UtcNow, EndAt = DateTimeOffset.UtcNow.AddHours(1), InstructorId = Guid.NewGuid(), ClassroomId = Guid.NewGuid(), Status = "COMPLETED" });
+            db.SessionAttendances.Add(new SessionAttendance { SessionId = sessionId, StudentId = studentId, Status = "PRESENT" });
+            db.Invoices.Add(new Invoice { Id = invoiceId, TenantId = owner.TenantId, BranchId = owner.BranchId, StudentId = studentId, InvoiceNumber = $"R1-{Guid.NewGuid():N}", TotalPiastres = 5_000, IssueDate = today, DueDate = today.AddDays(10), CreatedByUserId = owner.UserId });
+            db.PaymentTransactions.Add(new PaymentTransaction { TenantId = owner.TenantId, BranchId = owner.BranchId, InvoiceId = invoiceId, AmountPiastres = 2_000, Method = "CASH", ReceivedOn = today, RecordedByUserId = owner.UserId });
+            db.Expenses.Add(new Expense { TenantId = owner.TenantId, BranchId = owner.BranchId, Description = "Approved executive test expense", Category = "OPERATIONS", AmountPiastres = 500, SpentOn = today, CreatedByUserId = owner.UserId, Status = "APPROVED" });
+            db.ApprovalRequests.Add(new ApprovalRequest { TenantId = owner.TenantId, BranchId = owner.BranchId, RequestType = "TEST", TargetType = "TEST", TargetId = Guid.NewGuid().ToString(), SubmittedByRole = "R06_ACCOUNTANT", State = "PENDING" });
+            await db.SaveChangesAsync();
+        }
+
+        TestData.Authenticate(client, await TestData.LoginAsync(client, owner));
+        using var response = await client.GetAsync($"/api/v1/academy/executive-summary?from={today:yyyy-MM-dd}&to={today:yyyy-MM-dd}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = await response.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Executive report response is empty.");
+        var summary = document.RootElement.GetProperty("data").GetProperty("summary");
+        Assert.Equal(1, summary.GetProperty("activeStudents").GetInt32());
+        Assert.Equal(1, summary.GetProperty("activeEnrollments").GetInt32());
+        Assert.Equal(1, summary.GetProperty("sessions").GetInt32());
+        Assert.Equal(2_000, summary.GetProperty("collectedPiastres").GetInt64());
+        Assert.Equal(500, summary.GetProperty("approvedExpensesPiastres").GetInt64());
+        Assert.Equal(100m, summary.GetProperty("attendancePercent").GetDecimal());
+        Assert.Equal(1, summary.GetProperty("pendingApprovals").GetInt32());
+    }
 }

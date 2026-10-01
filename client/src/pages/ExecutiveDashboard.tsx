@@ -5,6 +5,8 @@ import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
+import { apiClient } from "@/lib/apiClient";
+import ExecutiveDashboardLive from "./ExecutiveDashboardLive";
 
 type View = "overview" | "branches" | "alerts" | "reports";
 type Branch = { name: string; manager: string; students: number; instructors: number; attendance: number; capacity: number; leads: number; tickets: number; collected: number; expenses: number; trend: number; health: "good" | "watch" };
@@ -23,7 +25,7 @@ const TITLE: Record<View, string> = { overview: "لوحة الإدارة الت�
 const COPY: Record<View, string> = { overview: "رؤية واحدة لأداء الأكاديمية، الفروع، النمو، التشغيل، والماليات.", branches: "قارن أداء الفروع بالمؤشرات نفسها دون فقدان سياق كل فرع.", alerts: "رتّب التنبيهات حسب الأثر واتخذ القرار من نطاق الأكاديمية.", reports: "استخرج ملخصًا تنفيذيًا قابلًا للمشاركة مع فريق الإدارة." };
 function money(value: number) { return new Intl.NumberFormat("en-US").format(value); }
 function total(key: keyof Branch, list: Branch[]) { return list.reduce((sum, item) => sum + (typeof item[key] === "number" ? Number(item[key]) : 0), 0); }
-export default function ExecutiveDashboard() {
+function ExecutiveDashboardPreviewContent() {
   const [, navigate] = useLocation();
   const [view, setView] = useState<View>("overview");
   const [branch, setBranch] = useState("كل الفروع");
@@ -49,3 +51,11 @@ function Kpi({ icon, label, value, hint, tone }: { icon: ReactNode; label: strin
 function Metric({ label, value }: { label: string; value: ReactNode }) { return <span className="executive-metric"><small>{label}</small><strong>{value}</strong></span>; }
 function ReportCard({ label, value, hint }: { label: string; value: ReactNode; hint: string }) { return <span className="executive-report-card"><small>{label}</small><strong>{value}</strong><span>{hint}</span></span>; }
 function PanelTitle({ icon, title, action }: { icon: ReactNode; title: string; action?: ReactNode }) { return <div className="executive-panel-title"><div><span>{icon}</span><h2>{title}</h2></div>{action}</div>; }
+
+function ExecutiveDashboardPreview() {
+  return <><div className="r1-preview-banner" role="note"><strong>PREVIEW / DEMO</strong><span>الأرقام التالية ثابتة للمعاينة وليست بيانات حساب فعلي.</span></div><ExecutiveDashboardPreviewContent /></>;
+}
+
+export default function ExecutiveDashboard() {
+  return apiClient.hasSession() ? <ExecutiveDashboardLive /> : <ExecutiveDashboardPreview />;
+}

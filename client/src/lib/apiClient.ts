@@ -17,6 +17,37 @@ export type PlatformAcademy = { id: string; name: string; slug: string; status: 
 export type PlatformAcademiesResponse = { items: PlatformAcademy[]; total: number };
 export type PlatformActivity = { id: string; action: string; targetType: string; targetId: string; tenantId: string | null; actorUserId: string | null; reason: string | null; createdAt: string; tenantName: string | null; actorName: string | null };
 export type PlatformActivityResponse = { items: PlatformActivity[]; total: number };
+export type ExecutiveBranchOption = { id: string; name: string; code: string; status: string };
+export type ExecutiveMetrics = {
+  activeStudents: number;
+  activeEnrollments: number;
+  sessions: number;
+  completedSessions: number;
+  attendedCount: number;
+  attendanceMarkedCount: number;
+  attendancePercent: number | null;
+  collectedPiastres: number;
+  approvedExpensesPiastres: number;
+  netPiastres: number;
+  pendingApprovals: number;
+};
+export type ExecutiveBranchMetrics = ExecutiveMetrics & {
+  branchId: string;
+  branchName: string;
+  branchCode: string;
+  branchStatus: string;
+};
+export type ExecutiveDashboardReport = {
+  tenantId: string;
+  from: string | null;
+  to: string | null;
+  selectedBranchId: string | null;
+  availableBranches: ExecutiveBranchOption[];
+  summary: ExecutiveMetrics;
+  branches: ExecutiveBranchMetrics[];
+  branchesWithoutStudentData: number;
+  dataSources: Record<string, string>;
+};
 
 export type BootstrapAcademyInput = {
   name: string;
@@ -391,6 +422,14 @@ export const apiClient = {
   changeAcademyMemberStatus: (membershipId: string, status: "ACTIVE" | "SUSPENDED" | "REVOKED") =>
     request<{ membershipId: string; status: string; userStatus: string }>(`/academy/members/${membershipId}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
   dashboardSummary: () => request<DashboardSummary>("/dashboard/summary"),
+  executiveSummary: (params: { from?: string; to?: string; branchId?: string } = {}) => {
+    const query = new URLSearchParams();
+    if (params.from) query.set("from", params.from);
+    if (params.to) query.set("to", params.to);
+    if (params.branchId) query.set("branchId", params.branchId);
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return request<ExecutiveDashboardReport>(`/academy/executive-summary${suffix}`);
+  },
   listStudents: () => request<StudentListResponse>("/students"),
   consumerStudents: () => request<ConsumerStudentsResponse>("/consumer/me/students"),
   consumerSessions: (studentId?: string) => request<ConsumerSessionsResponse>(`/consumer/me/sessions${studentId ? `?studentId=${encodeURIComponent(studentId)}` : ""}`),
