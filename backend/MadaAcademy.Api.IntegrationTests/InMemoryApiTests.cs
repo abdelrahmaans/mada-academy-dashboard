@@ -68,7 +68,7 @@ public sealed class InMemoryApiTests
     {
         using var factory = new TestApiFactory(useInMemory: true);
         var manager = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
-        var owner = await TestData.CreateAccountAsync(factory, "R01_ACADEMY_OWNER", manager.TenantId);
+        var owner = await TestData.CreateAccountAsync(factory, "R01_ACADEMY_OWNER", manager.TenantId, manager.BranchId);
         var instructor = await TestData.CreateAccountAsync(factory, "R04_INSTRUCTOR", manager.TenantId, manager.BranchId);
         var otherBranchId = Guid.NewGuid();
         var ownStudentId = Guid.NewGuid();
@@ -156,7 +156,7 @@ public sealed class InMemoryApiTests
     {
         using var factory = new TestApiFactory(useInMemory: true);
         var manager = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
-        var owner = await TestData.CreateAccountAsync(factory, "R01_ACADEMY_OWNER", manager.TenantId);
+        var owner = await TestData.CreateAccountAsync(factory, "R01_ACADEMY_OWNER", manager.TenantId, manager.BranchId);
         var otherBranchId = Guid.NewGuid();
         var foreignTenantId = Guid.NewGuid();
         var foreignBranchId = Guid.NewGuid();

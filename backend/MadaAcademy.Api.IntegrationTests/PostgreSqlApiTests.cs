@@ -132,7 +132,7 @@ public sealed class PostgreSqlApiTests(PostgreSqlFixture fixture)
     public async Task DashboardSummary_IsBranchScopedForManagerAndTenantScopedForOwnerOnPostgreSql()
     {
         var manager = await TestData.CreateAccountAsync(fixture.Factory, "R02_BRANCH_MANAGER");
-        var owner = await TestData.CreateAccountAsync(fixture.Factory, "R01_ACADEMY_OWNER", manager.TenantId);
+        var owner = await TestData.CreateAccountAsync(fixture.Factory, "R01_ACADEMY_OWNER", manager.TenantId, manager.BranchId);
         var otherBranchId = Guid.NewGuid();
         int activeTenantBranchCount;
         using (var scope = fixture.Factory.Services.CreateScope())
