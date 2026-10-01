@@ -12,6 +12,12 @@ export type AuthMe = {
   branches?: Array<{ id: string; name: string; code: string; status: string }>;
 };
 
+export type PlatformOverview = { academies: number; activeAcademies: number; trialAcademies: number; attentionAcademies: number; staffAccounts: number; activeSessions: number; auditEvents: number };
+export type PlatformAcademy = { id: string; name: string; slug: string; status: string; plan: string; createdAt: string; branches: number; users: number; owner: string | null };
+export type PlatformAcademiesResponse = { items: PlatformAcademy[]; total: number };
+export type PlatformActivity = { id: string; action: string; targetType: string; targetId: string; tenantId: string | null; actorUserId: string | null; reason: string | null; createdAt: string; tenantName: string | null; actorName: string | null };
+export type PlatformActivityResponse = { items: PlatformActivity[]; total: number };
+
 export type BootstrapAcademyInput = {
   name: string;
   slug?: string;
@@ -322,6 +328,12 @@ export const apiClient = {
   previewConsumerInvitation: (token: string) => request<ConsumerInvitationPreview>("/consumer-invitations/preview", { method: "POST", body: JSON.stringify({ token }) }, false),
   resendConsumerInvitationCode: (token: string) => request<ConsumerInvitationDelivery>("/consumer-invitations/resend-code", { method: "POST", body: JSON.stringify({ token }) }, false),
   me: () => request<AuthMe>("/me"),
+  platformOverview: () => request<PlatformOverview>("/platform/overview"),
+  platformAcademies: () => request<PlatformAcademiesResponse>("/platform/academies"),
+  changePlatformAcademyStatus: (tenantId: string, status: "ACTIVE" | "TRIAL" | "SETUP" | "PAUSED", reason?: string) => request<{ id: string; status: string }>(`/platform/academies/${tenantId}/status`, { method: "PATCH", body: JSON.stringify({ status, reason }) }),
+  platformAcademyMembers: (tenantId: string) => request<{ items: Array<{ membershipId: string; userId: string; name: string | null; roleCode: string; membershipStatus: string; userStatus: string; lastLoginAt: string | null; branch: { id: string; name: string; code: string } | null }>; total: number; tenantId: string }>(`/platform/academies/${tenantId}/members`),
+  revokePlatformUserSessions: (userId: string) => request<{ userId: string; revokedCount: number }>(`/platform/users/${userId}/sessions/revoke`, { method: "POST" }),
+  platformActivity: () => request<PlatformActivityResponse>("/platform/activity"),
   bootstrapAcademy: (input: BootstrapAcademyInput) =>
     request<BootstrapAcademyResponse>("/platform/academies", {
       method: "POST",
