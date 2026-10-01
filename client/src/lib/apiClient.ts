@@ -432,6 +432,13 @@ export const apiClient = {
     if (!response.ok) throw new ApiRequestError("تعذر رفع إثبات الدفع", response.status);
     return ((await response.json()) as { data: unknown }).data;
   },
+  uploadExpenseEvidence: async (expenseId: string, file: File) => {
+    const body = new FormData();
+    body.append("file", file);
+    const response = await fetch(`${API_BASE}/finance/expenses/${expenseId}/evidence`, { method: "POST", headers: accessToken ? { authorization: `Bearer ${accessToken}` } : undefined, body });
+    if (!response.ok) throw new ApiRequestError("تعذر رفع إثبات المصروف", response.status);
+    return ((await response.json()) as { data: unknown }).data;
+  },
   logout: async () => {
     const refreshToken = localStorage.getItem(REFRESH_KEY);
     if (refreshToken && accessToken) await request<void>("/auth/logout", { method: "POST", body: JSON.stringify({ refreshToken }) }, false).catch(() => undefined);
