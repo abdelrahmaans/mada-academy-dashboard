@@ -218,6 +218,8 @@ export type ConsumerInvitationDelivery = { status?: string; maskedPhone: string;
 export type FinancePayment = { id: string; invoiceId: string; amountPiastres: number; method: string; receivedOn: string; externalReference?: string | null; note?: string | null; createdAt: string; evidenceStatus: string; evidenceFileName?: string | null };
 export type FinanceInvoice = { id: string; invoiceNumber: string; tenantId: string; branchId: string; studentId: string; studentName?: string | null; enrollmentId?: string | null; issueDate: string; dueDate: string; totalPiastres: number; paidPiastres: number; remainingPiastres: number; status: string; lines: Array<{ description: string; amountPiastres: number }>; payments: FinancePayment[] };
 export type FinanceInvoicesResponse = { items: FinanceInvoice[]; total: number };
+export type FinanceExpense = { id: string; tenantId: string; branchId: string; branchName?: string | null; description: string; category: string; amountPiastres: number; spentOn: string; status: string; createdByUserId: string; approvalRequestId?: string | null; approvalReason?: string | null; decidedAt?: string | null; decidedByUserId?: string | null; evidenceStatus: string; evidenceFileName?: string | null };
+export type FinanceExpensesResponse = { items: FinanceExpense[]; total: number };
 
 export class ApiRequestError extends Error {
   constructor(
@@ -412,6 +414,16 @@ export const apiClient = {
   },
   createFinanceInvoice: (input: { studentId: string; dueDate: string; enrollmentId?: string; lines: Array<{ description: string; amountPiastres: number }> }) => request<FinanceInvoice>("/finance/invoices", { method: "POST", body: JSON.stringify(input) }),
   createFinancePayment: (invoiceId: string, input: { amountPiastres: number; method: string; receivedOn?: string; externalReference?: string; note?: string }) => request<{ payment: FinancePayment; invoiceId: string }>(`/finance/invoices/${invoiceId}/payments`, { method: "POST", body: JSON.stringify(input) }),
+  financeExpenses: (params: { status?: string; branchId?: string } = {}) => {
+    const query = new URLSearchParams();
+    if (params.status) query.set("status", params.status);
+    if (params.branchId) query.set("branchId", params.branchId);
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return request<FinanceExpensesResponse>(`/finance/expenses${suffix}`);
+  },
+  createFinanceExpense: (input: { description: string; category: string; amountPiastres: number; spentOn?: string; note?: string }) => request<FinanceExpense>("/finance/expenses", { method: "POST", body: JSON.stringify(input) }),
+  approveFinanceExpense: (expenseId: string) => request<FinanceExpense>(`/finance/expenses/${expenseId}/approve`, { method: "POST" }),
+  rejectFinanceExpense: (expenseId: string, reason: string) => request<FinanceExpense>(`/finance/expenses/${expenseId}/reject`, { method: "POST", body: JSON.stringify({ reason }) }),
   consumerInvoices: () => request<FinanceInvoicesResponse>("/consumer/invoices"),
   uploadPaymentEvidence: async (paymentId: string, file: File) => {
     const body = new FormData();
