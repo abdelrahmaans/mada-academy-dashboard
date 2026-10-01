@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using MadaAcademy.Api.Modules.Scheduling;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using MadaAcademy.Api.Persistence;
@@ -59,6 +61,134 @@ public sealed class InMemoryApiTests
         var body = await response.Content.ReadAsStringAsync();
         Assert.Contains("Visible Student", body, StringComparison.Ordinal);
         Assert.DoesNotContain("Out of Scope Student", body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task DashboardSummary_IsBranchScopedForR02AndDeniedToUnrelatedStaff()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        var manager = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
+        var owner = await TestData.CreateAccountAsync(factory, "R01_ACADEMY_OWNER", manager.TenantId);
+        var instructor = await TestData.CreateAccountAsync(factory, "R04_INSTRUCTOR", manager.TenantId, manager.BranchId);
+        var otherBranchId = Guid.NewGuid();
+        var ownStudentId = Guid.NewGuid();
+        var otherStudentId = Guid.NewGuid();
+        var ownSessionId = Guid.NewGuid();
+        var otherSessionId = Guid.NewGuid();
+        int activeTenantBranchCount;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            db.Branches.Add(new Branch { Id = otherBranchId, TenantId = manager.TenantId, Name = "Other Branch", Code = "OTHER" });
+            db.Students.AddRange(
+                new Student { Id = ownStudentId, TenantId = manager.TenantId, BranchId = manager.BranchId, FullName = "Branch A Dashboard Student" },
+                new Student { Id = otherStudentId, TenantId = manager.TenantId, BranchId = otherBranchId, FullName = "Branch B Dashboard Student" });
+            db.AcademySessions.AddRange(
+                new AcademySession { Id = ownSessionId, TenantId = manager.TenantId, BranchId = manager.BranchId, SessionNumber = 1, StartAt = DateTimeOffset.UtcNow.AddDays(1), EndAt = DateTimeOffset.UtcNow.AddDays(1).AddHours(1), InstructorId = Guid.NewGuid(), ClassroomId = Guid.NewGuid(), Status = "SCHEDULED" },
+                new AcademySession { Id = otherSessionId, TenantId = manager.TenantId, BranchId = otherBranchId, SessionNumber = 2, StartAt = DateTimeOffset.UtcNow.AddDays(2), EndAt = DateTimeOffset.UtcNow.AddDays(2).AddHours(1), InstructorId = Guid.NewGuid(), ClassroomId = Guid.NewGuid(), Status = "SCHEDULED" });
+            await db.SaveChangesAsync();
+            activeTenantBranchCount = await db.Branches.CountAsync(branch => branch.TenantId == manager.TenantId && branch.Status == "ACTIVE");
+        }
+
+        using var managerClient = factory.CreateClient();
+        TestData.Authenticate(managerClient, await TestData.LoginAsync(managerClient, manager));
+        using var managerResponse = await managerClient.GetAsync("/api/v1/dashboard/summary");
+        Assert.Equal(HttpStatusCode.OK, managerResponse.StatusCode);
+        using var managerJson = await managerResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Manager dashboard response is empty.");
+        var managerData = managerJson.RootElement.GetProperty("data");
+        Assert.Equal(1, managerData.GetProperty("students").GetInt32());
+        Assert.Equal(1, managerData.GetProperty("branchCount").GetInt32());
+        Assert.Equal(1, managerData.GetProperty("upcomingSessions").GetInt32());
+        Assert.DoesNotContain(otherStudentId.ToString(), managerJson.RootElement.GetRawText(), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(otherSessionId.ToString(), managerJson.RootElement.GetRawText(), StringComparison.OrdinalIgnoreCase);
+
+        using var ownerClient = factory.CreateClient();
+        TestData.Authenticate(ownerClient, await TestData.LoginAsync(ownerClient, owner));
+        using var ownerResponse = await ownerClient.GetAsync("/api/v1/dashboard/summary");
+        Assert.Equal(HttpStatusCode.OK, ownerResponse.StatusCode);
+        using var ownerJson = await ownerResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Owner dashboard response is empty.");
+        var ownerData = ownerJson.RootElement.GetProperty("data");
+        Assert.Equal(2, ownerData.GetProperty("students").GetInt32());
+        Assert.Equal(activeTenantBranchCount, ownerData.GetProperty("branchCount").GetInt32());
+        Assert.Equal(2, ownerData.GetProperty("upcomingSessions").GetInt32());
+
+        using var instructorClient = factory.CreateClient();
+        TestData.Authenticate(instructorClient, await TestData.LoginAsync(instructorClient, instructor));
+        Assert.Equal(HttpStatusCode.Forbidden, (await instructorClient.GetAsync("/api/v1/dashboard/summary")).StatusCode);
+    }
+
+    [Fact]
+    public async Task BranchManager_CannotSeeOrDecideSessionApprovalFromAnotherBranch()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        var manager = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
+        var otherBranchId = Guid.NewGuid();
+        var ownSessionId = Guid.NewGuid();
+        var otherSessionId = Guid.NewGuid();
+        var ownApprovalId = Guid.NewGuid();
+        var otherApprovalId = Guid.NewGuid();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            db.Branches.Add(new Branch { Id = otherBranchId, TenantId = manager.TenantId, Name = "Other Branch", Code = "OTHER" });
+            db.AcademySessions.AddRange(
+                new AcademySession { Id = ownSessionId, TenantId = manager.TenantId, BranchId = manager.BranchId, SessionNumber = 1, StartAt = DateTimeOffset.UtcNow.AddDays(1), EndAt = DateTimeOffset.UtcNow.AddDays(1).AddHours(1), InstructorId = Guid.NewGuid(), ClassroomId = Guid.NewGuid(), Status = "PENDING_APPROVAL" },
+                new AcademySession { Id = otherSessionId, TenantId = manager.TenantId, BranchId = otherBranchId, SessionNumber = 2, StartAt = DateTimeOffset.UtcNow.AddDays(2), EndAt = DateTimeOffset.UtcNow.AddDays(2).AddHours(1), InstructorId = Guid.NewGuid(), ClassroomId = Guid.NewGuid(), Status = "PENDING_APPROVAL" });
+            db.ApprovalRequests.AddRange(
+                new ApprovalRequest { Id = ownApprovalId, TenantId = manager.TenantId, BranchId = manager.BranchId, RequestType = "EXTRA", TargetType = "SESSION", TargetId = ownSessionId.ToString(), SubmittedByRole = "R04_INSTRUCTOR", State = "PENDING", Reason = "Own branch request" },
+                new ApprovalRequest { Id = otherApprovalId, TenantId = manager.TenantId, BranchId = otherBranchId, RequestType = "EXTRA", TargetType = "SESSION", TargetId = otherSessionId.ToString(), SubmittedByRole = "R04_INSTRUCTOR", State = "PENDING", Reason = "Other branch request" });
+            await db.SaveChangesAsync();
+        }
+        using var client = factory.CreateClient();
+        TestData.Authenticate(client, await TestData.LoginAsync(client, manager));
+
+        using var queueResponse = await client.GetAsync("/api/v1/scheduling/approvals?state=PENDING");
+        Assert.Equal(HttpStatusCode.OK, queueResponse.StatusCode);
+        var queueBody = await queueResponse.Content.ReadAsStringAsync();
+        Assert.Contains(ownApprovalId.ToString(), queueBody, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(otherApprovalId.ToString(), queueBody, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Other branch request", queueBody, StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.PostAsJsonAsync($"/api/v1/scheduling/approvals/{otherApprovalId}/decision", new { decision = "APPROVED", reason = "Not in this branch." })).StatusCode);
+    }
+
+    [Fact]
+    public async Task ConflictCheck_EnforcesBranchAndTenantScope()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        var manager = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
+        var owner = await TestData.CreateAccountAsync(factory, "R01_ACADEMY_OWNER", manager.TenantId);
+        var otherBranchId = Guid.NewGuid();
+        var foreignTenantId = Guid.NewGuid();
+        var foreignBranchId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        var instructorId = Guid.NewGuid();
+        var classroomId = Guid.NewGuid();
+        var startAt = DateTimeOffset.UtcNow.AddDays(3);
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            db.Branches.AddRange(
+                new Branch { Id = otherBranchId, TenantId = manager.TenantId, Name = "Other Academy Branch", Code = "OTHER" },
+                new Branch { Id = foreignBranchId, TenantId = foreignTenantId, Name = "Foreign Branch", Code = "FOREIGN" });
+            db.Tenants.Add(new Tenant { Id = foreignTenantId, Name = "Foreign Academy", Slug = $"foreign-{foreignTenantId:N}" });
+            db.AcademySessions.Add(new AcademySession { Id = sessionId, TenantId = manager.TenantId, BranchId = otherBranchId, SessionNumber = 1, StartAt = startAt, EndAt = startAt.AddHours(1), InstructorId = instructorId, ClassroomId = classroomId, Status = "SCHEDULED" });
+            await db.SaveChangesAsync();
+        }
+        ConflictCheckRequest Request(Guid branchId) => new(branchId, instructorId, classroomId, [], [], startAt, startAt.AddHours(1));
+
+        using var managerClient = factory.CreateClient();
+        TestData.Authenticate(managerClient, await TestData.LoginAsync(managerClient, manager));
+        using var denied = await managerClient.PostAsJsonAsync("/api/v1/scheduling/check-conflict", Request(otherBranchId));
+        Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
+        Assert.Contains("BRANCH_SCOPE_DENIED", await denied.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        Assert.DoesNotContain(sessionId.ToString(), await denied.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
+
+        using var ownerClient = factory.CreateClient();
+        TestData.Authenticate(ownerClient, await TestData.LoginAsync(ownerClient, owner));
+        using var allowed = await ownerClient.PostAsJsonAsync("/api/v1/scheduling/check-conflict", Request(otherBranchId));
+        Assert.Equal(HttpStatusCode.Conflict, allowed.StatusCode);
+        Assert.Contains(sessionId.ToString(), await allowed.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(HttpStatusCode.NotFound, (await ownerClient.PostAsJsonAsync("/api/v1/scheduling/check-conflict", Request(foreignBranchId))).StatusCode);
     }
 
     [Fact]

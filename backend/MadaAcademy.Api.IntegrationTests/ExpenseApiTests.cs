@@ -70,6 +70,32 @@ public sealed class ExpenseApiTests
     }
 
     [Fact]
+    public async Task BranchManager_CannotSeeOrApproveExpenseFromAnotherBranch()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        var manager = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
+        var otherBranch = Guid.NewGuid();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            db.Branches.Add(new Branch { Id = otherBranch, TenantId = manager.TenantId, Name = "Other Branch", Code = "OTHER" });
+            await db.SaveChangesAsync();
+        }
+        var visibleExpenseId = await SeedExpenseAsync(factory, manager.TenantId, manager.BranchId, "Visible branch expense");
+        var hiddenExpenseId = await SeedExpenseAsync(factory, manager.TenantId, otherBranch, "Hidden branch expense");
+        using var client = factory.CreateClient();
+        TestData.Authenticate(client, await TestData.LoginAsync(client, manager));
+
+        using var response = await client.GetAsync("/api/v1/finance/expenses?status=ALL");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains(visibleExpenseId.ToString(), body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(hiddenExpenseId.ToString(), body, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Hidden branch expense", body, StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.PostAsJsonAsync($"/api/v1/finance/expenses/{hiddenExpenseId}/approve", new { reason = "Not in this branch." })).StatusCode);
+    }
+
+    [Fact]
     public async Task RejectExpense_RequiresReasonAndDoesNotEnterApprovedState()
     {
         using var factory = new TestApiFactory(useInMemory: true);
