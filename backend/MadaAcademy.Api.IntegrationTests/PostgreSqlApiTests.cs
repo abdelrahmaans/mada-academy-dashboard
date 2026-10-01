@@ -273,4 +273,62 @@ public sealed class PostgreSqlApiTests(PostgreSqlFixture fixture)
         Assert.Equal(100m, summary.GetProperty("attendancePercent").GetDecimal());
         Assert.Equal(1, summary.GetProperty("pendingApprovals").GetInt32());
     }
+
+    [Fact]
+    public async Task PlatformSupportAndExecutiveActivity_ExecuteScopedQueriesOnPostgreSql()
+    {
+        using var platformClient = fixture.Factory.CreateClient();
+        using var ownerClient = fixture.Factory.CreateClient();
+        var platformAdmin = await TestData.CreateAccountAsync(fixture.Factory, "R00_PLATFORM_ADMIN");
+        var owner = await TestData.CreateAccountAsync(fixture.Factory, "R01_ACADEMY_OWNER");
+        var secondBranchId = Guid.NewGuid();
+        var visibleAuditId = Guid.NewGuid();
+        var branchlessAuditId = Guid.NewGuid();
+        var hiddenAuditId = Guid.NewGuid();
+        var decisionId = Guid.NewGuid();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        Guid membershipId;
+
+        using (var scope = fixture.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            db.Branches.Add(new Branch { Id = secondBranchId, TenantId = owner.TenantId, Name = "PostgreSQL Other Branch", Code = $"B{Guid.NewGuid():N}"[..10] });
+            db.AuditEvents.AddRange(
+                new AuditEvent { Id = visibleAuditId, TenantId = owner.TenantId, BranchId = owner.BranchId, Action = "PLATFORM_TEST_VISIBLE", TargetType = "TEST", TargetId = visibleAuditId.ToString(), Reason = "Visible branch audit" },
+                new AuditEvent { Id = branchlessAuditId, TenantId = owner.TenantId, Action = "PLATFORM_TEST_TENANT", TargetType = "TEST", TargetId = branchlessAuditId.ToString() },
+                new AuditEvent { Id = hiddenAuditId, TenantId = owner.TenantId, BranchId = secondBranchId, Action = "PLATFORM_TEST_HIDDEN", TargetType = "TEST", TargetId = hiddenAuditId.ToString() });
+            db.ApprovalRequests.Add(new ApprovalRequest { Id = decisionId, TenantId = owner.TenantId, BranchId = owner.BranchId, RequestType = "POSTGRESQL_DECISION", TargetType = "TEST", TargetId = "decision", SubmittedByRole = "R06_ACCOUNTANT", State = "APPROVED", Reason = "Approved by owner", DecidedByUserId = owner.UserId, DecidedAt = DateTimeOffset.UtcNow });
+            membershipId = await db.Memberships.Where(item => item.TenantId == owner.TenantId && item.UserAccountId == owner.UserId).Select(item => item.Id).SingleAsync();
+            await db.SaveChangesAsync();
+        }
+
+        TestData.Authenticate(platformClient, await TestData.LoginAsync(platformClient, platformAdmin));
+        TestData.Authenticate(ownerClient, await TestData.LoginAsync(ownerClient, owner));
+
+        using var membersResponse = await platformClient.GetAsync($"/api/v1/platform/academies/{owner.TenantId}/members?search={Uri.EscapeDataString(owner.Phone)}");
+        Assert.Equal(HttpStatusCode.OK, membersResponse.StatusCode);
+        using var membersDocument = await membersResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Platform member query response is empty.");
+        var member = membersDocument.RootElement.GetProperty("data").GetProperty("items")[0];
+        Assert.Equal(owner.UserId, member.GetProperty("userId").GetGuid());
+        Assert.True(member.GetProperty("activeSessions").GetInt32() >= 1);
+        Assert.DoesNotContain(owner.Phone, member.GetProperty("maskedPhone").GetString(), StringComparison.Ordinal);
+
+        using var activityResponse = await ownerClient.GetAsync($"/api/v1/academy/executive-activity?from={today:yyyy-MM-dd}&to={today:yyyy-MM-dd}&branchId={owner.BranchId}");
+        Assert.Equal(HttpStatusCode.OK, activityResponse.StatusCode);
+        using var activityDocument = await activityResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Executive activity query response is empty.");
+        var activityItems = activityDocument.RootElement.GetProperty("data").GetProperty("items").EnumerateArray().ToArray();
+        Assert.Contains(activityItems, item => item.GetProperty("id").GetGuid() == visibleAuditId);
+        Assert.Contains(activityItems, item => item.GetProperty("id").GetGuid() == branchlessAuditId);
+        Assert.Contains(activityItems, item => item.GetProperty("id").GetGuid() == decisionId && item.GetProperty("source").GetString() == "DECISION");
+        Assert.DoesNotContain(activityItems, item => item.GetProperty("id").GetGuid() == hiddenAuditId);
+
+        using var disableResponse = await platformClient.PatchAsJsonAsync(
+            $"/api/v1/platform/academies/{owner.TenantId}/members/{membershipId}/status",
+            new { status = "REVOKED", reason = "PostgreSQL security review" });
+        Assert.Equal(HttpStatusCode.OK, disableResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await ownerClient.GetAsync("/api/v1/me")).StatusCode);
+        using var platformActivityResponse = await platformClient.GetAsync($"/api/v1/platform/academies/{owner.TenantId}/activity");
+        Assert.Equal(HttpStatusCode.OK, platformActivityResponse.StatusCode);
+        Assert.Contains("PLATFORM_MEMBER_STATUS_CHANGED", await platformActivityResponse.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+    }
 }

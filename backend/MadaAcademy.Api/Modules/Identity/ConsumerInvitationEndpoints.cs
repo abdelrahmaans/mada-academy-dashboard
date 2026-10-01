@@ -290,8 +290,9 @@ public static class ConsumerInvitationEndpoints
         invitation.OtpHash = string.Empty;
         db.AuditEvents.Add(new AuditEvent { ActorUserId = account.Id, TenantId = invitation.TenantId, Action = "CONSUMER_INVITATION_ACCEPTED", TargetType = "CONSUMER_INVITATION", TargetId = invitation.Id.ToString(), MetadataJson = $"{{\"accountType\":\"{invitation.AccountType}\",\"studentId\":\"{student.Id}\"}}" });
 
-        var tokens = jwtTokens.Issue(account, membership);
-        db.RefreshSessions.Add(new RefreshSession { UserAccountId = account.Id, TokenHash = JwtTokenService.HashRefreshToken(tokens.RefreshToken), ExpiresAt = tokens.RefreshTokenExpiresAt });
+        var sessionId = Guid.NewGuid();
+        var tokens = jwtTokens.Issue(account, membership, sessionId);
+        db.RefreshSessions.Add(new RefreshSession { Id = sessionId, UserAccountId = account.Id, TokenHash = JwtTokenService.HashRefreshToken(tokens.RefreshToken), ExpiresAt = tokens.RefreshTokenExpiresAt });
         try
         {
             await db.SaveChangesAsync(cancellationToken);

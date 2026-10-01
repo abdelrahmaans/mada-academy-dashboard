@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
@@ -100,6 +101,7 @@ public sealed class ExecutiveDashboardApiTests
         Assert.Equal(5_500, summary.GetProperty("netPiastres").GetInt64());
         Assert.Equal(2, summary.GetProperty("pendingApprovals").GetInt32());
         Assert.Equal(2, data.GetProperty("branches").GetArrayLength());
+        Assert.True(data.GetProperty("alerts").GetArrayLength() > 0);
         Assert.DoesNotContain("Foreign Branch", document.RootElement.ToString(), StringComparison.Ordinal);
         Assert.Contains("PaymentTransactions by ReceivedOn", data.GetProperty("dataSources").GetProperty("collections").GetString());
 
@@ -125,8 +127,50 @@ public sealed class ExecutiveDashboardApiTests
 
         Assert.Equal(HttpStatusCode.Forbidden,
             (await client.GetAsync("/api/v1/academy/executive-summary")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await client.GetAsync("/api/v1/academy/executive-activity")).StatusCode);
         Assert.Equal(HttpStatusCode.MethodNotAllowed,
             (await client.PostAsync("/api/v1/academy/executive-summary", content: null)).StatusCode);
+    }
+
+    [Fact]
+    public async Task ExecutiveActivity_CombinesAuditAndDecisionsWithinTenantBranchAndPeriod()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var client = factory.CreateClient();
+        var owner = await TestData.CreateAccountAsync(factory, "R01_ACADEMY_OWNER");
+        var otherOwner = await TestData.CreateAccountAsync(factory, "R01_ACADEMY_OWNER");
+        var secondBranchId = Guid.NewGuid();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var auditId = Guid.NewGuid();
+        var globalAuditId = Guid.NewGuid();
+        var otherBranchAuditId = Guid.NewGuid();
+        var foreignAuditId = Guid.NewGuid();
+        var decisionId = Guid.NewGuid();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            db.Branches.Add(new Branch { Id = secondBranchId, TenantId = owner.TenantId, Name = "Executive Activity Other Branch", Code = "ACTIVITY-OTHER" });
+            db.AuditEvents.AddRange(
+                new AuditEvent { Id = auditId, TenantId = owner.TenantId, BranchId = owner.BranchId, Action = "PAYMENT_RECORDED", TargetType = "PAYMENT", TargetId = auditId.ToString(), Reason = "payment verified" },
+                new AuditEvent { Id = globalAuditId, TenantId = owner.TenantId, Action = "BRANCH_CREATED", TargetType = "BRANCH", TargetId = globalAuditId.ToString() },
+                new AuditEvent { Id = otherBranchAuditId, TenantId = owner.TenantId, BranchId = secondBranchId, Action = "OTHER_BRANCH_EVENT", TargetType = "TEST", TargetId = otherBranchAuditId.ToString() },
+                new AuditEvent { Id = foreignAuditId, TenantId = otherOwner.TenantId, BranchId = otherOwner.BranchId, Action = "FOREIGN_TENANT_EVENT", TargetType = "TEST", TargetId = foreignAuditId.ToString() });
+            db.ApprovalRequests.Add(new ApprovalRequest { Id = decisionId, TenantId = owner.TenantId, BranchId = owner.BranchId, RequestType = "EXPENSE_APPROVAL", TargetType = "EXPENSE", TargetId = "approved-expense", SubmittedByRole = "R06_ACCOUNTANT", State = "APPROVED", Reason = "approved after review", DecidedByUserId = owner.UserId, DecidedAt = DateTimeOffset.UtcNow });
+            await db.SaveChangesAsync();
+        }
+
+        TestData.Authenticate(client, await TestData.LoginAsync(client, owner));
+        using var response = await client.GetAsync($"/api/v1/academy/executive-activity?from={today:yyyy-MM-dd}&to={today:yyyy-MM-dd}&branchId={owner.BranchId}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = await response.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Executive activity response is empty.");
+        var items = document.RootElement.GetProperty("data").GetProperty("items").EnumerateArray().ToArray();
+        Assert.Contains(items, item => item.GetProperty("id").GetGuid() == auditId && item.GetProperty("source").GetString() == "AUDIT");
+        Assert.Contains(items, item => item.GetProperty("id").GetGuid() == globalAuditId);
+        Assert.Contains(items, item => item.GetProperty("id").GetGuid() == decisionId && item.GetProperty("source").GetString() == "DECISION" && item.GetProperty("state").GetString() == "APPROVED");
+        Assert.DoesNotContain(items, item => item.GetProperty("id").GetGuid() == otherBranchAuditId);
+        Assert.DoesNotContain(items, item => item.GetProperty("id").GetGuid() == foreignAuditId);
+        Assert.DoesNotContain(document.RootElement.ToString(), "MetadataJson", StringComparison.Ordinal);
     }
 
     private static DateTimeOffset StartOfDay(DateOnly date)

@@ -36,6 +36,7 @@ import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import SharedStatusBadge from "@/components/StatusBadge";
 import { apiClient } from "@/lib/apiClient";
+import PlatformConsoleLive from "./PlatformConsoleLive";
 import {
   Dialog,
   DialogClose,
@@ -449,7 +450,7 @@ function TicketList({
   );
 }
 
-export default function PlatformConsole() {
+function PlatformConsolePreviewContent() {
   const [, navigate] = useLocation();
   const [activeView, setActiveView] = useState<ViewKey>("overview");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -1447,4 +1448,12 @@ function DetailItem({ label, value }: { label: string; value: string }) {
       <strong>{value}</strong>
     </div>
   );
+}
+
+function PlatformConsolePreview() {
+  return <PlatformConsolePreviewContent />;
+}
+
+export default function PlatformConsole() {
+  return apiClient.hasSession() ? <PlatformConsoleLive /> : <PlatformConsolePreview />;
 }

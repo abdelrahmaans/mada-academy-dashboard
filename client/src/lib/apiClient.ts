@@ -17,6 +17,9 @@ export type PlatformAcademy = { id: string; name: string; slug: string; status: 
 export type PlatformAcademiesResponse = { items: PlatformAcademy[]; total: number };
 export type PlatformActivity = { id: string; action: string; targetType: string; targetId: string; tenantId: string | null; actorUserId: string | null; reason: string | null; createdAt: string; tenantName: string | null; actorName: string | null };
 export type PlatformActivityResponse = { items: PlatformActivity[]; total: number };
+export type PlatformMember = { membershipId: string; userId: string; name: string | null; maskedEmail: string | null; maskedPhone: string; roleCode: string; membershipStatus: string; userStatus: string; lastLoginAt: string | null; activeSessions: number; lastSessionAt: string | null; branch: { id: string; name: string; code: string } | null };
+export type PlatformRole = { code: string; label: string; scope: string; permissions: string[]; assignmentMode: string; canSelfAssign: boolean };
+export type ExecutiveActivityItem = { id: string; source: "AUDIT" | "DECISION"; action: string; targetType: string; targetId: string; branchId: string | null; actorUserId: string | null; actorName: string | null; occurredAt: string; reason: string | null; state: string | null };
 export type ExecutiveBranchOption = { id: string; name: string; code: string; status: string };
 export type ExecutiveMetrics = {
   activeStudents: number;
@@ -46,6 +49,7 @@ export type ExecutiveDashboardReport = {
   summary: ExecutiveMetrics;
   branches: ExecutiveBranchMetrics[];
   branchesWithoutStudentData: number;
+  alerts: Array<{ code: string; severity: "warning"; title: string; detail: string; branchId: string | null; branchName: string | null }>;
   dataSources: Record<string, string>;
 };
 
@@ -266,6 +270,7 @@ export class ApiRequestError extends Error {
     message: string,
     public readonly status: number,
     public readonly code?: string,
+    public readonly source?: string,
   ) {
     super(message);
     this.name = "ApiRequestError";
@@ -323,14 +328,16 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
     const body = await response.text();
     let message = response.status === 401 ? "رقم الهاتف أو كلمة المرور غير صحيحة." : body || `API request failed: ${response.status}`;
     let code: string | undefined;
+    let source: string | undefined;
     try {
-      const payload = JSON.parse(body) as { title?: string; detail?: string; extensions?: { code?: string }; error?: { message?: string; code?: string } };
+      const payload = JSON.parse(body) as { title?: string; detail?: string; extensions?: { code?: string }; error?: { message?: string; code?: string; source?: string } };
       message = payload.detail || payload.error?.message || payload.title || message;
       code = payload.extensions?.code || payload.error?.code;
+      source = payload.error?.source;
     } catch {
       // Keep the raw response when the backend does not return JSON.
     }
-    throw new ApiRequestError(message, response.status, code);
+    throw new ApiRequestError(message, response.status, code, source);
   }
   if (response.status === 204) return undefined as T;
   const payload = await response.json();
@@ -361,9 +368,12 @@ export const apiClient = {
   me: () => request<AuthMe>("/me"),
   platformOverview: () => request<PlatformOverview>("/platform/overview"),
   platformAcademies: () => request<PlatformAcademiesResponse>("/platform/academies"),
-  changePlatformAcademyStatus: (tenantId: string, status: "ACTIVE" | "TRIAL" | "SETUP" | "PAUSED", reason?: string) => request<{ id: string; status: string }>(`/platform/academies/${tenantId}/status`, { method: "PATCH", body: JSON.stringify({ status, reason }) }),
-  platformAcademyMembers: (tenantId: string) => request<{ items: Array<{ membershipId: string; userId: string; name: string | null; roleCode: string; membershipStatus: string; userStatus: string; lastLoginAt: string | null; branch: { id: string; name: string; code: string } | null }>; total: number; tenantId: string }>(`/platform/academies/${tenantId}/members`),
-  revokePlatformUserSessions: (userId: string) => request<{ userId: string; revokedCount: number }>(`/platform/users/${userId}/sessions/revoke`, { method: "POST" }),
+  platformRoles: () => request<{ items: PlatformRole[] }>("/platform/roles"),
+  changePlatformAcademyStatus: (tenantId: string, status: "ACTIVE" | "TRIAL" | "SETUP" | "PAUSED", reason: string) => request<{ id: string; status: string; revokedSessions: number }>(`/platform/academies/${tenantId}/status`, { method: "PATCH", body: JSON.stringify({ status, reason }) }),
+  platformAcademyMembers: (tenantId: string, search = "") => { const query = new URLSearchParams(); if (search.trim()) query.set("search", search.trim()); const suffix = query.toString() ? `?${query.toString()}` : ""; return request<{ items: PlatformMember[]; total: number; tenantId: string }>(`/platform/academies/${tenantId}/members${suffix}`); },
+  changePlatformMemberStatus: (tenantId: string, membershipId: string, status: "ACTIVE" | "REVOKED", reason: string) => request<{ membershipId: string; userId: string; status: string; revokedSessions: number }>(`/platform/academies/${tenantId}/members/${membershipId}/status`, { method: "PATCH", body: JSON.stringify({ status, reason }) }),
+  revokePlatformUserSessions: (tenantId: string, userId: string, reason: string) => request<{ userId: string; tenantId: string; revokedCount: number }>(`/platform/academies/${tenantId}/users/${userId}/sessions/revoke`, { method: "POST", body: JSON.stringify({ reason }) }),
+  platformAcademyActivity: (tenantId: string) => request<PlatformActivityResponse>(`/platform/academies/${tenantId}/activity`),
   platformActivity: () => request<PlatformActivityResponse>("/platform/activity"),
   bootstrapAcademy: (input: BootstrapAcademyInput) =>
     request<BootstrapAcademyResponse>("/platform/academies", {
@@ -429,6 +439,14 @@ export const apiClient = {
     if (params.branchId) query.set("branchId", params.branchId);
     const suffix = query.toString() ? `?${query.toString()}` : "";
     return request<ExecutiveDashboardReport>(`/academy/executive-summary${suffix}`);
+  },
+  executiveActivity: (params: { from?: string; to?: string; branchId?: string } = {}) => {
+    const query = new URLSearchParams();
+    if (params.from) query.set("from", params.from);
+    if (params.to) query.set("to", params.to);
+    if (params.branchId) query.set("branchId", params.branchId);
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return request<{ items: ExecutiveActivityItem[]; total: number; tenantId: string }>(`/academy/executive-activity${suffix}`);
   },
   listStudents: () => request<StudentListResponse>("/students"),
   consumerStudents: () => request<ConsumerStudentsResponse>("/consumer/me/students"),

@@ -14,13 +14,15 @@ public sealed class AuthService(MadaDbContext db, JwtTokenService tokens, OtpCha
         var phone = OtpChallengeStore.Normalize(request.Phone);
         var user = await db.UserAccounts.SingleOrDefaultAsync(x => x.Phone == phone && x.AccountType == request.AccountType, cancellationToken);
         if (user is null || user.Status != "ACTIVE") return null;
-        var membership = await db.Memberships.Where(x => x.UserAccountId == user.Id && x.Status == "ACTIVE").OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(cancellationToken);
+        var membership = await db.Memberships.Where(x => x.UserAccountId == user.Id && x.Status == "ACTIVE" && (x.RoleCode == "R00_PLATFORM_ADMIN" || x.Tenant!.Status != "PAUSED")).OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(cancellationToken);
         if (membership is null) return null;
 
         user.LastLoginAt = DateTimeOffset.UtcNow;
-        var response = tokens.Issue(user, membership);
+        var sessionId = Guid.NewGuid();
+        var response = tokens.Issue(user, membership, sessionId);
         db.RefreshSessions.Add(new RefreshSession
         {
+            Id = sessionId,
             UserAccountId = user.Id,
             TokenHash = JwtTokenService.HashRefreshToken(response.RefreshToken),
             ExpiresAt = response.RefreshTokenExpiresAt
@@ -34,11 +36,12 @@ public sealed class AuthService(MadaDbContext db, JwtTokenService tokens, OtpCha
         var phone = OtpChallengeStore.Normalize(request.Phone);
         var user = await db.UserAccounts.SingleOrDefaultAsync(x => x.Phone == phone && x.AccountType == request.AccountType, cancellationToken);
         if (user is null || user.Status != "ACTIVE" || !passwords.Verify(request.Password, user.PasswordHash)) return null;
-        var membership = await db.Memberships.Where(x => x.UserAccountId == user.Id && x.Status == "ACTIVE").OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(cancellationToken);
+        var membership = await db.Memberships.Where(x => x.UserAccountId == user.Id && x.Status == "ACTIVE" && (x.RoleCode == "R00_PLATFORM_ADMIN" || x.Tenant!.Status != "PAUSED")).OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(cancellationToken);
         if (membership is null) return null;
         user.LastLoginAt = DateTimeOffset.UtcNow;
-        var response = tokens.Issue(user, membership);
-        db.RefreshSessions.Add(new RefreshSession { UserAccountId = user.Id, TokenHash = JwtTokenService.HashRefreshToken(response.RefreshToken), ExpiresAt = response.RefreshTokenExpiresAt });
+        var sessionId = Guid.NewGuid();
+        var response = tokens.Issue(user, membership, sessionId);
+        db.RefreshSessions.Add(new RefreshSession { Id = sessionId, UserAccountId = user.Id, TokenHash = JwtTokenService.HashRefreshToken(response.RefreshToken), ExpiresAt = response.RefreshTokenExpiresAt });
         await db.SaveChangesAsync(cancellationToken);
         return response;
     }
@@ -48,13 +51,15 @@ public sealed class AuthService(MadaDbContext db, JwtTokenService tokens, OtpCha
         var hash = JwtTokenService.HashRefreshToken(request.RefreshToken);
         var session = await db.RefreshSessions.Include(x => x.UserAccount).SingleOrDefaultAsync(x => x.TokenHash == hash, cancellationToken);
         if (session is null || session.RevokedAt is not null || session.ExpiresAt <= DateTimeOffset.UtcNow || session.UserAccount is null || session.UserAccount.Status != "ACTIVE") return null;
-        var membership = await db.Memberships.Where(x => x.UserAccountId == session.UserAccountId && x.Status == "ACTIVE").OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(cancellationToken);
+        var membership = await db.Memberships.Where(x => x.UserAccountId == session.UserAccountId && x.Status == "ACTIVE" && (x.RoleCode == "R00_PLATFORM_ADMIN" || x.Tenant!.Status != "PAUSED")).OrderBy(x => x.CreatedAt).FirstOrDefaultAsync(cancellationToken);
         if (membership is null) return null;
 
         session.RevokedAt = DateTimeOffset.UtcNow;
-        var response = tokens.Issue(session.UserAccount, membership);
+        var sessionId = Guid.NewGuid();
+        var response = tokens.Issue(session.UserAccount, membership, sessionId);
         db.RefreshSessions.Add(new RefreshSession
         {
+            Id = sessionId,
             UserAccountId = session.UserAccountId,
             TokenHash = JwtTokenService.HashRefreshToken(response.RefreshToken),
             ExpiresAt = response.RefreshTokenExpiresAt
