@@ -60,6 +60,7 @@ app.MapMadaClassroomSchedulingEndpoints();
 app.MapMadaSessionWorkflowEndpoints();
 app.MapMadaOperationalEndpoints();
 app.MapMadaFinanceEndpoints();
+app.MapMadaInvoiceCorrectionEndpoints();
 app.MapMadaExpenseEndpoints();
 
 app.MapPost("/api/v1/auth/otp/send", (OtpSendRequest request, AuthService auth) =>

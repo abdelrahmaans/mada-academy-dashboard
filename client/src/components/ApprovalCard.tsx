@@ -11,7 +11,7 @@ import {
   X,
 } from "lucide-react";
 
-export type ApprovalKind = "discount" | "substitute" | "expense" | "session";
+export type ApprovalKind = "discount" | "substitute" | "expense" | "session" | "correction";
 export type ApprovalStatus = "pending" | "approved" | "rejected";
 
 export type ApprovalItem = {
@@ -35,6 +35,9 @@ export type ApprovalItem = {
   expenseDescription?: string;
   expenseAmount?: number;
   expenseCategory?: string;
+  correctionCurrentAmount?: number;
+  correctionProposedAmount?: number;
+  correctionInvoice?: string;
   sessionDate?: string;
   sessionTime?: string;
   status: ApprovalStatus;
@@ -66,7 +69,7 @@ function ApprovalTypeIcon({ kind }: { kind: ApprovalKind }) {
       className={`approval-type-icon ${kind === "discount" ? "approval-discount-icon" : kind === "expense" ? "approval-expense-icon" : kind === "session" ? "approval-session-icon" : "approval-substitute-icon"}`}
       aria-hidden="true"
     >
-      {kind === "session" ? <CalendarDays size={18} /> : kind === "discount" ? (
+      {kind === "session" ? <CalendarDays size={18} /> : kind === "discount" || kind === "correction" ? (
         <FileText size={18} />
       ) : kind === "expense" ? (
         <Wallet size={18} />
@@ -104,6 +107,9 @@ function ApprovalDetailStrip({ item }: { item: ApprovalItem }) {
 
   if (item.kind === "session") {
     return <div className="approval-detail-strip"><span>{item.requestType ?? "طلب جلسة"}</span><i /><span>الجلسة المستهدفة</span><bdi dir="ltr">{item.targetId}</bdi></div>;
+  }
+  if (item.kind === "correction") {
+    return <div className="approval-detail-strip"><span>تصحيح الفاتورة</span><i /><bdi dir="ltr">{item.correctionInvoice}</bdi><i /><span>{item.summary}</span></div>;
   }
   return (
     <div className="approval-detail-strip">
@@ -147,6 +153,9 @@ function ApprovalSideSummary({ item }: { item: ApprovalItem }) {
 
   if (item.kind === "session") {
     return <><small>طلب جلسة تشغيلية</small><strong>{item.sessionDate ?? "بانتظار المراجعة"}</strong><span>{item.sessionTime ?? item.requestType}</span></>;
+  }
+  if (item.kind === "correction") {
+    return <><small>القيمة المقترحة</small><strong>{formatMoney(item.correctionProposedAmount ?? 0)} <bdi>ج.م</bdi></strong><span>السابق {formatMoney(item.correctionCurrentAmount ?? 0)} ج.م</span></>;
   }
   return (
     <>

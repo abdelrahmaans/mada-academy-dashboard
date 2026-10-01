@@ -41,7 +41,7 @@ import DecisionDialog from "@/components/DecisionDialog";
 import NotificationCenter, {
   type NotificationItem,
 } from "@/components/NotificationCenter";
-import { apiClient, type ApprovalRequestRecord, type NotificationRecord } from "@/lib/apiClient";
+import { apiClient, type ApprovalRequestRecord, type InvoiceCorrection, type NotificationRecord } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
 
 type QueueTab = "all" | ApprovalKind;
@@ -223,6 +223,9 @@ function notificationFromApi(record: NotificationRecord): NotificationItem {
     unread: !record.isRead, actionLabel: isApproval ? "فتح الطلبات" : undefined,
   };
 }
+function correctionFromApi(record: InvoiceCorrection): ApprovalItem {
+  return { id: record.id, kind: "correction", title: "تصحيح فاتورة يحتاج اعتمادًا", summary: record.reason, branch: record.branchId, requestedBy: "المحاسبة", submittedAt: new Date(record.createdAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" }), submittedAtSort: record.createdAt, status: record.status.toLowerCase() as ApprovalStatus, decidedAt: record.decidedAt ? new Date(record.decidedAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" }) : undefined, decidedAtSort: record.decidedAt ? new Date(record.decidedAt).getTime() : undefined, decidedBy: record.decidedByUserId ?? undefined, decisionNote: record.reason, targetId: record.id, correctionInvoice: record.invoiceNumber ?? record.invoiceId, correctionCurrentAmount: Math.round(record.currentTotalPiastres / 100), correctionProposedAmount: Math.round(record.proposedTotalPiastres / 100), live: true };
+}
 
 export default function Approvals() {
   const [, navigate] = useLocation();
@@ -251,10 +254,10 @@ export default function Approvals() {
     setRequests([]);
     setNotifications([]);
     setLoadError(null);
-    Promise.all([apiClient.listApprovals(), apiClient.listNotifications()])
-      .then(([approvalResponse, notificationResponse]) => {
+    Promise.all([apiClient.listApprovals(), apiClient.listNotifications(), apiClient.invoiceCorrections()])
+      .then(([approvalResponse, notificationResponse, correctionResponse]) => {
         const supported = approvalResponse.items.filter(item => item.targetType === "SESSION" && ["EXTRA", "MAKEUP", "INSTRUCTOR_SUBSTITUTION"].includes(item.requestType));
-        setRequests(supported.map(approvalFromApi));
+        setRequests([...supported.map(approvalFromApi), ...correctionResponse.items.map(correctionFromApi)]);
         setNotifications(notificationResponse.items.map(notificationFromApi));
       })
       .catch(cause => {
@@ -401,11 +404,15 @@ export default function Approvals() {
         return;
       }
       try {
-        await apiClient.decideApproval(id, {
-          decision: status.toUpperCase() as "APPROVED" | "REJECTED",
-          assignedInstructorId: status === "approved" && item.kind === "substitute" ? item.proposedInstructorId ?? undefined : undefined,
-          reason: decisionNote.trim() || undefined,
-        });
+        if (item.kind === "correction") {
+          await apiClient.decideInvoiceCorrection(id, { decision: status.toUpperCase() as "APPROVED" | "REJECTED", reason: decisionNote.trim() || undefined });
+        } else {
+          await apiClient.decideApproval(id, {
+            decision: status.toUpperCase() as "APPROVED" | "REJECTED",
+            assignedInstructorId: status === "approved" && item.kind === "substitute" ? item.proposedInstructorId ?? undefined : undefined,
+            reason: decisionNote.trim() || undefined,
+          });
+        }
         const decidedAtDate = new Date();
         const decidedAt = new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium", timeStyle: "short" }).format(decidedAtDate);
         setRequests(current => current.map(request => request.id === id ? { ...request, status, decidedAt, decidedAtSort: decidedAtDate.getTime(), decidedBy: "المستخدم الحالي", decisionNote: decisionNote.trim() || undefined } : request));
@@ -783,6 +790,7 @@ export default function Approvals() {
                   { id: "all", label: "كل الطلبات", count: branchRequests.length },
                   { id: "session", label: "طلبات الجلسات", count: pendingSessionRequests },
                   { id: "substitute", label: "مدرب بديل", count: pendingSubstitutes },
+                  { id: "correction", label: "تصحيح فواتير", count: pending.filter(item => item.kind === "correction").length },
                 ] : [
                   {
                     id: "all",
