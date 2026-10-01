@@ -13,12 +13,12 @@ public interface IPrivateObjectStorage
 
 public sealed class LocalPrivateObjectStorage(IConfiguration configuration) : IPrivateObjectStorage
 {
-    private readonly string root = Path.GetFullPath(configuration["Mada:PrivateStorageRoot"]
-        ?? Environment.GetEnvironmentVariable("MADA_PRIVATE_STORAGE_ROOT")
-        ?? Path.Combine(AppContext.BaseDirectory, "private-storage"));
+    private readonly string root = Path.GetFullPath(ValidateRoot(configuration));
+    private readonly long maxObjectBytes = long.TryParse(configuration["Mada:PrivateStorageMaxBytes"] ?? Environment.GetEnvironmentVariable("MADA_PRIVATE_STORAGE_MAX_BYTES"), out var configured) && configured > 0 ? configured : 10 * 1024 * 1024;
 
     public async Task<StoredPrivateObject> PutAsync(Stream content, string contentType, long sizeBytes, CancellationToken cancellationToken)
     {
+        if (sizeBytes <= 0 || sizeBytes > maxObjectBytes) throw new InvalidDataException("Private object exceeds the configured size limit.");
         var key = $"{DateTime.UtcNow:yyyy/MM}/{Guid.NewGuid():N}";
         var path = Resolve(key);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
@@ -30,11 +30,21 @@ public sealed class LocalPrivateObjectStorage(IConfiguration configuration) : IP
         while ((read = await content.ReadAsync(buffer, cancellationToken)) > 0)
         {
             written += read;
+            if (written > maxObjectBytes) throw new InvalidDataException("Private object exceeds the configured size limit.");
             await output.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
             hash.AppendData(buffer, 0, read);
         }
         await output.FlushAsync(cancellationToken);
         return new StoredPrivateObject(key, contentType, written, Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant());
+    }
+
+    private static string ValidateRoot(IConfiguration configuration)
+    {
+        var root = configuration["Mada:PrivateStorageRoot"] ?? Environment.GetEnvironmentVariable("MADA_PRIVATE_STORAGE_ROOT") ?? Path.Combine(AppContext.BaseDirectory, "private-storage");
+        var fullRoot = Path.GetFullPath(root);
+        var webRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "wwwroot"));
+        if (fullRoot.Equals(webRoot, StringComparison.OrdinalIgnoreCase) || fullRoot.StartsWith(webRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("Private storage cannot be located under wwwroot.");
+        return fullRoot;
     }
 
     public Task<Stream?> OpenReadAsync(string key, CancellationToken cancellationToken)
