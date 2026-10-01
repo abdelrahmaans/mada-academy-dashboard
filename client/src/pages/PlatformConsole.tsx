@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -34,6 +35,7 @@ import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import SharedStatusBadge from "@/components/StatusBadge";
+import { apiClient } from "@/lib/apiClient";
 import {
   Dialog,
   DialogClose,
@@ -454,6 +456,8 @@ export default function PlatformConsole() {
   const [academies, setAcademies] = useState(initialAcademies);
   const [tickets, setTickets] = useState(initialTickets);
   const [activities, setActivities] = useState(initialActivity);
+  const [platformOverview, setPlatformOverview] = useState<{ academies: number; activeAcademies: number; trialAcademies: number; attentionAcademies: number; staffAccounts: number; activeSessions: number; auditEvents: number } | null>(null);
+  const [liveMode, setLiveMode] = useState(false);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | AcademyStatus>(
     "all"
@@ -470,6 +474,19 @@ export default function PlatformConsole() {
   const [firstBranchName, setFirstBranchName] = useState("");
   const [planName, setPlanName] = useState("تجريبية · توضيحية");
   const [createError, setCreateError] = useState("");
+  useEffect(() => {
+    if (!apiClient.hasSession()) return;
+    let cancelled = false;
+    Promise.all([apiClient.platformOverview(), apiClient.platformAcademies(), apiClient.platformActivity()]).then(([overview, academyResponse, activityResponse]) => {
+      if (cancelled) return;
+      setPlatformOverview(overview);
+      setAcademies(academyResponse.items.map(item => ({ id: item.id, name: item.name, owner: item.owner ?? "—", plan: item.plan, branches: item.branches, users: item.users, status: item.status.toLowerCase() as AcademyStatus, renewal: new Date(item.createdAt).toLocaleDateString("ar-EG") })));
+      setActivities(activityResponse.items.map(item => ({ id: item.id, title: item.action, detail: `${item.tenantName ?? "Platform"} · ${item.targetType} · ${item.actorName ?? "system"}`, time: new Date(item.createdAt).toLocaleString("ar-EG"), tone: item.action.includes("STATUS") ? "amber" : "blue" })));
+      setTickets([]);
+      setLiveMode(true);
+    }).catch(error => { if (!cancelled) toast.error(error instanceof Error ? error.message : "تعذر تحميل بيانات المنصة"); });
+    return () => { cancelled = true; };
+  }, []);
 
   const normalizedQuery = query.trim().toLocaleLowerCase("ar-EG");
   const filteredAcademies = useMemo(
@@ -638,7 +655,7 @@ export default function PlatformConsole() {
           </span>
           <span>
             <strong>مساحة المنصة</strong>
-            <small>الدور R00 · معاينة</small>
+            <small>الدور R00 · {liveMode ? "LIVE" : "وضع المعاينة"}</small>
           </span>
           <ChevronDown size={14} aria-hidden="true" />
         </div>
@@ -695,7 +712,7 @@ export default function PlatformConsole() {
           </button>
         </div>
         <div className="sidebar-version pc-sidebar-foot">
-          <span className="pc-demo-dot" /> نموذج واجهات · لا يوجد دخول فعلي
+          <span className={`pc-demo-dot ${liveMode ? "pc-live-dot" : ""}`} /> {liveMode ? "بيانات المنصة LIVE" : "وضع المعاينة · لا يوجد دخول فعلي"}
         </div>
       </aside>
 
@@ -759,8 +776,7 @@ export default function PlatformConsole() {
           <div className="pc-demo-banner" role="note">
             <span className="pc-demo-mark">DEMO</span>
             <span>
-              <strong>بيانات العرض توضيحية.</strong> زر إنشاء الأكاديمية يفتح
-              مسار الـBootstrap الحقيقي ويتطلب صلاحية R00.
+              <strong>{liveMode ? "الأكاديميات والنشاط متصلان بالـAPI." : "بيانات العرض توضيحية."}</strong> زر إنشاء الأكاديمية يفتح مسار الـBootstrap الحقيقي ويتطلب صلاحية R00.
             </span>
           </div>
           <div className="pc-security-banner" role="note">
@@ -780,29 +796,29 @@ export default function PlatformConsole() {
               >
                 <MetricCard
                   label="الأكاديميات"
-                  value={formatNumber(academies.length)}
-                  note="سجلات توضيحية في العينة"
+                  value={formatNumber(platformOverview?.academies ?? academies.length)}
+                  note={liveMode ? "إجمالي الأكاديميات في المنصة" : "سجلات توضيحية في العينة"}
                   icon={Building2}
                   tone="teal"
                 />
                 <MetricCard
                   label="اشتراكات نشطة"
-                  value={formatNumber(activeCount)}
-                  note="حالة عرض وليست حالة فوترة"
+                  value={formatNumber(platformOverview?.activeAcademies ?? activeCount)}
+                  note={liveMode ? "Tenant بحالة ACTIVE" : "حالة عرض وليست حالة فوترة"}
                   icon={CheckCircle2}
                   tone="blue"
                 />
                 <MetricCard
                   label="فترات تجريبية"
-                  value={formatNumber(trialCount)}
-                  note="باقات وحدود توضيحية"
+                  value={formatNumber(platformOverview?.trialAcademies ?? trialCount)}
+                  note={liveMode ? "Tenant بحالة TRIAL" : "باقات وحدود توضيحية"}
                   icon={CalendarDays}
                   tone="amber"
                 />
                 <MetricCard
                   label="تذاكر مفتوحة"
-                  value={formatNumber(openTicketCount)}
-                  note="تذاكر دعم تجريبية"
+                  value={formatNumber(liveMode ? 0 : openTicketCount)}
+                  note={liveMode ? "Ticketing API خارج هذا tranche" : "تذاكر دعم تجريبية"}
                   icon={Ticket}
                   tone="violet"
                 />

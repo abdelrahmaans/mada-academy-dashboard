@@ -5,6 +5,7 @@ using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Modules.Identity;
 using MadaAcademy.Api.Modules.Finance;
 using MadaAcademy.Api.Modules.Operations;
+using MadaAcademy.Api.Modules.Platform;
 using MadaAcademy.Api.Modules.Scheduling;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
@@ -62,6 +63,7 @@ app.MapMadaOperationalEndpoints();
 app.MapMadaFinanceEndpoints();
 app.MapMadaInvoiceCorrectionEndpoints();
 app.MapMadaExpenseEndpoints();
+app.MapMadaPlatformAdminEndpoints();
 
 app.MapPost("/api/v1/auth/otp/send", (OtpSendRequest request, AuthService auth) =>
 {
