@@ -3,11 +3,13 @@ using System.Security.Cryptography;
 using System.Text;
 using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Modules.Identity;
+using MadaAcademy.Api.Modules.Finance;
 using MadaAcademy.Api.Modules.Operations;
 using MadaAcademy.Api.Modules.Scheduling;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
 using MadaAcademy.Api.Persistence.Seeding;
+using MadaAcademy.Api.Storage;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +18,7 @@ var jwtOptions = JwtOptions.Load(builder.Configuration, builder.Environment);
 builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecks();
 builder.Services.AddMadaPersistence(builder.Configuration);
+builder.Services.AddSingleton<IPrivateObjectStorage, LocalPrivateObjectStorage>();
 builder.Services.AddMadaAuthentication(jwtOptions);
 if (builder.Environment.IsDevelopment()) builder.Services.AddSingleton<ISmsMessageSender, DevelopmentSmsMessageSender>();
 else builder.Services.AddSingleton<ISmsMessageSender, UnconfiguredSmsMessageSender>();
@@ -56,6 +59,7 @@ app.MapMadaClassroomResourceEndpoints();
 app.MapMadaClassroomSchedulingEndpoints();
 app.MapMadaSessionWorkflowEndpoints();
 app.MapMadaOperationalEndpoints();
+app.MapMadaFinanceEndpoints();
 
 app.MapPost("/api/v1/auth/otp/send", (OtpSendRequest request, AuthService auth) =>
 {

@@ -215,6 +215,9 @@ export type ConsumerAccountLookupRecord = { id: string; name: string | null; acc
 export type ConsumerAccountLookupResponse = { items: ConsumerAccountLookupRecord[]; total: number };
 export type ConsumerInvitationPreview = { accountType: "parent" | "student"; maskedPhone: string; expiresAt: string; otpExpiresAt: string; displayNameRequired: boolean };
 export type ConsumerInvitationDelivery = { status?: string; maskedPhone: string; expiresAt?: string; otpExpiresAt: string; delivery: string; developmentCode?: string | null; debugAcceptUrl?: string | null };
+export type FinancePayment = { id: string; invoiceId: string; amountPiastres: number; method: string; receivedOn: string; externalReference?: string | null; note?: string | null; createdAt: string; evidenceStatus: string; evidenceFileName?: string | null };
+export type FinanceInvoice = { id: string; invoiceNumber: string; tenantId: string; branchId: string; studentId: string; studentName?: string | null; enrollmentId?: string | null; issueDate: string; dueDate: string; totalPiastres: number; paidPiastres: number; remainingPiastres: number; status: string; lines: Array<{ description: string; amountPiastres: number }>; payments: FinancePayment[] };
+export type FinanceInvoicesResponse = { items: FinanceInvoice[]; total: number };
 
 export class ApiRequestError extends Error {
   constructor(
@@ -399,6 +402,24 @@ export const apiClient = {
       method: "PUT",
       body: JSON.stringify({ records }),
     }),
+  financeInvoices: (params: { query?: string; status?: string; studentId?: string } = {}) => {
+    const query = new URLSearchParams();
+    if (params.query) query.set("query", params.query);
+    if (params.status) query.set("status", params.status);
+    if (params.studentId) query.set("studentId", params.studentId);
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return request<FinanceInvoicesResponse>(`/finance/invoices${suffix}`);
+  },
+  createFinanceInvoice: (input: { studentId: string; dueDate: string; enrollmentId?: string; lines: Array<{ description: string; amountPiastres: number }> }) => request<FinanceInvoice>("/finance/invoices", { method: "POST", body: JSON.stringify(input) }),
+  createFinancePayment: (invoiceId: string, input: { amountPiastres: number; method: string; receivedOn?: string; externalReference?: string; note?: string }) => request<{ payment: FinancePayment; invoiceId: string }>(`/finance/invoices/${invoiceId}/payments`, { method: "POST", body: JSON.stringify(input) }),
+  consumerInvoices: () => request<FinanceInvoicesResponse>("/consumer/invoices"),
+  uploadPaymentEvidence: async (paymentId: string, file: File) => {
+    const body = new FormData();
+    body.append("file", file);
+    const response = await fetch(`${API_BASE}/finance/payments/${paymentId}/evidence`, { method: "POST", headers: accessToken ? { authorization: `Bearer ${accessToken}` } : undefined, body });
+    if (!response.ok) throw new ApiRequestError("تعذر رفع إثبات الدفع", response.status);
+    return ((await response.json()) as { data: unknown }).data;
+  },
   logout: async () => {
     const refreshToken = localStorage.getItem(REFRESH_KEY);
     if (refreshToken && accessToken) await request<void>("/auth/logout", { method: "POST", body: JSON.stringify({ refreshToken }) }, false).catch(() => undefined);
