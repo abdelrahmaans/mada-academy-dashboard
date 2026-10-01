@@ -41,6 +41,48 @@ public sealed class FinanceApiTests
     }
 
     [Fact]
+    public async Task FinancialReads_AreRoleRestrictedAndBranchManagerGetsOnlyAggregateReport()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        var manager = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
+        var platformAdmin = await TestData.CreateAccountAsync(factory, "R00_PLATFORM_ADMIN", manager.TenantId, manager.BranchId);
+        var instructor = await TestData.CreateAccountAsync(factory, "R04_INSTRUCTOR", manager.TenantId, manager.BranchId);
+        var otherBranch = Guid.NewGuid();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            db.Branches.Add(new Branch { Id = otherBranch, TenantId = manager.TenantId, Name = "Other Branch", Code = "OTHER" });
+            await db.SaveChangesAsync();
+        }
+        var invoiceId = await SeedInvoiceAsync(factory, manager.TenantId, manager.BranchId, "Branch A student", 10_000);
+        await SeedInvoiceAsync(factory, manager.TenantId, otherBranch, "Branch B student", 20_000);
+
+        using var managerClient = factory.CreateClient();
+        TestData.Authenticate(managerClient, await TestData.LoginAsync(managerClient, manager));
+        var report = await managerClient.GetAsync("/api/v1/finance/reports/summary");
+        Assert.Equal(HttpStatusCode.OK, report.StatusCode);
+        var reportJson = await report.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Report response missing.");
+        var branches = reportJson.RootElement.GetProperty("data").GetProperty("branches");
+        Assert.Equal(1, branches.GetArrayLength());
+        Assert.Equal(manager.BranchId, branches[0].GetProperty("branchId").GetGuid());
+        Assert.Equal(HttpStatusCode.NotFound, (await managerClient.GetAsync($"/api/v1/finance/reports/summary?branchId={otherBranch}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await managerClient.GetAsync("/api/v1/finance/invoices")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await managerClient.PostAsJsonAsync("/api/v1/finance/invoices", new { studentId = Guid.NewGuid(), dueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7)), lines = new[] { new { description = "Not allowed", amountPiastres = 1000 } } })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await managerClient.PostAsJsonAsync($"/api/v1/finance/invoices/{invoiceId}/payments", new { amountPiastres = 1000, method = "CASH" })).StatusCode);
+
+        foreach (var restrictedAccount in new[] { platformAdmin, instructor })
+        {
+            using var restrictedClient = factory.CreateClient();
+            TestData.Authenticate(restrictedClient, await TestData.LoginAsync(restrictedClient, restrictedAccount));
+            Assert.Equal(HttpStatusCode.Forbidden, (await restrictedClient.GetAsync("/api/v1/finance/invoices")).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await restrictedClient.GetAsync($"/api/v1/finance/invoices/{invoiceId}")).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await restrictedClient.GetAsync("/api/v1/finance/reports/summary")).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await restrictedClient.GetAsync("/api/v1/finance/reports/summary.csv")).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await restrictedClient.GetAsync("/api/v1/finance/invoice-corrections")).StatusCode);
+        }
+    }
+
+    [Fact]
     public async Task InvoiceAndPaymentEndpoints_DenyCrossBranchAndCrossTenantAccess()
     {
         using var factory = new TestApiFactory(useInMemory: true);
