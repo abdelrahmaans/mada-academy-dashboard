@@ -180,7 +180,7 @@ public static class AcademyIdentityEndpoints
         "R00_PLATFORM_ADMIN" => ["platform.read", "academy.create", "academy.read", "academy.archive"],
         "R01_ACADEMY_OWNER" => ["academy.read", "academy.update", "branch.read", "branch.create", "classrooms.manage", "staff.read", "staff.invite", "roles.read", "roles.manage", "reports.read"],
         "R02_BRANCH_MANAGER" => ["branch.read", "students.read", "students.create", "sessions.read", "sessions.create", "attendance.read", "attendance.write"],
-        "R03_HEAD_INSTRUCTORS" => ["branch.read", "sessions.read", "attendance.read", "attendance.write", "evaluations.write"],
+        "R03_HEAD_INSTRUCTORS" => ["branch.read", "sessions.read", "attendance.read", "attendance.write", "evaluations.write", "evaluations.review"],
         "R04_INSTRUCTOR" => ["sessions.assigned.read", "attendance.read", "attendance.write", "evaluations.write"],
         "R08_PARENT" => ["consumer.students.read", "consumer.sessions.read", "consumer.evaluations.read"],
         "R09_STUDENT" => ["consumer.self.read", "consumer.sessions.read", "consumer.evaluations.read"],

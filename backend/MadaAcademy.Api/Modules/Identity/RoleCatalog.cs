@@ -14,7 +14,7 @@ public static class RoleCatalog
     [
         new("R01_ACADEMY_OWNER", "مسؤول الأكاديمية", "TENANT", "يرى الأكاديمية بكل فروعها ويدير الفريق والصلاحيات التشغيلية.", ["academy.read", "academy.update", "branch.read", "branch.create", "classrooms.manage", "staff.read", "staff.invite", "roles.read", "roles.manage", "reports.read"], false),
         new("R02_BRANCH_MANAGER", "مدير الفرع", "BRANCH", "يدير التشغيل اليومي لفرع محدد والطلاب والجلسات والحضور.", ["branch.read", "students.read", "students.create", "sessions.read", "sessions.create", "attendance.read", "attendance.write"], true),
-        new("R03_HEAD_INSTRUCTORS", "رئيس المدربين", "BRANCH", "يتابع المدربين والجلسات والتقييمات داخل الفرع.", ["branch.read", "sessions.read", "attendance.read", "attendance.write", "evaluations.write", "staff.read"], true),
+        new("R03_HEAD_INSTRUCTORS", "رئيس المدربين", "BRANCH", "يتابع المدربين والجلسات والتقييمات داخل الفرع.", ["branch.read", "sessions.read", "attendance.read", "attendance.write", "evaluations.write", "evaluations.review", "staff.read"], true),
         new("R04_INSTRUCTOR", "المدرب", "BRANCH", "يصل إلى الجلسات والطلاب المسندين إليه فقط.", ["sessions.assigned.read", "attendance.read", "attendance.write", "evaluations.write"], true),
         new("R05_SECRETARY", "السكرتير", "BRANCH", "يدير التسجيلات والبيانات التشغيلية الأساسية للفرع.", ["branch.read", "students.read", "students.create", "sessions.read", "staff.read"], true),
         new("R06_ACCOUNTANT", "المحاسب", "BRANCH", "يتابع التحصيل والتقارير المالية المصرح بها داخل الفرع.", ["branch.read", "finance.read", "finance.write", "reports.read"], true),

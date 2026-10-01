@@ -186,6 +186,17 @@ export type AttendanceRecordInput = {
   status: Exclude<AttendanceItem["status"], "UNMARKED">;
   lateMinutes?: number | null;
 };
+export type SessionEvaluationStatus = "DRAFT" | "SUBMITTED" | "CHANGES_REQUESTED" | "PUBLISHED";
+export type SessionEvaluationRecord = {
+  studentId: string; score: number | null; notes: string | null; status: SessionEvaluationStatus;
+  reviewNote: string | null; submittedAt: string | null; reviewedAt: string | null;
+};
+export type SessionEvaluationListResponse = { sessionId: string; items: SessionEvaluationRecord[]; total: number };
+export type EvaluationReviewRecord = {
+  id: string; sessionId: string; studentId: string; studentName: string; courseName: string;
+  instructorName: string | null; score: number | null; notes: string | null; submittedAt: string | null; sessionDate: string;
+};
+export type EvaluationReviewQueueResponse = { items: EvaluationReviewRecord[]; total: number };
 export type ConsumerStudentRecord = { id: string; name: string; branchId: string; branchName: string | null; relationship: string };
 export type ConsumerStudentsResponse = { items: ConsumerStudentRecord[]; total: number };
 export type ConsumerSessionRecord = {
@@ -346,6 +357,10 @@ export const apiClient = {
   listApprovals: (state: "ALL" | "PENDING" | "APPROVED" | "REJECTED" = "ALL") => request<ApprovalListResponse>(`/scheduling/approvals?state=${state}`),
   decideApproval: (approvalId: string, input: { decision: "APPROVED" | "REJECTED"; assignedInstructorId?: string; reason?: string }) => request<{ approvalId: string; state: string; sessionId: string; sessionStatus: string; substituteInstructorId: string | null }>(`/scheduling/approvals/${approvalId}/decision`, { method: "POST", body: JSON.stringify(input) }),
   saveSessionEvaluations: (sessionId: string, items: Array<{ studentId: string; score?: number | null; notes?: string }>) => request<{ sessionId: string; saved: number }>(`/scheduling/sessions/${sessionId}/evaluations`, { method: "PUT", body: JSON.stringify({ items }) }),
+  listSessionEvaluations: (sessionId: string) => request<SessionEvaluationListResponse>(`/scheduling/sessions/${sessionId}/evaluations`),
+  submitSessionEvaluations: (sessionId: string, studentIds: string[]) => request<{ sessionId: string; submitted: number; status: string }>(`/scheduling/sessions/${sessionId}/evaluations/submit`, { method: "POST", body: JSON.stringify({ studentIds }) }),
+  listEvaluationReviews: () => request<EvaluationReviewQueueResponse>("/scheduling/evaluation-reviews"),
+  decideEvaluationReview: (evaluationId: string, input: { decision: "PUBLISH" | "REQUEST_CHANGES"; note?: string }) => request<{ evaluationId: string; sessionId: string; status: string; reviewedAt: string; publishedAt: string | null }>(`/scheduling/evaluation-reviews/${evaluationId}/decision`, { method: "POST", body: JSON.stringify(input) }),
   listNotifications: (unreadOnly = false) => request<NotificationListResponse>(`/scheduling/notifications?unreadOnly=${unreadOnly}`),
   markNotificationRead: (notificationId: string) => request<void>(`/scheduling/notifications/${notificationId}/read`, { method: "POST" }),
   academyMembers: () => request<AcademyMembersResponse>("/academy/members"),

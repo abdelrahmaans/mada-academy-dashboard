@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using MadaAcademy.Api.Persistence;
+using MadaAcademy.Api.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -185,5 +186,55 @@ public sealed class PostgreSqlApiTests(PostgreSqlFixture fixture)
         Assert.True(await db.Memberships.AnyAsync(item => item.UserAccountId == account.Id && item.TenantId == staff.TenantId && item.RoleCode == "R08_PARENT"));
         Assert.True(await db.GuardianStudentLinks.AnyAsync(item => item.UserAccountId == account.Id && item.StudentId == studentId));
         Assert.Equal("ACCEPTED", (await db.ConsumerInvitations.SingleAsync()).Status);
+    }
+
+    [Fact]
+    public async Task EvaluationReviewAndConsumerPublication_WorkOnPostgreSql()
+    {
+        using var managerClient = fixture.Factory.CreateClient();
+        var manager = await TestData.CreateAccountAsync(fixture.Factory, "R02_BRANCH_MANAGER");
+        var instructor = await TestData.CreateAccountAsync(fixture.Factory, "R04_INSTRUCTOR", manager.TenantId, manager.BranchId);
+        var reviewer = await TestData.CreateAccountAsync(fixture.Factory, "R03_HEAD_INSTRUCTORS", manager.TenantId, manager.BranchId);
+        var parent = await TestData.CreateConsumerAccountAsync(fixture.Factory, manager.TenantId, "parent", "R08_PARENT");
+        var studentId = Guid.NewGuid();
+        var templateId = Guid.NewGuid();
+        var offeringId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        var classroomId = Guid.NewGuid();
+        using (var scope = fixture.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            db.Students.Add(new Student { Id = studentId, TenantId = manager.TenantId, BranchId = manager.BranchId, FullName = "PostgreSQL Evaluation Student" });
+            db.CourseTemplates.Add(new CourseTemplate { Id = templateId, TenantId = manager.TenantId, Name = "PostgreSQL Robotics", TotalSessions = 8, SessionDurationHours = 1, BasePricePiastres = 0 });
+            db.Classrooms.Add(new Classroom { Id = classroomId, BranchId = manager.BranchId, Name = $"Room-{Guid.NewGuid():N}"[..13], Capacity = 12 });
+            db.CourseOfferings.Add(new CourseOffering { Id = offeringId, TenantId = manager.TenantId, BranchId = manager.BranchId, CourseTemplateId = templateId, InstructorId = instructor.UserId, ClassroomId = classroomId, StartDate = DateOnly.FromDateTime(DateTime.UtcNow), EndDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)), MaxStudents = 12 });
+            db.StudentEnrollments.Add(new StudentEnrollment { StudentId = studentId, CourseOfferingId = offeringId, FinalPricePiastres = 0, Status = "ACTIVE" });
+            db.AcademySessions.Add(new AcademySession { Id = sessionId, TenantId = manager.TenantId, BranchId = manager.BranchId, CourseOfferingId = offeringId, SessionNumber = 1, StartAt = DateTimeOffset.UtcNow.AddDays(-1), EndAt = DateTimeOffset.UtcNow.AddHours(-23), InstructorId = instructor.UserId, ClassroomId = classroomId, Status = "COMPLETED" });
+            await db.SaveChangesAsync();
+        }
+
+        TestData.Authenticate(managerClient, await TestData.LoginAsync(managerClient, manager));
+        Assert.Equal(HttpStatusCode.OK, (await managerClient.PostAsJsonAsync($"/api/v1/students/{studentId}/guardians", new { userAccountId = parent.UserId, relationship = "Guardian" })).StatusCode);
+        using var instructorClient = fixture.Factory.CreateClient();
+        TestData.Authenticate(instructorClient, await TestData.LoginAsync(instructorClient, instructor));
+        Assert.Equal(HttpStatusCode.OK, (await instructorClient.PutAsJsonAsync($"/api/v1/scheduling/sessions/{sessionId}/evaluations", new { items = new[] { new { studentId, score = 88, notes = "اتقان ممتاز" } } })).StatusCode);
+
+        using var parentClient = fixture.Factory.CreateClient();
+        TestData.Authenticate(parentClient, await TestData.LoginAsync(parentClient, parent));
+        Assert.Contains("\"score\":null", await parentClient.GetStringAsync("/api/v1/consumer/me/sessions"), StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.OK, (await instructorClient.PostAsJsonAsync($"/api/v1/scheduling/sessions/{sessionId}/evaluations/submit", new { studentIds = new[] { studentId } })).StatusCode);
+
+        using var reviewerClient = fixture.Factory.CreateClient();
+        TestData.Authenticate(reviewerClient, await TestData.LoginAsync(reviewerClient, reviewer));
+        using var queueResponse = await reviewerClient.GetAsync("/api/v1/scheduling/evaluation-reviews");
+        Assert.Equal(HttpStatusCode.OK, queueResponse.StatusCode);
+        using var queue = await queueResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Review queue response is empty.");
+        var item = queue.RootElement.GetProperty("data").GetProperty("items")[0];
+        var evaluationId = item.GetProperty("id").GetGuid();
+        Assert.Equal(studentId, item.GetProperty("studentId").GetGuid());
+        Assert.Equal(HttpStatusCode.OK, (await reviewerClient.PostAsJsonAsync($"/api/v1/scheduling/evaluation-reviews/{evaluationId}/decision", new { decision = "PUBLISH" })).StatusCode);
+        var published = await parentClient.GetStringAsync("/api/v1/consumer/me/sessions");
+        Assert.Contains("\"score\":88", published, StringComparison.Ordinal);
+        Assert.Contains("اتقان ممتاز", published, StringComparison.Ordinal);
     }
 }

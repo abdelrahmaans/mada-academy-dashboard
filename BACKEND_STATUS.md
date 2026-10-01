@@ -84,3 +84,22 @@ React أصبح متصلًا بالـASP.NET Core عبر `client/src/lib/apiClien
 **MVP بلا تكلفة:** لا يوجد provider SMS فعلي. الـDevelopment sender يعيد OTP عشوائياً للاختبار فقط؛ `UnconfiguredSmsMessageSender` في البيئات غير التطويرية يرفض الإرسال بـ503 ويسجل فشل التسليم، ولا توجد رموز ثابتة أو قبول وهمي. مزود لاحقاً يمكن ربطه دون تغيير API/UI عبر `ISmsMessageSender`؛ يجب ضبط `MADA_FRONTEND_URL` على أصل الواجهة الحي عبر HTTPS خارج Development.
 
 التحقق: **27/27** backend integration tests ناجحة على PostgreSQL 16.15 وInMemory، بما فيها test قبول الدعوة فعلياً على PostgreSQL؛ `pnpm check`، `pnpm test` **5/5**، `pnpm build` و`git diff --check` ناجحة. ما زالت تحذيرات Umami في build محلية فقط.
+
+
+---
+
+## 19. Evaluation Review & Publication — 1 أكتوبر 2026
+
+تمت إضافة دورة حالة لتقييم الجلسة: `DRAFT` → `SUBMITTED` → `PUBLISHED` أو `CHANGES_REQUESTED` → `SUBMITTED`. يوفر المدرب المسند:
+
+- `GET /api/v1/scheduling/sessions/{sessionId}/evaluations` لقراءة سجلاته وحالات المراجعة وملاحظات الإرجاع.
+- `PUT /api/v1/scheduling/sessions/{sessionId}/evaluations` لحفظ/تحديث المسودات؛ لا يمكن تعديل تقييم أُرسل أو نُشر.
+- `POST /api/v1/scheduling/sessions/{sessionId}/evaluations/submit` لإرسال تقييمات محفوظة بعد اكتمال الدرجة والملاحظة.
+
+دور `R03_HEAD_INSTRUCTORS` فقط يملك `evaluations.review`: `GET /api/v1/scheduling/evaluation-reviews` يعيد قائمة الفرع من claims، و`POST /api/v1/scheduling/evaluation-reviews/{evaluationId}/decision` يقبل `PUBLISH` أو `REQUEST_CHANGES`؛ يتطلب الإرجاع ملاحظة، ولا يمكن نشر تقييم خارج فرع المراجع. تسجل الانتقالات وتُرسل تنبيهات للطاقم. يتم تعيين الحالة الافتراضية في PostgreSQL إلى `DRAFT` لتظل السجلات السابقة مخفية بعد الترحيل.
+
+`GET /api/v1/consumer/me/sessions` لا يعيد الدرجة أو الملاحظات إلا للتقييمات `PUBLISHED`. الاختبارات تغطي حجب المسودة وتحت المراجعة والمطلوب تعديلها، صلاحية R03 وعزل الفرع، ثم إتاحة النتيجة بعد النشر ورفض تعديلها بعدها.
+
+الواجهة: InstructorDesk يدعم حفظ المسودة/الإرسال ويقرأ الحالة وملاحظة المراجع؛ HeadInstructors يحمّل queue حقيقية في LIVE ولا يعرض أمثلة التقييم في summary الحي؛ واجهة الأسرة لا تعرض مبالغ مالية تجريبية في LIVE حتى إضافة API الفواتير.
+
+التحقق: **29/29** backend integration tests ناجحة على PostgreSQL 16 وInMemory؛ `pnpm check`، Vitest **5/5**، `pnpm build`، `dotnet ef migrations has-pending-model-changes` و`git diff --check` ناجحة.

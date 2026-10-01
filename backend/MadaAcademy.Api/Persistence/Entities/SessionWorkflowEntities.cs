@@ -17,6 +17,12 @@ public sealed class SessionEvaluation : EntityBase
     public Guid InstructorId { get; set; }
     public int? Score { get; set; }
     public string? Notes { get; set; }
+    public string Status { get; set; } = "DRAFT";
+    public string? ReviewNote { get; set; }
+    public DateTimeOffset? SubmittedAt { get; set; }
+    public Guid? ReviewedByUserId { get; set; }
+    public DateTimeOffset? ReviewedAt { get; set; }
+    public DateTimeOffset? PublishedAt { get; set; }
 }
 
 public sealed class InAppNotification : EntityBase

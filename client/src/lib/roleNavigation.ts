@@ -75,7 +75,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     defaultScopeLabel: "فرع واحد · فريق المدربين والجلسات التابعة",
     homePath: "/head-instructors",
     navigation: [
-      { path: "/head-instructors", label: "ملخص الفريق", purpose: "quality queue and team overview" },
+      { path: "/head-instructors", label: "ملخص الفريق", purpose: "branch-scoped evaluation review and team overview" },
       { path: "/academic-programs", label: "البرامج الأكاديمية", purpose: "curriculum and progress review" },
       { path: "/schedule", label: "جدول الفريق", purpose: "sessions in supervision scope" },
     ],
