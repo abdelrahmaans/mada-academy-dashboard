@@ -34,6 +34,8 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
     public DbSet<InvoiceLine> InvoiceLines => Set<InvoiceLine>();
     public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
     public DbSet<PaymentEvidence> PaymentEvidences => Set<PaymentEvidence>();
+    public DbSet<Expense> Expenses => Set<Expense>();
+    public DbSet<ExpenseEvidence> ExpenseEvidences => Set<ExpenseEvidence>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -268,6 +270,25 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
             entity.Property(x => x.ContentType).HasMaxLength(120).IsRequired();
             entity.Property(x => x.Sha256).HasMaxLength(64).IsRequired();
             entity.HasOne(x => x.PaymentTransaction).WithOne(x => x.Evidence).HasForeignKey<PaymentEvidence>(x => x.PaymentTransactionId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<Expense>(entity =>
+        {
+            entity.HasIndex(x => new { x.TenantId, x.BranchId, x.Status, x.SpentOn });
+            entity.HasIndex(x => new { x.TenantId, x.ApprovalRequestId }).IsUnique().HasFilter("\"ApprovalRequestId\" IS NOT NULL");
+            entity.Property(x => x.Description).HasMaxLength(500).IsRequired();
+            entity.Property(x => x.Category).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(24).IsRequired();
+            entity.HasOne(x => x.Branch).WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ApprovalRequest).WithMany().HasForeignKey(x => x.ApprovalRequestId).OnDelete(DeleteBehavior.SetNull);
+        });
+        modelBuilder.Entity<ExpenseEvidence>(entity =>
+        {
+            entity.HasIndex(x => x.ExpenseId).IsUnique();
+            entity.Property(x => x.StorageKey).HasMaxLength(240).IsRequired();
+            entity.Property(x => x.DisplayFileName).HasMaxLength(180).IsRequired();
+            entity.Property(x => x.ContentType).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.Sha256).HasMaxLength(64).IsRequired();
+            entity.HasOne(x => x.Expense).WithOne(x => x.Evidence).HasForeignKey<ExpenseEvidence>(x => x.ExpenseId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
