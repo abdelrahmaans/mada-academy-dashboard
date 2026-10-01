@@ -34,6 +34,7 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
     public DbSet<InvoiceLine> InvoiceLines => Set<InvoiceLine>();
     public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
     public DbSet<PaymentEvidence> PaymentEvidences => Set<PaymentEvidence>();
+    public DbSet<InvoiceCorrectionRequest> InvoiceCorrectionRequests => Set<InvoiceCorrectionRequest>();
     public DbSet<Expense> Expenses => Set<Expense>();
     public DbSet<ExpenseEvidence> ExpenseEvidences => Set<ExpenseEvidence>();
 
@@ -270,6 +271,17 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
             entity.Property(x => x.ContentType).HasMaxLength(120).IsRequired();
             entity.Property(x => x.Sha256).HasMaxLength(64).IsRequired();
             entity.HasOne(x => x.PaymentTransaction).WithOne(x => x.Evidence).HasForeignKey<PaymentEvidence>(x => x.PaymentTransactionId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<InvoiceCorrectionRequest>(entity =>
+        {
+            entity.HasIndex(x => new { x.TenantId, x.BranchId, x.Status, x.CreatedAt });
+            entity.HasIndex(x => new { x.InvoiceId, x.Status });
+            entity.HasIndex(x => x.ApprovalRequestId).IsUnique();
+            entity.Property(x => x.ProposedLinesJson).HasColumnType("jsonb").IsRequired();
+            entity.Property(x => x.Reason).HasMaxLength(1000).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(24).IsRequired();
+            entity.HasOne(x => x.Invoice).WithMany().HasForeignKey(x => x.InvoiceId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.ApprovalRequest).WithMany().HasForeignKey(x => x.ApprovalRequestId).OnDelete(DeleteBehavior.Restrict);
         });
         modelBuilder.Entity<Expense>(entity =>
         {

@@ -24,7 +24,7 @@ function ApprovalTypeIcon({ kind }: { kind: ApprovalItem["kind"] }) {
       className={`approval-type-icon ${kind === "discount" ? "approval-discount-icon" : kind === "expense" ? "approval-expense-icon" : "approval-substitute-icon"}`}
       aria-hidden="true"
     >
-      {kind === "session" ? <CalendarDays size={18} /> : kind === "discount" ? (
+      {kind === "session" ? <CalendarDays size={18} /> : kind === "discount" || kind === "correction" ? (
         <FileText size={18} />
       ) : kind === "expense" ? (
         <Wallet size={18} />
@@ -165,6 +165,12 @@ export default function DecisionDialog({
                 <small>التصنيف</small>
                 <strong>{item.expenseCategory}</strong>
               </span>
+            </>
+          ) : item.kind === "correction" ? (
+            <>
+              <span><small>الفاتورة</small><strong dir="ltr">{item.correctionInvoice}</strong></span>
+              <span><small>القيمة الحالية</small><strong>{formatMoney(item.correctionCurrentAmount ?? 0)} ج.م</strong></span>
+              <span><small>القيمة المقترحة</small><strong>{formatMoney(item.correctionProposedAmount ?? 0)} ج.م</strong></span>
             </>
           ) : item.kind === "session" ? (
             <>

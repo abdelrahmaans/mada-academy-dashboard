@@ -220,6 +220,8 @@ export type FinanceInvoice = { id: string; invoiceNumber: string; tenantId: stri
 export type FinanceInvoicesResponse = { items: FinanceInvoice[]; total: number };
 export type FinanceExpense = { id: string; tenantId: string; branchId: string; branchName?: string | null; description: string; category: string; amountPiastres: number; spentOn: string; status: string; createdByUserId: string; approvalRequestId?: string | null; approvalReason?: string | null; decidedAt?: string | null; decidedByUserId?: string | null; evidenceStatus: string; evidenceFileName?: string | null };
 export type FinanceExpensesResponse = { items: FinanceExpense[]; total: number };
+export type InvoiceCorrection = { id: string; tenantId: string; branchId: string; invoiceId: string; invoiceNumber?: string | null; studentName?: string | null; approvalRequestId: string; requestedByUserId: string; currentTotalPiastres: number; currentDueDate: string; proposedTotalPiastres: number; proposedDueDate: string; reason: string; status: string; decidedAt?: string | null; decidedByUserId?: string | null; createdAt: string };
+export type InvoiceCorrectionsResponse = { items: InvoiceCorrection[]; total: number };
 
 export class ApiRequestError extends Error {
   constructor(
@@ -425,6 +427,9 @@ export const apiClient = {
   approveFinanceExpense: (expenseId: string) => request<FinanceExpense>(`/finance/expenses/${expenseId}/approve`, { method: "POST" }),
   rejectFinanceExpense: (expenseId: string, reason: string) => request<FinanceExpense>(`/finance/expenses/${expenseId}/reject`, { method: "POST", body: JSON.stringify({ reason }) }),
   consumerInvoices: () => request<FinanceInvoicesResponse>("/consumer/invoices"),
+  invoiceCorrections: (state: "ALL" | "PENDING" | "APPROVED" | "REJECTED" = "ALL") => request<InvoiceCorrectionsResponse>(`/finance/invoice-corrections?state=${state}`),
+  createInvoiceCorrection: (invoiceId: string, input: { proposedDueDate: string; lines: Array<{ description: string; amountPiastres: number }>; reason: string }) => request<InvoiceCorrection>(`/finance/invoices/${invoiceId}/correction-requests`, { method: "POST", body: JSON.stringify(input) }),
+  decideInvoiceCorrection: (correctionId: string, input: { decision: "APPROVED" | "REJECTED"; reason?: string }) => request<InvoiceCorrection>(`/finance/invoice-corrections/${correctionId}/decision`, { method: "POST", body: JSON.stringify(input) }),
   uploadPaymentEvidence: async (paymentId: string, file: File) => {
     const body = new FormData();
     body.append("file", file);
