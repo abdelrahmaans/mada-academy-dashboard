@@ -275,6 +275,50 @@ public sealed class PostgreSqlApiTests(PostgreSqlFixture fixture)
     }
 
     [Fact]
+    public async Task BranchManager_ApprovesExpenseWithReasonAndPostgreSqlAudit()
+    {
+        var manager = await TestData.CreateAccountAsync(fixture.Factory, "R02_BRANCH_MANAGER");
+        var accountant = await TestData.CreateAccountAsync(fixture.Factory, "R06_ACCOUNTANT", manager.TenantId, manager.BranchId);
+        using var accountantClient = fixture.Factory.CreateClient();
+        using var managerClient = fixture.Factory.CreateClient();
+        TestData.Authenticate(accountantClient, await TestData.LoginAsync(accountantClient, accountant));
+        TestData.Authenticate(managerClient, await TestData.LoginAsync(managerClient, manager));
+
+        using var createResponse = await accountantClient.PostAsJsonAsync("/api/v1/finance/expenses", new
+        {
+            description = "PostgreSQL R02 approval test",
+            category = "OPERATIONS",
+            amountPiastres = 12_345,
+            spentOn = DateOnly.FromDateTime(DateTime.UtcNow)
+        });
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        using var createDocument = await createResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Expense response is empty.");
+        var expenseId = createDocument.RootElement.GetProperty("data").GetProperty("id").GetGuid();
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await managerClient.PostAsJsonAsync($"/api/v1/finance/expenses/{expenseId}/approve", new { reason = " " })).StatusCode);
+        const string reason = "Verified the original receipt against the branch budget.";
+        using var decisionResponse = await managerClient.PostAsJsonAsync($"/api/v1/finance/expenses/{expenseId}/approve", new { reason = $"  {reason}  " });
+        Assert.Equal(HttpStatusCode.OK, decisionResponse.StatusCode);
+
+        using var listResponse = await managerClient.GetAsync("/api/v1/finance/expenses?status=ALL");
+        Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
+        Assert.Contains(expenseId.ToString(), await listResponse.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
+
+        using var scope = fixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+        var expense = await db.Expenses.SingleAsync(item => item.Id == expenseId);
+        Assert.Equal("APPROVED", expense.Status);
+        var transition = await db.StateTransitions.SingleAsync(item => item.AggregateType == "EXPENSE" && item.AggregateId == expenseId.ToString());
+        Assert.Equal(manager.UserId, transition.ActorUserId);
+        Assert.Equal(reason, transition.Reason);
+        var audit = await db.AuditEvents.SingleAsync(item => item.TargetType == "EXPENSE" && item.TargetId == expenseId.ToString() && item.Action == "EXPENSE_APPROVED");
+        Assert.Equal(manager.UserId, audit.ActorUserId);
+        Assert.Equal(manager.TenantId, audit.TenantId);
+        Assert.Equal(manager.BranchId, audit.BranchId);
+        Assert.Equal(reason, audit.Reason);
+    }
+
+    [Fact]
     public async Task PlatformSupportAndExecutiveActivity_ExecuteScopedQueriesOnPostgreSql()
     {
         using var platformClient = fixture.Factory.CreateClient();
