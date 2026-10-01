@@ -41,6 +41,7 @@ import {
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import AuditTimeline, { type AuditEvent } from "@/components/AuditTimeline";
+import EvaluationReviewQueue from "@/components/EvaluationReviewQueue";
 import InstructorPerformanceComparison from "@/components/InstructorPerformanceComparison";
 import ReasonField from "@/components/ReasonField";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
@@ -51,6 +52,7 @@ import {
   LockedState,
 } from "@/components/FeedbackStates";
 import WorkflowStepper from "@/components/WorkflowStepper";
+import { apiClient } from "@/lib/apiClient";
 
 type WorkspaceView =
   | "overview"
@@ -595,6 +597,7 @@ function EvaluationCard({
 
 export default function HeadInstructors() {
   const [, navigate] = useLocation();
+  const liveMode = apiClient.hasSession();
   const sessionSearchRef = useRef<HTMLInputElement>(null);
   const [view, setView] = useState<WorkspaceView>(() => {
     const requested = new URLSearchParams(window.location.search).get("view");
@@ -629,7 +632,7 @@ export default function HeadInstructors() {
 
   const selectedSession =
     SESSIONS.find(session => session.id === selectedSessionId) ?? SESSIONS[0];
-  const selectedEvaluation = EVALUATIONS.find(
+  const selectedEvaluation = liveMode ? undefined : EVALUATIONS.find(
     evaluation => evaluation.id === selectedEvaluationId
   );
   const selectedEvaluationReviewStatus = selectedEvaluation
@@ -923,7 +926,7 @@ export default function HeadInstructors() {
           >
             <ClipboardCheck size={17} />
             <span>تقييمات الطلاب</span>
-            <b>{followUpEvaluationCount}</b>
+            <b>{liveMode ? "LIVE" : followUpEvaluationCount}</b>
           </button>
         </nav>
         <div className="academic-sidebar-divider" />
@@ -1063,10 +1066,9 @@ export default function HeadInstructors() {
               <AlertCircle size={15} />
             </span>
             <span>
-              بيانات الفريق والحصص والتقييمات توضيحية ومحلية. لا يوجد حفظ فعلي
-              أو اعتماد إداري من هذه المعاينة.
+              {liveMode ? "مراجعة التقييمات LIVE من الخادم؛ بقية بيانات الفريق والحصص في هذه الصفحة ما زالت توضيحية." : "بيانات الفريق والحصص والتقييمات توضيحية ومحلية. لا يوجد حفظ فعلي أو اعتماد إداري من هذه المعاينة."}
             </span>
-            <b>DEMO</b>
+            <b>{liveMode ? "LIVE + DEMO" : "DEMO"}</b>
           </div>
           <RoleScopeCard className="academic-role-scope-card" compact />
 
@@ -1082,6 +1084,7 @@ export default function HeadInstructors() {
               averageScore={averageScore}
               readyEvaluationCount={readyEvaluationCount}
               followUpEvaluationCount={followUpEvaluationCount}
+              liveMode={liveMode}
               branch={BRANCH}
             />
           )}
@@ -1114,15 +1117,15 @@ export default function HeadInstructors() {
             />
           )}
           {view === "evaluations" && (
-            <EvaluationsView
-              query={evaluationQuery}
-              setQuery={setEvaluationQuery}
-              statusFilter={evaluationStatusFilter}
-              setStatusFilter={setEvaluationStatusFilter}
-              evaluations={filteredEvaluations}
-              reviewedIds={reviewedIds}
-              onOpen={openEvaluation}
-            />
+            liveMode ? <EvaluationReviewQueue /> : <EvaluationsView
+                query={evaluationQuery}
+                setQuery={setEvaluationQuery}
+                statusFilter={evaluationStatusFilter}
+                setStatusFilter={setEvaluationStatusFilter}
+                evaluations={filteredEvaluations}
+                reviewedIds={reviewedIds}
+                onOpen={openEvaluation}
+              />
           )}
 
           <footer className="academic-footnote">
@@ -1321,6 +1324,7 @@ function OverviewView({
   averageScore,
   readyEvaluationCount,
   followUpEvaluationCount,
+  liveMode,
   branch,
 }: {
   onNavigate: (view: WorkspaceView) => void;
@@ -1333,6 +1337,7 @@ function OverviewView({
   averageScore: string;
   readyEvaluationCount: number;
   followUpEvaluationCount: number;
+  liveMode: boolean;
   branch: string;
 }) {
   const avgSessionAttendance = Math.round(
@@ -1600,6 +1605,21 @@ function OverviewView({
           </div>
         </section>
 
+        {liveMode ? (
+        <section className="academic-panel academic-evaluation-panel">
+          <div className="academic-panel-heading">
+            <div>
+              <span className="academic-panel-kicker">تقييمات حية · من API</span>
+              <h2>مراجعة واعتماد التقييمات</h2>
+              <p>لا تُعرض درجات تجريبية هنا. افتح قائمة المراجعة للاطلاع على تقييمات المدربين الفعلية.</p>
+            </div>
+            <button className="academic-review-count" onClick={() => onNavigate("evaluations")}>
+              <span>LIVE</span><small>قائمة المراجعة</small><ChevronLeft size={13} />
+            </button>
+          </div>
+          <div className="academic-panel-footer"><span><ShieldCheck size={13} /> لا تظهر النتائج للمستهلك حتى النشر.</span><button onClick={() => onNavigate("evaluations")}>فتح المراجعات <ChevronLeft size={13} /></button></div>
+        </section>
+        ) : (
         <section className="academic-panel academic-evaluation-panel">
           <div className="academic-panel-heading">
             <div>
@@ -1641,6 +1661,7 @@ function OverviewView({
             </button>
           </div>
         </section>
+        )}
       </div>
 
       <section className="academic-action-strip">
@@ -1663,7 +1684,7 @@ function OverviewView({
             onClick={() => onNavigate("evaluations")}
           >
             <ClipboardCheck size={15} /> متابعة التقييمات{" "}
-            <b>{followUpEvaluationCount}</b>
+            <b>{liveMode ? "LIVE" : followUpEvaluationCount}</b>
           </button>
           <button
             className="academic-primary-button"

@@ -188,22 +188,31 @@ public static class ConsumerIdentityEndpoints
                               join branch in db.Branches.AsNoTracking() on session.BranchId equals branch.Id
                               join classroom in db.Classrooms.AsNoTracking() on session.ClassroomId equals classroom.Id
                               where session.TenantId == tenantId && offeringIds.Contains(offering.Id) && session.Status != "CANCELLED"
+                                    && offering.TenantId == tenantId && offering.BranchId == session.BranchId
+                                    && template.TenantId == tenantId && branch.TenantId == tenantId
                               orderby session.StartAt descending
                               select new { session.Id, session.CourseOfferingId, session.SessionNumber, session.StartAt, session.EndAt, session.Status, courseName = template.Name, branchName = branch.Name, classroomName = classroom.Name })
             .ToListAsync(cancellationToken);
         var sessionIds = sessions.Select(item => item.Id).ToArray();
         var enrollmentsByOffering = enrollmentRows.GroupBy(item => item.CourseOfferingId).ToDictionary(group => group.Key, group => group.Select(item => item.StudentId).ToArray());
         var attendance = await db.SessionAttendances.AsNoTracking().Where(item => sessionIds.Contains(item.SessionId) && scopedStudents.Contains(item.StudentId)).ToDictionaryAsync(item => new { item.SessionId, item.StudentId }, cancellationToken);
+        var publishedEvaluations = await db.SessionEvaluations.AsNoTracking()
+            .Where(item => sessionIds.Contains(item.SessionId) && scopedStudents.Contains(item.StudentId) && item.Status == "PUBLISHED")
+            .Select(item => new { item.SessionId, item.StudentId, item.Score, item.Notes })
+            .ToDictionaryAsync(item => (item.SessionId, item.StudentId), cancellationToken);
         var names = await db.Students.AsNoTracking().Where(item => scopedStudents.Contains(item.Id)).ToDictionaryAsync(item => item.Id, item => item.FullName, cancellationToken);
         var items = sessions.SelectMany(session => enrollmentsByOffering.GetValueOrDefault(session.CourseOfferingId!.Value, [])
-            .Where(id => scopedStudents.Contains(id)).Select(id => new
+            .Where(id => scopedStudents.Contains(id)).Select(id =>
             {
-                sessionId = session.Id, studentId = id, studentName = names.GetValueOrDefault(id),
-                session.SessionNumber, session.StartAt, session.EndAt, session.Status, session.courseName, session.branchName, session.classroomName,
-                attendanceStatus = attendance.TryGetValue(new { SessionId = session.Id, StudentId = id }, out var mark) ? mark.Status : "UNMARKED",
-                // Instructor-entered evaluations have no publication/review state yet; never expose drafts to consumers.
-                score = (int?)null,
-                notes = (string?)null
+                publishedEvaluations.TryGetValue((session.Id, id), out var evaluation);
+                return new
+                {
+                    sessionId = session.Id, studentId = id, studentName = names.GetValueOrDefault(id),
+                    session.SessionNumber, session.StartAt, session.EndAt, session.Status, session.courseName, session.branchName, session.classroomName,
+                    attendanceStatus = attendance.TryGetValue(new { SessionId = session.Id, StudentId = id }, out var mark) ? mark.Status : "UNMARKED",
+                    score = evaluation?.Score,
+                    notes = evaluation?.Notes
+                };
             })).OrderByDescending(item => item.StartAt).ToList();
         return Results.Ok(new { data = new { items, total = items.Count } });
     }

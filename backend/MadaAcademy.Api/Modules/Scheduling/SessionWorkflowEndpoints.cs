@@ -25,7 +25,11 @@ public static class SessionWorkflowEndpoints
         scheduling.MapPost("/approvals/{approvalId:guid}/proposals", ProposeSubstituteAsync);
         scheduling.MapGet("/approvals", ListApprovalsAsync);
         scheduling.MapPost("/approvals/{approvalId:guid}/decision", DecideApprovalAsync);
+        scheduling.MapGet("/sessions/{sessionId:guid}/evaluations", ListSessionEvaluationsAsync);
         scheduling.MapPut("/sessions/{sessionId:guid}/evaluations", UpsertEvaluationsAsync);
+        scheduling.MapPost("/sessions/{sessionId:guid}/evaluations/submit", SubmitEvaluationsAsync);
+        scheduling.MapGet("/evaluation-reviews", ListEvaluationReviewsAsync);
+        scheduling.MapPost("/evaluation-reviews/{evaluationId:guid}/decision", DecideEvaluationReviewAsync);
         scheduling.MapGet("/notifications", ListNotificationsAsync);
         scheduling.MapPost("/notifications/{notificationId:guid}/read", MarkNotificationReadAsync);
         return endpoints;
@@ -298,14 +302,128 @@ public static class SessionWorkflowEndpoints
 
     private static async Task<IResult> UpsertEvaluationsAsync(Guid sessionId, EvaluationBatchRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
     {
-        if (!IsInstructor(user) || !Scope(user, out var tenantId, out var branchScope)) return Forbidden("EVALUATION_WRITE_FORBIDDEN");
+        if (!IsInstructor(user) || !Scope(user, out var tenantId, out var branchScope) || !branchScope.HasValue) return Forbidden("EVALUATION_WRITE_FORBIDDEN");
         var actorId = Actor(user); if (!actorId.HasValue) return Forbidden("ACTOR_REQUIRED");
         var session = await db.AcademySessions.SingleOrDefaultAsync(item => item.Id == sessionId && item.TenantId == tenantId && (!branchScope.HasValue || item.BranchId == branchScope.Value) && (item.InstructorId == actorId.Value || item.SubstituteInstructorId == actorId.Value), cancellationToken);
         if (session is null) return NotFound("SESSION_NOT_FOUND");
-        var ids = request.Items.Select(item => item.StudentId).Distinct().ToArray(); var enrolled = await db.StudentEnrollments.Where(item => item.CourseOfferingId == session.CourseOfferingId && item.Status == "ACTIVE" && ids.Contains(item.StudentId)).Select(item => item.StudentId).ToListAsync(cancellationToken); if (enrolled.Count != ids.Length) return Validation("items", "All evaluated students must be enrolled in the group.");
+        if (request.Items is null || request.Items.Count == 0 || request.Items.Any(item => item.StudentId == Guid.Empty || item.Score is < 0 or > 100 || item.Notes?.Length > 2000)) return Validation("items", "Provide unique enrolled students, valid scores, and notes no longer than 2,000 characters.");
+        var ids = request.Items.Select(item => item.StudentId).Distinct().ToArray();
+        if (ids.Length != request.Items.Count) return Validation("items", "A student may appear only once in an evaluation batch.");
+        if (!session.CourseOfferingId.HasValue || !await db.CourseOfferings.AnyAsync(item => item.Id == session.CourseOfferingId.Value && item.TenantId == tenantId && item.BranchId == session.BranchId, cancellationToken)) return Validation("items", "The session must belong to an active course group in its academy and branch.");
+        var enrolled = await (from enrollment in db.StudentEnrollments
+                              join student in db.Students on enrollment.StudentId equals student.Id
+                              where enrollment.CourseOfferingId == session.CourseOfferingId.Value && enrollment.Status == "ACTIVE" && ids.Contains(enrollment.StudentId) && student.TenantId == tenantId && student.BranchId == session.BranchId
+                              select enrollment.StudentId).ToListAsync(cancellationToken);
+        if (enrolled.Count != ids.Length) return Validation("items", "All evaluated students must be enrolled in the group.");
         var current = await db.SessionEvaluations.Where(item => item.SessionId == sessionId && ids.Contains(item.StudentId)).ToDictionaryAsync(item => item.StudentId, cancellationToken);
-        foreach (var item in request.Items) { if (item.Score is < 0 or > 100) return Validation("score", "Score must be between 0 and 100."); if (current.TryGetValue(item.StudentId, out var evaluation)) { evaluation.Score = item.Score; evaluation.Notes = item.Notes; evaluation.InstructorId = actorId.Value; } else db.SessionEvaluations.Add(new SessionEvaluation { SessionId = sessionId, StudentId = item.StudentId, InstructorId = actorId.Value, Score = item.Score, Notes = item.Notes }); }
+        if (current.Values.Any(item => item.Status is "SUBMITTED" or "PUBLISHED")) return Conflict("EVALUATION_NOT_EDITABLE", "Submitted or published evaluations cannot be edited until they are returned for changes.");
+        foreach (var item in request.Items)
+        {
+            if (current.TryGetValue(item.StudentId, out var evaluation))
+            {
+                evaluation.Score = item.Score; evaluation.Notes = item.Notes; evaluation.InstructorId = actorId.Value; evaluation.Status = "DRAFT";
+            }
+            else db.SessionEvaluations.Add(new SessionEvaluation { SessionId = sessionId, StudentId = item.StudentId, InstructorId = actorId.Value, Score = item.Score, Notes = item.Notes, Status = "DRAFT" });
+        }
         await db.SaveChangesAsync(cancellationToken); return Results.Ok(new { data = new { sessionId, saved = request.Items.Count } });
+    }
+
+    private static async Task<IResult> ListSessionEvaluationsAsync(Guid sessionId, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!IsInstructor(user) || !Scope(user, out var tenantId, out var branchScope) || !branchScope.HasValue) return Forbidden("EVALUATION_READ_FORBIDDEN");
+        var actorId = Actor(user); if (!actorId.HasValue) return Forbidden("ACTOR_REQUIRED");
+        var session = await db.AcademySessions.SingleOrDefaultAsync(item => item.Id == sessionId && item.TenantId == tenantId && (!branchScope.HasValue || item.BranchId == branchScope.Value) && (item.InstructorId == actorId.Value || item.SubstituteInstructorId == actorId.Value), cancellationToken);
+        if (session is null) return NotFound("SESSION_NOT_FOUND");
+        var items = await (from evaluation in db.SessionEvaluations.AsNoTracking()
+                           join student in db.Students.AsNoTracking() on evaluation.StudentId equals student.Id
+                           where evaluation.SessionId == sessionId && student.TenantId == tenantId && student.BranchId == session.BranchId && session.CourseOfferingId.HasValue
+                                 && db.CourseOfferings.Any(offering => offering.Id == session.CourseOfferingId.Value && offering.TenantId == tenantId && offering.BranchId == session.BranchId)
+                                 && db.StudentEnrollments.Any(enrollment => enrollment.StudentId == student.Id && enrollment.CourseOfferingId == session.CourseOfferingId.Value && enrollment.Status == "ACTIVE")
+                           orderby evaluation.StudentId
+                           select new { evaluation.StudentId, evaluation.Score, evaluation.Notes, evaluation.Status, evaluation.ReviewNote, evaluation.SubmittedAt, evaluation.ReviewedAt })
+            .ToListAsync(cancellationToken);
+        return Results.Ok(new { data = new { sessionId, items, total = items.Count } });
+    }
+
+    private static async Task<IResult> SubmitEvaluationsAsync(Guid sessionId, EvaluationSubmissionRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!IsInstructor(user) || !Scope(user, out var tenantId, out var branchScope) || !branchScope.HasValue) return Forbidden("EVALUATION_SUBMIT_FORBIDDEN");
+        var actorId = Actor(user); if (!actorId.HasValue) return Forbidden("ACTOR_REQUIRED");
+        var session = await db.AcademySessions.SingleOrDefaultAsync(item => item.Id == sessionId && item.TenantId == tenantId && (!branchScope.HasValue || item.BranchId == branchScope.Value) && (item.InstructorId == actorId.Value || item.SubstituteInstructorId == actorId.Value), cancellationToken);
+        if (session is null) return NotFound("SESSION_NOT_FOUND");
+        if (request.StudentIds is null || request.StudentIds.Count == 0 || request.StudentIds.Count > 100 || request.StudentIds.Any(id => id == Guid.Empty)) return Validation("studentIds", "Provide between 1 and 100 student IDs.");
+        var ids = request.StudentIds.Distinct().ToArray();
+        if (ids.Length != request.StudentIds.Count) return Validation("studentIds", "A student may appear only once.");
+        if (!session.CourseOfferingId.HasValue) return Validation("studentIds", "The session is not linked to an active course group.");
+        if (!await db.CourseOfferings.AnyAsync(item => item.Id == session.CourseOfferingId.Value && item.TenantId == tenantId && item.BranchId == session.BranchId, cancellationToken)) return Validation("studentIds", "The session must belong to an active course group in its academy and branch.");
+        var enrolled = await (from enrollment in db.StudentEnrollments
+                              join student in db.Students on enrollment.StudentId equals student.Id
+                              where enrollment.CourseOfferingId == session.CourseOfferingId.Value && enrollment.Status == "ACTIVE" && ids.Contains(enrollment.StudentId) && student.TenantId == tenantId && student.BranchId == session.BranchId
+                              select enrollment.StudentId).ToListAsync(cancellationToken);
+        if (enrolled.Count != ids.Length) return Validation("studentIds", "All submitted students must be enrolled in the group.");
+        var evaluations = await db.SessionEvaluations.Where(item => item.SessionId == sessionId && ids.Contains(item.StudentId)).ToListAsync(cancellationToken);
+        if (evaluations.Count != ids.Length) return Validation("studentIds", "Save every evaluation before submitting it for review.");
+        if (evaluations.Any(item => item.Status is not ("DRAFT" or "CHANGES_REQUESTED"))) return Conflict("EVALUATION_NOT_SUBMITTABLE", "Only draft evaluations or evaluations returned for changes can be submitted.");
+        if (evaluations.Any(item => !item.Score.HasValue || string.IsNullOrWhiteSpace(item.Notes))) return Validation("studentIds", "Every submitted evaluation needs a score and a constructive note.");
+        var now = DateTimeOffset.UtcNow;
+        foreach (var evaluation in evaluations)
+        {
+            var previousStatus = evaluation.Status;
+            evaluation.Status = "SUBMITTED"; evaluation.SubmittedAt = now; evaluation.ReviewedByUserId = null; evaluation.ReviewedAt = null; evaluation.PublishedAt = null; evaluation.ReviewNote = null;
+            db.StateTransitions.Add(new StateTransitionEvent { AggregateType = "SESSION_EVALUATION", AggregateId = evaluation.Id.ToString(), FromState = previousStatus, ToState = "SUBMITTED", ActorUserId = actorId.Value, Reason = "Instructor submitted evaluation for academic review." });
+        }
+        await NotifyStaffAsync(db, session.TenantId, session.BranchId, actorId.Value, "EVALUATION_SUBMITTED", "تقييمات جديدة للمراجعة", $"تم إرسال {evaluations.Count} تقييم للمراجعة الأكاديمية.", "SESSION", sessionId.ToString(), cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.Ok(new { data = new { sessionId, submitted = evaluations.Count, status = "SUBMITTED" } });
+    }
+
+    private static async Task<IResult> ListEvaluationReviewsAsync(ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!CanReviewEvaluations(user) || !Scope(user, out var tenantId, out var branchScope) || !branchScope.HasValue) return Forbidden("EVALUATION_REVIEW_FORBIDDEN");
+        var items = await (from evaluation in db.SessionEvaluations.AsNoTracking()
+                           join session in db.AcademySessions.AsNoTracking() on evaluation.SessionId equals session.Id
+                           join student in db.Students.AsNoTracking() on evaluation.StudentId equals student.Id
+                           join instructor in db.UserAccounts.AsNoTracking() on evaluation.InstructorId equals instructor.Id
+                           join offering in db.CourseOfferings.AsNoTracking() on session.CourseOfferingId equals (Guid?)offering.Id
+                           join template in db.CourseTemplates.AsNoTracking() on offering.CourseTemplateId equals template.Id
+                           where evaluation.Status == "SUBMITTED" && session.TenantId == tenantId && session.BranchId == branchScope.Value
+                                 && student.TenantId == tenantId && student.BranchId == branchScope.Value
+                                 && offering.TenantId == tenantId && offering.BranchId == branchScope.Value && template.TenantId == tenantId
+                                 && db.StudentEnrollments.Any(enrollment => enrollment.StudentId == evaluation.StudentId && enrollment.CourseOfferingId == offering.Id && enrollment.Status == "ACTIVE")
+                                 && db.Memberships.Any(membership => membership.UserAccountId == evaluation.InstructorId && membership.TenantId == tenantId && membership.BranchId == branchScope.Value && membership.Status == "ACTIVE" && (membership.RoleCode == "R03_HEAD_INSTRUCTORS" || membership.RoleCode == "R04_INSTRUCTOR"))
+                           orderby evaluation.SubmittedAt
+                           select new { evaluation.Id, evaluation.SessionId, evaluation.StudentId, studentName = student.FullName, courseName = template.Name, instructorName = instructor.DisplayName, evaluation.Score, evaluation.Notes, evaluation.SubmittedAt, sessionDate = session.StartAt })
+            .ToListAsync(cancellationToken);
+        return Results.Ok(new { data = new { items, total = items.Count } });
+    }
+
+    private static async Task<IResult> DecideEvaluationReviewAsync(Guid evaluationId, EvaluationReviewDecision request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!CanReviewEvaluations(user) || !Scope(user, out var tenantId, out var branchScope) || !branchScope.HasValue) return Forbidden("EVALUATION_REVIEW_FORBIDDEN");
+        var actorId = Actor(user); if (!actorId.HasValue) return Forbidden("ACTOR_REQUIRED");
+        var decision = request.Decision?.Trim().ToUpperInvariant();
+        if (decision is not ("PUBLISH" or "REQUEST_CHANGES")) return Validation("decision", "Decision must be PUBLISH or REQUEST_CHANGES.");
+        var reviewNote = request.Note?.Trim();
+        if (decision == "REQUEST_CHANGES" && string.IsNullOrWhiteSpace(reviewNote)) return Validation("note", "A review note is required when returning an evaluation for changes.");
+        if (reviewNote?.Length > 1000) return Validation("note", "Review notes cannot exceed 1,000 characters.");
+        var evaluation = await db.SessionEvaluations.SingleOrDefaultAsync(item => item.Id == evaluationId && item.Status == "SUBMITTED", cancellationToken);
+        if (evaluation is null) return NotFound("EVALUATION_REVIEW_NOT_FOUND");
+        var session = await db.AcademySessions.SingleOrDefaultAsync(item => item.Id == evaluation.SessionId && item.TenantId == tenantId && item.BranchId == branchScope.Value, cancellationToken);
+        if (session is null) return NotFound("EVALUATION_REVIEW_NOT_FOUND");
+        if (!session.CourseOfferingId.HasValue) return NotFound("EVALUATION_REVIEW_NOT_FOUND");
+        var targetIsScoped = await db.Students.AnyAsync(student => student.Id == evaluation.StudentId && student.TenantId == tenantId && student.BranchId == branchScope.Value, cancellationToken)
+            && await db.CourseOfferings.AnyAsync(offering => offering.Id == session.CourseOfferingId.Value && offering.TenantId == tenantId && offering.BranchId == branchScope.Value, cancellationToken)
+            && await db.StudentEnrollments.AnyAsync(enrollment => enrollment.StudentId == evaluation.StudentId && enrollment.CourseOfferingId == session.CourseOfferingId.Value && enrollment.Status == "ACTIVE", cancellationToken)
+            && await db.Memberships.AnyAsync(membership => membership.UserAccountId == evaluation.InstructorId && membership.TenantId == tenantId && membership.BranchId == branchScope.Value && membership.Status == "ACTIVE" && (membership.RoleCode == "R03_HEAD_INSTRUCTORS" || membership.RoleCode == "R04_INSTRUCTOR"), cancellationToken);
+        if (!targetIsScoped) return NotFound("EVALUATION_REVIEW_NOT_FOUND");
+        var now = DateTimeOffset.UtcNow;
+        evaluation.Status = decision == "PUBLISH" ? "PUBLISHED" : "CHANGES_REQUESTED";
+        evaluation.ReviewedByUserId = actorId.Value; evaluation.ReviewedAt = now; evaluation.ReviewNote = decision == "REQUEST_CHANGES" ? reviewNote : null;
+        evaluation.PublishedAt = decision == "PUBLISH" ? now : null;
+        db.StateTransitions.Add(new StateTransitionEvent { AggregateType = "SESSION_EVALUATION", AggregateId = evaluation.Id.ToString(), FromState = "SUBMITTED", ToState = evaluation.Status, ActorUserId = actorId.Value, Reason = reviewNote });
+        await NotifyStaffAsync(db, session.TenantId, session.BranchId, evaluation.InstructorId, decision == "PUBLISH" ? "EVALUATION_PUBLISHED" : "EVALUATION_CHANGES_REQUESTED", decision == "PUBLISH" ? "تم نشر التقييم" : "التقييم يحتاج تعديلًا", decision == "PUBLISH" ? "اعتمد رئيس المدربين التقييم وأصبح متاحًا للطالب والأسرة." : reviewNote!, "SESSION", session.Id.ToString(), cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.Ok(new { data = new { evaluationId, sessionId = session.Id, status = evaluation.Status, reviewedAt = evaluation.ReviewedAt, publishedAt = evaluation.PublishedAt } });
     }
 
     private static async Task<IResult> ListNotificationsAsync(ClaimsPrincipal user, MadaDbContext db, bool unreadOnly, CancellationToken cancellationToken)
@@ -331,6 +449,7 @@ public static class SessionWorkflowEndpoints
     private static bool Scope(ClaimsPrincipal user, out Guid tenantId, out Guid? branchId) { var ok = Guid.TryParse(user.FindFirstValue("tenantId"), out tenantId); branchId = Guid.TryParse(user.FindFirstValue("branchId"), out var parsed) ? parsed : null; return ok; }
     private static Guid? Actor(ClaimsPrincipal user) => Guid.TryParse(user.FindFirstValue("sub"), out var id) ? id : null;
     private static bool IsInstructor(ClaimsPrincipal user) => user.IsInRole("R04_INSTRUCTOR") || user.IsInRole("R03_HEAD_INSTRUCTORS");
+    private static bool CanReviewEvaluations(ClaimsPrincipal user) => user.IsInRole("R03_HEAD_INSTRUCTORS");
     private static bool CanCreateGroup(ClaimsPrincipal user) => user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R03_HEAD_INSTRUCTORS");
     private static bool CanDecide(ClaimsPrincipal user) => user.IsInRole("R00_PLATFORM_ADMIN") || user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R03_HEAD_INSTRUCTORS");
     private static IResult NotFound(string code) => Results.NotFound(new { error = new { code, message = code } });
@@ -350,3 +469,5 @@ public sealed record SubstituteProposalRequest(string? Message);
 public sealed record ApprovalDecision(string Decision, Guid? AssignedInstructorId = null, string? Reason = null);
 public sealed record EvaluationBatchRequest(IReadOnlyList<EvaluationItem> Items);
 public sealed record EvaluationItem(Guid StudentId, int? Score, string? Notes);
+public sealed record EvaluationSubmissionRequest(IReadOnlyList<Guid> StudentIds);
+public sealed record EvaluationReviewDecision(string Decision, string? Note = null);

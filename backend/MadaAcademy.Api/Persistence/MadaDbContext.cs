@@ -215,7 +215,10 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
         modelBuilder.Entity<SessionEvaluation>(entity =>
         {
             entity.HasIndex(x => new { x.SessionId, x.StudentId }).IsUnique();
+            entity.HasIndex(x => x.Status);
             entity.Property(x => x.Notes).HasMaxLength(2000);
+            entity.Property(x => x.Status).HasMaxLength(32).HasDefaultValue("DRAFT").IsRequired();
+            entity.Property(x => x.ReviewNote).HasMaxLength(1000);
         });
         modelBuilder.Entity<InAppNotification>(entity =>
         {
