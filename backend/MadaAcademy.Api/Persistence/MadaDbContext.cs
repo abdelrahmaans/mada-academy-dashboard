@@ -240,9 +240,9 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
             entity.HasIndex(x => new { x.StudentId, x.IssueDate });
             entity.Property(x => x.InvoiceNumber).HasMaxLength(48).IsRequired();
             entity.Property(x => x.Status).HasMaxLength(24).IsRequired();
-            entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne<Branch>().WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
-            entity.HasOne<Student>().WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Tenant).WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Branch).WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<StudentEnrollment>().WithMany().HasForeignKey(x => x.EnrollmentId).OnDelete(DeleteBehavior.SetNull);
         });
         modelBuilder.Entity<InvoiceLine>(entity =>

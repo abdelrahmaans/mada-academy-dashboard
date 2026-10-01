@@ -26,9 +26,6 @@ namespace MadaAcademy.Api.Persistence.Migrations
                     DueDate = table.Column<DateOnly>(type: "date", nullable: false),
                     Status = table.Column<string>(type: "character varying(24)", maxLength: 24, nullable: false),
                     CreatedByUserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    TenantId1 = table.Column<Guid>(type: "uuid", nullable: true),
-                    BranchId1 = table.Column<Guid>(type: "uuid", nullable: true),
-                    StudentId1 = table.Column<Guid>(type: "uuid", nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     UpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
@@ -42,11 +39,6 @@ namespace MadaAcademy.Api.Persistence.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_Invoices_Branches_BranchId1",
-                        column: x => x.BranchId1,
-                        principalTable: "Branches",
-                        principalColumn: "Id");
-                    table.ForeignKey(
                         name: "FK_Invoices_StudentEnrollments_EnrollmentId",
                         column: x => x.EnrollmentId,
                         principalTable: "StudentEnrollments",
@@ -59,21 +51,11 @@ namespace MadaAcademy.Api.Persistence.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_Invoices_Students_StudentId1",
-                        column: x => x.StudentId1,
-                        principalTable: "Students",
-                        principalColumn: "Id");
-                    table.ForeignKey(
                         name: "FK_Invoices_Tenants_TenantId",
                         column: x => x.TenantId,
                         principalTable: "Tenants",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Invoices_Tenants_TenantId1",
-                        column: x => x.TenantId1,
-                        principalTable: "Tenants",
-                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -165,11 +147,6 @@ namespace MadaAcademy.Api.Persistence.Migrations
                 column: "BranchId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Invoices_BranchId1",
-                table: "Invoices",
-                column: "BranchId1");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Invoices_EnrollmentId",
                 table: "Invoices",
                 column: "EnrollmentId");
@@ -181,19 +158,9 @@ namespace MadaAcademy.Api.Persistence.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Invoices_StudentId1",
-                table: "Invoices",
-                column: "StudentId1");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Invoices_StudentId_IssueDate",
                 table: "Invoices",
                 columns: new[] { "StudentId", "IssueDate" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Invoices_TenantId1",
-                table: "Invoices",
-                column: "TenantId1");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Invoices_TenantId_BranchId_Status_DueDate",

@@ -102,7 +102,7 @@ public static class FinanceEndpoints
             }
         }
         finally { InMemoryPaymentGate.Release(); }
-        var payment = await db.PaymentTransactions.AsNoTracking().Include(x => x.Evidence).SingleAsync(x => x.RecordedByUserId == actorId && x.InvoiceId == invoiceId, cancellationToken);
+        var payment = await db.PaymentTransactions.AsNoTracking().Include(x => x.Evidence).Where(x => x.RecordedByUserId == actorId && x.InvoiceId == invoiceId).OrderByDescending(x => x.CreatedAt).FirstAsync(cancellationToken);
         return Results.Created($"/api/v1/finance/payments/{payment.Id}", new { data = new { payment = ToPaymentResponse(payment), invoiceId } });
     }
 
@@ -127,17 +127,18 @@ public static class FinanceEndpoints
         if (!Guid.TryParse(context.User.FindFirstValue("sub"), out var actorId)) return Forbidden("ACTOR_REQUIRED");
         var payment = await db.PaymentTransactions.Include(x => x.Evidence).SingleOrDefaultAsync(x => x.Id == paymentId && x.TenantId == scope.TenantId && (!scope.BranchId.HasValue || x.BranchId == scope.BranchId.Value), cancellationToken);
         if (payment is null) return NotFound("PAYMENT_NOT_FOUND");
+        if (payment.Evidence is not null) return Conflict("EVIDENCE_ALREADY_ATTACHED");
         var form = await context.Request.ReadFormAsync(cancellationToken);
         var file = form.Files.GetFile("file");
         if (file is null || file.Length == 0) return Validation("file", "A file is required.");
         if (file.Length > MaxEvidenceBytes || !EvidenceTypes.Contains(file.ContentType.ToLowerInvariant())) return Validation("file", "Only PDF, JPG, and PNG files up to 10 MB are allowed.");
-        if (payment.Evidence is not null) return Conflict("EVIDENCE_ALREADY_ATTACHED");
         await using var input = file.OpenReadStream();
         var stored = await storage.PutAsync(input, file.ContentType.ToLowerInvariant(), file.Length, cancellationToken);
-        payment.Evidence = new PaymentEvidence { PaymentTransactionId = payment.Id, StorageKey = stored.Key, DisplayFileName = SafeFileName(file.FileName), ContentType = stored.ContentType, SizeBytes = stored.SizeBytes, Sha256 = stored.Sha256, UploadedByUserId = actorId };
+        var evidence = new PaymentEvidence { PaymentTransactionId = payment.Id, StorageKey = stored.Key, DisplayFileName = SafeFileName(file.FileName), ContentType = stored.ContentType, SizeBytes = stored.SizeBytes, Sha256 = stored.Sha256, UploadedByUserId = actorId };
+        db.PaymentEvidences.Add(evidence);
         db.AuditEvents.Add(new AuditEvent { ActorUserId = actorId, TenantId = payment.TenantId, BranchId = payment.BranchId, Action = "PAYMENT_EVIDENCE_ATTACHED", TargetType = "PAYMENT", TargetId = payment.Id.ToString(), MetadataJson = JsonSerializer.Serialize(new { stored.ContentType, stored.SizeBytes, stored.Sha256 }) });
         await db.SaveChangesAsync(cancellationToken);
-        return Results.Ok(new { data = new { paymentId, status = "ATTACHED", fileName = payment.Evidence.DisplayFileName, contentType = stored.ContentType, sizeBytes = stored.SizeBytes } });
+        return Results.Ok(new { data = new { paymentId, status = "ATTACHED", fileName = evidence.DisplayFileName, contentType = stored.ContentType, sizeBytes = stored.SizeBytes } });
     }
 
     private static async Task<IResult> DownloadEvidenceAsync(Guid paymentId, HttpContext context, MadaDbContext db, IPrivateObjectStorage storage, CancellationToken cancellationToken)

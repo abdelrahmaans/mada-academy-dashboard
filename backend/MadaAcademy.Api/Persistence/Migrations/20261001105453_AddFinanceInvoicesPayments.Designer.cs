@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MadaAcademy.Api.Persistence.Migrations
 {
     [DbContext(typeof(MadaDbContext))]
-    [Migration("20261001104419_AddFinanceInvoicesPayments")]
+    [Migration("20261001105453_AddFinanceInvoicesPayments")]
     partial class AddFinanceInvoicesPayments
     {
         /// <inheritdoc />
@@ -686,9 +686,6 @@ namespace MadaAcademy.Api.Persistence.Migrations
                     b.Property<Guid>("BranchId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("BranchId1")
-                        .HasColumnType("uuid");
-
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -717,13 +714,7 @@ namespace MadaAcademy.Api.Persistence.Migrations
                     b.Property<Guid>("StudentId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("StudentId1")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("TenantId1")
                         .HasColumnType("uuid");
 
                     b.Property<int>("TotalPiastres")
@@ -736,16 +727,10 @@ namespace MadaAcademy.Api.Persistence.Migrations
 
                     b.HasIndex("BranchId");
 
-                    b.HasIndex("BranchId1");
-
                     b.HasIndex("EnrollmentId");
 
                     b.HasIndex("InvoiceNumber")
                         .IsUnique();
-
-                    b.HasIndex("StudentId1");
-
-                    b.HasIndex("TenantId1");
 
                     b.HasIndex("StudentId", "IssueDate");
 
@@ -1490,40 +1475,28 @@ namespace MadaAcademy.Api.Persistence.Migrations
 
             modelBuilder.Entity("MadaAcademy.Api.Persistence.Entities.Invoice", b =>
                 {
-                    b.HasOne("MadaAcademy.Api.Persistence.Entities.Branch", null)
+                    b.HasOne("MadaAcademy.Api.Persistence.Entities.Branch", "Branch")
                         .WithMany()
                         .HasForeignKey("BranchId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("MadaAcademy.Api.Persistence.Entities.Branch", "Branch")
-                        .WithMany()
-                        .HasForeignKey("BranchId1");
 
                     b.HasOne("MadaAcademy.Api.Persistence.Entities.StudentEnrollment", null)
                         .WithMany()
                         .HasForeignKey("EnrollmentId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("MadaAcademy.Api.Persistence.Entities.Student", null)
+                    b.HasOne("MadaAcademy.Api.Persistence.Entities.Student", "Student")
                         .WithMany()
                         .HasForeignKey("StudentId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("MadaAcademy.Api.Persistence.Entities.Student", "Student")
-                        .WithMany()
-                        .HasForeignKey("StudentId1");
-
-                    b.HasOne("MadaAcademy.Api.Persistence.Entities.Tenant", null)
+                    b.HasOne("MadaAcademy.Api.Persistence.Entities.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("MadaAcademy.Api.Persistence.Entities.Tenant", "Tenant")
-                        .WithMany()
-                        .HasForeignKey("TenantId1");
 
                     b.Navigation("Branch");
 
