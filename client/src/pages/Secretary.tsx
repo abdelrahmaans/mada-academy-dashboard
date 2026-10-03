@@ -30,10 +30,11 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useLocation } from "wouter";
+import { Redirect, useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import { EmptyState, ErrorState, LockedState } from "@/components/FeedbackStates";
+import { apiClient } from "@/lib/apiClient";
 
 type SecretaryView = "overview" | "leads" | "registrations" | "operations";
 type LeadStatus =
@@ -474,7 +475,7 @@ function SecretaryBrand() {
   );
 }
 
-export default function Secretary() {
+function SecretaryPreview() {
   const [, navigate] = useLocation();
   const [view, setView] = useState<SecretaryView>(() => {
     const requested = new URLSearchParams(window.location.search).get("view");
@@ -2493,6 +2494,10 @@ export default function Secretary() {
       )}
     </RoleDashboardShell>
   );
+}
+
+export default function Secretary() {
+  return apiClient.hasSession() ? <Redirect to="/secretary-desk" /> : <SecretaryPreview />;
 }
 
 function NoteComposer({ onSave }: { onSave: (note: string) => void }) {
