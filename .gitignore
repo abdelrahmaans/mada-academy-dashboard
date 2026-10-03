@@ -122,3 +122,7 @@ client/public/__manus__/version.json
 # .NET test output
 **/TestResults/
 artifacts/
+
+# Playwright output
+playwright-report/
+test-results/

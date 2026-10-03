@@ -1,15 +1,15 @@
 # خطة المرحلة القادمة — Mada Academy
 
 **تاريخ اللقطة:** 3 أكتوبر 2026
-**قاعدة العمل الحالية:** `main` عند `1d13815` بعد دمج [PR #35](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/35).
-**الحالة:** P1 core seed/API journey تم دمجه والتحقق منه. هذه الوثيقة تحتفظ بخطة Finance كمرجع مؤجل. قرار التنفيذ الحالي هو إغلاق manual consumer acceptance أولًا، ثم اختيار gap P2 التالية.
+**قاعدة العمل الحالية:** `main` عند `bc01cb3` بعد دمج [PR #37](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/37).
+**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance تم إغلاقها. المتبقي production-readiness فقط: private storage smoke، backup/restore، وstaging deployment acceptance.
 
 ## قرار التنفيذ الحالي
 
 1. **تم إغلاق شريحة P2 source acceptance:** تقارير التشغيل، عزل النطاق، حماية LIVE، وحالات R08/R09 الجزئية مثبتة.
 2. **تم دمج P1 core journey:** الـseeder repairable، وحسابات R04/R08/R09 وروابطهم واختبارات الرحلة موجودة في `main`.
-3. **الخطوة النشطة:** تنفيذ [CONSUMER_STAGING_SMOKE_TEST.md](CONSUMER_STAGING_SMOKE_TEST.md) بمجرد توفر API غير إنتاجي مضبوط؛ لا نعتبر source-level tests بديلًا عن click-through.
-4. **لا نبدأ Finance deployment أو secrets أو evidence storage:** Finance يظل مؤجلًا كما طلب المستخدم.
+3. **تم تنفيذ local browser E2E:** `pnpm e2e` يمر بـ **3/3** لرحلات R06/R08/R09.
+4. **الخطوة المتبقية الوحيدة للـFinance:** secret injection + authenticated private-storage smoke + durable backup/restore policy + deployed staging smoke. لا نعتبرها مكتملة محليًا.
 
 ## نتيجة acceptance الحالية
 
@@ -31,8 +31,8 @@
 - FamilyPortal: تم فصل تحميل الأطفال والجلسات عن endpoint الفواتير؛ فشل الفواتير يعرض حالة مستقلة وtoast وRetry، ويحافظ على بيانات الأطفال والجلسات، كما لا تعرض بطاقة الطفل حالة فواتير مضللة أثناء التحميل أو الفشل.
 - StudentPortal: تم فصل ملف الطالب عن الجلسات باستخدام `Promise.allSettled`؛ فشل الجلسات يحافظ على ملف الطالب ويعرض warning وtoast وRetry، وفشل الملف الأساسي يعرض error وRetry، مع منع Demo fallback في LIVE.
 - Consumer final acceptance: اكتملت مراجعة R08/R09 وتوثقت في `CONSUMER_FINAL_ACCEPTANCE.md`; تم التأكد من عزل Demo، حالات empty/error/loading، Toast وRetry، وفصل البيانات الأساسية عن الفواتير/الجلسات الاختيارية.
-- **الفجوة التالية المثبتة:** manual authenticated browser smoke test لمسارات R08/R09؛ الحسابات والبيانات أصبحت مضبوطة، والـAPI local-only preflight نجح، والمتبقي click-through محلي أو controlled API URL.
-- التحقق المحلي: Vitest **11/11**، `pnpm check`، `pnpm build`، و`git diff --check` ناجحة.
+- **الفجوة التالية المثبتة:** production evidence/storage and staging acceptance؛ الـlocal API preflight والـbrowser E2E أُنجزا بالفعل.
+- التحقق المحلي: Finance/Invoice correction **11/11**، InMemory backend **54/54**، browser E2E **3/3**، `pnpm check`، Vitest، `pnpm build`، و`git diff --check` ناجحة.
 - التحقق عبر GitHub: **4/4 checks ناجحة** على PR #35، منها **70/70 backend tests**.
 
 ## الهدف

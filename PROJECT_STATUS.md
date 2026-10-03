@@ -1,13 +1,13 @@
 # Mada Academy — Project Status
 
 **As of:** 3 October 2026
-**Verified Git state:** `main` at `1d13815`, pushed to origin after PR #35 merge.
-**Latest delivery PR:** [PR #35 — seed and verify the P1 core journey](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/35), merged with all required checks successful.
+**Verified Git state:** `main` at `bc01cb3`, pushed to origin after PR #37 merge.
+**Latest delivery PR:** [PR #37 — enable local consumer smoke run](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/37), merged with all required checks successful.
 **Stack:** React + Vite + TypeScript (primary UI); ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions. Angular is a reference preview only.
 
 ## Executive summary
 
-Mada has moved beyond a static prototype: authentication, scoped operational APIs, consumer account links, session/evaluation workflows, finance APIs, and operational reports are persisted and tested. The product is **not fully production-ready end-to-end**: the current P2 delivery still needs final acceptance/merge, production SMS is intentionally unconfigured, password recovery is missing, and finance evidence deployment/storage smoke tests remain outside the currently active work. Per the current execution decision, the stalled Finance follow-up and P1 blocker are left unchanged while P2 acceptance is completed.
+Mada has moved beyond a static prototype: authentication, scoped operational APIs, consumer account links, session/evaluation workflows, finance APIs, and operational reports are persisted and tested. The **Finance code/local acceptance slice is complete**; production readiness still requires private-storage secret injection, authenticated storage smoke test, durable backup/restore evidence, and deployed staging acceptance. Production SMS is intentionally unconfigured and password recovery is missing.
 
 ## Role-by-role state
 
@@ -18,8 +18,8 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 | **R02 Branch Manager** | Branch-scoped student/session/classroom and approval operations are available across implemented backend slices; `/branch-operations` now routes authenticated R02 users to the live dashboard instead of the legacy demo, and approvals/classes/schedule remain visible when optional endpoints are forbidden. | Some non-core branch panels remain outside the current P2 slice. |
 | **R03 Head Instructors** | Branch-scoped evaluation review queue; publish or request changes; dashboard avoids demo evaluation samples in LIVE evaluation surfaces, keeps core team/group/session data visible when optional endpoints fail, and preserves groups or sessions when one Academic Programs read fails. | Other overview/team indicators may still be preview/demo data. |
 | **R04 Instructor** | Assigned sessions, attendance, evaluation drafts/submission, and relevant workflow actions are connected to APIs. | Broader instructor analytics and non-core surfaces are not all live. |
-| **R05 Secretary** | Student workflows, phone-based consumer lookup/linking, consumer invitations, and scoped invoice/payment operations exist; legacy Secretary route is guarded from LIVE sessions. | Finance follow-up is intentionally parked for the current P2 cycle; do not expand permissions without reopening the finance decision. |
-| **R06 Accountant** | FinanceDesk is connected to scoped invoice/payment/expense/report APIs with role-aware loading, forbidden, and error states. | Production evidence/storage smoke test and release-gate deployment work remain parked; do not mark Finance fully production-ready from UI checks alone. |
+| **R05 Secretary** | Student workflows, phone-based consumer lookup/linking, consumer invitations, and scoped invoice/payment operations exist; legacy Secretary route is guarded from LIVE sessions. | Production evidence/storage and deployed staging remain open; no broad `finance.write`. |
+| **R06 Accountant** | FinanceDesk is connected to scoped invoice/payment/expense/report APIs with role-aware loading, forbidden, and error states; local browser E2E passes. | Production evidence/storage and deployed staging remain open. |
 | **R07 Marketing Manager** | Branch scope is aligned in navigation metadata and copy. | Marketing campaign/lead operations are not all backed by live APIs. |
 | **R08 Guardian** | Real linked children, scoped consumer operational data, published evaluations, and linked invoice reads; LIVE has explicit empty/error states without demo fallback, and invoice failure no longer hides linked children or sessions. | Evidence deployment and any additional finance UX remain outside the active P2 cycle. |
 | **R09 Student** | Self-scoped account/student relationship, consumer session data, published evaluations, and explicit LIVE empty/error states without demo fallback; student profile remains visible when session loading fails, with toast and retry feedback. | Broader learning/progress elements remain intentionally limited to persisted session data. |
@@ -35,7 +35,7 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 
 ## CI and verified baseline
 
-At PR #35, all four GitHub checks passed: PostgreSQL/backend integration, preview comments, and both deployments. The backend suite passed **70/70**, while local frontend validation passed Vitest **13/13**, `pnpm check`, `pnpm build`, and `git diff --check`. A local API run now supports `MADA_DATABASE_MODE=memory` plus demo seeding; the R08/R09 preflight verified one linked student per account and the published parent score `88`. Full local backend execution passes **54/54** InMemory tests; the 16 PostgreSQL tests correctly require a disposable `DATABASE_URL` and were not run without one. CI workflows cover backend/PostgreSQL and frontend checks.
+At PR #37, all four GitHub checks passed, including PostgreSQL/backend integration and both frontend deployments. The backend suite passed **70/70** in CI; local frontend validation passed Vitest, `pnpm check`, `pnpm build`, and `git diff --check`. Local Finance and invoice-correction tests pass **11/11**; local InMemory backend tests pass **54/54**; browser E2E passes **3/3** for R06/R08/R09 using Chromium. The local API preflight verified linked scope and published score `88`.
 
 ## OTP status
 
@@ -46,12 +46,11 @@ At PR #35, all four GitHub checks passed: PostgreSQL/backend integration, previe
 
 ## Next milestone and open issues
 
-The P2 consumer final acceptance review is complete for R08/R09 and PR #35 is merged; the seeded accounts, links, attendance, and published evaluation are now repairable and covered by API integration tests. The next phase is the credentialed staging smoke test; its exact checklist is in [CONSUMER_STAGING_SMOKE_TEST.md](CONSUMER_STAGING_SMOKE_TEST.md), and it remains pending until a controlled non-production API URL exists. The Finance follow-up remains intentionally parked. The finance design and release gates remain documented in [INVOICES_PAYMENTS_MVP_PLAN.md](INVOICES_PAYMENTS_MVP_PLAN.md) and [FINANCE_RELEASE_GATE.md](FINANCE_RELEASE_GATE.md).
+The P1/P2 consumer acceptance and Finance local acceptance are complete. The next phase is production-readiness evidence: configure the server-only Supabase key, run authenticated private-bucket upload/download smoke, define durable object backup/restore, and run deployed API/frontend staging acceptance. The finance design and release gates remain documented in [INVOICES_PAYMENTS_MVP_PLAN.md](INVOICES_PAYMENTS_MVP_PLAN.md) and [FINANCE_RELEASE_GATE.md](FINANCE_RELEASE_GATE.md).
 
 Open implementation blockers and product debt:
 
-1. Manual R08/R09 browser click-through is the active next-phase gate; automation and seeded data are ready, but no controlled deployed API exists yet.
-2. Finance evidence deployment remains gated on backend secrets, authenticated staging upload/download smoke test, and durable backup evidence; see [FINANCE_RELEASE_GATE.md](FINANCE_RELEASE_GATE.md).
+1. Finance production evidence deployment remains gated on backend secrets, authenticated staging upload/download smoke test, and durable backup evidence; see [FINANCE_RELEASE_GATE.md](FINANCE_RELEASE_GATE.md).
 3. Invoice cancellation/correction/refund and expanded financial workflows remain outside the current slice and must not be implied as supported.
 4. Production SMS provider and password recovery are later identity work; interim OTP mode remains opt-in, limited, audited, and never a hard-coded/shared code.
-5. Run [CONSUMER_STAGING_SMOKE_TEST.md](CONSUMER_STAGING_SMOKE_TEST.md) against a controlled non-production API; do not reopen parked Finance work without a new decision.
+5. Run [CONSUMER_STAGING_SMOKE_TEST.md](CONSUMER_STAGING_SMOKE_TEST.md) against a controlled non-production API when deployment is authorized; local E2E is already automated in `e2e/critical-flows.spec.ts`.

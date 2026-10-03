@@ -304,3 +304,9 @@ Current state: Finance evidence storage is in testing on the private Supabase `p
 تم دمج PR #35 (`1d13815`) بعد نجاح كل checks: backend PostgreSQL integration **70/70**، وفحوصات الـfrontend والـpreviews. أصبح `DemoDataSeeder` repairable/idempotent للـcore graph، بما يشمل حسابات R04/R08/R09 وروابطهم وبيانات enrollment وattendance والتقييم المنشور وانتقالات الحالة. أضيفت رحلة API من حفظ التقييم وإرساله للمراجعة ونشره حتى ظهوره للمستهلك، مع عزل parent/student والـbranch scope.
 
 المرحلة النشطة التالية هي manual authenticated smoke test لـR08/R09. الحسابات والبيانات التجريبية جاهزة، لكن الاختبار اليدوي ينتظر API غير إنتاجي مضبوط؛ Finance deployment وSupabase secrets وevidence storage ما زالت مؤجلة. الـrunbook التنفيذي هو `CONSUMER_STAGING_SMOKE_TEST.md`.
+
+## 2026-10-03 — Finance Local Acceptance + Browser E2E Closed
+
+تم إغلاق شريحة Finance على مستوى الكود والقبول المحلي. اختبارات Finance وInvoice correction نجحت **11/11**، والواجهة نجحت في `pnpm check` وVitest و`pnpm build`، وأضاف الريبو Playwright E2E حقيقية باستخدام Chromium. النتيجة **3/3**: R06 FinanceDesk LIVE، R08 Family Portal بعزل الطفل المرتبط، وR09 Student Portal بعزل الطالب.
+
+المتبقي ليس كودًا محليًا: حقن `SUPABASE_SERVICE_ROLE_KEY` في خادم غير الواجهة، تشغيل upload/download smoke على bucket `private-evidence`، توثيق backup/restore دائم للـobjects، ثم staging smoke بعد النشر. لذلك Finance أصبح **code/local-accepted** وليس **production-ready** بعد.

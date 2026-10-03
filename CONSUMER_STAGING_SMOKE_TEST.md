@@ -41,3 +41,19 @@ curl -fsS -X POST http://127.0.0.1:5180/api/v1/auth/login \
 ```
 
 Use the returned access token as `Authorization: Bearer <token>` for `/api/v1/consumer/me/students` and `/api/v1/consumer/me/sessions` before opening the browser.
+
+## Automated browser E2E
+
+The repository now includes Playwright coverage in `e2e/critical-flows.spec.ts`:
+
+- **R06:** authenticated LIVE FinanceDesk surface and finance summary (no demo banner).
+- **R08:** Family Portal linked-child scope and financial tab.
+- **R09:** Student Portal self-scope; the parent-linked child is not visible.
+
+Run it locally with:
+
+```bash
+pnpm e2e
+```
+
+The Playwright config starts the seeded InMemory API and Vite automatically and uses the system Chromium binary. Latest verified result: **3/3 passed**.
