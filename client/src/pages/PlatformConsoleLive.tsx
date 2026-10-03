@@ -29,6 +29,7 @@ export default function PlatformConsoleLive() {
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [tenantSearch, setTenantSearch] = useState("");
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const [userSearch, setUserSearch] = useState("");
@@ -44,15 +45,33 @@ export default function PlatformConsoleLive() {
     let active = true;
     setLoading(true);
     setError(null);
-    Promise.all([apiClient.platformOverview(), apiClient.platformAcademies(), apiClient.platformRoles()])
-      .then(([nextOverview, academyResponse, roleResponse]) => {
+    setWarning(null);
+    Promise.allSettled([apiClient.platformOverview(), apiClient.platformAcademies(), apiClient.platformRoles()])
+      .then(([overviewResult, academyResult, rolesResult]) => {
         if (!active) return;
-        setOverview(nextOverview);
-        setAcademies(academyResponse.items);
-        setRoles(roleResponse.items);
-        setSelectedTenantId(current => current || academyResponse.items[0]?.id || "");
+        const warnings: string[] = [];
+        if (overviewResult.status === "fulfilled") setOverview(overviewResult.value);
+        else warnings.push("مؤشرات المنصة غير متاحة مؤقتًا.");
+        if (academyResult.status === "fulfilled") {
+          setAcademies(academyResult.value.items);
+          setSelectedTenantId(current => current || academyResult.value.items[0]?.id || "");
+        } else warnings.push("قائمة الأكاديميات غير متاحة مؤقتًا.");
+        if (rolesResult.status === "fulfilled") setRoles(rolesResult.value.items);
+        else warnings.push("تعريفات أدوار المنصة غير متاحة مؤقتًا.");
+        if (warnings.length === 3) throw new Error("تعذر تحميل بيانات الإدارة الحية.");
+        if (warnings.length > 0) {
+          const warningMessage = warnings.join(" ");
+          setWarning(warningMessage);
+          toast.error(warningMessage);
+        } else setWarning(null);
+        if (refreshKey > 0) toast.success("تم تحديث بيانات المنصة");
       })
-      .catch(failure => { if (active) setError(failure instanceof Error ? failure.message : "تعذر تحميل بيانات الإدارة الحية."); })
+      .catch(failure => {
+        if (!active) return;
+        const message = failure instanceof Error ? failure.message : "تعذر تحميل بيانات الإدارة الحية.";
+        setError(message);
+        toast.error(message);
+      })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [refreshKey]);
@@ -77,7 +96,10 @@ export default function PlatformConsoleLive() {
           setActivity(activityResponse.items);
         }
       }).catch(failure => {
-        if (active) setSupportError(failure instanceof Error ? failure.message : "تعذر تحميل سجل الدعم.");
+        if (!active) return;
+        const message = failure instanceof Error ? failure.message : "تعذر تحميل سجل الدعم.";
+        setSupportError(message);
+        toast.error(message);
       }).finally(() => { if (active) setSupportLoading(false); });
     }, view === "support" ? 250 : 0);
     return () => { active = false; window.clearTimeout(delay); };
@@ -146,6 +168,7 @@ export default function PlatformConsoleLive() {
         <RoleScopeCard className="pc-live-scope" compact />
         {loading && <div className="pc-live-state" role="status"><RefreshCw className="pc-live-spin" size={18} /> جارٍ تحميل بيانات المنصة…</div>}
         {!loading && error && <div className="pc-live-state pc-live-error" role="alert"><AlertCircle size={19} /><span>{error}</span><button type="button" onClick={() => setRefreshKey(value => value + 1)}>إعادة المحاولة</button></div>}
+        {!loading && !error && warning && <div className="pc-live-state pc-live-error" role="status"><AlertCircle size={19} /><span>{warning} البيانات المتاحة ما زالت معروضة من الخادم.</span><button type="button" onClick={() => setRefreshKey(value => value + 1)}>إعادة المحاولة</button></div>}
         {!loading && !error && view === "overview" && <>
           <label className="pc-live-reason"><span>سبب إجراء الإيقاف أو التفعيل (إلزامي)</span><input value={reason} onChange={event => setReason(event.target.value)} placeholder="اكتب سببًا مختصرًا قبل أي تغيير حالة" /></label>
           <section className="pc-live-metrics" aria-label="مؤشرات المنصة الحية">
