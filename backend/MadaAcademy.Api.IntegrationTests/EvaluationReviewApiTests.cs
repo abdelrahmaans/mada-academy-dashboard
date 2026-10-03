@@ -62,6 +62,7 @@ public sealed class EvaluationReviewApiTests
         using var instructorReviewClient = factory.CreateClient();
         TestData.Authenticate(instructorReviewClient, await TestData.LoginAsync(instructorReviewClient, instructor));
         Assert.Equal(HttpStatusCode.Forbidden, (await instructorReviewClient.GetAsync("/api/v1/scheduling/evaluation-reviews")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await instructorReviewClient.GetAsync("/api/v1/scheduling/evaluation-status-summary")).StatusCode);
 
         using var reviewerClient = factory.CreateClient();
         TestData.Authenticate(reviewerClient, await TestData.LoginAsync(reviewerClient, reviewer));
@@ -72,6 +73,14 @@ public sealed class EvaluationReviewApiTests
         Assert.Equal(1, queueItems.GetArrayLength());
         var evaluationId = queueItems[0].GetProperty("id").GetGuid();
         Assert.Equal(studentId, queueItems[0].GetProperty("studentId").GetGuid());
+        using (var statusResponse = await reviewerClient.GetAsync("/api/v1/scheduling/evaluation-status-summary"))
+        {
+            Assert.Equal(HttpStatusCode.OK, statusResponse.StatusCode);
+            using var statusJson = await statusResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Evaluation status summary response is empty.");
+            var counts = statusJson.RootElement.GetProperty("data").GetProperty("counts");
+            Assert.Equal(1, counts.GetProperty("SUBMITTED").GetInt32());
+            Assert.Equal(0, counts.GetProperty("PUBLISHED").GetInt32());
+        }
         Assert.Equal(HttpStatusCode.NotFound, (await reviewerClient.PostAsJsonAsync($"/api/v1/scheduling/evaluation-reviews/{crossBranchEvaluationId}/decision", new { decision = "PUBLISH" })).StatusCode);
         using var branchLeakResponse = await reviewerClient.PostAsJsonAsync($"/api/v1/scheduling/evaluation-reviews/{Guid.NewGuid()}/decision", new { decision = "PUBLISH" });
         Assert.Equal(HttpStatusCode.NotFound, branchLeakResponse.StatusCode);
@@ -84,18 +93,46 @@ public sealed class EvaluationReviewApiTests
         Assert.Equal(HttpStatusCode.BadRequest, missingNote.StatusCode);
         var returned = await reviewerClient.PostAsJsonAsync($"/api/v1/scheduling/evaluation-reviews/{evaluationId}/decision", new { decision = "REQUEST_CHANGES", note = "أضف خطوة تالية محددة." });
         Assert.Equal(HttpStatusCode.OK, returned.StatusCode);
+        var changeNotice = await instructorClient.GetStringAsync("/api/v1/scheduling/notifications?unreadOnly=true");
+        Assert.Contains("EVALUATION_CHANGES_REQUESTED", changeNotice, StringComparison.Ordinal);
+        using (var statusResponse = await reviewerClient.GetAsync("/api/v1/scheduling/evaluation-status-summary"))
+        {
+            using var statusJson = await statusResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Evaluation status summary response is empty.");
+            var counts = statusJson.RootElement.GetProperty("data").GetProperty("counts");
+            Assert.Equal(1, counts.GetProperty("CHANGES_REQUESTED").GetInt32());
+            Assert.Equal(0, counts.GetProperty("SUBMITTED").GetInt32());
+        }
         var sessionsAfterReturn = await parentClient.GetStringAsync("/api/v1/consumer/me/sessions");
         Assert.Contains("\"score\":null", sessionsAfterReturn, StringComparison.Ordinal);
 
         var editableDraft = await instructorClient.PutAsJsonAsync($"/api/v1/scheduling/sessions/{sessionId}/evaluations", new { items = new[] { new { studentId, score = 90, notes = "استيعاب الفكرة: 5/5\nتقدم واضح" } } });
         Assert.Equal(HttpStatusCode.OK, editableDraft.StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await instructorClient.PostAsJsonAsync($"/api/v1/scheduling/sessions/{sessionId}/evaluations/submit", new { studentIds = new[] { studentId } })).StatusCode);
+        var resubmissionNotice = await reviewerClient.GetStringAsync("/api/v1/scheduling/notifications?unreadOnly=true");
+        Assert.Contains("EVALUATION_SUBMITTED", resubmissionNotice, StringComparison.Ordinal);
         using var publishResponse = await reviewerClient.PostAsJsonAsync($"/api/v1/scheduling/evaluation-reviews/{evaluationId}/decision", new { decision = "PUBLISH" });
         Assert.Equal(HttpStatusCode.OK, publishResponse.StatusCode);
         var published = await parentClient.GetStringAsync("/api/v1/consumer/me/sessions");
         Assert.Contains("\"score\":90", published, StringComparison.Ordinal);
         Assert.Contains("تقدم واضح", published, StringComparison.Ordinal);
         Assert.Equal(HttpStatusCode.Conflict, (await instructorClient.PutAsJsonAsync($"/api/v1/scheduling/sessions/{sessionId}/evaluations", new { items = new[] { new { studentId, score = 95, notes = "Should not replace published grade" } } })).StatusCode);
+        var publishedNotice = await instructorClient.GetStringAsync("/api/v1/scheduling/notifications?unreadOnly=true");
+        Assert.Contains("EVALUATION_PUBLISHED", publishedNotice, StringComparison.Ordinal);
+        using (var statusResponse = await reviewerClient.GetAsync("/api/v1/scheduling/evaluation-status-summary"))
+        {
+            using var statusJson = await statusResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Evaluation status summary response is empty.");
+            var counts = statusJson.RootElement.GetProperty("data").GetProperty("counts");
+            Assert.Equal(1, counts.GetProperty("PUBLISHED").GetInt32());
+            Assert.Equal(0, counts.GetProperty("SUBMITTED").GetInt32());
+        }
+        using (var auditScope = factory.Services.CreateScope())
+        {
+            var db = auditScope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            var transitions = await db.StateTransitions.Where(item => item.AggregateType == "SESSION_EVALUATION" && item.AggregateId == evaluationId.ToString()).OrderBy(item => item.CreatedAt).ToListAsync();
+            Assert.Equal(new[] { "SUBMITTED", "CHANGES_REQUESTED", "SUBMITTED", "PUBLISHED" }, transitions.Select(item => item.ToState));
+            Assert.Contains(transitions, item => item.ToState == "CHANGES_REQUESTED" && item.ActorUserId == reviewer.UserId && item.Reason == "أضف خطوة تالية محددة.");
+            Assert.Contains(transitions, item => item.ToState == "PUBLISHED" && item.ActorUserId == reviewer.UserId);
+        }
     }
 
     private static async Task<(Guid SessionId, Guid StudentId)> SeedSessionAsync(TestApiFactory factory, Guid tenantId, Guid branchId, Guid instructorId, string studentName, string courseName, bool seedSubmittedEvaluation)

@@ -47,6 +47,7 @@ public sealed class FinanceApiTests
         var manager = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
         var platformAdmin = await TestData.CreateAccountAsync(factory, "R00_PLATFORM_ADMIN", manager.TenantId, manager.BranchId);
         var instructor = await TestData.CreateAccountAsync(factory, "R04_INSTRUCTOR", manager.TenantId, manager.BranchId);
+        var headInstructor = await TestData.CreateAccountAsync(factory, "R03_HEAD_INSTRUCTORS", manager.TenantId, manager.BranchId);
         var otherBranch = Guid.NewGuid();
         using (var scope = factory.Services.CreateScope())
         {
@@ -70,7 +71,7 @@ public sealed class FinanceApiTests
         Assert.Equal(HttpStatusCode.Forbidden, (await managerClient.PostAsJsonAsync("/api/v1/finance/invoices", new { studentId = Guid.NewGuid(), dueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7)), lines = new[] { new { description = "Not allowed", amountPiastres = 1000 } } })).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await managerClient.PostAsJsonAsync($"/api/v1/finance/invoices/{invoiceId}/payments", new { amountPiastres = 1000, method = "CASH" })).StatusCode);
 
-        foreach (var restrictedAccount in new[] { platformAdmin, instructor })
+        foreach (var restrictedAccount in new[] { platformAdmin, instructor, headInstructor })
         {
             using var restrictedClient = factory.CreateClient();
             TestData.Authenticate(restrictedClient, await TestData.LoginAsync(restrictedClient, restrictedAccount));
@@ -79,7 +80,28 @@ public sealed class FinanceApiTests
             Assert.Equal(HttpStatusCode.Forbidden, (await restrictedClient.GetAsync("/api/v1/finance/reports/summary")).StatusCode);
             Assert.Equal(HttpStatusCode.Forbidden, (await restrictedClient.GetAsync("/api/v1/finance/reports/summary.csv")).StatusCode);
             Assert.Equal(HttpStatusCode.Forbidden, (await restrictedClient.GetAsync("/api/v1/finance/invoice-corrections")).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await restrictedClient.GetAsync("/api/v1/finance/expenses")).StatusCode);
         }
+
+        using var headClient = factory.CreateClient();
+        TestData.Authenticate(headClient, await TestData.LoginAsync(headClient, headInstructor));
+        Assert.Equal(HttpStatusCode.OK, (await headClient.GetAsync("/api/v1/scheduling/groups")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await headClient.GetAsync($"/api/v1/scheduling/instructors?branchId={manager.BranchId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await headClient.GetAsync("/api/v1/scheduling/course-templates")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await headClient.PostAsJsonAsync("/api/v1/scheduling/groups", new
+        {
+            branchId = manager.BranchId,
+            courseTemplateId = Guid.NewGuid(),
+            instructorId = headInstructor.UserId,
+            classroomId = Guid.NewGuid(),
+            startDate = DateOnly.FromDateTime(DateTime.UtcNow),
+            endDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7)),
+            daysOfWeek = new[] { 1 },
+            startTime = new TimeOnly(10, 0),
+            durationMinutes = 60,
+            maxStudents = 10,
+            finalPricePiastres = 500_000
+        })).StatusCode);
     }
 
     [Fact]

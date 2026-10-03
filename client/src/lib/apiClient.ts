@@ -233,6 +233,7 @@ export type SessionEvaluationRecord = {
   reviewNote: string | null; submittedAt: string | null; reviewedAt: string | null;
 };
 export type SessionEvaluationListResponse = { sessionId: string; items: SessionEvaluationRecord[]; total: number };
+export type EvaluationStatusSummary = { branchId: string; counts: Record<SessionEvaluationStatus, number> };
 export type EvaluationReviewRecord = {
   id: string; sessionId: string; studentId: string; studentName: string; courseName: string;
   instructorName: string | null; score: number | null; notes: string | null; submittedAt: string | null; sessionDate: string;
@@ -421,6 +422,7 @@ export const apiClient = {
   listSessionEvaluations: (sessionId: string) => request<SessionEvaluationListResponse>(`/scheduling/sessions/${sessionId}/evaluations`),
   submitSessionEvaluations: (sessionId: string, studentIds: string[]) => request<{ sessionId: string; submitted: number; status: string }>(`/scheduling/sessions/${sessionId}/evaluations/submit`, { method: "POST", body: JSON.stringify({ studentIds }) }),
   listEvaluationReviews: () => request<EvaluationReviewQueueResponse>("/scheduling/evaluation-reviews"),
+  evaluationStatusSummary: () => request<EvaluationStatusSummary>("/scheduling/evaluation-status-summary"),
   decideEvaluationReview: (evaluationId: string, input: { decision: "PUBLISH" | "REQUEST_CHANGES"; note?: string }) => request<{ evaluationId: string; sessionId: string; status: string; reviewedAt: string; publishedAt: string | null }>(`/scheduling/evaluation-reviews/${evaluationId}/decision`, { method: "POST", body: JSON.stringify(input) }),
   listNotifications: (unreadOnly = false) => request<NotificationListResponse>(`/scheduling/notifications?unreadOnly=${unreadOnly}`),
   markNotificationRead: (notificationId: string) => request<void>(`/scheduling/notifications/${notificationId}/read`, { method: "POST" }),

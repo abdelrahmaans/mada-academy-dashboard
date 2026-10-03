@@ -53,6 +53,7 @@ import {
 } from "@/components/FeedbackStates";
 import WorkflowStepper from "@/components/WorkflowStepper";
 import { apiClient } from "@/lib/apiClient";
+import HeadInstructorsLive from "./HeadInstructorsLive";
 
 type WorkspaceView =
   | "overview"
@@ -595,7 +596,7 @@ function EvaluationCard({
   );
 }
 
-export default function HeadInstructors() {
+function HeadInstructorsPreview() {
   const [, navigate] = useLocation();
   const liveMode = apiClient.hasSession();
   const sessionSearchRef = useRef<HTMLInputElement>(null);
@@ -1307,6 +1308,10 @@ export default function HeadInstructors() {
       )}
     </RoleDashboardShell>
   );
+}
+
+export default function HeadInstructors() {
+  return apiClient.hasSession() ? <HeadInstructorsLive /> : <HeadInstructorsPreview />;
 }
 
 function ArrowRightSafe() {
