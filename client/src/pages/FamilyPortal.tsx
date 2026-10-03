@@ -290,7 +290,7 @@ export default function FamilyPortal() {
             <span className="family-demo-badge">{liveMode ? "LIVE · بيانات الحساب" : "DEMO · معاينة محلية"}</span>
           </div>
           {dataLoading && <div className="family-info-note">جارٍ تحميل الأطفال والجلسات المرتبطة بحسابك…</div>}
-          {dataError && <div className="family-info-note" role="alert">تعذر تحميل بيانات الأسرة: {dataError}</div>}
+          {dataError && <div className="family-info-note" role="alert">تعذر تحميل بيانات الأسرة: {dataError} <button type="button" onClick={retry}>إعادة المحاولة</button></div>}
           {dataWarning && !dataError && <div className="family-info-note" role="status">تم تحميل الأطفال، لكن الجلسات غير متاحة مؤقتًا: {dataWarning} <button type="button" onClick={retry}>إعادة المحاولة</button></div>}
           {children.length > 0 && <ChildrenSwitcher
             children={children}
