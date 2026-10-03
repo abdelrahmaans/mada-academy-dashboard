@@ -1,15 +1,16 @@
 # خطة المرحلة القادمة — Mada Academy
 
 **تاريخ اللقطة:** 3 أكتوبر 2026
-**قاعدة العمل الحالية:** `main` عند `bc01cb3` بعد دمج [PR #37](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/37).
-**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance تم إغلاقها. المتبقي production-readiness فقط: private storage smoke، backup/restore، وstaging deployment acceptance.
+**قاعدة العمل الحالية:** `main` عند `c08dc35` بعد دمج [PR #38](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/38). Production-preparation files are in the next delivery PR.
+**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وexpanded E2E تم إغلاقها. المتبقي production-readiness فقط: deployment، private storage smoke، backup/restore، وstaging acceptance.
 
 ## قرار التنفيذ الحالي
 
 1. **تم إغلاق شريحة P2 source acceptance:** تقارير التشغيل، عزل النطاق، حماية LIVE، وحالات R08/R09 الجزئية مثبتة.
 2. **تم دمج P1 core journey:** الـseeder repairable، وحسابات R04/R08/R09 وروابطهم واختبارات الرحلة موجودة في `main`.
-3. **تم تنفيذ local browser E2E:** `pnpm e2e` يمر بـ **3/3** لرحلات R06/R08/R09.
-4. **الخطوة المتبقية الوحيدة للـFinance:** secret injection + authenticated private-storage smoke + durable backup/restore policy + deployed staging smoke. لا نعتبرها مكتملة محليًا.
+3. **تم تنفيذ local browser/API E2E:** `pnpm e2e` يمر بـ **4/4** ويغطي R06/R08/R09 ودورة الفاتورة/الدفع/الإثبات.
+4. **تم تجهيز بيئة النشر داخل الريبو:** Dockerfile، production env template، staging smoke script، وrunbook.
+5. **الخطوة المتبقية الوحيدة للـFinance:** secret injection + authenticated private-storage smoke + durable backup/restore policy + deployed staging smoke. لا نعتبرها مكتملة محليًا.
 
 ## نتيجة acceptance الحالية
 
@@ -32,7 +33,7 @@
 - StudentPortal: تم فصل ملف الطالب عن الجلسات باستخدام `Promise.allSettled`؛ فشل الجلسات يحافظ على ملف الطالب ويعرض warning وtoast وRetry، وفشل الملف الأساسي يعرض error وRetry، مع منع Demo fallback في LIVE.
 - Consumer final acceptance: اكتملت مراجعة R08/R09 وتوثقت في `CONSUMER_FINAL_ACCEPTANCE.md`; تم التأكد من عزل Demo، حالات empty/error/loading، Toast وRetry، وفصل البيانات الأساسية عن الفواتير/الجلسات الاختيارية.
 - **الفجوة التالية المثبتة:** production evidence/storage and staging acceptance؛ الـlocal API preflight والـbrowser E2E أُنجزا بالفعل.
-- التحقق المحلي: Finance/Invoice correction **11/11**، InMemory backend **54/54**، browser E2E **3/3**، `pnpm check`، Vitest، `pnpm build`، و`git diff --check` ناجحة.
+- التحقق المحلي: Finance/Invoice correction **11/11**، InMemory backend **54/54**، browser/API E2E **4/4**، Vitest **13/13**، `pnpm check`، `pnpm build`، و`git diff --check` ناجحة.
 - التحقق عبر GitHub: **4/4 checks ناجحة** على PR #35، منها **70/70 backend tests**.
 
 ## الهدف
