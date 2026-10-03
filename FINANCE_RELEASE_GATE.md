@@ -23,6 +23,15 @@ This gate covers the existing Finance/Operations vertical slice. It does not aut
 - [ ] Real staging smoke test against the deployed API and frontend.
 - [ ] PostgreSQL integration suite in the current execution environment (requires the .NET SDK and PostgreSQL service).
 
+## Verification completed locally — 3 October 2026
+
+- [x] Finance and invoice-correction InMemory integration tests: **11/11**.
+- [x] Frontend `pnpm check`, Vitest, and production build pass.
+- [x] Browser E2E with Chromium: **3/3** — R06 FinanceDesk LIVE surface, R08 Family Portal linked scope, and R09 Student Portal self-scope.
+- [x] Local API preflight with seeded InMemory data: health, password login, linked-student scope, and published evaluation visibility.
+
+These checks close the **code and local acceptance** portion of the Finance MVP. They do not close production evidence storage, backup/restore, or deployed staging acceptance.
+
 ## Storage and deployment decision
 
 `LocalPrivateObjectStorage` is private-path storage, not a production durability guarantee. It must not be used for real evidence data unless the hosting environment explicitly guarantees persistent disk, backup, restore, access control, and monitoring.
