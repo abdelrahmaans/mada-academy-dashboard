@@ -1,8 +1,8 @@
 # Mada Academy — Project Status
 
 **As of:** 3 October 2026
-**Verified Git state:** `main` at `7950c11`, pushed to origin after PR #39 merge.
-**Latest delivery PR:** [PR #39 — production preparation gates](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/39), merged with all required checks successful.
+**Verified Git state:** `main` includes PR #40 and is pushed to origin.
+**Latest delivery PR:** [PR #40 — record production preparation merge](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/40), merged successfully.
 **Stack:** React + Vite + TypeScript (primary UI); ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions. Angular is a reference preview only.
 
 ## Executive summary

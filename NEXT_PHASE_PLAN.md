@@ -1,7 +1,7 @@
 # خطة المرحلة القادمة — Mada Academy
 
 **تاريخ اللقطة:** 3 أكتوبر 2026
-**قاعدة العمل الحالية:** `main` عند `7950c11` بعد دمج [PR #39](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/39).
+**قاعدة العمل الحالية:** `main` بعد دمج [PR #40](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/40).
 **الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وexpanded E2E تم إغلاقها. المتبقي production-readiness فقط: deployment، private storage smoke، backup/restore، وstaging acceptance.
 
 ## قرار التنفيذ الحالي
