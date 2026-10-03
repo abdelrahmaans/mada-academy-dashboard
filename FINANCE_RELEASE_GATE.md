@@ -41,7 +41,7 @@ The deployment handoff must name the selected storage backend, persistence/backu
 
 ## Current Supabase target
 
-The selected project is `mada-software` with API URL `https://wooivgjevouoybibxsao.supabase.co`. The bucket `private-evidence` is private and has been created. The remaining deployment step is to inject `SUPABASE_SERVICE_ROLE_KEY` as a server-only secret and run the backend storage smoke test; the key must never be committed or exposed to the frontend.
+The selected project is `mada-software` with API URL `https://wooivgjevouoybibxsao.supabase.co`. The bucket `private-evidence` is private and has been created. The current project phase is **testing**. The remaining deployment step is to inject `SUPABASE_SERVICE_ROLE_KEY` as a server-only secret and run the backend storage smoke test; the key must never be committed or exposed to the frontend. Manual backups by the owner are accepted temporarily during testing, but this does not close the production backup gate.
 
 
 ### Backup blocker

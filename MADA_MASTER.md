@@ -294,3 +294,6 @@ Authorization remains server-side and narrow: R05 secretary can perform invoice/
 **Storage decision:** real production evidence uploads remain blocked until the hosting environment provides durable private storage with backup, preferably S3-compatible object storage. Local disk is acceptable only for development/test or an explicitly persistent, backed-up deployment; it is not a production default.
 
 Storage runtime now defaults to fail-closed outside Development. An optional Supabase private Storage adapter is available through server-only `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`, and `MADA_PRIVATE_STORAGE_MODE=supabase`; no Supabase project credentials are present in the repository.
+
+
+Current state: Finance evidence storage is in testing on the private Supabase `private-evidence` bucket. Manual owner backups are accepted during testing. Production sign-off still requires a documented durable/off-site object backup policy.

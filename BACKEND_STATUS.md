@@ -130,3 +130,8 @@ The finance APIs and persistence are now the current hardening target. `FinanceD
 **Deployment/storage gate:** `LocalPrivateObjectStorage` must not be treated as production durability. Until a durable private backend and backup policy are configured, production must not accept real evidence uploads. The deployment handoff must document the selected private object storage, retention, backup, restore test, and secret/configuration requirements.
 
 Storage runtime now defaults to fail-closed outside Development. An optional Supabase private Storage adapter is available through server-only `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`, and `MADA_PRIVATE_STORAGE_MODE=supabase`; no Supabase project credentials are present in the repository.
+
+
+### Current testing state — Supabase evidence storage
+
+The `mada-software` Supabase project is the selected private evidence-storage target. The `private-evidence` bucket is private, limited to 10 MiB, and restricted to PDF/JPG/PNG. The system is currently in testing: the owner will perform manual backups temporarily, while the backend remains fail-closed unless `MADA_PRIVATE_STORAGE_MODE=supabase` and the server-only Supabase secret are configured. Automatic/off-site object backup remains a production gate, not a blocker for this testing phase.
