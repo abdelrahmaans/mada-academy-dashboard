@@ -107,8 +107,13 @@ function Router() {
 
 function ApiFeedbackBridge() {
   useEffect(() => subscribeApiErrors(({ error, path }) => {
-    if (error.status === 401 && !path.startsWith("/auth/") && !path.startsWith("/consumer-invitations/")) {
+    if (path.startsWith("/auth/") || path.startsWith("/consumer-invitations/")) return;
+    if (error.status === 401) {
       toast.error("انتهت جلسة الدخول، سجّل الدخول مرة أخرى.", { id: "mada-session-expired" });
+    } else if (error.status === 403) {
+      toast.error("ليس لديك صلاحية لتنفيذ هذا الإجراء.", { id: "mada-api-forbidden" });
+    } else if (error.status >= 500) {
+      toast.error("حدث خطأ في الخادم، حاول مرة أخرى.", { id: "mada-api-server-error" });
     }
   }), []);
   return null;
