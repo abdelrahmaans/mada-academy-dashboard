@@ -1,7 +1,7 @@
 # Mada Academy — Project Status
 
 **As of:** 3 October 2026
-**Verified Git state:** `feat/p2-operational-reports` at `c244e06`, pushed to origin and tracked by [PR #34](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/34).
+**Verified Git state:** `feat/p2-operational-reports` at `73187b9`, pushed to origin and tracked by [PR #34](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/34).
 **Latest delivery PR:** [PR #34 — scoped operational reports and acceptance hardening](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/34), open with all required checks successful.
 **Stack:** React + Vite + TypeScript (primary UI); ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions. Angular is a reference preview only.
 
@@ -21,7 +21,7 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 | **R05 Secretary** | Student workflows, phone-based consumer lookup/linking, consumer invitations, and scoped invoice/payment operations exist; legacy Secretary route is guarded from LIVE sessions. | Finance follow-up is intentionally parked for the current P2 cycle; do not expand permissions without reopening the finance decision. |
 | **R06 Accountant** | FinanceDesk is connected to scoped invoice/payment/expense/report APIs with role-aware loading, forbidden, and error states. | Production evidence/storage smoke test and release-gate deployment work remain parked; do not mark Finance fully production-ready from UI checks alone. |
 | **R07 Marketing Manager** | Branch scope is aligned in navigation metadata and copy. | Marketing campaign/lead operations are not all backed by live APIs. |
-| **R08 Guardian** | Real linked children, scoped consumer operational data, published evaluations, and linked invoice reads; LIVE has explicit empty/error states without demo fallback. | Evidence deployment and any additional finance UX remain outside the active P2 cycle. |
+| **R08 Guardian** | Real linked children, scoped consumer operational data, published evaluations, and linked invoice reads; LIVE has explicit empty/error states without demo fallback, and invoice failure no longer hides linked children or sessions. | Evidence deployment and any additional finance UX remain outside the active P2 cycle. |
 | **R09 Student** | Self-scoped account/student relationship, consumer session data, published evaluations, and explicit LIVE empty/error states without demo fallback. | Broader learning/progress elements remain intentionally limited to persisted session data. |
 
 ## Live backend and identity
