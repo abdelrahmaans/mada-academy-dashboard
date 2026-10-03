@@ -1,7 +1,7 @@
 # خطة المرحلة القادمة — Mada Academy
 
 **تاريخ اللقطة:** 3 أكتوبر 2026
-**قاعدة العمل الحالية:** `feat/p2-operational-reports` عند `73187b9`، مع [PR #34](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/34) مفتوحًا.
+**قاعدة العمل الحالية:** `feat/p2-operational-reports` عند `d81e03c`، مع [PR #34](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/34) مفتوحًا.
 **الحالة:** هذه الوثيقة تحتفظ بخطة Finance كمرجع مؤجل. قرار التنفيذ الحالي هو إكمال P2 acceptance أولًا، وترك Finance follow-up وP1 blocker كما هما دون بدء جديد.
 
 ## قرار التنفيذ الحالي
@@ -29,7 +29,8 @@
 - ExecutiveDashboardLive: فشل تقرير R01 أو سجل التدقيق يظهر كـtoast وخطأ داخل الصفحة، مع إعادة محاولة لسجل التدقيق، ونجاح التحديث اليدوي يعطي toast نجاح؛ لا يتم عرض بدائل تجريبية.
 - API feedback interceptor: تم توحيد بث أخطاء API من `apiClient`، والجسر العام يعرض toast واحدًا لـ401، وtoast صلاحية لـ403، وtoast خطأ خادم لـ5xx؛ اختبارات interceptor الفعلية تغطي 403 و500، وأخطاء النطاق/العملية تظل محلية عندما تحتاج رسالة وسياقًا خاصًا.
 - FamilyPortal: تم فصل تحميل الأطفال والجلسات عن endpoint الفواتير؛ فشل الفواتير يعرض حالة مستقلة وtoast وRetry، ويحافظ على بيانات الأطفال والجلسات، كما لا تعرض بطاقة الطفل حالة فواتير مضللة أثناء التحميل أو الفشل.
-- **الفجوة التالية المثبتة:** تدقيق `StudentPortal` بنفس النمط لمسارات consumer، دون بدء تنفيذ Finance نفسه أو تغيير صلاحياته.
+- StudentPortal: تم فصل ملف الطالب عن الجلسات باستخدام `Promise.allSettled`؛ فشل الجلسات يحافظ على ملف الطالب ويعرض warning وtoast وRetry، وفشل الملف الأساسي يعرض error وRetry، مع منع Demo fallback في LIVE.
+- **الفجوة التالية المثبتة:** مراجعة قبول نهائية لمسارات consumer ورفع نتائجها على PR #34، ثم دمج PR بعد المراجعة؛ Finance وP1 يظلان متوقفين.
 - التحقق المحلي: Vitest **11/11**، `pnpm check`، `pnpm build`، و`git diff --check` ناجحة.
 - التحقق عبر GitHub: **5/5 checks ناجحة** على PR #34.
 
