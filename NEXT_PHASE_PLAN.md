@@ -1,7 +1,7 @@
 # خطة المرحلة القادمة — Mada Academy
 
 **تاريخ اللقطة:** 3 أكتوبر 2026
-**قاعدة العمل الحالية:** `feat/p2-operational-reports` عند `c887857`، مع [PR #34](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/34) مفتوحًا.
+**قاعدة العمل الحالية:** `feat/p2-operational-reports` عند `1fb1a53`، مع [PR #34](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/34) مفتوحًا.
 **الحالة:** هذه الوثيقة تحتفظ بخطة Finance كمرجع مؤجل. قرار التنفيذ الحالي هو إكمال P2 acceptance أولًا، وترك Finance follow-up وP1 blocker كما هما دون بدء جديد.
 
 ## قرار التنفيذ الحالي
@@ -20,6 +20,8 @@
 - Classes: تم فصل الكورسات والمجموعات الأساسية عن بيانات القاعات والمدربين والطلاب الاختيارية؛ فشل endpoint مساعد لا يحول شاشة التشغيل كلها إلى حالة فارغة.
 - Schedule: تم فصل الجلسات الأساسية عن بيانات القاعات والمدربين الاختيارية؛ فشل endpoint مساعد لا يمسح الجدول الحي.
 - AcademyClassrooms: تم فصل القاعات عن قائمة الفروع؛ كما أصبحت أخطاء موارد القاعة حالة واضحة مع إعادة محاولة بدل عرض قائمة فارغة مضللة.
+- BranchOperations: تم منع ظهور شاشة DEMO عند وجود session؛ المسار authenticated R02 يعرض HomeLive، بينما يظل preview متاحًا فقط خارج الجلسة.
+- AcademyBranches: تمت مراجعة التحميل؛ لا يوجد fallback تجريبي، وrefresh الفاشل يحافظ على آخر قائمة محملة بدل استبدالها بقائمة فارغة، لذلك لا يلزم تغيير إضافي حاليًا.
 - التحقق المحلي: Vitest **11/11**، `pnpm check`، `pnpm build`، و`git diff --check` ناجحة.
 - التحقق عبر GitHub: **5/5 checks ناجحة** على PR #34.
 
