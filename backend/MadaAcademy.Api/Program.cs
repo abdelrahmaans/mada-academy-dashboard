@@ -20,7 +20,11 @@ var jwtOptions = JwtOptions.Load(builder.Configuration, builder.Environment);
 builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecks();
 builder.Services.AddMadaPersistence(builder.Configuration);
-builder.Services.AddSingleton<IPrivateObjectStorage, LocalPrivateObjectStorage>();
+var storageMode = builder.Configuration["Mada:PrivateStorageMode"] ?? Environment.GetEnvironmentVariable("MADA_PRIVATE_STORAGE_MODE") ?? (builder.Environment.IsDevelopment() ? "local" : "disabled");
+builder.Services.AddHttpClient<SupabasePrivateObjectStorage>();
+if (string.Equals(storageMode, "supabase", StringComparison.OrdinalIgnoreCase)) builder.Services.AddSingleton<IPrivateObjectStorage, SupabasePrivateObjectStorage>();
+else if (string.Equals(storageMode, "local", StringComparison.OrdinalIgnoreCase) && builder.Environment.IsDevelopment()) builder.Services.AddSingleton<IPrivateObjectStorage, LocalPrivateObjectStorage>();
+else builder.Services.AddSingleton<IPrivateObjectStorage, UnavailablePrivateObjectStorage>();
 builder.Services.AddMadaAuthentication(jwtOptions);
 if (builder.Environment.IsDevelopment()) builder.Services.AddSingleton<ISmsMessageSender, DevelopmentSmsMessageSender>();
 else builder.Services.AddSingleton<ISmsMessageSender, UnconfiguredSmsMessageSender>();
@@ -37,12 +41,16 @@ builder.Services.AddCors(options => options.AddPolicy("frontend", policy =>
 
 var app = builder.Build();
 
-if (IsEnabled("MADA_APPLY_MIGRATIONS") || IsEnabled("MADA_SEED_DEMO_DATA"))
+var seedDemoData = IsEnabled("MADA_SEED_DEMO_DATA");
+if (seedDemoData && !app.Environment.IsDevelopment())
+    throw new InvalidOperationException("MADA_SEED_DEMO_DATA is only allowed in the Development environment.");
+
+if (IsEnabled("MADA_APPLY_MIGRATIONS") || seedDemoData)
 {
     await using var scope = app.Services.CreateAsyncScope();
     var database = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
     await database.Database.MigrateAsync();
-    if (IsEnabled("MADA_SEED_DEMO_DATA"))
+    if (seedDemoData)
         await DemoDataSeeder.SeedAsync(database);
 }
 

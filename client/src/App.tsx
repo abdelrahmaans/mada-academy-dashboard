@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { lazy, Suspense } from "react";
-import { Route, Switch, Router as WouterRouter } from "wouter";
+import { Redirect, Route, Switch, Router as WouterRouter } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -13,7 +13,6 @@ const Classes = lazy(() => import("./pages/Classes"));
 const Schedule = lazy(() => import("./pages/Schedule"));
 const Secretary = lazy(() => import("./pages/Secretary"));
 const SecretaryDesk = lazy(() => import("./pages/SecretaryDesk"));
-const Finance = lazy(() => import("./pages/Finance"));
 const FinanceDesk = lazy(() => import("./pages/FinanceDesk"));
 const MarketingDesk = lazy(() => import("./pages/MarketingDesk"));
 const Team = lazy(() => import("./pages/Team"));
@@ -36,6 +35,10 @@ const ConsumerInvitationAccept = lazy(() => import("./pages/ConsumerInvitationAc
 const AcademyRoles = lazy(() => import("./pages/AcademyRoles"));
 const AcademyBranches = lazy(() => import("./pages/AcademyBranches"));
 const AcademyClassrooms = lazy(() => import("./pages/AcademyClassrooms"));
+
+function FinanceRedirect() {
+  return <Redirect to="/finance-desk" />;
+}
 
 function ProtectedAcademyBootstrap() {
   return <ProtectedRoute roles={["R00_PLATFORM_ADMIN"]}><AcademyBootstrap /></ProtectedRoute>;
@@ -67,7 +70,7 @@ const APP_ROUTES = [
   ["/schedule", Schedule],
   ["/secretary", Secretary],
   ["/secretary-desk", SecretaryDesk],
-  ["/finance", Finance],
+  ["/finance", FinanceRedirect],
   ["/finance-desk", FinanceDesk],
   ["/marketing-desk", MarketingDesk],
   ["/team", Team],

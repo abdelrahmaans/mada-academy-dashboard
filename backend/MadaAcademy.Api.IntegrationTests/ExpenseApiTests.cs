@@ -100,8 +100,8 @@ public sealed class ExpenseApiTests
     {
         using var factory = new TestApiFactory(useInMemory: true);
         using var creatorClient = factory.CreateClient();
-        var creator = await TestData.CreateAccountAsync(factory, "R05_SECRETARY");
-        var approver = await TestData.CreateAccountAsync(factory, "R06_ACCOUNTANT", creator.TenantId, creator.BranchId);
+        var creator = await TestData.CreateAccountAsync(factory, "R06_ACCOUNTANT");
+        var approver = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER", creator.TenantId, creator.BranchId);
         TestData.Authenticate(creatorClient, await TestData.LoginAsync(creatorClient, creator));
         var response = await creatorClient.PostAsJsonAsync("/api/v1/finance/expenses", new { description = "Unclear subscription", category = "OTHER", amountPiastres = 90_000 });
         var json = await response.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Expense response missing.");
@@ -112,6 +112,8 @@ public sealed class ExpenseApiTests
         var rejected = await approverClient.PostAsJsonAsync($"/api/v1/finance/expenses/{expenseId}/reject", new { reason = "Receipt does not match the policy." });
         Assert.Equal(HttpStatusCode.OK, rejected.StatusCode);
         Assert.Contains("\"status\":\"REJECTED\"", await rejected.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        var expenses = await approverClient.GetStringAsync("/api/v1/finance/expenses?status=ALL");
+        Assert.Contains("Receipt does not match the policy.", expenses, StringComparison.Ordinal);
     }
 
     [Fact]

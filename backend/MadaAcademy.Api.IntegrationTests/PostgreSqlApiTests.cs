@@ -395,7 +395,9 @@ public sealed class PostgreSqlApiTests(PostgreSqlFixture fixture)
 
         using var listResponse = await managerClient.GetAsync("/api/v1/finance/expenses?status=ALL");
         Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
-        Assert.Contains(expenseId.ToString(), await listResponse.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
+        var expenseListBody = await listResponse.Content.ReadAsStringAsync();
+        Assert.Contains(expenseId.ToString(), expenseListBody, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(reason, expenseListBody, StringComparison.Ordinal);
 
         using var scope = fixture.Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
@@ -409,6 +411,96 @@ public sealed class PostgreSqlApiTests(PostgreSqlFixture fixture)
         Assert.Equal(manager.TenantId, audit.TenantId);
         Assert.Equal(manager.BranchId, audit.BranchId);
         Assert.Equal(reason, audit.Reason);
+    }
+
+    [Fact]
+    public async Task FinanceWorkspace_R05AndR06AreBranchScopedOnPostgreSql()
+    {
+        var secretary = await TestData.CreateAccountAsync(fixture.Factory, "R05_SECRETARY");
+        var accountant = await TestData.CreateAccountAsync(fixture.Factory, "R06_ACCOUNTANT", secretary.TenantId, secretary.BranchId);
+        var otherBranchId = Guid.NewGuid();
+        using (var scope = fixture.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            db.Branches.Add(new Branch { Id = otherBranchId, TenantId = secretary.TenantId, Name = "PostgreSQL Hidden Finance Branch", Code = $"B{Guid.NewGuid():N}"[..10] });
+            await db.SaveChangesAsync();
+        }
+
+        var visibleStudentId = await TestData.SeedStudentAsync(fixture.Factory, secretary.TenantId, secretary.BranchId, "PostgreSQL Visible Finance Student");
+        var hiddenStudentId = await TestData.SeedStudentAsync(fixture.Factory, secretary.TenantId, otherBranchId, "PostgreSQL Hidden Finance Student");
+        var visibleInvoiceId = Guid.NewGuid();
+        var hiddenInvoiceId = Guid.NewGuid();
+        using (var scope = fixture.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            db.Invoices.AddRange(
+                new Invoice
+                {
+                    Id = visibleInvoiceId, TenantId = secretary.TenantId, BranchId = secretary.BranchId,
+                    StudentId = visibleStudentId, InvoiceNumber = $"PG-{Guid.NewGuid():N}"[..20], TotalPiastres = 18_000,
+                    IssueDate = DateOnly.FromDateTime(DateTime.UtcNow), DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7)),
+                    Status = "UNPAID", CreatedByUserId = secretary.UserId,
+                    Lines = [new InvoiceLine { LineNumber = 1, Description = "PostgreSQL finance tuition", AmountPiastres = 18_000 }]
+                },
+                new Invoice
+                {
+                    Id = hiddenInvoiceId, TenantId = secretary.TenantId, BranchId = otherBranchId,
+                    StudentId = hiddenStudentId, InvoiceNumber = $"PG-{Guid.NewGuid():N}"[..20], TotalPiastres = 27_000,
+                    IssueDate = DateOnly.FromDateTime(DateTime.UtcNow), DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7)),
+                    Status = "UNPAID", CreatedByUserId = secretary.UserId,
+                    Lines = [new InvoiceLine { LineNumber = 1, Description = "Hidden branch tuition", AmountPiastres = 27_000 }]
+                });
+            await db.SaveChangesAsync();
+        }
+        string visibleBranchName;
+        using (var scope = fixture.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            visibleBranchName = await db.Branches.Where(branch => branch.Id == secretary.BranchId).Select(branch => branch.Name).SingleAsync();
+        }
+
+        using var secretaryClient = fixture.Factory.CreateClient();
+        using var accountantClient = fixture.Factory.CreateClient();
+        TestData.Authenticate(secretaryClient, await TestData.LoginAsync(secretaryClient, secretary));
+        TestData.Authenticate(accountantClient, await TestData.LoginAsync(accountantClient, accountant));
+
+        using var secretaryInvoices = await secretaryClient.GetAsync("/api/v1/finance/invoices");
+        Assert.Equal(HttpStatusCode.OK, secretaryInvoices.StatusCode);
+        var secretaryBody = await secretaryInvoices.Content.ReadAsStringAsync();
+        Assert.Contains(visibleInvoiceId.ToString(), secretaryBody, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains($"\"branchName\":\"{visibleBranchName}\"", secretaryBody, StringComparison.Ordinal);
+        Assert.DoesNotContain(hiddenInvoiceId.ToString(), secretaryBody, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("PostgreSQL Hidden Finance Student", secretaryBody, StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.NotFound, (await secretaryClient.GetAsync($"/api/v1/finance/invoices/{hiddenInvoiceId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await secretaryClient.GetAsync("/api/v1/finance/expenses")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await secretaryClient.GetAsync("/api/v1/finance/reports/summary")).StatusCode);
+
+        using var accountantInvoices = await accountantClient.GetAsync("/api/v1/finance/invoices");
+        Assert.Equal(HttpStatusCode.OK, accountantInvoices.StatusCode);
+        var accountantBody = await accountantInvoices.Content.ReadAsStringAsync();
+        Assert.Contains(visibleInvoiceId.ToString(), accountantBody, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(hiddenInvoiceId.ToString(), accountantBody, StringComparison.OrdinalIgnoreCase);
+        using var reportResponse = await accountantClient.GetAsync("/api/v1/finance/reports/summary");
+        Assert.Equal(HttpStatusCode.OK, reportResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await accountantClient.GetAsync("/api/v1/finance/expenses")).StatusCode);
+    }
+
+    [Fact]
+    public async Task DemoFinanceSeed_IsRelationalAndIdempotentOnPostgreSql()
+    {
+        using var scope = fixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+        await MadaAcademy.Api.Persistence.Seeding.DemoDataSeeder.SeedAsync(db);
+        await MadaAcademy.Api.Persistence.Seeding.DemoDataSeeder.SeedAsync(db);
+
+        var tenantId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        Assert.Equal(2, await db.Branches.CountAsync(branch => branch.TenantId == tenantId));
+        Assert.Equal(4, await db.Memberships.CountAsync(membership => membership.TenantId == tenantId && (membership.RoleCode == "R05_SECRETARY" || membership.RoleCode == "R06_ACCOUNTANT")));
+        Assert.Equal(2, await db.Invoices.CountAsync(invoice => invoice.TenantId == tenantId));
+        Assert.Equal(2, await db.PaymentTransactions.CountAsync(payment => payment.TenantId == tenantId));
+        Assert.Equal(2, await db.Expenses.CountAsync(expense => expense.TenantId == tenantId));
+        Assert.Single(await db.AuditEvents.Where(audit => audit.TenantId == tenantId && audit.Action == "EXPENSE_APPROVED").ToListAsync());
+        Assert.Single(await db.StateTransitions.Where(transition => transition.AggregateType == "EXPENSE" && transition.ToState == "APPROVED").ToListAsync());
     }
 
     [Fact]

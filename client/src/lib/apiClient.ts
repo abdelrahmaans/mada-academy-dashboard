@@ -259,7 +259,7 @@ export type ConsumerAccountLookupResponse = { items: ConsumerAccountLookupRecord
 export type ConsumerInvitationPreview = { accountType: "parent" | "student"; maskedPhone: string; expiresAt: string; otpExpiresAt: string; displayNameRequired: boolean };
 export type ConsumerInvitationDelivery = { status?: string; maskedPhone: string; expiresAt?: string; otpExpiresAt: string; delivery: string; developmentCode?: string | null; debugAcceptUrl?: string | null };
 export type FinancePayment = { id: string; invoiceId: string; amountPiastres: number; method: string; receivedOn: string; externalReference?: string | null; note?: string | null; createdAt: string; evidenceStatus: string; evidenceFileName?: string | null };
-export type FinanceInvoice = { id: string; invoiceNumber: string; tenantId: string; branchId: string; studentId: string; studentName?: string | null; enrollmentId?: string | null; issueDate: string; dueDate: string; totalPiastres: number; paidPiastres: number; remainingPiastres: number; status: string; lines: Array<{ description: string; amountPiastres: number }>; payments: FinancePayment[] };
+export type FinanceInvoice = { id: string; invoiceNumber: string; tenantId: string; branchId: string; branchName?: string | null; studentId: string; studentName?: string | null; enrollmentId?: string | null; issueDate: string; dueDate: string; totalPiastres: number; paidPiastres: number; remainingPiastres: number; status: string; lines: Array<{ description: string; amountPiastres: number }>; payments: FinancePayment[] };
 export type FinanceInvoicesResponse = { items: FinanceInvoice[]; total: number };
 export type FinanceExpense = { id: string; tenantId: string; branchId: string; branchName?: string | null; description: string; category: string; amountPiastres: number; spentOn: string; createdAt: string; status: string; createdByUserId: string; approvalRequestId?: string | null; approvalReason?: string | null; decidedAt?: string | null; decidedByUserId?: string | null; evidenceStatus: string; evidenceFileName?: string | null };
 export type FinanceExpensesResponse = { items: FinanceExpense[]; total: number };
@@ -513,12 +513,22 @@ export const apiClient = {
     if (!response.ok) throw new ApiRequestError("تعذر رفع إثبات الدفع", response.status);
     return ((await response.json()) as { data: unknown }).data;
   },
+  downloadPaymentEvidence: async (paymentId: string) => {
+    const response = await fetch(`${API_BASE}/finance/payments/${paymentId}/evidence`, { headers: accessToken ? { authorization: `Bearer ${accessToken}` } : undefined });
+    if (!response.ok) throw new ApiRequestError("تعذر تنزيل إثبات الدفع", response.status);
+    return response.blob();
+  },
   uploadExpenseEvidence: async (expenseId: string, file: File) => {
     const body = new FormData();
     body.append("file", file);
     const response = await fetch(`${API_BASE}/finance/expenses/${expenseId}/evidence`, { method: "POST", headers: accessToken ? { authorization: `Bearer ${accessToken}` } : undefined, body });
     if (!response.ok) throw new ApiRequestError("تعذر رفع إثبات المصروف", response.status);
     return ((await response.json()) as { data: unknown }).data;
+  },
+  downloadExpenseEvidence: async (expenseId: string) => {
+    const response = await fetch(`${API_BASE}/finance/expenses/${expenseId}/evidence`, { headers: accessToken ? { authorization: `Bearer ${accessToken}` } : undefined });
+    if (!response.ok) throw new ApiRequestError("تعذر تنزيل إثبات المصروف", response.status);
+    return response.blob();
   },
   logout: async () => {
     const refreshToken = localStorage.getItem(REFRESH_KEY);

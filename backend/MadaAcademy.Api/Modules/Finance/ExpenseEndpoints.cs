@@ -33,7 +33,7 @@ public static class ExpenseEndpoints
         if (normalized is not null && normalized is not ("PENDING" or "APPROVED" or "REJECTED")) return Validation("status", "Status must be ALL, PENDING, APPROVED, or REJECTED.");
         if (branchId.HasValue && scope.BranchId.HasValue && branchId.Value != scope.BranchId.Value) return NotFound("EXPENSE_NOT_FOUND");
         var effectiveBranch = branchId ?? scope.BranchId;
-        var expenses = await db.Expenses.AsNoTracking().Include(x => x.Evidence).Include(x => x.Branch)
+        var expenses = await db.Expenses.AsNoTracking().Include(x => x.Evidence).Include(x => x.ApprovalRequest).Include(x => x.Branch)
             .Where(x => x.TenantId == scope.TenantId && (!effectiveBranch.HasValue || x.BranchId == effectiveBranch.Value) && (normalized == null || x.Status == normalized))
             .OrderByDescending(x => x.SpentOn).ThenByDescending(x => x.CreatedAt).Take(300).ToListAsync(cancellationToken);
         return Results.Ok(new { data = new { items = expenses.Select(ToResponse), total = expenses.Count } });
@@ -107,7 +107,15 @@ public static class ExpenseEndpoints
         if (file is null || file.Length == 0) return Validation("file", "A file is required.");
         if (file.Length > MaxEvidenceBytes || !EvidenceTypes.Contains(file.ContentType.ToLowerInvariant())) return Validation("file", "Only PDF, JPG, and PNG files up to 10 MB are allowed.");
         await using var input = file.OpenReadStream();
-        var stored = await storage.PutAsync(input, file.ContentType.ToLowerInvariant(), file.Length, cancellationToken);
+        StoredPrivateObject stored;
+        try
+        {
+            stored = await storage.PutAsync(input, file.ContentType.ToLowerInvariant(), file.Length, cancellationToken);
+        }
+        catch (StorageUnavailableException exception)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "PRIVATE_STORAGE_UNAVAILABLE", detail: exception.Message);
+        }
         var evidence = new ExpenseEvidence { ExpenseId = expense.Id, StorageKey = stored.Key, DisplayFileName = SafeFileName(file.FileName), ContentType = stored.ContentType, SizeBytes = stored.SizeBytes, Sha256 = stored.Sha256, UploadedByUserId = actorId };
         db.ExpenseEvidences.Add(evidence);
         db.AuditEvents.Add(new AuditEvent { ActorUserId = actorId, TenantId = expense.TenantId, BranchId = expense.BranchId, Action = "EXPENSE_EVIDENCE_ATTACHED", TargetType = "EXPENSE", TargetId = expense.Id.ToString(), MetadataJson = JsonSerializer.Serialize(new { stored.ContentType, stored.SizeBytes, stored.Sha256 }) });
@@ -125,8 +133,8 @@ public static class ExpenseEndpoints
     }
 
     private static object ToResponse(Expense expense) => new { id = expense.Id, tenantId = expense.TenantId, branchId = expense.BranchId, branchName = expense.Branch?.Name, description = expense.Description, category = expense.Category, amountPiastres = expense.AmountPiastres, spentOn = expense.SpentOn, createdAt = expense.CreatedAt, status = expense.Status, createdByUserId = expense.CreatedByUserId, approvalRequestId = expense.ApprovalRequestId ?? expense.ApprovalRequest?.Id, approvalReason = expense.ApprovalRequest?.Reason, decidedAt = expense.ApprovalRequest?.DecidedAt, decidedByUserId = expense.ApprovalRequest?.DecidedByUserId, evidenceStatus = expense.Evidence is null ? "NOT_ATTACHED" : "ATTACHED", evidenceFileName = expense.Evidence?.DisplayFileName };
-    private static bool CanRead(ClaimsPrincipal user) => user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R05_SECRETARY") || user.IsInRole("R06_ACCOUNTANT");
-    private static bool CanWrite(ClaimsPrincipal user) => user.IsInRole("R05_SECRETARY") || user.IsInRole("R06_ACCOUNTANT");
+    private static bool CanRead(ClaimsPrincipal user) => user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R06_ACCOUNTANT");
+    private static bool CanWrite(ClaimsPrincipal user) => user.IsInRole("R06_ACCOUNTANT");
     private static bool CanApprove(ClaimsPrincipal user) => user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R06_ACCOUNTANT");
     private static bool TryScope(ClaimsPrincipal user, out ExpenseScope scope, out IResult? error)
     {
