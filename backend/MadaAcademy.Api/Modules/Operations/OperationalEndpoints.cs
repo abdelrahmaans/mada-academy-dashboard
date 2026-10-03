@@ -183,6 +183,58 @@ public static class OperationalEndpoints
                 new AttendanceResponse(session.Id, session.Status, rows, rows.Count)));
         });
 
+        operations.MapPost("/sessions/{sessionId:guid}/complete", async Task<Results<Ok<ApiEnvelope<SessionCompletionResponse>>, ProblemHttpResult>> (
+            Guid sessionId,
+            ClaimsPrincipal user,
+            MadaDbContext db,
+            CancellationToken cancellationToken) =>
+        {
+            if (!user.IsInRole("R04_INSTRUCTOR"))
+                return Problem(403, "SESSION_COMPLETION_FORBIDDEN", "Only an instructor can complete an assigned session.");
+            if (!TryGetScope(user, out var scope, out var scopeError)) return scopeError;
+            var session = await FindScopedSession(db, sessionId, scope, cancellationToken);
+            if (session is null || !IsAssignedInstructor(user, session))
+                return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
+            if (session.Status is "COMPLETED" or "CANCELLED")
+                return Problem(409, "SESSION_NOT_COMPLETABLE", "The session is already complete or cancelled.");
+            if (session.Status is not ("SCHEDULED" or "IN_PROGRESS"))
+                return Problem(409, "SESSION_NOT_COMPLETABLE", "Only scheduled or in-progress sessions can be completed.");
+            var now = DateTimeOffset.UtcNow;
+            if (session.EndAt > now)
+                return Problem(409, "SESSION_NOT_ENDED", "A session can only be completed after its scheduled end time.");
+
+            var attendance = await LoadAttendanceCore(db, session, cancellationToken);
+            if (attendance.Count == 0 || attendance.Any(item => item.Status == "UNMARKED"))
+                return Problem(409, "ATTENDANCE_INCOMPLETE", "Record attendance for every enrolled student before completing the session.");
+            if (!Guid.TryParse(user.FindFirstValue("sub"), out var actorId))
+                return Problem(403, "SESSION_COMPLETION_FORBIDDEN", "The authenticated instructor identity is missing.");
+
+            var previousStatus = session.Status;
+            session.Status = "COMPLETED";
+            session.CompletedAt = now;
+            db.StateTransitions.Add(new StateTransitionEvent
+            {
+                AggregateType = "SESSION",
+                AggregateId = session.Id.ToString(),
+                FromState = previousStatus,
+                ToState = "COMPLETED",
+                ActorUserId = actorId,
+                Reason = "Instructor completed the session after recording attendance."
+            });
+            db.AuditEvents.Add(new AuditEvent
+            {
+                ActorUserId = actorId,
+                TenantId = session.TenantId,
+                BranchId = session.BranchId,
+                Action = "SESSION_COMPLETED",
+                TargetType = "SESSION",
+                TargetId = session.Id.ToString(),
+                Reason = "Instructor completed the session after recording attendance."
+            });
+            await db.SaveChangesAsync(cancellationToken);
+            return TypedResults.Ok(new ApiEnvelope<SessionCompletionResponse>(new SessionCompletionResponse(session.Id, session.Status, now)));
+        });
+
         return endpoints;
     }
 
@@ -223,8 +275,9 @@ public static class OperationalEndpoints
         var roster = await db.StudentEnrollments.AsNoTracking()
             .Where(enrollment => enrollment.CourseOfferingId == session.CourseOfferingId && enrollment.Status == "ACTIVE")
             .Join(db.Students.AsNoTracking(), enrollment => enrollment.StudentId, student => student.Id,
-                (_, student) => new RosterStudent(student.Id, student.FullName))
-            .OrderBy(item => item.FullName)
+                (_, student) => new { student.Id, student.FullName })
+            .OrderBy(student => student.FullName)
+            .Select(student => new RosterStudent(student.Id, student.FullName))
             .ToListAsync(cancellationToken);
         var attendance = await db.SessionAttendances.AsNoTracking()
             .Where(item => item.SessionId == session.Id)
@@ -269,3 +322,4 @@ public sealed record AttendanceResponse(Guid SessionId, string SessionStatus, IR
 public sealed record AttendanceItem(Guid StudentId, string StudentName, string Status, int? LateMinutes, DateTimeOffset? UpdatedAt);
 public sealed record AttendanceUpsertRequest(IReadOnlyList<AttendanceRecordRequest>? Records);
 public sealed record AttendanceRecordRequest(Guid StudentId, string Status, int? LateMinutes = null);
+public sealed record SessionCompletionResponse(Guid SessionId, string Status, DateTimeOffset CompletedAt);

@@ -9,6 +9,7 @@ import StatusBadge from "@/components/StatusBadge";
 import { ErrorState, LoadingState } from "@/components/FeedbackStates";
 import { apiClient, type AttendanceResponse, type NotificationRecord, type SessionEvaluationRecord, type SessionEvaluationStatus, type SessionRecord } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
+import InstructorDeskLive from "./InstructorDeskLive";
 
 type DeskView = "today" | "attendance" | "evaluation";
 type AttendanceStatus = "unmarked" | "present" | "absent" | "late" | "excused";
@@ -64,7 +65,7 @@ function mapLiveSession(record: SessionRecord, attendance: AttendanceResponse): 
   };
 }
 
-export default function InstructorDesk() {
+function InstructorDeskPreview() {
   const [, navigate] = useLocation();
   const { me, logout } = useAuth();
   const [view, setView] = useState<DeskView>("today");
@@ -255,3 +256,8 @@ function EvaluationView({ session, sessions, selectedId, onSession, students, se
 }
 function Kpi({ icon, label, value, hint, tone }: { icon: ReactNode; label: string; value: ReactNode; hint: string; tone: string }) { return <article className="instructor-desk-kpi"><span className={`instructor-desk-kpi-icon ${tone}`}>{icon}</span><small>{label}</small><strong>{value}</strong><span>{hint}</span></article>; }
 function PanelTitle({ icon, title, action }: { icon: ReactNode; title: string; action?: ReactNode }) { return <div className="instructor-desk-panel-title"><div><span>{icon}</span><h2>{title}</h2></div>{action}</div>; }
+
+
+export default function InstructorDesk() {
+  return apiClient.hasSession() ? <InstructorDeskLive /> : <InstructorDeskPreview />;
+}

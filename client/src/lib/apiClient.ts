@@ -221,6 +221,7 @@ export type AttendanceResponse = {
   items: AttendanceItem[];
   total: number;
 };
+export type SessionCompletionResponse = { sessionId: string; status: string; completedAt: string };
 
 export type AttendanceRecordInput = {
   studentId: string;
@@ -478,6 +479,7 @@ export const apiClient = {
       method: "PUT",
       body: JSON.stringify({ records }),
     }),
+  completeSession: (sessionId: string) => request<SessionCompletionResponse>(`/sessions/${sessionId}/complete`, { method: "POST" }),
   financeInvoices: (params: { query?: string; status?: string; studentId?: string } = {}) => {
     const query = new URLSearchParams();
     if (params.query) query.set("query", params.query);
