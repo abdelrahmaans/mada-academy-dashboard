@@ -32,6 +32,8 @@ import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import StatusBadge from "@/components/StatusBadge";
+import { apiClient } from "@/lib/apiClient";
+import AcademicProgramsLive from "./AcademicProgramsLive";
 
 type ProgramView = "curriculum" | "sessions" | "progress";
 type CurriculumStatus = "published" | "in_review" | "draft";
@@ -65,7 +67,7 @@ const INITIAL_PROGRESS: StudentProgress[] = [
   { id: "ST-0322", name: "تاليا عمرو", group: "AI · مجموعة A", course: "أساسيات الذكاء الاصطناعي", completion: 28, mastery: 48, attendance: 70, lastCheckpoint: "البيانات · 22 سبتمبر", risk: "at_risk" },
 ];
 
-export default function AcademicPrograms() {
+function AcademicProgramsPreview() {
   const [, navigate] = useLocation();
   const [view, setView] = useState<ProgramView>("curriculum");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -95,3 +97,8 @@ function Kpi({ icon, label, value, hint, tone }: { icon: ReactNode; label: strin
 function PanelTitle({ icon, title, action }: { icon: ReactNode; title: string; action?: ReactNode }) { return <div className="academic-programs-panel-title"><div><span>{icon}</span><h2>{title}</h2></div>{action}</div>; }
 function ProgressValue({ value }: { value: number }) { return <span className="progress-value"><i><b style={{ width: `${value}%` }} /></i><strong>{value}%</strong></span>; }
 function EmptyMessage({ text }: { text: string }) { return <div className="academic-programs-empty"><Search size={18} /><strong>{text}</strong><small>جرّب تغيير البحث أو الفلتر.</small></div>; }
+
+
+export default function AcademicPrograms() {
+  return apiClient.hasSession() ? <AcademicProgramsLive /> : <AcademicProgramsPreview />;
+}

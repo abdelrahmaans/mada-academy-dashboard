@@ -29,6 +29,7 @@ public static class SessionWorkflowEndpoints
         scheduling.MapPut("/sessions/{sessionId:guid}/evaluations", UpsertEvaluationsAsync);
         scheduling.MapPost("/sessions/{sessionId:guid}/evaluations/submit", SubmitEvaluationsAsync);
         scheduling.MapGet("/evaluation-reviews", ListEvaluationReviewsAsync);
+        scheduling.MapGet("/evaluation-status-summary", ListEvaluationStatusSummaryAsync);
         scheduling.MapPost("/evaluation-reviews/{evaluationId:guid}/decision", DecideEvaluationReviewAsync);
         scheduling.MapGet("/notifications", ListNotificationsAsync);
         scheduling.MapPost("/notifications/{notificationId:guid}/read", MarkNotificationReadAsync);
@@ -37,7 +38,7 @@ public static class SessionWorkflowEndpoints
 
     private static async Task<IResult> ListCourseTemplatesAsync(ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
     {
-        if (!CanCreateGroup(user) || !Scope(user, out var tenantId, out _)) return Forbidden("SCHEDULING_READ_FORBIDDEN");
+        if (!CanManageScheduling(user) || !Scope(user, out var tenantId, out _)) return Forbidden("SCHEDULING_READ_FORBIDDEN");
         var items = await db.CourseTemplates.AsNoTracking()
             .Where(item => item.TenantId == tenantId && item.Status != "ARCHIVED")
             .OrderBy(item => item.Name)
@@ -48,7 +49,7 @@ public static class SessionWorkflowEndpoints
 
     private static async Task<IResult> CreateCourseTemplateAsync(CreateCourseTemplateRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
     {
-        if (!CanCreateGroup(user) || !Scope(user, out var tenantId, out _)) return Forbidden("SCHEDULING_WRITE_FORBIDDEN");
+        if (!CanManageScheduling(user) || !Scope(user, out var tenantId, out _)) return Forbidden("SCHEDULING_WRITE_FORBIDDEN");
         if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 160 || request.TotalSessions < 1 || request.SessionDurationHours <= 0 || request.BasePricePiastres < 0)
             return Validation("course", "Name, positive session count and duration, and a non-negative price are required.");
         var course = new CourseTemplate
@@ -71,7 +72,7 @@ public static class SessionWorkflowEndpoints
 
     private static async Task<IResult> ListGroupsAsync(ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
     {
-        if (!CanCreateGroup(user) || !Scope(user, out var tenantId, out var branchScope)) return Forbidden("SCHEDULING_READ_FORBIDDEN");
+        if (!CanReadScheduling(user) || !Scope(user, out var tenantId, out var branchScope)) return Forbidden("SCHEDULING_READ_FORBIDDEN");
         var items = await (from offering in db.CourseOfferings.AsNoTracking()
                            join template in db.CourseTemplates.AsNoTracking() on offering.CourseTemplateId equals template.Id
                            join branch in db.Branches.AsNoTracking() on offering.BranchId equals branch.Id
@@ -94,7 +95,7 @@ public static class SessionWorkflowEndpoints
 
     private static async Task<IResult> ListInstructorsAsync(ClaimsPrincipal user, MadaDbContext db, Guid? branchId, CancellationToken cancellationToken)
     {
-        if (!CanCreateGroup(user) || !Scope(user, out var tenantId, out var branchScope)) return Forbidden("SCHEDULING_READ_FORBIDDEN");
+        if (!CanReadScheduling(user) || !Scope(user, out var tenantId, out var branchScope)) return Forbidden("SCHEDULING_READ_FORBIDDEN");
         if (branchScope.HasValue && branchId.HasValue && branchScope != branchId) return Forbidden("BRANCH_SCOPE_DENIED");
         var selectedBranch = branchScope ?? branchId;
         var items = await db.Memberships.AsNoTracking()
@@ -111,7 +112,7 @@ public static class SessionWorkflowEndpoints
 
     private static async Task<IResult> CreateSessionAsync(CreateSessionRequest request, ClaimsPrincipal user, MadaDbContext db, ConflictService conflicts, CancellationToken cancellationToken)
     {
-        if (!CanCreateGroup(user)) return Results.Forbid();
+        if (!CanManageScheduling(user)) return Results.Forbid();
         if (!Scope(user, out var tenantId, out var branchScope)) return Forbidden("TENANT_SCOPE_REQUIRED");
         if (branchScope.HasValue && branchScope != request.BranchId) return Forbidden("BRANCH_SCOPE_DENIED");
         if (request.EndAt <= request.StartAt) return Validation("time", "EndAt must be after StartAt.");
@@ -133,7 +134,7 @@ public static class SessionWorkflowEndpoints
 
     private static async Task<IResult> CreateGroupAsync(CreateGroupRequest request, ClaimsPrincipal user, MadaDbContext db, ConflictService conflicts, CancellationToken cancellationToken)
     {
-        if (!CanCreateGroup(user)) return Results.Forbid();
+        if (!CanManageScheduling(user)) return Results.Forbid();
         if (!Scope(user, out var tenantId, out var branchScope)) return Forbidden("TENANT_SCOPE_REQUIRED");
         if (branchScope.HasValue && branchScope != request.BranchId) return Forbidden("BRANCH_SCOPE_DENIED");
         if (request.StartDate > request.EndDate || request.DaysOfWeek is null || request.DaysOfWeek.Count == 0 || request.DurationMinutes is < 15 or > 480)
@@ -169,7 +170,7 @@ public static class SessionWorkflowEndpoints
 
     private static async Task<IResult> RequestSessionAsync(RequestSessionRequest request, ClaimsPrincipal user, MadaDbContext db, ConflictService conflicts, CancellationToken cancellationToken)
     {
-        if (!CanCreateGroup(user) && !IsInstructor(user)) return Forbidden("SESSION_REQUEST_FORBIDDEN");
+        if (!CanManageScheduling(user) && !IsInstructor(user)) return Forbidden("SESSION_REQUEST_FORBIDDEN");
         if (!SessionRequestTypes.Contains(request.Type.ToUpperInvariant())) return Validation("type", "Type must be EXTRA or MAKEUP.");
         if (!Scope(user, out var tenantId, out var branchScope)) return Forbidden("TENANT_SCOPE_REQUIRED");
         if (branchScope.HasValue && branchScope != request.BranchId) return Forbidden("BRANCH_SCOPE_DENIED");
@@ -397,6 +398,35 @@ public static class SessionWorkflowEndpoints
         return Results.Ok(new { data = new { items, total = items.Count } });
     }
 
+    private static async Task<IResult> ListEvaluationStatusSummaryAsync(ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!CanReviewEvaluations(user) || !Scope(user, out var tenantId, out var branchScope) || !branchScope.HasValue)
+            return Forbidden("EVALUATION_REVIEW_FORBIDDEN");
+
+        var grouped = await (from evaluation in db.SessionEvaluations.AsNoTracking()
+                             join session in db.AcademySessions.AsNoTracking() on evaluation.SessionId equals session.Id
+                             where session.TenantId == tenantId && session.BranchId == branchScope.Value
+                                   && (evaluation.Status == "DRAFT" || evaluation.Status == "SUBMITTED" || evaluation.Status == "CHANGES_REQUESTED" || evaluation.Status == "PUBLISHED")
+                                   && session.CourseOfferingId.HasValue
+                                   && db.Students.Any(student => student.Id == evaluation.StudentId && student.TenantId == tenantId && student.BranchId == branchScope.Value)
+                                   && db.CourseOfferings.Any(offering => offering.Id == session.CourseOfferingId.Value && offering.TenantId == tenantId && offering.BranchId == branchScope.Value)
+                                   && db.StudentEnrollments.Any(enrollment => enrollment.StudentId == evaluation.StudentId && enrollment.CourseOfferingId == session.CourseOfferingId.Value && enrollment.Status == "ACTIVE")
+                                   && db.Memberships.Any(membership => membership.UserAccountId == evaluation.InstructorId && membership.TenantId == tenantId && membership.BranchId == branchScope.Value && membership.Status == "ACTIVE" && (membership.RoleCode == "R03_HEAD_INSTRUCTORS" || membership.RoleCode == "R04_INSTRUCTOR"))
+                             group evaluation by evaluation.Status into statusGroup
+                             select new { status = statusGroup.Key, count = statusGroup.Count() })
+            .ToListAsync(cancellationToken);
+
+        var counts = new Dictionary<string, int>(StringComparer.Ordinal)
+        {
+            ["DRAFT"] = 0,
+            ["SUBMITTED"] = 0,
+            ["CHANGES_REQUESTED"] = 0,
+            ["PUBLISHED"] = 0
+        };
+        foreach (var item in grouped) counts[item.status] = item.count;
+        return Results.Ok(new { data = new { branchId = branchScope.Value, counts } });
+    }
+
     private static async Task<IResult> DecideEvaluationReviewAsync(Guid evaluationId, EvaluationReviewDecision request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
     {
         if (!CanReviewEvaluations(user) || !Scope(user, out var tenantId, out var branchScope) || !branchScope.HasValue) return Forbidden("EVALUATION_REVIEW_FORBIDDEN");
@@ -450,7 +480,8 @@ public static class SessionWorkflowEndpoints
     private static Guid? Actor(ClaimsPrincipal user) => Guid.TryParse(user.FindFirstValue("sub"), out var id) ? id : null;
     private static bool IsInstructor(ClaimsPrincipal user) => user.IsInRole("R04_INSTRUCTOR") || user.IsInRole("R03_HEAD_INSTRUCTORS");
     private static bool CanReviewEvaluations(ClaimsPrincipal user) => user.IsInRole("R03_HEAD_INSTRUCTORS");
-    private static bool CanCreateGroup(ClaimsPrincipal user) => user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R03_HEAD_INSTRUCTORS");
+    private static bool CanManageScheduling(ClaimsPrincipal user) => user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER");
+    private static bool CanReadScheduling(ClaimsPrincipal user) => CanManageScheduling(user) || user.IsInRole("R03_HEAD_INSTRUCTORS");
     private static bool CanDecide(ClaimsPrincipal user) => user.IsInRole("R00_PLATFORM_ADMIN") || user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R03_HEAD_INSTRUCTORS");
     private static IResult NotFound(string code) => Results.NotFound(new { error = new { code, message = code } });
     private static IResult Conflict(string code, string message) => Results.Conflict(new { error = new { code, message } });

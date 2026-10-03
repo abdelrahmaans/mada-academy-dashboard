@@ -266,12 +266,28 @@ public sealed class PostgreSqlApiTests(PostgreSqlFixture fixture)
         Assert.Equal(HttpStatusCode.OK, queueResponse.StatusCode);
         using var queue = await queueResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Review queue response is empty.");
         var item = queue.RootElement.GetProperty("data").GetProperty("items")[0];
+        using (var statusResponse = await reviewerClient.GetAsync("/api/v1/scheduling/evaluation-status-summary"))
+        {
+            Assert.Equal(HttpStatusCode.OK, statusResponse.StatusCode);
+            using var status = await statusResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Evaluation status summary response is empty.");
+            var counts = status.RootElement.GetProperty("data").GetProperty("counts");
+            Assert.Equal(1, counts.GetProperty("SUBMITTED").GetInt32());
+            Assert.Equal(0, counts.GetProperty("PUBLISHED").GetInt32());
+        }
         var evaluationId = item.GetProperty("id").GetGuid();
         Assert.Equal(studentId, item.GetProperty("studentId").GetGuid());
         Assert.Equal(HttpStatusCode.OK, (await reviewerClient.PostAsJsonAsync($"/api/v1/scheduling/evaluation-reviews/{evaluationId}/decision", new { decision = "PUBLISH" })).StatusCode);
         var published = await parentClient.GetStringAsync("/api/v1/consumer/me/sessions");
         Assert.Contains("\"score\":88", published, StringComparison.Ordinal);
         Assert.Contains("اتقان ممتاز", published, StringComparison.Ordinal);
+        using (var auditScope = fixture.Factory.Services.CreateScope())
+        {
+            var db = auditScope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            var transitions = await db.StateTransitions.Where(transition => transition.AggregateType == "SESSION_EVALUATION" && transition.AggregateId == evaluationId.ToString()).OrderBy(transition => transition.CreatedAt).ToListAsync();
+            Assert.Equal(new[] { "SUBMITTED", "PUBLISHED" }, transitions.Select(transition => transition.ToState));
+            Assert.Contains(transitions, transition => transition.ToState == "SUBMITTED" && transition.ActorUserId == instructor.UserId);
+            Assert.Contains(transitions, transition => transition.ToState == "PUBLISHED" && transition.ActorUserId == reviewer.UserId);
+        }
     }
 
     [Fact]
