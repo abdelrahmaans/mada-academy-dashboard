@@ -49,7 +49,8 @@ if (IsEnabled("MADA_APPLY_MIGRATIONS") || seedDemoData)
 {
     await using var scope = app.Services.CreateAsyncScope();
     var database = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
-    await database.Database.MigrateAsync();
+    if (database.Database.IsRelational())
+        await database.Database.MigrateAsync();
     if (seedDemoData)
         await DemoDataSeeder.SeedAsync(database);
 }

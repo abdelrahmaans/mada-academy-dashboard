@@ -35,7 +35,7 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 
 ## CI and verified baseline
 
-At PR #35, all four GitHub checks passed: PostgreSQL/backend integration, preview comments, and both deployments. The backend suite passed **70/70**, while local frontend validation passed Vitest **13/13**, `pnpm check`, `pnpm build`, and `git diff --check`. CI workflows cover backend/PostgreSQL and frontend checks.
+At PR #35, all four GitHub checks passed: PostgreSQL/backend integration, preview comments, and both deployments. The backend suite passed **70/70**, while local frontend validation passed Vitest **13/13**, `pnpm check`, `pnpm build`, and `git diff --check`. A local API run now supports `MADA_DATABASE_MODE=memory` plus demo seeding; the R08/R09 preflight verified one linked student per account and the published parent score `88`. Full local backend execution passes **54/54** InMemory tests; the 16 PostgreSQL tests correctly require a disposable `DATABASE_URL` and were not run without one. CI workflows cover backend/PostgreSQL and frontend checks.
 
 ## OTP status
 
