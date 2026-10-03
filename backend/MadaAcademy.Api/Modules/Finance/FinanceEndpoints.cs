@@ -37,7 +37,7 @@ public static class FinanceEndpoints
         if (!TryStaffScope(context.User, out var scope, out var error)) return error;
         if (!CanReadInvoices(context.User)) return Forbidden("INVOICE_READ_FORBIDDEN");
         var invoices = await db.Invoices.AsNoTracking()
-            .Include(x => x.Student).Include(x => x.Payments).Include(x => x.Lines)
+            .Include(x => x.Student).Include(x => x.Branch).Include(x => x.Payments).ThenInclude(x => x.Evidence).Include(x => x.Lines)
             .Where(x => x.TenantId == scope.TenantId && (!scope.BranchId.HasValue || x.BranchId == scope.BranchId.Value))
             .Where(x => !studentId.HasValue || x.StudentId == studentId.Value)
             .Where(x => string.IsNullOrWhiteSpace(status) || x.Status == status!.Trim().ToUpperInvariant())
@@ -50,7 +50,7 @@ public static class FinanceEndpoints
     {
         if (!TryStaffScope(context.User, out var scope, out var error)) return error;
         if (!CanReadInvoices(context.User)) return Forbidden("INVOICE_READ_FORBIDDEN");
-        var invoice = await db.Invoices.AsNoTracking().Include(x => x.Student).Include(x => x.Payments).ThenInclude(x => x.Evidence).Include(x => x.Lines)
+        var invoice = await db.Invoices.AsNoTracking().Include(x => x.Student).Include(x => x.Branch).Include(x => x.Payments).ThenInclude(x => x.Evidence).Include(x => x.Lines)
             .SingleOrDefaultAsync(x => x.Id == invoiceId && x.TenantId == scope.TenantId && (!scope.BranchId.HasValue || x.BranchId == scope.BranchId.Value), cancellationToken);
         return invoice is null ? NotFound("INVOICE_NOT_FOUND") : Results.Ok(new { data = ToResponse(invoice) });
     }
@@ -243,7 +243,7 @@ public static class FinanceEndpoints
     {
         var paid = invoice.Payments.Sum(x => (long)x.AmountPiastres);
         var status = paid >= invoice.TotalPiastres ? "PAID" : paid > 0 ? "PARTIAL" : invoice.DueDate < DateOnly.FromDateTime(DateTime.UtcNow) ? "OVERDUE" : "UNPAID";
-        return new { id = invoice.Id, invoiceNumber = invoice.InvoiceNumber, tenantId = invoice.TenantId, branchId = invoice.BranchId, studentId = invoice.StudentId, studentName = invoice.Student?.FullName, enrollmentId = invoice.EnrollmentId, issueDate = invoice.IssueDate, dueDate = invoice.DueDate, totalPiastres = invoice.TotalPiastres, paidPiastres = paid, remainingPiastres = Math.Max(0, invoice.TotalPiastres - paid), status, lines = invoice.Lines.OrderBy(x => x.LineNumber).Select(x => new { x.Description, x.AmountPiastres }), payments = invoice.Payments.OrderByDescending(x => x.CreatedAt).Select(ToPaymentResponse) };
+        return new { id = invoice.Id, invoiceNumber = invoice.InvoiceNumber, tenantId = invoice.TenantId, branchId = invoice.BranchId, branchName = invoice.Branch?.Name, studentId = invoice.StudentId, studentName = invoice.Student?.FullName, enrollmentId = invoice.EnrollmentId, issueDate = invoice.IssueDate, dueDate = invoice.DueDate, totalPiastres = invoice.TotalPiastres, paidPiastres = paid, remainingPiastres = Math.Max(0, invoice.TotalPiastres - paid), status, lines = invoice.Lines.OrderBy(x => x.LineNumber).Select(x => new { x.Description, x.AmountPiastres }), payments = invoice.Payments.OrderByDescending(x => x.CreatedAt).Select(ToPaymentResponse) };
     }
 
     private static object ToPaymentResponse(PaymentTransaction payment) => new { id = payment.Id, invoiceId = payment.InvoiceId, amountPiastres = payment.AmountPiastres, method = payment.Method, receivedOn = payment.ReceivedOn, externalReference = payment.ExternalReference, note = payment.Note, createdAt = payment.CreatedAt, evidenceStatus = payment.Evidence is null ? "NOT_ATTACHED" : "ATTACHED", evidenceFileName = payment.Evidence?.DisplayFileName };

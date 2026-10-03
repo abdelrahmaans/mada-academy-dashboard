@@ -8,7 +8,12 @@ public static class DemoDataSeeder
 {
     public static async Task SeedAsync(MadaDbContext db, CancellationToken cancellationToken = default)
     {
-        if (await db.Tenants.AnyAsync(x => x.Slug == "mada-demo-academy", cancellationToken)) return;
+        var existingTenant = await db.Tenants.SingleOrDefaultAsync(x => x.Slug == "mada-demo-academy", cancellationToken);
+        if (existingTenant is not null)
+        {
+            await EnsureFinanceSliceAsync(db, existingTenant.Id, cancellationToken);
+            return;
+        }
 
         var tenantId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var mainBranchId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
@@ -26,7 +31,9 @@ public static class DemoDataSeeder
             new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000004"), Email = "head@mada.demo", Phone = "+201000000004", DisplayName = "Head Instructor", AccountType = "staff", PasswordHash = demoPasswordHash, Status = "ACTIVE" },
             new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000005"), Email = "secretary@mada.demo", Phone = "+201000000005", DisplayName = "Academy Secretary", AccountType = "staff", PasswordHash = demoPasswordHash, Status = "ACTIVE" },
             new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000006"), Email = "accountant@mada.demo", Phone = "+201000000006", DisplayName = "Academy Accountant", AccountType = "staff", PasswordHash = demoPasswordHash, Status = "ACTIVE" },
-            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000007"), Email = "media@mada.demo", Phone = "+201000000007", DisplayName = "Media Manager", AccountType = "staff", PasswordHash = demoPasswordHash, Status = "ACTIVE" }
+            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000007"), Email = "media@mada.demo", Phone = "+201000000007", DisplayName = "Media Manager", AccountType = "staff", PasswordHash = demoPasswordHash, Status = "ACTIVE" },
+            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000008"), Email = "secretary.helio@mada.demo", Phone = "+201000000008", DisplayName = "Heliopolis Secretary", AccountType = "staff", PasswordHash = demoPasswordHash, Status = "ACTIVE" },
+            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000009"), Email = "accountant.helio@mada.demo", Phone = "+201000000009", DisplayName = "Heliopolis Accountant", AccountType = "staff", PasswordHash = demoPasswordHash, Status = "ACTIVE" }
         };
 
         var memberships = new[]
@@ -37,7 +44,9 @@ public static class DemoDataSeeder
             new Membership { UserAccountId = users[3].Id, TenantId = tenantId, BranchId = mainBranchId, RoleCode = "R03_HEAD_INSTRUCTORS", ScopeLevel = "BRANCH" },
             new Membership { UserAccountId = users[4].Id, TenantId = tenantId, BranchId = mainBranchId, RoleCode = "R05_SECRETARY", ScopeLevel = "BRANCH" },
             new Membership { UserAccountId = users[5].Id, TenantId = tenantId, BranchId = mainBranchId, RoleCode = "R06_ACCOUNTANT", ScopeLevel = "BRANCH" },
-            new Membership { UserAccountId = users[6].Id, TenantId = tenantId, BranchId = mainBranchId, RoleCode = "R07_MEDIA_MANAGER", ScopeLevel = "BRANCH" }
+            new Membership { UserAccountId = users[6].Id, TenantId = tenantId, BranchId = mainBranchId, RoleCode = "R07_MEDIA_MANAGER", ScopeLevel = "BRANCH" },
+            new Membership { UserAccountId = users[7].Id, TenantId = tenantId, BranchId = heliopolisBranchId, RoleCode = "R05_SECRETARY", ScopeLevel = "BRANCH" },
+            new Membership { UserAccountId = users[8].Id, TenantId = tenantId, BranchId = heliopolisBranchId, RoleCode = "R06_ACCOUNTANT", ScopeLevel = "BRANCH" }
         };
 
         var classroomMain = new Classroom { Id = Guid.Parse("20000000-0000-0000-0000-000000000001"), BranchId = mainBranchId, Name = "Robotics Lab A", Capacity = 14 };
@@ -58,7 +67,6 @@ public static class DemoDataSeeder
             new SessionAttendance { SessionId = session3.Id, StudentId = students[1].Id, Status = "LATE", LateMinutes = 12 },
             new SessionAttendance { SessionId = session3.Id, StudentId = students[2].Id, Status = "ABSENT" }
         };
-
         db.Add(tenant);
         db.AddRange(mainBranch, heliopolisBranch);
         db.AddRange(users);
@@ -68,6 +76,93 @@ public static class DemoDataSeeder
         db.AddRange(students);
         db.AddRange(enrollments);
         db.AddRange(attendance);
+        await db.SaveChangesAsync(cancellationToken);
+        await EnsureFinanceSliceAsync(db, tenantId, cancellationToken);
+    }
+
+    private static async Task EnsureFinanceSliceAsync(MadaDbContext db, Guid tenantId, CancellationToken cancellationToken)
+    {
+        var mainBranchId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        var heliopolisBranchId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        var userSpecs = new[]
+        {
+            (Guid.Parse("10000000-0000-0000-0000-000000000005"), "secretary@mada.demo", "+201000000005", "Academy Secretary"),
+            (Guid.Parse("10000000-0000-0000-0000-000000000006"), "accountant@mada.demo", "+201000000006", "Academy Accountant"),
+            (Guid.Parse("10000000-0000-0000-0000-000000000008"), "secretary.helio@mada.demo", "+201000000008", "Heliopolis Secretary"),
+            (Guid.Parse("10000000-0000-0000-0000-000000000009"), "accountant.helio@mada.demo", "+201000000009", "Heliopolis Accountant")
+        };
+        var demoPasswordHash = new PasswordHashService().Hash("Mada@2026");
+        foreach (var (id, email, phone, displayName) in userSpecs)
+        {
+            if (await db.UserAccounts.AnyAsync(user => user.Id == id, cancellationToken)) continue;
+            db.UserAccounts.Add(new UserAccount { Id = id, Email = email, Phone = phone, DisplayName = displayName, AccountType = "staff", PasswordHash = demoPasswordHash, Status = "ACTIVE" });
+        }
+        if (!await db.Branches.AnyAsync(branch => branch.Id == mainBranchId, cancellationToken))
+            db.Branches.Add(new Branch { Id = mainBranchId, TenantId = tenantId, Name = "Main Branch", Code = "MAIN" });
+        if (!await db.Branches.AnyAsync(branch => branch.Id == heliopolisBranchId, cancellationToken))
+            db.Branches.Add(new Branch { Id = heliopolisBranchId, TenantId = tenantId, Name = "Heliopolis Branch", Code = "HELIO" });
+        await db.SaveChangesAsync(cancellationToken);
+
+        var membershipSpecs = new[]
+        {
+            (Guid.Parse("10000000-0000-0000-0000-000000000005"), mainBranchId, "R05_SECRETARY"),
+            (Guid.Parse("10000000-0000-0000-0000-000000000006"), mainBranchId, "R06_ACCOUNTANT"),
+            (Guid.Parse("10000000-0000-0000-0000-000000000008"), heliopolisBranchId, "R05_SECRETARY"),
+            (Guid.Parse("10000000-0000-0000-0000-000000000009"), heliopolisBranchId, "R06_ACCOUNTANT")
+        };
+        foreach (var (userId, branchId, roleCode) in membershipSpecs)
+        {
+            if (await db.Memberships.AnyAsync(membership => membership.UserAccountId == userId && membership.TenantId == tenantId && membership.BranchId == branchId && membership.RoleCode == roleCode, cancellationToken)) continue;
+            db.Memberships.Add(new Membership { UserAccountId = userId, TenantId = tenantId, BranchId = branchId, RoleCode = roleCode, ScopeLevel = "BRANCH" });
+        }
+
+        var mainStudentId = Guid.Parse("70000000-0000-0000-0000-000000000001");
+        var heliopolisStudentId = Guid.Parse("70000000-0000-0000-0000-000000000007");
+        if (!await db.Students.AnyAsync(student => student.Id == mainStudentId, cancellationToken))
+            db.Students.Add(new Student { Id = mainStudentId, TenantId = tenantId, BranchId = mainBranchId, FullName = "Youssef Ahmed", DateOfBirth = new DateOnly(2015, 4, 12), Status = "ACTIVE" });
+        if (!await db.Students.AnyAsync(student => student.Id == heliopolisStudentId, cancellationToken))
+            db.Students.Add(new Student { Id = heliopolisStudentId, TenantId = tenantId, BranchId = heliopolisBranchId, FullName = "Salma Hossam", DateOfBirth = new DateOnly(2015, 4, 12), Status = "ACTIVE" });
+        await db.SaveChangesAsync(cancellationToken);
+
+        if (!await db.Invoices.AnyAsync(invoice => invoice.InvoiceNumber == "MAD-MAIN-2026-0001", cancellationToken))
+            db.Invoices.Add(new Invoice
+            {
+                Id = Guid.Parse("80000000-0000-0000-0000-000000000001"), TenantId = tenantId, BranchId = mainBranchId,
+                StudentId = mainStudentId, InvoiceNumber = "MAD-MAIN-2026-0001", TotalPiastres = 320_000,
+                IssueDate = new DateOnly(2026, 10, 1), DueDate = new DateOnly(2026, 10, 15), Status = "PARTIAL",
+                CreatedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000005"),
+                Lines = [new InvoiceLine { Id = Guid.Parse("81000000-0000-0000-0000-000000000001"), LineNumber = 1, Description = "Junior Robotics — Level 1", AmountPiastres = 320_000 }],
+                Payments = [new PaymentTransaction { Id = Guid.Parse("82000000-0000-0000-0000-000000000001"), TenantId = tenantId, BranchId = mainBranchId, AmountPiastres = 125_000, Method = "CASH", ReceivedOn = new DateOnly(2026, 10, 2), RecordedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000006") }]
+            });
+        if (!await db.Invoices.AnyAsync(invoice => invoice.InvoiceNumber == "MAD-HELIO-2026-0001", cancellationToken))
+            db.Invoices.Add(new Invoice
+            {
+                Id = Guid.Parse("80000000-0000-0000-0000-000000000002"), TenantId = tenantId, BranchId = heliopolisBranchId,
+                StudentId = heliopolisStudentId, InvoiceNumber = "MAD-HELIO-2026-0001", TotalPiastres = 260_000,
+                IssueDate = new DateOnly(2026, 10, 1), DueDate = new DateOnly(2026, 10, 20), Status = "PAID",
+                CreatedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000008"),
+                Lines = [new InvoiceLine { Id = Guid.Parse("81000000-0000-0000-0000-000000000002"), LineNumber = 1, Description = "Creative Lab — October", AmountPiastres = 260_000 }],
+                Payments = [new PaymentTransaction { Id = Guid.Parse("82000000-0000-0000-0000-000000000002"), TenantId = tenantId, BranchId = heliopolisBranchId, AmountPiastres = 260_000, Method = "INSTAPAY", ReceivedOn = new DateOnly(2026, 10, 2), ExternalReference = "IP-DEMO-HELIO-001", RecordedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000009") }]
+            });
+
+        var mainExpenseId = Guid.Parse("83000000-0000-0000-0000-000000000001");
+        var heliopolisExpenseId = Guid.Parse("83000000-0000-0000-0000-000000000002");
+        if (!await db.Expenses.AnyAsync(expense => expense.Id == mainExpenseId, cancellationToken))
+        {
+            var approval = new ApprovalRequest { Id = Guid.Parse("84000000-0000-0000-0000-000000000001"), TenantId = tenantId, BranchId = mainBranchId, RequestType = "EXPENSE_APPROVAL", TargetType = "EXPENSE", TargetId = mainExpenseId.ToString(), SubmittedByRole = "R02_BRANCH_MANAGER", State = "PENDING", Reason = "Pending demo purchase" };
+            db.Expenses.Add(new Expense { Id = mainExpenseId, TenantId = tenantId, BranchId = mainBranchId, Description = "Robotics lab consumables", Category = "SUPPLIES", AmountPiastres = 45_000, SpentOn = new DateOnly(2026, 10, 2), Status = "PENDING", CreatedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000003"), ApprovalRequestId = approval.Id, ApprovalRequest = approval });
+        }
+        if (!await db.Expenses.AnyAsync(expense => expense.Id == heliopolisExpenseId, cancellationToken))
+        {
+            var reason = "Approved for creative lab materials";
+            var approval = new ApprovalRequest { Id = Guid.Parse("84000000-0000-0000-0000-000000000002"), TenantId = tenantId, BranchId = heliopolisBranchId, RequestType = "EXPENSE_APPROVAL", TargetType = "EXPENSE", TargetId = heliopolisExpenseId.ToString(), SubmittedByRole = "R06_ACCOUNTANT", State = "APPROVED", Reason = reason, DecidedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000002"), DecidedAt = new DateTimeOffset(2026, 10, 2, 12, 0, 0, TimeSpan.Zero) };
+            db.Expenses.Add(new Expense { Id = heliopolisExpenseId, TenantId = tenantId, BranchId = heliopolisBranchId, Description = "Creative lab materials", Category = "SUPPLIES", AmountPiastres = 35_000, SpentOn = new DateOnly(2026, 10, 2), Status = "APPROVED", CreatedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000009"), ApprovalRequestId = approval.Id, ApprovalRequest = approval });
+            if (!await db.StateTransitions.AnyAsync(item => item.AggregateType == "EXPENSE" && item.AggregateId == heliopolisExpenseId.ToString() && item.ToState == "APPROVED", cancellationToken))
+                db.StateTransitions.Add(new StateTransitionEvent { AggregateType = "EXPENSE", AggregateId = heliopolisExpenseId.ToString(), FromState = "PENDING", ToState = "APPROVED", ActorUserId = approval.DecidedByUserId!.Value, Reason = reason });
+            if (!await db.AuditEvents.AnyAsync(item => item.TargetType == "EXPENSE" && item.TargetId == heliopolisExpenseId.ToString() && item.Action == "EXPENSE_APPROVED", cancellationToken))
+                db.AuditEvents.Add(new AuditEvent { ActorUserId = approval.DecidedByUserId!.Value, TenantId = tenantId, BranchId = heliopolisBranchId, Action = "EXPENSE_APPROVED", TargetType = "EXPENSE", TargetId = heliopolisExpenseId.ToString(), Reason = reason });
+        }
+
         await db.SaveChangesAsync(cancellationToken);
     }
 }

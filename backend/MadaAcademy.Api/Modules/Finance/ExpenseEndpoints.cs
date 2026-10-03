@@ -33,7 +33,7 @@ public static class ExpenseEndpoints
         if (normalized is not null && normalized is not ("PENDING" or "APPROVED" or "REJECTED")) return Validation("status", "Status must be ALL, PENDING, APPROVED, or REJECTED.");
         if (branchId.HasValue && scope.BranchId.HasValue && branchId.Value != scope.BranchId.Value) return NotFound("EXPENSE_NOT_FOUND");
         var effectiveBranch = branchId ?? scope.BranchId;
-        var expenses = await db.Expenses.AsNoTracking().Include(x => x.Evidence).Include(x => x.Branch)
+        var expenses = await db.Expenses.AsNoTracking().Include(x => x.Evidence).Include(x => x.ApprovalRequest).Include(x => x.Branch)
             .Where(x => x.TenantId == scope.TenantId && (!effectiveBranch.HasValue || x.BranchId == effectiveBranch.Value) && (normalized == null || x.Status == normalized))
             .OrderByDescending(x => x.SpentOn).ThenByDescending(x => x.CreatedAt).Take(300).ToListAsync(cancellationToken);
         return Results.Ok(new { data = new { items = expenses.Select(ToResponse), total = expenses.Count } });

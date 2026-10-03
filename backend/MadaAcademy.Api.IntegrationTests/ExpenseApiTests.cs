@@ -112,6 +112,8 @@ public sealed class ExpenseApiTests
         var rejected = await approverClient.PostAsJsonAsync($"/api/v1/finance/expenses/{expenseId}/reject", new { reason = "Receipt does not match the policy." });
         Assert.Equal(HttpStatusCode.OK, rejected.StatusCode);
         Assert.Contains("\"status\":\"REJECTED\"", await rejected.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        var expenses = await approverClient.GetStringAsync("/api/v1/finance/expenses?status=ALL");
+        Assert.Contains("Receipt does not match the policy.", expenses, StringComparison.Ordinal);
     }
 
     [Fact]

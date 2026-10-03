@@ -101,6 +101,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     homePath: "/secretary-desk",
     navigation: [
       { path: "/secretary-desk", label: "مكتب الخدمة", purpose: "lead to enrollment" },
+      { path: "/finance-desk", label: "التحصيل والفواتير", purpose: "branch-scoped collections and payments" },
       { path: "/students", label: "الطلاب", purpose: "branch operational records" },
       { path: "/schedule", label: "المجموعات والمواعيد", purpose: "enrollment availability" },
     ],

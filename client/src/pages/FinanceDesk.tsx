@@ -1,50 +1,274 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { AlertCircle, ArrowDownToLine, ArrowUpLeft, BarChart3, CalendarDays, Check, CheckCircle2, ChevronLeft, CircleHelp, Clock3, CreditCard, FileCheck2, FileText, LayoutDashboard, LogOut, MapPin, Menu, Plus, Search, Settings, ShieldCheck, TrendingDown, TrendingUp, Wallet, X } from "lucide-react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
+import {
+  AlertCircle,
+  ArrowDownToLine,
+  ArrowUpLeft,
+  BarChart3,
+  CalendarDays,
+  Check,
+  CheckCircle2,
+  ChevronLeft,
+  CircleHelp,
+  Clock3,
+  CreditCard,
+  FileCheck2,
+  FileText,
+  LayoutDashboard,
+  LogOut,
+  MapPin,
+  Menu,
+  Plus,
+  Search,
+  Settings,
+  ShieldCheck,
+  TrendingDown,
+  TrendingUp,
+  Wallet,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
-import { apiClient, type FinanceExpense, type FinanceInvoice, type FinancePayment, type FinanceReport, type StudentRecord } from "@/lib/apiClient";
+import {
+  canAccessFinanceView,
+  financeCapabilitiesForRole,
+  type FinanceView,
+} from "@/lib/financeAccess";
+import {
+  apiClient,
+  type AuthMe,
+  type FinanceExpense,
+  type FinanceInvoice,
+  type FinancePayment,
+  type FinanceReport,
+  type StudentRecord,
+} from "@/lib/apiClient";
 
-type View = "overview" | "collections" | "expenses" | "reports";
+type View = FinanceView;
 type InvoiceStatus = "partial" | "overdue" | "paid" | "unpaid";
 type ExpenseStatus = "pending" | "approved" | "rejected";
 type PaymentMethod = "CASH" | "VISA" | "INSTAPAY" | "VODAFONE_CASH";
-const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = { CASH: "نقدي", VISA: "بطاقة Visa", INSTAPAY: "InstaPay", VODAFONE_CASH: "Vodafone Cash" };
-type Invoice = { id: string; number: string; student: string; parent: string; branch: string; course: string; total: number; collected: number; due: string; payments: FinancePayment[] };
-type Expense = { id: string; description: string; branch: string; category: string; amount: number; date: string; status: ExpenseStatus; createdBy: string; reason?: string; evidenceStatus?: string };
+const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  CASH: "نقدي",
+  VISA: "بطاقة Visa",
+  INSTAPAY: "InstaPay",
+  VODAFONE_CASH: "Vodafone Cash",
+};
+type Invoice = {
+  id: string;
+  number: string;
+  student: string;
+  parent: string;
+  branch: string;
+  course: string;
+  total: number;
+  collected: number;
+  due: string;
+  status?: InvoiceStatus;
+  payments: FinancePayment[];
+};
+type Expense = {
+  id: string;
+  description: string;
+  branch: string;
+  category: string;
+  amount: number;
+  date: string;
+  status: ExpenseStatus;
+  createdBy: string;
+  reason?: string;
+  evidenceStatus?: string;
+};
 const INVOICES: Invoice[] = [
-  { id: "INV-0908", number: "MAD-NSR-2026-0908", student: "ياسين محمد علي", parent: "محمد علي", branch: "مدينة نصر", course: "روبوتكس مستوى 2", total: 4800, collected: 2400, due: "26 سبتمبر", payments: [] },
-  { id: "INV-0904", number: "MAD-NSR-2026-0904", student: "عمر خالد إبراهيم", parent: "نهى إبراهيم", branch: "مدينة نصر", course: "دوائر إلكترونية", total: 4500, collected: 1500, due: "20 سبتمبر", payments: [] },
-  { id: "INV-0905", number: "MAD-MAD-2026-0905", student: "ليلى أحمد محمود", parent: "أحمد محمود", branch: "المعادي", course: "برمجة للمبتدئين", total: 5200, collected: 5200, due: "18 سبتمبر", payments: [] },
-  { id: "INV-0902", number: "MAD-ZAY-2026-0902", student: "ملك حسام الدين", parent: "حسام الدين", branch: "الشيخ زايد", course: "روبوتكس مستوى 1", total: 3900, collected: 0, due: "30 سبتمبر", payments: [] },
+  {
+    id: "INV-0908",
+    number: "MAD-NSR-2026-0908",
+    student: "ياسين محمد علي",
+    parent: "محمد علي",
+    branch: "مدينة نصر",
+    course: "روبوتكس مستوى 2",
+    total: 4800,
+    collected: 2400,
+    due: "26 سبتمبر",
+    payments: [],
+  },
+  {
+    id: "INV-0904",
+    number: "MAD-NSR-2026-0904",
+    student: "عمر خالد إبراهيم",
+    parent: "نهى إبراهيم",
+    branch: "مدينة نصر",
+    course: "دوائر إلكترونية",
+    total: 4500,
+    collected: 1500,
+    due: "20 سبتمبر",
+    payments: [],
+  },
+  {
+    id: "INV-0905",
+    number: "MAD-MAD-2026-0905",
+    student: "ليلى أحمد محمود",
+    parent: "أحمد محمود",
+    branch: "المعادي",
+    course: "برمجة للمبتدئين",
+    total: 5200,
+    collected: 5200,
+    due: "18 سبتمبر",
+    payments: [],
+  },
+  {
+    id: "INV-0902",
+    number: "MAD-ZAY-2026-0902",
+    student: "ملك حسام الدين",
+    parent: "حسام الدين",
+    branch: "الشيخ زايد",
+    course: "روبوتكس مستوى 1",
+    total: 3900,
+    collected: 0,
+    due: "30 سبتمبر",
+    payments: [],
+  },
 ];
 const INITIAL_EXPENSES: Expense[] = [
-  { id: "EXP-104", description: "مستلزمات روبوتكس للمجموعات الجديدة", branch: "مدينة نصر", category: "مواد ومستلزمات", amount: 3850, date: "24 سبتمبر", status: "approved", createdBy: "أحمد محمود" },
-  { id: "EXP-103", description: "صيانة أجهزة معمل البرمجة", branch: "المعادي", category: "تشغيل وصيانة", amount: 1650, date: "23 سبتمبر", status: "pending", createdBy: "سارة خالد" },
-  { id: "EXP-102", description: "مكافأة تدريب مسابقة سبتمبر", branch: "الشيخ زايد", category: "مسابقات", amount: 2400, date: "22 سبتمبر", status: "pending", createdBy: "أحمد محمود" },
-  { id: "EXP-101", description: "اشتراك خدمة غير معتمد", branch: "مدينة نصر", category: "أخرى", amount: 900, date: "21 سبتمبر", status: "rejected", createdBy: "سارة خالد", reason: "المرفق لا يطابق سياسة المصروفات." },
+  {
+    id: "EXP-104",
+    description: "مستلزمات روبوتكس للمجموعات الجديدة",
+    branch: "مدينة نصر",
+    category: "مواد ومستلزمات",
+    amount: 3850,
+    date: "24 سبتمبر",
+    status: "approved",
+    createdBy: "أحمد محمود",
+  },
+  {
+    id: "EXP-103",
+    description: "صيانة أجهزة معمل البرمجة",
+    branch: "المعادي",
+    category: "تشغيل وصيانة",
+    amount: 1650,
+    date: "23 سبتمبر",
+    status: "pending",
+    createdBy: "سارة خالد",
+  },
+  {
+    id: "EXP-102",
+    description: "مكافأة تدريب مسابقة سبتمبر",
+    branch: "الشيخ زايد",
+    category: "مسابقات",
+    amount: 2400,
+    date: "22 سبتمبر",
+    status: "pending",
+    createdBy: "أحمد محمود",
+  },
+  {
+    id: "EXP-101",
+    description: "اشتراك خدمة غير معتمد",
+    branch: "مدينة نصر",
+    category: "أخرى",
+    amount: 900,
+    date: "21 سبتمبر",
+    status: "rejected",
+    createdBy: "سارة خالد",
+    reason: "المرفق لا يطابق سياسة المصروفات.",
+  },
 ];
-const STATUS_LABEL: Record<InvoiceStatus, string> = { partial: "مدفوعة جزئيًا", overdue: "متأخرة", paid: "مدفوعة", unpaid: "غير مدفوعة" };
-const EXPENSE_LABEL: Record<ExpenseStatus, string> = { pending: "بانتظار الاعتماد", approved: "معتمد", rejected: "مرفوض" };
-function money(value: number) { return new Intl.NumberFormat("en-US").format(value); }
-function mapFinanceInvoice(invoice: FinanceInvoice): Invoice { return { id: invoice.id, number: invoice.invoiceNumber, student: invoice.studentName ?? "طالب", parent: "—", branch: invoice.branchId, course: invoice.lines[0]?.description ?? "—", total: Math.round(invoice.totalPiastres / 100), collected: Math.round(invoice.paidPiastres / 100), due: invoice.dueDate, payments: invoice.payments }; }
-function mapFinanceExpense(expense: FinanceExpense): Expense { return { id: expense.id, description: expense.description, branch: expense.branchName ?? expense.branchId, category: expense.category, amount: Math.round(expense.amountPiastres / 100), date: expense.spentOn, status: expense.status.toLowerCase() as ExpenseStatus, createdBy: expense.createdByUserId, reason: expense.approvalReason ?? undefined, evidenceStatus: expense.evidenceStatus }; }
-function invoiceStatus(invoice: Invoice): InvoiceStatus { if (invoice.collected >= invoice.total) return "paid"; if (invoice.collected === 0 && invoice.due.includes("20")) return "overdue"; return invoice.collected > 0 ? "partial" : "unpaid"; }
+const STATUS_LABEL: Record<InvoiceStatus, string> = {
+  partial: "مدفوعة جزئيًا",
+  overdue: "متأخرة",
+  paid: "مدفوعة",
+  unpaid: "غير مدفوعة",
+};
+const EXPENSE_LABEL: Record<ExpenseStatus, string> = {
+  pending: "بانتظار الاعتماد",
+  approved: "معتمد",
+  rejected: "مرفوض",
+};
+function money(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+function mapFinanceInvoice(invoice: FinanceInvoice): Invoice {
+  return {
+    id: invoice.id,
+    number: invoice.invoiceNumber,
+    student: invoice.studentName ?? "طالب",
+    parent: "—",
+    branch: invoice.branchName ?? invoice.branchId,
+    course: invoice.lines[0]?.description ?? "—",
+    total: invoice.totalPiastres / 100,
+    collected: invoice.paidPiastres / 100,
+    due: invoice.dueDate,
+    status: financeInvoiceStatus(invoice.status),
+    payments: invoice.payments,
+  };
+}
+
+function financeInvoiceStatus(status: string): InvoiceStatus {
+  switch (status.toUpperCase()) {
+    case "PAID":
+      return "paid";
+    case "PARTIAL":
+      return "partial";
+    case "OVERDUE":
+      return "overdue";
+    default:
+      return "unpaid";
+  }
+}
+function mapFinanceExpense(expense: FinanceExpense): Expense {
+  return {
+    id: expense.id,
+    description: expense.description,
+    branch: expense.branchName ?? expense.branchId,
+    category: expense.category,
+    amount: expense.amountPiastres / 100,
+    date: expense.spentOn,
+    status: expense.status.toLowerCase() as ExpenseStatus,
+    createdBy: expense.createdByUserId,
+    reason: expense.approvalReason ?? undefined,
+    evidenceStatus: expense.evidenceStatus,
+  };
+}
+function invoiceStatus(invoice: Invoice): InvoiceStatus {
+  if (invoice.status) return invoice.status;
+  if (invoice.collected >= invoice.total) return "paid";
+  if (invoice.collected === 0 && invoice.due.includes("سبتمبر"))
+    return "overdue";
+  return invoice.collected > 0 ? "partial" : "unpaid";
+}
 
 export default function FinanceDesk() {
   const [, navigate] = useLocation();
-  const [view, setView] = useState<View>("overview");
+  const [liveMode] = useState(() => apiClient.hasSession());
+  const [view, setView] = useState<View>(() =>
+    liveMode ? "collections" : "overview"
+  );
   const [mobileOpen, setMobileOpen] = useState(false);
   const [branch, setBranch] = useState("مدينة نصر");
   const [query, setQuery] = useState("");
-  const [invoices, setInvoices] = useState(INVOICES);
-  const [expenses, setExpenses] = useState(INITIAL_EXPENSES);
-  const [paymentInvoice, setPaymentInvoice] = useState(INVOICES[0].id);
+  const [invoices, setInvoices] = useState<Invoice[]>(() =>
+    liveMode ? [] : INVOICES
+  );
+  const [expenses, setExpenses] = useState<Expense[]>(() =>
+    liveMode ? [] : INITIAL_EXPENSES
+  );
+  const [paymentInvoice, setPaymentInvoice] = useState(() =>
+    liveMode ? "" : INVOICES[0].id
+  );
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
-  const [receivedOn, setReceivedOn] = useState(new Date().toISOString().slice(0, 10));
+  const [receivedOn, setReceivedOn] = useState(
+    new Date().toISOString().slice(0, 10)
+  );
   const [externalReference, setExternalReference] = useState("");
   const [expenseDescription, setExpenseDescription] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
@@ -53,51 +277,1562 @@ export default function FinanceDesk() {
   const [invoiceStudentId, setInvoiceStudentId] = useState("");
   const [invoiceDescription, setInvoiceDescription] = useState("");
   const [invoiceAmount, setInvoiceAmount] = useState("");
-  const [invoiceDueDate, setInvoiceDueDate] = useState("2026-10-15");
+  const [invoiceDueDate, setInvoiceDueDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 7);
+    return date.toISOString().slice(0, 10);
+  });
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
-  const [liveMode, setLiveMode] = useState(apiClient.hasSession());
   const [report, setReport] = useState<FinanceReport | null>(null);
+  const [financeMe, setFinanceMe] = useState<AuthMe | null>(null);
+  const [financeAccess, setFinanceAccess] = useState(() =>
+    financeCapabilitiesForRole(null)
+  );
+  const [workspaceState, setWorkspaceState] = useState<
+    "loading" | "ready" | "error" | "forbidden"
+  >(() => (liveMode ? "loading" : "ready"));
+  const [loadError, setLoadError] = useState("");
+  const [loadAttempt, setLoadAttempt] = useState(0);
+
   useEffect(() => {
-    if (!apiClient.hasSession()) return;
+    if (!liveMode) return;
     let cancelled = false;
-    Promise.all([apiClient.financeInvoices(), apiClient.financeExpenses(), apiClient.listStudents(), apiClient.financeReport()]).then(([invoiceResponse, expenseResponse, studentResponse, reportResponse]) => { if (!cancelled) { const loadedInvoices = invoiceResponse.items.map(mapFinanceInvoice); setInvoices(loadedInvoices); setExpenses(expenseResponse.items.map(mapFinanceExpense)); setStudents(studentResponse.items); setReport(reportResponse); setInvoiceStudentId(current => current || studentResponse.items[0]?.id || ""); setPaymentInvoice(current => loadedInvoices.find(invoice => invoice.collected < invoice.total)?.id || current); setLiveMode(true); } }).catch(error => { if (!cancelled) toast.error(error instanceof Error ? error.message : "تعذر تحميل البيانات المالية"); });
-    return () => { cancelled = true; };
-  }, []);
-  const scopedInvoices = liveMode ? invoices : invoices.filter(item => item.branch === branch);
-  const scopedExpenses = liveMode ? expenses : expenses.filter(item => item.branch === branch);
-  const filteredInvoices = scopedInvoices.filter(item => !query.trim() || `${item.number} ${item.student} ${item.parent}`.toLocaleLowerCase("ar").includes(query.trim().toLocaleLowerCase("ar")));
-  const filteredExpenses = scopedExpenses.filter(item => !query.trim() || `${item.description} ${item.createdBy} ${item.category}`.toLocaleLowerCase("ar").includes(query.trim().toLocaleLowerCase("ar")));
-  const collected = scopedInvoices.reduce((sum, item) => sum + item.collected, 0);
-  const outstanding = scopedInvoices.reduce((sum, item) => sum + item.total - item.collected, 0);
-  const approvedExpenses = scopedExpenses.filter(item => item.status === "approved").reduce((sum, item) => sum + item.amount, 0);
-  const pendingCount = scopedExpenses.filter(item => item.status === "pending").length;
+    setWorkspaceState("loading");
+    setLoadError("");
+    setInvoices([]);
+    setExpenses([]);
+    setStudents([]);
+    setReport(null);
+
+    const loadFinanceWorkspace = async () => {
+      try {
+        const currentUser = await apiClient.me();
+        const access = financeCapabilitiesForRole(currentUser.role);
+        if (cancelled) return;
+
+        setFinanceMe(currentUser);
+        setFinanceAccess(access);
+        if (!access.allowed) {
+          setWorkspaceState("forbidden");
+          return;
+        }
+
+        const [invoiceResponse, studentResponse] = await Promise.all([
+          apiClient.financeInvoices(),
+          apiClient.listStudents(),
+        ]);
+        let loadedExpenses: Expense[] = [];
+        let loadedReport: FinanceReport | null = null;
+        if (access.canReadExpenses) {
+          const [expenseResponse, reportResponse] = await Promise.all([
+            apiClient.financeExpenses(),
+            apiClient.financeReport(),
+          ]);
+          loadedExpenses = expenseResponse.items.map(mapFinanceExpense);
+          loadedReport = reportResponse;
+        }
+
+        if (cancelled) return;
+        const loadedInvoices = invoiceResponse.items.map(mapFinanceInvoice);
+        setInvoices(loadedInvoices);
+        setExpenses(loadedExpenses);
+        setStudents(studentResponse.items);
+        setReport(loadedReport);
+        setInvoiceStudentId(studentResponse.items[0]?.id ?? "");
+        setPaymentInvoice(
+          loadedInvoices.find(invoice => invoice.collected < invoice.total)
+            ?.id ?? ""
+        );
+        setView(access.initialView);
+        setWorkspaceState("ready");
+      } catch (error) {
+        if (cancelled) return;
+        setInvoices([]);
+        setExpenses([]);
+        setStudents([]);
+        setReport(null);
+        setLoadError(
+          error instanceof Error ? error.message : "تعذر تحميل البيانات المالية"
+        );
+        setWorkspaceState("error");
+      }
+    };
+
+    void loadFinanceWorkspace();
+    return () => {
+      cancelled = true;
+    };
+  }, [liveMode, loadAttempt]);
+
+  const activeAccess = liveMode
+    ? financeAccess
+    : financeCapabilitiesForRole("R06_ACCOUNTANT");
+  const roleCode: "R05" | "R06" =
+    liveMode && financeAccess.roleCode === "R05" ? "R05" : "R06";
+  const roleLabel = liveMode
+    ? financeAccess.roleLabel || "مساحة مالية"
+    : "المحاسب · معاينة";
+  const branchContext = liveMode
+    ? (financeMe?.branches?.[0]?.name ?? "الفرع المصرح")
+    : branch;
+  const scopedInvoices = liveMode
+    ? invoices
+    : invoices.filter(item => item.branch === branch);
+  const scopedExpenses = liveMode
+    ? expenses
+    : expenses.filter(item => item.branch === branch);
+  const filteredInvoices = scopedInvoices.filter(
+    item =>
+      !query.trim() ||
+      `${item.number} ${item.student} ${item.parent}`
+        .toLocaleLowerCase("ar")
+        .includes(query.trim().toLocaleLowerCase("ar"))
+  );
+  const filteredExpenses = scopedExpenses.filter(
+    item =>
+      !query.trim() ||
+      `${item.description} ${item.createdBy} ${item.category}`
+        .toLocaleLowerCase("ar")
+        .includes(query.trim().toLocaleLowerCase("ar"))
+  );
+  const collected = scopedInvoices.reduce(
+    (sum, item) => sum + item.collected,
+    0
+  );
+  const outstanding = scopedInvoices.reduce(
+    (sum, item) => sum + item.total - item.collected,
+    0
+  );
+  const approvedExpenses = scopedExpenses
+    .filter(item => item.status === "approved")
+    .reduce((sum, item) => sum + item.amount, 0);
+  const pendingCount = scopedExpenses.filter(
+    item => item.status === "pending"
+  ).length;
   const net = collected - approvedExpenses;
-  const exportReport = async () => { if (!liveMode) { toast.info("تصدير التقرير متاح في وضع LIVE فقط"); return; } try { const blob = await apiClient.downloadFinanceReport(); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = "mada-financial-report.csv"; link.click(); URL.revokeObjectURL(url); toast.success("تم تنزيل التقرير المالي"); } catch (error) { toast.error(error instanceof Error ? error.message : "تعذر تصدير التقرير"); } };
-  const selectView = (next: View) => { setView(next); setMobileOpen(false); setQuery(""); };
-  const recordPayment = (event: FormEvent) => { event.preventDefault(); const amount = Number(paymentAmount); const invoice = invoices.find(item => item.id === paymentInvoice); const remaining = invoice ? invoice.total - invoice.collected : 0; const reference = externalReference.trim(); if (!invoice || !amount || amount <= 0) { toast.error("أدخل مبلغ تحصيل صحيح"); return; } if (amount > remaining) { toast.error("المبلغ أكبر من الرصيد المتبقي", { description: `المتاح للتحصيل ${money(remaining)} ج.م فقط.` }); return; } if (!receivedOn) { toast.error("اختر تاريخ استلام التحصيل"); return; } if ((paymentMethod === "INSTAPAY" || paymentMethod === "VODAFONE_CASH") && !reference) { toast.error("المرجع مطلوب لهذه الطريقة"); return; } const input = { amountPiastres: amount * 100, method: paymentMethod, receivedOn, ...(reference ? { externalReference: reference } : {}) }; if (liveMode) { void apiClient.createFinancePayment(invoice.id, input).then(response => { setInvoices(current => current.map(item => item.id === invoice.id ? { ...item, collected: item.collected + amount, payments: [response.payment, ...item.payments] } : item)); toast.success("تم تسجيل التحصيل على الـAPI"); setPaymentAmount(""); setExternalReference(""); }).catch(error => toast.error(error instanceof Error ? error.message : "تعذر تسجيل التحصيل")); return; } setInvoices(current => current.map(item => item.id === paymentInvoice ? { ...item, collected: item.collected + amount } : item)); toast.success("تم تسجيل التحصيل في وضع المعاينة", { description: `${money(amount)} ج.م · ${PAYMENT_METHOD_LABELS[paymentMethod]}.` }); setPaymentAmount(""); setExternalReference(""); };
-  const createExpense = (event: FormEvent) => { event.preventDefault(); const amount = Number(expenseAmount); if (!expenseDescription.trim() || !amount || amount <= 0) { toast.error("أدخل وصف المصروف والمبلغ"); return; } if (liveMode) { void apiClient.createFinanceExpense({ description: expenseDescription, category: "OPERATIONS", amountPiastres: amount * 100 }).then(expense => { setExpenses(current => [mapFinanceExpense(expense), ...current]); toast.success("تم رفع المصروف للمراجعة"); setExpenseDescription(""); setExpenseAmount(""); }).catch(error => toast.error(error instanceof Error ? error.message : "تعذر رفع المصروف")); return; } setExpenses(current => [{ id: `EXP-${current.length + 110}`, description: expenseDescription, branch: expenseBranch, category: "تشغيل وصيانة", amount, date: "اليوم", status: "pending", createdBy: "المحاسب" }, ...current]); toast.success("تم رفع المصروف للمراجعة", { description: "لن يدخل الإجماليات المعتمدة قبل قرار الاعتماد." }); setExpenseDescription(""); setExpenseAmount(""); };
-  const approveExpense = (expenseId: string) => { if (liveMode) { const reason = window.prompt("سبب اعتماد المصروف (مطلوب للتدقيق):"); if (!reason?.trim()) { toast.error("يجب إدخال سبب اعتماد المصروف"); return; } void apiClient.approveFinanceExpense(expenseId, reason.trim()).then(expense => { setExpenses(current => current.map(item => item.id === expenseId ? mapFinanceExpense(expense) : item)); toast.success("تم اعتماد المصروف"); }).catch(error => toast.error(error instanceof Error ? error.message : "تعذر اعتماد المصروف")); return; } setExpenses(current => current.map(item => item.id === expenseId ? { ...item, status: "approved" } : item)); };
-  const rejectExpense = (event: FormEvent) => { event.preventDefault(); if (!rejecting || !rejectReason.trim()) { toast.error("سبب الرفض إلزامي"); return; } if (liveMode) { void apiClient.rejectFinanceExpense(rejecting, rejectReason).then(expense => { setExpenses(current => current.map(item => item.id === rejecting ? mapFinanceExpense(expense) : item)); toast.success("تم رفض المصروف بسبب موثق"); setRejecting(null); setRejectReason(""); }).catch(error => toast.error(error instanceof Error ? error.message : "تعذر رفض المصروف")); return; } setExpenses(current => current.map(item => item.id === rejecting ? { ...item, status: "rejected", reason: rejectReason } : item)); toast.success("تم رفض المصروف بسبب موثق"); setRejecting(null); setRejectReason(""); };
-  const createInvoice = (event: FormEvent) => { event.preventDefault(); const amount = Number(invoiceAmount); if (!invoiceStudentId || !invoiceDescription.trim() || !amount || amount <= 0 || !invoiceDueDate) { toast.error("أدخل الطالب والوصف والمبلغ وتاريخ الاستحقاق"); return; } if (!liveMode) { toast.info("إنشاء الفواتير متاح في وضع LIVE فقط"); return; } void apiClient.createFinanceInvoice({ studentId: invoiceStudentId, dueDate: invoiceDueDate, lines: [{ description: invoiceDescription.trim(), amountPiastres: amount * 100 }] }).then(invoice => { setInvoices(current => [mapFinanceInvoice(invoice), ...current]); toast.success("تم إنشاء الفاتورة"); setInvoiceDialogOpen(false); setInvoiceDescription(""); setInvoiceAmount(""); }).catch(error => toast.error(error instanceof Error ? error.message : "تعذر إنشاء الفاتورة")); };
-  const uploadPaymentEvidence = (paymentId: string, file: File) => { if (!liveMode) return; void apiClient.uploadPaymentEvidence(paymentId, file).then(() => { setInvoices(current => current.map(invoice => ({ ...invoice, payments: invoice.payments.map(payment => payment.id === paymentId ? { ...payment, evidenceStatus: "ATTACHED", evidenceFileName: file.name } : payment) }))); toast.success("تم رفع إثبات الدفع"); }).catch(error => toast.error(error instanceof Error ? error.message : "تعذر رفع إثبات الدفع")); };
-  const uploadExpenseEvidence = (expenseId: string, file: File) => { if (!liveMode) return; void apiClient.uploadExpenseEvidence(expenseId, file).then(() => { setExpenses(current => current.map(expense => expense.id === expenseId ? { ...expense, evidenceStatus: "ATTACHED" } : expense)); toast.success("تم رفع إثبات المصروف"); }).catch(error => toast.error(error instanceof Error ? error.message : "تعذر رفع إثبات المصروف")); };
-  const downloadEvidence = async (loader: () => Promise<Blob>, filename: string) => { try { const blob = await loader(); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = filename; link.click(); URL.revokeObjectURL(url); } catch (error) { toast.error(error instanceof Error ? error.message : "تعذر تنزيل الإثبات"); } };
-  return <RoleDashboardShell demo={!liveMode} className="app-shell finance-desk-shell" roleCode="R06" roleLabel="المحاسب" scopeLevel="branch" scopeLabel="المالية داخل الفروع المصرح بها" tenantName="أكاديمية مدى" branchName="الفروع المصرح بها">
-    {mobileOpen && <button className="mobile-scrim" aria-label="إغلاق القائمة" onClick={() => setMobileOpen(false)} />}
-    <aside className={`sidebar ${mobileOpen ? "sidebar-open" : ""}`}><div className="sidebar-top"><button className="finance-desk-brand" onClick={() => navigate("/finance")}><strong>مدى</strong><small>المالية والتحصيل · R06</small></button><button className="icon-button sidebar-close" aria-label="إغلاق القائمة" onClick={() => setMobileOpen(false)}><X size={19} /></button></div><div className="academy-switcher"><span className="academy-avatar"><Wallet size={20} /></span><span className="academy-meta"><strong>أكاديمية مدى</strong><small>أحمد محمود · مالي</small></span></div><div className="nav-caption">المساحة المالية</div><nav className="primary-nav"><NavButton active={view === "overview"} onClick={() => selectView("overview")} icon={<LayoutDashboard size={19} />} label="ملخص مالي" /><NavButton active={view === "collections"} onClick={() => selectView("collections")} icon={<CreditCard size={19} />} label="الفواتير والتحصيل" count={scopedInvoices.length} /><NavButton active={view === "expenses"} onClick={() => selectView("expenses")} icon={<TrendingDown size={19} />} label="المصاريف" count={pendingCount} /><NavButton active={view === "reports"} onClick={() => selectView("reports")} icon={<BarChart3 size={19} />} label="التقارير" /></nav><div className="nav-caption nav-caption-spaced">روابط أخرى</div><nav className="primary-nav"><button className="nav-link" onClick={() => navigate("/academy-owner")}><ShieldCheck size={19} /><span>مراجعة الإدارة</span></button><button className="nav-link" onClick={() => navigate("/approvals")}><FileCheck2 size={19} /><span>الموافقات</span></button></nav><div className="sidebar-spacer" /><div className="sidebar-help"><span className="help-icon"><CircleHelp size={18} /></span><div><strong>محتاج مساعدة؟</strong><span>سياسة التصحيح والمصروفات</span></div><ChevronLeft size={16} /></div><div className="sidebar-bottom"><button className="nav-link" onClick={() => toast("الإعدادات قيد التجهيز")}><Settings size={19} /><span>الإعدادات</span></button><button className="nav-link" onClick={() => toast("تم تسجيل الخروج التجريبي")}><LogOut size={19} /><span>تسجيل الخروج</span></button></div></aside>
-    <main className="main-panel"><header className="topbar"><div className="topbar-right"><button className="icon-button mobile-menu-button" aria-label="فتح القائمة" onClick={() => setMobileOpen(true)}><Menu size={21} /></button><label className="finance-branch-select"><MapPin size={16} /><select value={branch} disabled={liveMode} onChange={event => setBranch(event.target.value)}><option>مدينة نصر</option><option>المعادي</option><option>الشيخ زايد</option></select></label></div><span className="finance-desk-scope"><ShieldCheck size={14} /> نطاق الفروع المصرح بها · فصل الإنشاء عن الاعتماد</span></header><div className="workspace finance-desk-content"><PageHeader className="welcome-row" copyClassName="welcome-copy" actionsClassName="welcome-actions" eyebrow={<span className="eyebrow"><i className="eyebrow-dot" /> المالية والتحصيل · R06</span>} title={VIEW_TITLES[view]} description={VIEW_COPY[view]} actions={<span className="finance-desk-date"><CalendarDays size={14} /> سبتمبر 2026 · {branch}</span>} /><RoleScopeCard className="finance-desk-scope-card" /><div className="finance-desk-banner">{!liveMode && <><AlertCircle size={15} /><span><strong>DEMO · معاينة محلية:</strong> البيانات والعمليات هنا غير محفوظة على الـAPI.</span></>}<ShieldCheck size={15} /><span><strong>قاعدة مالية:</strong> الفاتورة المحصلة لا تعدّل مباشرة، والمصروف المرفوض لا يدخل الإجماليات المعتمدة. كل قرار يحتفظ بسبب وسجل.</span></div>{view === "overview" && <Overview collected={collected} outstanding={outstanding} expenses={approvedExpenses} net={net} pending={pendingCount} onCollections={() => selectView("collections")} onExpenses={() => selectView("expenses")} onReports={() => selectView("reports")} />}{view === "collections" && <Collections invoices={filteredInvoices} query={query} setQuery={setQuery} paymentInvoice={paymentInvoice} setPaymentInvoice={setPaymentInvoice} amount={paymentAmount} setAmount={setPaymentAmount} onSubmit={recordPayment} onCreateInvoice={() => setInvoiceDialogOpen(true)} onUploadEvidence={uploadPaymentEvidence} onDownloadEvidence={(paymentId, fileName) => void downloadEvidence(() => apiClient.downloadPaymentEvidence(paymentId), fileName)} paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} receivedOn={receivedOn} setReceivedOn={setReceivedOn} externalReference={externalReference} setExternalReference={setExternalReference} />}{view === "expenses" && <Expenses expenses={filteredExpenses} query={query} setQuery={setQuery} description={expenseDescription} setDescription={setExpenseDescription} amount={expenseAmount} setAmount={setExpenseAmount} branch={expenseBranch} setBranch={setExpenseBranch} onSubmit={createExpense} onReject={setRejecting} onApprove={approveExpense} onUploadEvidence={uploadExpenseEvidence} onDownloadEvidence={(expenseId, fileName) => void downloadEvidence(() => apiClient.downloadExpenseEvidence(expenseId), fileName)} liveMode={liveMode} />}{view === "reports" && <Reports invoices={scopedInvoices} expenses={scopedExpenses} collected={collected} approvedExpenses={approvedExpenses} net={net} report={report} onExport={exportReport} />}</div></main>{invoiceDialogOpen && <div className="finance-desk-modal-backdrop"><form className="finance-desk-modal" onSubmit={createInvoice}><button type="button" className="finance-modal-close" onClick={() => setInvoiceDialogOpen(false)}><X size={16} /></button><span className="finance-modal-icon"><FileText size={19} /></span><h2>إنشاء فاتورة</h2><p>الفاتورة الجديدة ستظهر مباشرة في سجل التحصيل وFamily Portal.</p><label>الطالب<select value={invoiceStudentId} onChange={event => setInvoiceStudentId(event.target.value)}>{students.map(student => <option key={student.id} value={student.id}>{student.fullName}</option>)}</select></label><label>وصف البند<input value={invoiceDescription} onChange={event => setInvoiceDescription(event.target.value)} placeholder="مثال: رسوم شهر أكتوبر" /></label><label>المبلغ (ج.م)<input value={invoiceAmount} onChange={event => setInvoiceAmount(event.target.value)} type="number" min="1" placeholder="مثال: 2500" /></label><label>تاريخ الاستحقاق<input value={invoiceDueDate} onChange={event => setInvoiceDueDate(event.target.value)} type="date" /></label><button className="finance-desk-primary" type="submit"><Plus size={15} /> إنشاء الفاتورة</button></form></div>}{rejecting && <div className="finance-desk-modal-backdrop"><form className="finance-desk-modal" onSubmit={rejectExpense}><button type="button" className="finance-modal-close" onClick={() => setRejecting(null)}><X size={16} /></button><span className="finance-modal-icon"><AlertCircle size={19} /></span><h2>رفض المصروف</h2><p>سبب الرفض إلزامي وسيظهر في سجل المصروف.</p><textarea value={rejectReason} onChange={event => setRejectReason(event.target.value)} placeholder="اكتب سببًا واضحًا للرفض..." rows={4} /><button className="finance-desk-primary" type="submit"><Check size={15} /> حفظ الرفض</button></form></div>}</RoleDashboardShell>;
+  const exportReport = async () => {
+    if (!liveMode) {
+      toast.info("تصدير التقرير متاح في وضع LIVE فقط");
+      return;
+    }
+    try {
+      const blob = await apiClient.downloadFinanceReport();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "mada-financial-report.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success("تم تنزيل التقرير المالي");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "تعذر تصدير التقرير"
+      );
+    }
+  };
+  const selectView = (next: View) => {
+    if (!canAccessFinanceView(activeAccess, next)) return;
+    setView(next);
+    setMobileOpen(false);
+    setQuery("");
+  };
+  const recordPayment = (event: FormEvent) => {
+    event.preventDefault();
+    const amount = Number(paymentAmount);
+    const invoice = invoices.find(item => item.id === paymentInvoice);
+    const remaining = invoice ? invoice.total - invoice.collected : 0;
+    const reference = externalReference.trim();
+    if (!invoice || !amount || amount <= 0) {
+      toast.error("أدخل مبلغ تحصيل صحيح");
+      return;
+    }
+    if (amount > remaining) {
+      toast.error("المبلغ أكبر من الرصيد المتبقي", {
+        description: `المتاح للتحصيل ${money(remaining)} ج.م فقط.`,
+      });
+      return;
+    }
+    if (!receivedOn) {
+      toast.error("اختر تاريخ استلام التحصيل");
+      return;
+    }
+    if (
+      (paymentMethod === "INSTAPAY" || paymentMethod === "VODAFONE_CASH") &&
+      !reference
+    ) {
+      toast.error("المرجع مطلوب لهذه الطريقة");
+      return;
+    }
+    const input = {
+      amountPiastres: amount * 100,
+      method: paymentMethod,
+      receivedOn,
+      ...(reference ? { externalReference: reference } : {}),
+    };
+    if (liveMode) {
+      void apiClient
+        .createFinancePayment(invoice.id, input)
+        .then(response => {
+          setInvoices(current =>
+            current.map(item =>
+              item.id === invoice.id
+                ? {
+                    ...item,
+                    collected: item.collected + amount,
+                    payments: [response.payment, ...item.payments],
+                  }
+                : item
+            )
+          );
+          toast.success("تم تسجيل التحصيل على الـAPI");
+          setPaymentAmount("");
+          setExternalReference("");
+        })
+        .catch(error =>
+          toast.error(
+            error instanceof Error ? error.message : "تعذر تسجيل التحصيل"
+          )
+        );
+      return;
+    }
+    setInvoices(current =>
+      current.map(item =>
+        item.id === paymentInvoice
+          ? { ...item, collected: item.collected + amount }
+          : item
+      )
+    );
+    toast.success("تم تسجيل التحصيل في وضع المعاينة", {
+      description: `${money(amount)} ج.م · ${PAYMENT_METHOD_LABELS[paymentMethod]}.`,
+    });
+    setPaymentAmount("");
+    setExternalReference("");
+  };
+  const createExpense = (event: FormEvent) => {
+    event.preventDefault();
+    const amount = Number(expenseAmount);
+    if (!expenseDescription.trim() || !amount || amount <= 0) {
+      toast.error("أدخل وصف المصروف والمبلغ");
+      return;
+    }
+    if (liveMode) {
+      void apiClient
+        .createFinanceExpense({
+          description: expenseDescription,
+          category: "OPERATIONS",
+          amountPiastres: amount * 100,
+        })
+        .then(expense => {
+          setExpenses(current => [mapFinanceExpense(expense), ...current]);
+          toast.success("تم رفع المصروف للمراجعة");
+          setExpenseDescription("");
+          setExpenseAmount("");
+        })
+        .catch(error =>
+          toast.error(
+            error instanceof Error ? error.message : "تعذر رفع المصروف"
+          )
+        );
+      return;
+    }
+    setExpenses(current => [
+      {
+        id: `EXP-${current.length + 110}`,
+        description: expenseDescription,
+        branch: expenseBranch,
+        category: "تشغيل وصيانة",
+        amount,
+        date: "اليوم",
+        status: "pending",
+        createdBy: "المحاسب",
+      },
+      ...current,
+    ]);
+    toast.success("تم رفع المصروف للمراجعة", {
+      description: "لن يدخل الإجماليات المعتمدة قبل قرار الاعتماد.",
+    });
+    setExpenseDescription("");
+    setExpenseAmount("");
+  };
+  const approveExpense = (expenseId: string) => {
+    if (liveMode) {
+      const reason = window.prompt("سبب اعتماد المصروف (مطلوب للتدقيق):");
+      if (!reason?.trim()) {
+        toast.error("يجب إدخال سبب اعتماد المصروف");
+        return;
+      }
+      void apiClient
+        .approveFinanceExpense(expenseId, reason.trim())
+        .then(expense => {
+          setExpenses(current =>
+            current.map(item =>
+              item.id === expenseId ? mapFinanceExpense(expense) : item
+            )
+          );
+          toast.success("تم اعتماد المصروف");
+        })
+        .catch(error =>
+          toast.error(
+            error instanceof Error ? error.message : "تعذر اعتماد المصروف"
+          )
+        );
+      return;
+    }
+    setExpenses(current =>
+      current.map(item =>
+        item.id === expenseId ? { ...item, status: "approved" } : item
+      )
+    );
+  };
+  const rejectExpense = (event: FormEvent) => {
+    event.preventDefault();
+    if (!rejecting || !rejectReason.trim()) {
+      toast.error("سبب الرفض إلزامي");
+      return;
+    }
+    if (liveMode) {
+      void apiClient
+        .rejectFinanceExpense(rejecting, rejectReason)
+        .then(expense => {
+          setExpenses(current =>
+            current.map(item =>
+              item.id === rejecting ? mapFinanceExpense(expense) : item
+            )
+          );
+          toast.success("تم رفض المصروف بسبب موثق");
+          setRejecting(null);
+          setRejectReason("");
+        })
+        .catch(error =>
+          toast.error(
+            error instanceof Error ? error.message : "تعذر رفض المصروف"
+          )
+        );
+      return;
+    }
+    setExpenses(current =>
+      current.map(item =>
+        item.id === rejecting
+          ? { ...item, status: "rejected", reason: rejectReason }
+          : item
+      )
+    );
+    toast.success("تم رفض المصروف بسبب موثق");
+    setRejecting(null);
+    setRejectReason("");
+  };
+  const createInvoice = (event: FormEvent) => {
+    event.preventDefault();
+    const amount = Number(invoiceAmount);
+    if (
+      !invoiceStudentId ||
+      !invoiceDescription.trim() ||
+      !amount ||
+      amount <= 0 ||
+      !invoiceDueDate
+    ) {
+      toast.error("أدخل الطالب والوصف والمبلغ وتاريخ الاستحقاق");
+      return;
+    }
+    if (!liveMode) {
+      toast.info("إنشاء الفواتير متاح في وضع LIVE فقط");
+      return;
+    }
+    void apiClient
+      .createFinanceInvoice({
+        studentId: invoiceStudentId,
+        dueDate: invoiceDueDate,
+        lines: [
+          {
+            description: invoiceDescription.trim(),
+            amountPiastres: amount * 100,
+          },
+        ],
+      })
+      .then(invoice => {
+        setInvoices(current => [mapFinanceInvoice(invoice), ...current]);
+        toast.success("تم إنشاء الفاتورة");
+        setInvoiceDialogOpen(false);
+        setInvoiceDescription("");
+        setInvoiceAmount("");
+      })
+      .catch(error =>
+        toast.error(
+          error instanceof Error ? error.message : "تعذر إنشاء الفاتورة"
+        )
+      );
+  };
+  const uploadPaymentEvidence = (paymentId: string, file: File) => {
+    if (!liveMode) return;
+    void apiClient
+      .uploadPaymentEvidence(paymentId, file)
+      .then(() => {
+        setInvoices(current =>
+          current.map(invoice => ({
+            ...invoice,
+            payments: invoice.payments.map(payment =>
+              payment.id === paymentId
+                ? {
+                    ...payment,
+                    evidenceStatus: "ATTACHED",
+                    evidenceFileName: file.name,
+                  }
+                : payment
+            ),
+          }))
+        );
+        toast.success("تم رفع إثبات الدفع");
+      })
+      .catch(error =>
+        toast.error(
+          error instanceof Error ? error.message : "تعذر رفع إثبات الدفع"
+        )
+      );
+  };
+  const uploadExpenseEvidence = (expenseId: string, file: File) => {
+    if (!liveMode) return;
+    void apiClient
+      .uploadExpenseEvidence(expenseId, file)
+      .then(() => {
+        setExpenses(current =>
+          current.map(expense =>
+            expense.id === expenseId
+              ? { ...expense, evidenceStatus: "ATTACHED" }
+              : expense
+          )
+        );
+        toast.success("تم رفع إثبات المصروف");
+      })
+      .catch(error =>
+        toast.error(
+          error instanceof Error ? error.message : "تعذر رفع إثبات المصروف"
+        )
+      );
+  };
+  const downloadEvidence = async (
+    loader: () => Promise<Blob>,
+    filename: string
+  ) => {
+    try {
+      const blob = await loader();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "تعذر تنزيل الإثبات"
+      );
+    }
+  };
+  return (
+    <RoleDashboardShell
+      demo={!liveMode}
+      className="app-shell finance-desk-shell"
+      roleCode={roleCode}
+      roleLabel={roleLabel}
+      scopeLevel="branch"
+      scopeLabel={
+        liveMode ? "المالية داخل النطاق المصرح" : "معاينة بيانات مالية"
+      }
+      tenantName={financeMe?.academy?.name ?? "أكاديمية مدى"}
+      branchName={branchContext}
+    >
+      {mobileOpen && (
+        <button
+          className="mobile-scrim"
+          aria-label="إغلاق القائمة"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+      <aside className={`sidebar ${mobileOpen ? "sidebar-open" : ""}`}>
+        <div className="sidebar-top">
+          <button
+            className="finance-desk-brand"
+            onClick={() => navigate("/finance")}
+          >
+            <strong>مدى</strong>
+            <small>المالية والتحصيل · {roleCode}</small>
+          </button>
+          <button
+            className="icon-button sidebar-close"
+            aria-label="إغلاق القائمة"
+            onClick={() => setMobileOpen(false)}
+          >
+            <X size={19} />
+          </button>
+        </div>
+        <div className="academy-switcher">
+          <span className="academy-avatar">
+            <Wallet size={20} />
+          </span>
+          <span className="academy-meta">
+            <strong>{financeMe?.academy?.name ?? "أكاديمية مدى"}</strong>
+            <small>
+              {financeMe?.user?.displayName ?? "مساحة مالية"} · {roleLabel}
+            </small>
+          </span>
+        </div>
+        <div className="nav-caption">المساحة المالية</div>
+        <nav className="primary-nav">
+          {canAccessFinanceView(activeAccess, "overview") && (
+            <NavButton
+              active={view === "overview"}
+              onClick={() => selectView("overview")}
+              icon={<LayoutDashboard size={19} />}
+              label="ملخص مالي"
+            />
+          )}
+          {canAccessFinanceView(activeAccess, "collections") && (
+            <NavButton
+              active={view === "collections"}
+              onClick={() => selectView("collections")}
+              icon={<CreditCard size={19} />}
+              label="الفواتير والتحصيل"
+              count={scopedInvoices.length}
+            />
+          )}
+          {canAccessFinanceView(activeAccess, "expenses") && (
+            <NavButton
+              active={view === "expenses"}
+              onClick={() => selectView("expenses")}
+              icon={<TrendingDown size={19} />}
+              label="المصاريف"
+              count={pendingCount}
+            />
+          )}
+          {canAccessFinanceView(activeAccess, "reports") && (
+            <NavButton
+              active={view === "reports"}
+              onClick={() => selectView("reports")}
+              icon={<BarChart3 size={19} />}
+              label="التقارير"
+            />
+          )}
+        </nav>
+        {!liveMode && (
+          <>
+            <div className="nav-caption nav-caption-spaced">روابط أخرى</div>
+            <nav className="primary-nav">
+              <button
+                className="nav-link"
+                onClick={() => navigate("/academy-owner")}
+              >
+                <ShieldCheck size={19} />
+                <span>مراجعة الإدارة</span>
+              </button>
+              <button
+                className="nav-link"
+                onClick={() => navigate("/approvals")}
+              >
+                <FileCheck2 size={19} />
+                <span>الموافقات</span>
+              </button>
+            </nav>
+          </>
+        )}
+        <div className="sidebar-spacer" />
+        <div className="sidebar-help">
+          <span className="help-icon">
+            <CircleHelp size={18} />
+          </span>
+          <div>
+            <strong>محتاج مساعدة؟</strong>
+            <span>سياسة التصحيح والمصروفات</span>
+          </div>
+          <ChevronLeft size={16} />
+        </div>
+        <div className="sidebar-bottom">
+          <button
+            className="nav-link"
+            onClick={() => toast("الإعدادات قيد التجهيز")}
+          >
+            <Settings size={19} />
+            <span>الإعدادات</span>
+          </button>
+          <button
+            className="nav-link"
+            onClick={() => toast("تم تسجيل الخروج التجريبي")}
+          >
+            <LogOut size={19} />
+            <span>تسجيل الخروج</span>
+          </button>
+        </div>
+      </aside>
+      <main className="main-panel">
+        <header className="topbar">
+          <div className="topbar-right">
+            <button
+              className="icon-button mobile-menu-button"
+              aria-label="فتح القائمة"
+              onClick={() => setMobileOpen(true)}
+            >
+              <Menu size={21} />
+            </button>
+            <label className="finance-branch-select">
+              <MapPin size={16} />
+              <select
+                value={branchContext}
+                disabled={liveMode}
+                onChange={event => setBranch(event.target.value)}
+              >
+                {liveMode && (
+                  <option value={branchContext}>{branchContext}</option>
+                )}
+                <option>مدينة نصر</option>
+                <option>المعادي</option>
+                <option>الشيخ زايد</option>
+              </select>
+            </label>
+          </div>
+          <span className="finance-desk-scope">
+            <ShieldCheck size={14} /> نطاق الفروع المصرح بها · فصل الإنشاء عن
+            الاعتماد
+          </span>
+        </header>
+        <div className="workspace finance-desk-content">
+          <PageHeader
+            className="welcome-row"
+            copyClassName="welcome-copy"
+            actionsClassName="welcome-actions"
+            eyebrow={
+              <span className="eyebrow">
+                <i className="eyebrow-dot" /> المالية والتحصيل · {roleCode}
+              </span>
+            }
+            title={VIEW_TITLES[view]}
+            description={VIEW_COPY[view]}
+            actions={
+              <span className="finance-desk-date">
+                <CalendarDays size={14} />
+                {new Intl.DateTimeFormat("ar-EG", {
+                  month: "long",
+                  year: "numeric",
+                }).format(new Date())}{" "}
+                · {branchContext}
+              </span>
+            }
+          />
+          <RoleScopeCard className="finance-desk-scope-card" />
+          <div className="finance-desk-banner" role="status" aria-live="polite">
+            {!liveMode && (
+              <>
+                <AlertCircle size={15} />
+                <span>
+                  <strong>DEMO · معاينة محلية:</strong> البيانات والعمليات هنا
+                  غير محفوظة على الـAPI.
+                </span>
+              </>
+            )}
+            {liveMode && workspaceState === "loading" && (
+              <span>جار تحميل بيانات المالية الحية ضمن صلاحيات الحساب…</span>
+            )}
+            {liveMode && workspaceState === "error" && (
+              <span>
+                تعذر تحميل البيانات المالية. لم يتم عرض بيانات معاينة.{" "}
+                {loadError}{" "}
+                <button
+                  type="button"
+                  onClick={() => setLoadAttempt(value => value + 1)}
+                >
+                  إعادة المحاولة
+                </button>
+              </span>
+            )}
+            {liveMode && workspaceState === "forbidden" && (
+              <span>
+                هذه المساحة متاحة فقط لدوري R05 السكرتير وR06 المحاسب.
+              </span>
+            )}
+            {(!liveMode || workspaceState === "ready") && (
+              <>
+                <ShieldCheck size={15} />
+                <span>
+                  <strong>قاعدة مالية:</strong> الفاتورة المحصلة لا تعدّل
+                  مباشرة، والمصروف المرفوض لا يدخل الإجماليات المعتمدة. كل قرار
+                  يحتفظ بسبب وسجل.
+                </span>
+              </>
+            )}
+          </div>
+          {liveMode && workspaceState !== "ready" && (
+            <section className="finance-desk-panel" role="status">
+              {workspaceState === "loading"
+                ? "جار تحميل بيانات الحساب…"
+                : workspaceState === "forbidden"
+                  ? "لا توجد صلاحية لعرض هذه المساحة."
+                  : "البيانات الحية غير متاحة حاليًا؛ أعد المحاولة لاحقًا."}
+            </section>
+          )}
+          {(!liveMode || workspaceState === "ready") && view === "overview" && (
+            <Overview
+              collected={collected}
+              outstanding={outstanding}
+              expenses={approvedExpenses}
+              net={net}
+              pending={pendingCount}
+              onCollections={() => selectView("collections")}
+              onExpenses={() => selectView("expenses")}
+              onReports={() => selectView("reports")}
+              scopeHint={liveMode ? "الفرع الحالي" : "كل الفروع · هذا الشهر"}
+            />
+          )}
+          {(!liveMode || workspaceState === "ready") &&
+            view === "collections" && (
+              <Collections
+                invoices={filteredInvoices}
+                query={query}
+                setQuery={setQuery}
+                paymentInvoice={paymentInvoice}
+                setPaymentInvoice={setPaymentInvoice}
+                amount={paymentAmount}
+                setAmount={setPaymentAmount}
+                onSubmit={recordPayment}
+                onCreateInvoice={() => setInvoiceDialogOpen(true)}
+                onUploadEvidence={uploadPaymentEvidence}
+                onDownloadEvidence={(paymentId, fileName) =>
+                  void downloadEvidence(
+                    () => apiClient.downloadPaymentEvidence(paymentId),
+                    fileName
+                  )
+                }
+                paymentMethod={paymentMethod}
+                setPaymentMethod={setPaymentMethod}
+                receivedOn={receivedOn}
+                setReceivedOn={setReceivedOn}
+                externalReference={externalReference}
+                setExternalReference={setExternalReference}
+                roleCode={roleCode}
+              />
+            )}
+          {(!liveMode || workspaceState === "ready") &&
+            canAccessFinanceView(activeAccess, "expenses") &&
+            view === "expenses" && (
+              <Expenses
+                expenses={filteredExpenses}
+                query={query}
+                setQuery={setQuery}
+                description={expenseDescription}
+                setDescription={setExpenseDescription}
+                amount={expenseAmount}
+                setAmount={setExpenseAmount}
+                branch={expenseBranch}
+                setBranch={setExpenseBranch}
+                onSubmit={createExpense}
+                onReject={setRejecting}
+                onApprove={approveExpense}
+                onUploadEvidence={uploadExpenseEvidence}
+                onDownloadEvidence={(expenseId, fileName) =>
+                  void downloadEvidence(
+                    () => apiClient.downloadExpenseEvidence(expenseId),
+                    fileName
+                  )
+                }
+                liveMode={liveMode}
+              />
+            )}
+          {(!liveMode || workspaceState === "ready") &&
+            canAccessFinanceView(activeAccess, "reports") &&
+            view === "reports" && (
+              <Reports
+                invoices={scopedInvoices}
+                expenses={scopedExpenses}
+                collected={collected}
+                approvedExpenses={approvedExpenses}
+                net={net}
+                report={report}
+                liveMode={liveMode}
+                onExport={exportReport}
+              />
+            )}
+        </div>
+      </main>
+      {invoiceDialogOpen && (!liveMode || workspaceState === "ready") && (
+        <div className="finance-desk-modal-backdrop">
+          <form className="finance-desk-modal" onSubmit={createInvoice}>
+            <button
+              type="button"
+              className="finance-modal-close"
+              onClick={() => setInvoiceDialogOpen(false)}
+            >
+              <X size={16} />
+            </button>
+            <span className="finance-modal-icon">
+              <FileText size={19} />
+            </span>
+            <h2>إنشاء فاتورة</h2>
+            <p>الفاتورة الجديدة ستظهر مباشرة في سجل التحصيل وFamily Portal.</p>
+            <label>
+              الطالب
+              <select
+                value={invoiceStudentId}
+                onChange={event => setInvoiceStudentId(event.target.value)}
+              >
+                {students.map(student => (
+                  <option key={student.id} value={student.id}>
+                    {student.fullName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              وصف البند
+              <input
+                value={invoiceDescription}
+                onChange={event => setInvoiceDescription(event.target.value)}
+                placeholder="مثال: رسوم شهر أكتوبر"
+              />
+            </label>
+            <label>
+              المبلغ (ج.م)
+              <input
+                value={invoiceAmount}
+                onChange={event => setInvoiceAmount(event.target.value)}
+                type="number"
+                min="1"
+                placeholder="مثال: 2500"
+              />
+            </label>
+            <label>
+              تاريخ الاستحقاق
+              <input
+                value={invoiceDueDate}
+                onChange={event => setInvoiceDueDate(event.target.value)}
+                type="date"
+              />
+            </label>
+            <button className="finance-desk-primary" type="submit">
+              <Plus size={15} /> إنشاء الفاتورة
+            </button>
+          </form>
+        </div>
+      )}
+      {rejecting && (!liveMode || workspaceState === "ready") && (
+        <div className="finance-desk-modal-backdrop">
+          <form className="finance-desk-modal" onSubmit={rejectExpense}>
+            <button
+              type="button"
+              className="finance-modal-close"
+              onClick={() => setRejecting(null)}
+            >
+              <X size={16} />
+            </button>
+            <span className="finance-modal-icon">
+              <AlertCircle size={19} />
+            </span>
+            <h2>رفض المصروف</h2>
+            <p>سبب الرفض إلزامي وسيظهر في سجل المصروف.</p>
+            <textarea
+              value={rejectReason}
+              onChange={event => setRejectReason(event.target.value)}
+              placeholder="اكتب سببًا واضحًا للرفض..."
+              rows={4}
+            />
+            <button className="finance-desk-primary" type="submit">
+              <Check size={15} /> حفظ الرفض
+            </button>
+          </form>
+        </div>
+      )}
+    </RoleDashboardShell>
+  );
 }
-function NavButton({ active, onClick, icon, label, count }: { active: boolean; onClick: () => void; icon: ReactNode; label: string; count?: number }) { return <button className={`nav-link ${active ? "active" : ""}`} onClick={onClick}>{icon}<span>{label}</span>{count !== undefined && <span className="nav-count">{count}</span>}</button>; }
-const VIEW_TITLES: Record<View, string> = { overview: "الملخص المالي", collections: "الفواتير والتحصيل", expenses: "المصاريف", reports: "التقارير المالية" };
-const VIEW_COPY: Record<View, string> = { overview: "تابع التحصيل والمستحقات والمصروفات المعتمدة قبل اتخاذ الخطوة التالية.", collections: "سجل الدفعات، راجع الأرصدة، وارفع طلب تصحيح بدل تعديل الفاتورة مباشرة.", expenses: "أنشئ مصروفًا، راجع حالته، وارفضه بسبب موثق قبل دخوله في الإجماليات.", reports: "قارن التحصيل بالمصروفات المعتمدة وصافي الحركة حسب الفروع." };
-function Overview({ collected, outstanding, expenses, net, pending, onCollections, onExpenses, onReports }: { collected: number; outstanding: number; expenses: number; net: number; pending: number; onCollections: () => void; onExpenses: () => void; onReports: () => void }) { return <><section className="finance-desk-kpis"><Kpi icon={<TrendingUp size={16} />} label="إجمالي التحصيل" value={`${money(collected)} ج.م`} hint="كل الفروع · هذا الشهر" tone="teal" /><Kpi icon={<Clock3 size={16} />} label="المستحقات" value={`${money(outstanding)} ج.م`} hint="فواتير لم تكتمل" tone="amber" /><Kpi icon={<TrendingDown size={16} />} label="مصروفات معتمدة" value={`${money(expenses)} ج.م`} hint="لا تشمل pending/rejected" tone="blue" /><Kpi icon={<Wallet size={16} />} label="صافي الحركة" value={`${money(net)} ج.م`} hint={`${pending} مصروفات تنتظر القرار`} tone="violet" /></section><div className="finance-desk-grid"><section className="finance-desk-panel"><PanelTitle icon={<FileCheck2 size={16} />} title="الخطوة التالية" /><div className="finance-next-list"><button onClick={onCollections}><span className="finance-next-icon amber"><CreditCard size={15} /></span><span><strong>راجع الفواتير غير المكتملة</strong><small>سجل التحصيل أو ارفع طلب التصحيح</small></span><ChevronLeft size={14} /></button><button onClick={onExpenses}><span className="finance-next-icon violet"><TrendingDown size={15} /></span><span><strong>راجع المصروفات المعلقة</strong><small>اعتماد أو رفض بسبب موثق</small></span><ChevronLeft size={14} /></button><button onClick={onReports}><span className="finance-next-icon teal"><BarChart3 size={15} /></span><span><strong>افتح تقرير الفروع</strong><small>تحصيل · مستحق · مصروف · صافي</small></span><ChevronLeft size={14} /></button></div></section><section className="finance-desk-panel"><PanelTitle icon={<ShieldCheck size={16} />} title="ضوابط الإقفال" /><div className="finance-control-list"><span><CheckCircle2 size={15} /> المحصل يدخل في سجل التحصيل فقط</span><span><CheckCircle2 size={15} /> المصروف pending لا يدخل صافي الحركة</span><span><CheckCircle2 size={15} /> التعديل بعد التحصيل يمر بطلب تصحيح</span><span><CheckCircle2 size={15} /> الرفض يحتاج سببًا إلزاميًا</span></div></section></div></>; }
-function Collections({ invoices, query, setQuery, paymentInvoice, setPaymentInvoice, amount, setAmount, onSubmit, onCreateInvoice, onUploadEvidence, onDownloadEvidence, paymentMethod, setPaymentMethod, receivedOn, setReceivedOn, externalReference, setExternalReference }: { invoices: Invoice[]; query: string; setQuery: (v: string) => void; paymentInvoice: string; setPaymentInvoice: (v: string) => void; amount: string; setAmount: (v: string) => void; onSubmit: (e: FormEvent) => void; onCreateInvoice: () => void; onUploadEvidence: (paymentId: string, file: File) => void; onDownloadEvidence: (paymentId: string, fileName: string) => void; paymentMethod: PaymentMethod; setPaymentMethod: (v: PaymentMethod) => void; receivedOn: string; setReceivedOn: (v: string) => void; externalReference: string; setExternalReference: (v: string) => void }) { return <div className="finance-desk-two-col"><section className="finance-desk-panel"><PanelTitle icon={<CreditCard size={16} />} title="الفواتير والأرصدة" action={<><button className="finance-desk-secondary" type="button" onClick={onCreateInvoice}><Plus size={14} /> إنشاء فاتورة</button><label className="finance-desk-search"><Search size={13} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="فاتورة أو طالب..." /></label></>} /><div className="finance-invoice-list">{invoices.length === 0 ? <p className="finance-desk-empty">لا توجد فواتير مطابقة للبحث أو الفرع المحدد.</p> : invoices.map(invoice => { const status = invoiceStatus(invoice); return <article className="finance-invoice-row" key={invoice.id}><div className="finance-invoice-person"><span>{invoice.student.slice(0, 1)}</span><div><strong>{invoice.student}</strong><small>{invoice.number} · {invoice.parent}</small></div></div><div className="finance-invoice-meta"><span>{invoice.course} · {invoice.branch}</span><small>استحقاق {invoice.due}</small></div><div className="finance-invoice-money"><strong>{money(invoice.total)} ج.م</strong><small>محصل {money(invoice.collected)} · متبقي {money(invoice.total - invoice.collected)}</small></div><span className={`finance-desk-status ${status}`}>{STATUS_LABEL[status]}</span>{invoice.payments.map(payment => <span key={payment.id}><small className="finance-reason">العملية مسجلة</small>{payment.evidenceStatus === "ATTACHED" ? <button type="button" className="finance-evidence-action" onClick={() => onDownloadEvidence(payment.id, payment.evidenceFileName ?? `payment-${payment.id}-evidence`)}>إثبات مرفق · تنزيل</button> : <label className="finance-evidence-action">رفع إثبات الدفع<input type="file" accept="application/pdf,image/jpeg,image/png" hidden onChange={event => { const file = event.target.files?.[0]; if (file) onUploadEvidence(payment.id, file); event.currentTarget.value = ""; }} /></label>}</span>)}</article>; })}</div></section><section className="finance-desk-panel finance-payment-card"><PanelTitle icon={<Wallet size={16} />} title="تسجيل تحصيل" action={<span className="finance-desk-context"><ShieldCheck size={13} /> R06</span>} /><form onSubmit={onSubmit} className="finance-desk-form"><label>الفاتورة<select value={paymentInvoice} onChange={event => setPaymentInvoice(event.target.value)}>{invoices.filter(item => item.collected < item.total).map(item => <option key={item.id} value={item.id}>{item.number} · {item.student}</option>)}</select></label><label>المبلغ (ج.م)<input value={amount} onChange={event => setAmount(event.target.value)} type="number" min="1" placeholder="مثال: 1200" /></label><label>طريقة الدفع<select value={paymentMethod} onChange={event => setPaymentMethod(event.target.value as PaymentMethod)}>{(Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[]).map(method => <option key={method} value={method}>{PAYMENT_METHOD_LABELS[method]}</option>)}</select></label><label>تاريخ الاستلام<input type="date" value={receivedOn} onChange={event => setReceivedOn(event.target.value)} /></label>{(paymentMethod === "INSTAPAY" || paymentMethod === "VODAFONE_CASH") && <label>المرجع الخارجي<input value={externalReference} onChange={event => setExternalReference(event.target.value)} placeholder="رقم العملية أو المرجع" required /></label>}<button className="finance-desk-primary" type="submit"><Check size={14} /> تسجيل التحصيل</button><p><AlertCircle size={13} /> سيتم حفظ الطريقة والتاريخ في سجل العملية.</p></form></section></div>; }
-function Expenses({ expenses, query, setQuery, description, setDescription, amount, setAmount, branch, setBranch, onSubmit, onReject, onApprove, onUploadEvidence, onDownloadEvidence, liveMode }: { expenses: Expense[]; query: string; setQuery: (v: string) => void; description: string; setDescription: (v: string) => void; amount: string; setAmount: (v: string) => void; branch: string; setBranch: (v: string) => void; onSubmit: (e: FormEvent) => void; onReject: (id: string) => void; onApprove: (id: string) => void; onUploadEvidence: (id: string, file: File) => void; onDownloadEvidence: (id: string, fileName: string) => void; liveMode: boolean }) { return <div className="finance-desk-two-col"><section className="finance-desk-panel"><PanelTitle icon={<TrendingDown size={16} />} title="سجل المصروفات" action={<label className="finance-desk-search"><Search size={13} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="ابحث في المصروفات..." /></label>} /><div className="finance-expense-list">{expenses.length === 0 ? <p className="finance-desk-empty">لا توجد مصروفات مطابقة للبحث أو الفرع المحدد.</p> : expenses.map(expense => <article className="finance-expense-row" key={expense.id}><span className={`finance-expense-icon ${expense.status}`}><FileText size={15} /></span><div><strong>{expense.description}</strong><small>{expense.id} · {expense.category} · {expense.branch} · {expense.date}</small></div><strong>{money(expense.amount)} ج.م</strong><span className={`finance-desk-status ${expense.status}`}>{EXPENSE_LABEL[expense.status]}</span>{expense.status === "pending" && <><button className="finance-reject-link" onClick={() => onApprove(expense.id)}>اعتماد</button><button className="finance-reject-link" onClick={() => onReject(expense.id)}>رفض بسبب</button></>}{expense.reason && <small className="finance-reason">{expense.reason}</small>}{expense.evidenceStatus === "ATTACHED" ? <button type="button" className="finance-evidence-action" onClick={() => onDownloadEvidence(expense.id, expense.evidenceStatus ?? `expense-${expense.id}-evidence`)}>إثبات مرفق · تنزيل</button> : <label className="finance-evidence-action">رفع الإثبات<input type="file" accept="application/pdf,image/jpeg,image/png" hidden onChange={event => { const file = event.target.files?.[0]; if (file) onUploadEvidence(expense.id, file); event.currentTarget.value = ""; }} /></label>}</article>)}</div></section><section className="finance-desk-panel"><PanelTitle icon={<Plus size={16} />} title="إضافة مصروف" action={<span className="finance-desk-context">يبدأ pending</span>} /><form onSubmit={onSubmit} className="finance-desk-form"><label>وصف المصروف<input value={description} onChange={event => setDescription(event.target.value)} placeholder="مثال: صيانة معمل" /></label><label>الفرع<select value={branch} disabled={liveMode} onChange={event => setBranch(event.target.value)}><option>مدينة نصر</option><option>المعادي</option><option>الشيخ زايد</option></select></label><label>التصنيف<select disabled={liveMode}><option>تشغيل وصيانة</option><option>مواد ومستلزمات</option><option>أجور مدربين</option><option>فعاليات</option></select></label><label>المبلغ (ج.م)<input value={amount} onChange={event => setAmount(event.target.value)} type="number" min="1" placeholder="مثال: 1500" /></label><button className="finance-desk-primary" type="submit"><Plus size={14} /> رفع للمراجعة</button><p><ShieldCheck size={13} /> المصروف لا يدخل التقرير قبل الاعتماد.</p></form></section></div>; }
-function Reports({ invoices, expenses, collected, approvedExpenses, net, report, onExport }: { invoices: Invoice[]; expenses: Expense[]; collected: number; approvedExpenses: number; net: number; report: FinanceReport | null; onExport: () => void }) {
-  const branches = report?.branches ?? ["مدينة نصر", "المعادي", "الشيخ زايد"].map(branch => ({ branchId: branch, branchName: branch, invoiceCount: invoices.filter(item => item.branch === branch).length, collectedPiastres: invoices.filter(item => item.branch === branch).reduce((sum, item) => sum + item.collected * 100, 0), approvedExpensesPiastres: expenses.filter(item => item.branch === branch && item.status === "approved").reduce((sum, item) => sum + item.amount * 100, 0), netPiastres: 0 }));
-  return <section className="finance-desk-panel"><PanelTitle icon={<BarChart3 size={16} />} title="تقرير الحركة المالية" action={<button className="finance-desk-secondary" onClick={onExport}><ArrowDownToLine size={14} /> تصدير التقرير</button>} /><div className="finance-report-summary"><span><small>التحصيل</small><strong>{money(report ? Math.round(report.totalCollectedPiastres / 100) : collected)} ج.م</strong></span><span><small>المصروف المعتمد</small><strong>{money(report ? Math.round(report.approvedExpensesPiastres / 100) : approvedExpenses)} ج.م</strong></span><span><small>صافي الحركة</small><strong>{money(report ? Math.round(report.netPiastres / 100) : net)} ج.م</strong></span></div><div className="finance-branch-report">{branches.map(branch => <article key={branch.branchId}><div><strong>{branch.branchName}</strong><small>{branch.invoiceCount} فواتير</small></div><span><small>تحصيل</small><b>{money(Math.round(branch.collectedPiastres / 100))}</b></span><span><small>مصروف معتمد</small><b>{money(Math.round(branch.approvedExpensesPiastres / 100))}</b></span><span><small>صافي</small><b>{money(Math.round(branch.netPiastres / 100))}</b></span></article>)}</div><div className="finance-report-note"><ShieldCheck size={14} /> التقرير الحي يستبعد المصروفات pending وrejected من الصافي المعتمد.</div></section>;
+function NavButton({
+  active,
+  onClick,
+  icon,
+  label,
+  count,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: ReactNode;
+  label: string;
+  count?: number;
+}) {
+  return (
+    <button className={`nav-link ${active ? "active" : ""}`} onClick={onClick}>
+      {icon}
+      <span>{label}</span>
+      {count !== undefined && <span className="nav-count">{count}</span>}
+    </button>
+  );
 }
-function Kpi({ icon, label, value, hint, tone }: { icon: ReactNode; label: string; value: ReactNode; hint: string; tone: string }) { return <article className="finance-desk-kpi"><span className={`finance-desk-kpi-icon ${tone}`}>{icon}</span><small>{label}</small><strong>{value}</strong><span>{hint}</span></article>; }
-function PanelTitle({ icon, title, action }: { icon: ReactNode; title: string; action?: ReactNode }) { return <div className="finance-desk-panel-title"><div><span>{icon}</span><h2>{title}</h2></div>{action}</div>; }
+const VIEW_TITLES: Record<View, string> = {
+  overview: "الملخص المالي",
+  collections: "الفواتير والتحصيل",
+  expenses: "المصاريف",
+  reports: "التقارير المالية",
+};
+const VIEW_COPY: Record<View, string> = {
+  overview:
+    "تابع التحصيل والمستحقات والمصروفات المعتمدة قبل اتخاذ الخطوة التالية.",
+  collections:
+    "سجل الدفعات، راجع الأرصدة، وارفع طلب تصحيح بدل تعديل الفاتورة مباشرة.",
+  expenses:
+    "أنشئ مصروفًا، راجع حالته، وارفضه بسبب موثق قبل دخوله في الإجماليات.",
+  reports: "قارن التحصيل بالمصروفات المعتمدة وصافي الحركة حسب الفروع.",
+};
+function Overview({
+  collected,
+  outstanding,
+  expenses,
+  net,
+  pending,
+  onCollections,
+  onExpenses,
+  onReports,
+  scopeHint,
+}: {
+  collected: number;
+  outstanding: number;
+  expenses: number;
+  net: number;
+  pending: number;
+  onCollections: () => void;
+  onExpenses: () => void;
+  onReports: () => void;
+  scopeHint: string;
+}) {
+  return (
+    <>
+      <section className="finance-desk-kpis">
+        <Kpi
+          icon={<TrendingUp size={16} />}
+          label="إجمالي التحصيل"
+          value={`${money(collected)} ج.م`}
+          hint={scopeHint}
+          tone="teal"
+        />
+        <Kpi
+          icon={<Clock3 size={16} />}
+          label="المستحقات"
+          value={`${money(outstanding)} ج.م`}
+          hint="فواتير لم تكتمل"
+          tone="amber"
+        />
+        <Kpi
+          icon={<TrendingDown size={16} />}
+          label="مصروفات معتمدة"
+          value={`${money(expenses)} ج.م`}
+          hint="لا تشمل pending/rejected"
+          tone="blue"
+        />
+        <Kpi
+          icon={<Wallet size={16} />}
+          label="صافي الحركة"
+          value={`${money(net)} ج.م`}
+          hint={`${pending} مصروفات تنتظر القرار`}
+          tone="violet"
+        />
+      </section>
+      <div className="finance-desk-grid">
+        <section className="finance-desk-panel">
+          <PanelTitle icon={<FileCheck2 size={16} />} title="الخطوة التالية" />
+          <div className="finance-next-list">
+            <button onClick={onCollections}>
+              <span className="finance-next-icon amber">
+                <CreditCard size={15} />
+              </span>
+              <span>
+                <strong>راجع الفواتير غير المكتملة</strong>
+                <small>سجل التحصيل أو ارفع طلب التصحيح</small>
+              </span>
+              <ChevronLeft size={14} />
+            </button>
+            <button onClick={onExpenses}>
+              <span className="finance-next-icon violet">
+                <TrendingDown size={15} />
+              </span>
+              <span>
+                <strong>راجع المصروفات المعلقة</strong>
+                <small>اعتماد أو رفض بسبب موثق</small>
+              </span>
+              <ChevronLeft size={14} />
+            </button>
+            <button onClick={onReports}>
+              <span className="finance-next-icon teal">
+                <BarChart3 size={15} />
+              </span>
+              <span>
+                <strong>افتح تقرير الفروع</strong>
+                <small>تحصيل · مستحق · مصروف · صافي</small>
+              </span>
+              <ChevronLeft size={14} />
+            </button>
+          </div>
+        </section>
+        <section className="finance-desk-panel">
+          <PanelTitle icon={<ShieldCheck size={16} />} title="ضوابط الإقفال" />
+          <div className="finance-control-list">
+            <span>
+              <CheckCircle2 size={15} /> المحصل يدخل في سجل التحصيل فقط
+            </span>
+            <span>
+              <CheckCircle2 size={15} /> المصروف pending لا يدخل صافي الحركة
+            </span>
+            <span>
+              <CheckCircle2 size={15} /> التعديل بعد التحصيل يمر بطلب تصحيح
+            </span>
+            <span>
+              <CheckCircle2 size={15} /> الرفض يحتاج سببًا إلزاميًا
+            </span>
+          </div>
+        </section>
+      </div>
+    </>
+  );
+}
+function Collections({
+  invoices,
+  query,
+  setQuery,
+  paymentInvoice,
+  setPaymentInvoice,
+  amount,
+  setAmount,
+  onSubmit,
+  onCreateInvoice,
+  onUploadEvidence,
+  onDownloadEvidence,
+  paymentMethod,
+  setPaymentMethod,
+  receivedOn,
+  setReceivedOn,
+  externalReference,
+  setExternalReference,
+  roleCode,
+}: {
+  invoices: Invoice[];
+  query: string;
+  setQuery: (v: string) => void;
+  paymentInvoice: string;
+  setPaymentInvoice: (v: string) => void;
+  amount: string;
+  setAmount: (v: string) => void;
+  onSubmit: (e: FormEvent) => void;
+  onCreateInvoice: () => void;
+  onUploadEvidence: (paymentId: string, file: File) => void;
+  onDownloadEvidence: (paymentId: string, fileName: string) => void;
+  paymentMethod: PaymentMethod;
+  setPaymentMethod: (v: PaymentMethod) => void;
+  receivedOn: string;
+  setReceivedOn: (v: string) => void;
+  externalReference: string;
+  setExternalReference: (v: string) => void;
+  roleCode: string;
+}) {
+  return (
+    <div className="finance-desk-two-col">
+      <section className="finance-desk-panel">
+        <PanelTitle
+          icon={<CreditCard size={16} />}
+          title="الفواتير والأرصدة"
+          action={
+            <>
+              <button
+                className="finance-desk-secondary"
+                type="button"
+                onClick={onCreateInvoice}
+              >
+                <Plus size={14} /> إنشاء فاتورة
+              </button>
+              <label className="finance-desk-search">
+                <Search size={13} />
+                <input
+                  value={query}
+                  onChange={event => setQuery(event.target.value)}
+                  placeholder="فاتورة أو طالب..."
+                />
+              </label>
+            </>
+          }
+        />
+        <div className="finance-invoice-list">
+          {invoices.length === 0 ? (
+            <p className="finance-desk-empty">
+              لا توجد فواتير مطابقة للبحث أو الفرع المحدد.
+            </p>
+          ) : (
+            invoices.map(invoice => {
+              const status = invoiceStatus(invoice);
+              return (
+                <article className="finance-invoice-row" key={invoice.id}>
+                  <div className="finance-invoice-person">
+                    <span>{invoice.student.slice(0, 1)}</span>
+                    <div>
+                      <strong>{invoice.student}</strong>
+                      <small>
+                        {invoice.number} · {invoice.parent}
+                      </small>
+                    </div>
+                  </div>
+                  <div className="finance-invoice-meta">
+                    <span>
+                      {invoice.course} · {invoice.branch}
+                    </span>
+                    <small>استحقاق {invoice.due}</small>
+                  </div>
+                  <div className="finance-invoice-money">
+                    <strong>{money(invoice.total)} ج.م</strong>
+                    <small>
+                      محصل {money(invoice.collected)} · متبقي{" "}
+                      {money(invoice.total - invoice.collected)}
+                    </small>
+                  </div>
+                  <span className={`finance-desk-status ${status}`}>
+                    {STATUS_LABEL[status]}
+                  </span>
+                  {invoice.payments.map(payment => (
+                    <span key={payment.id}>
+                      <small className="finance-reason">العملية مسجلة</small>
+                      {payment.evidenceStatus === "ATTACHED" ? (
+                        <button
+                          type="button"
+                          className="finance-evidence-action"
+                          onClick={() =>
+                            onDownloadEvidence(
+                              payment.id,
+                              payment.evidenceFileName ??
+                                `payment-${payment.id}-evidence`
+                            )
+                          }
+                        >
+                          إثبات مرفق · تنزيل
+                        </button>
+                      ) : (
+                        <label className="finance-evidence-action">
+                          رفع إثبات الدفع
+                          <input
+                            type="file"
+                            accept="application/pdf,image/jpeg,image/png"
+                            hidden
+                            onChange={event => {
+                              const file = event.target.files?.[0];
+                              if (file) onUploadEvidence(payment.id, file);
+                              event.currentTarget.value = "";
+                            }}
+                          />
+                        </label>
+                      )}
+                    </span>
+                  ))}
+                </article>
+              );
+            })
+          )}
+        </div>
+      </section>
+      <section className="finance-desk-panel finance-payment-card">
+        <PanelTitle
+          icon={<Wallet size={16} />}
+          title="تسجيل تحصيل"
+          action={
+            <span className="finance-desk-context">
+              <ShieldCheck size={13} /> {roleCode}
+            </span>
+          }
+        />
+        <form onSubmit={onSubmit} className="finance-desk-form">
+          <label>
+            الفاتورة
+            <select
+              value={paymentInvoice}
+              onChange={event => setPaymentInvoice(event.target.value)}
+            >
+              {invoices
+                .filter(item => item.collected < item.total)
+                .map(item => (
+                  <option key={item.id} value={item.id}>
+                    {item.number} · {item.student}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label>
+            المبلغ (ج.م)
+            <input
+              value={amount}
+              onChange={event => setAmount(event.target.value)}
+              type="number"
+              min="1"
+              placeholder="مثال: 1200"
+            />
+          </label>
+          <label>
+            طريقة الدفع
+            <select
+              value={paymentMethod}
+              onChange={event =>
+                setPaymentMethod(event.target.value as PaymentMethod)
+              }
+            >
+              {(Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[]).map(
+                method => (
+                  <option key={method} value={method}>
+                    {PAYMENT_METHOD_LABELS[method]}
+                  </option>
+                )
+              )}
+            </select>
+          </label>
+          <label>
+            تاريخ الاستلام
+            <input
+              type="date"
+              value={receivedOn}
+              onChange={event => setReceivedOn(event.target.value)}
+            />
+          </label>
+          {(paymentMethod === "INSTAPAY" ||
+            paymentMethod === "VODAFONE_CASH") && (
+            <label>
+              المرجع الخارجي
+              <input
+                value={externalReference}
+                onChange={event => setExternalReference(event.target.value)}
+                placeholder="رقم العملية أو المرجع"
+                required
+              />
+            </label>
+          )}
+          <button className="finance-desk-primary" type="submit">
+            <Check size={14} /> تسجيل التحصيل
+          </button>
+          <p>
+            <AlertCircle size={13} /> سيتم حفظ الطريقة والتاريخ في سجل العملية.
+          </p>
+        </form>
+      </section>
+    </div>
+  );
+}
+function Expenses({
+  expenses,
+  query,
+  setQuery,
+  description,
+  setDescription,
+  amount,
+  setAmount,
+  branch,
+  setBranch,
+  onSubmit,
+  onReject,
+  onApprove,
+  onUploadEvidence,
+  onDownloadEvidence,
+  liveMode,
+}: {
+  expenses: Expense[];
+  query: string;
+  setQuery: (v: string) => void;
+  description: string;
+  setDescription: (v: string) => void;
+  amount: string;
+  setAmount: (v: string) => void;
+  branch: string;
+  setBranch: (v: string) => void;
+  onSubmit: (e: FormEvent) => void;
+  onReject: (id: string) => void;
+  onApprove: (id: string) => void;
+  onUploadEvidence: (id: string, file: File) => void;
+  onDownloadEvidence: (id: string, fileName: string) => void;
+  liveMode: boolean;
+}) {
+  return (
+    <div className="finance-desk-two-col">
+      <section className="finance-desk-panel">
+        <PanelTitle
+          icon={<TrendingDown size={16} />}
+          title="سجل المصروفات"
+          action={
+            <label className="finance-desk-search">
+              <Search size={13} />
+              <input
+                value={query}
+                onChange={event => setQuery(event.target.value)}
+                placeholder="ابحث في المصروفات..."
+              />
+            </label>
+          }
+        />
+        <div className="finance-expense-list">
+          {expenses.length === 0 ? (
+            <p className="finance-desk-empty">
+              لا توجد مصروفات مطابقة للبحث أو الفرع المحدد.
+            </p>
+          ) : (
+            expenses.map(expense => (
+              <article className="finance-expense-row" key={expense.id}>
+                <span className={`finance-expense-icon ${expense.status}`}>
+                  <FileText size={15} />
+                </span>
+                <div>
+                  <strong>{expense.description}</strong>
+                  <small>
+                    {expense.id} · {expense.category} · {expense.branch} ·{" "}
+                    {expense.date}
+                  </small>
+                </div>
+                <strong>{money(expense.amount)} ج.م</strong>
+                <span className={`finance-desk-status ${expense.status}`}>
+                  {EXPENSE_LABEL[expense.status]}
+                </span>
+                {expense.status === "pending" && (
+                  <>
+                    <button
+                      className="finance-reject-link"
+                      onClick={() => onApprove(expense.id)}
+                    >
+                      اعتماد
+                    </button>
+                    <button
+                      className="finance-reject-link"
+                      onClick={() => onReject(expense.id)}
+                    >
+                      رفض بسبب
+                    </button>
+                  </>
+                )}
+                {expense.reason && (
+                  <small className="finance-reason">{expense.reason}</small>
+                )}
+                {expense.evidenceStatus === "ATTACHED" ? (
+                  <button
+                    type="button"
+                    className="finance-evidence-action"
+                    onClick={() =>
+                      onDownloadEvidence(
+                        expense.id,
+                        expense.evidenceStatus ??
+                          `expense-${expense.id}-evidence`
+                      )
+                    }
+                  >
+                    إثبات مرفق · تنزيل
+                  </button>
+                ) : (
+                  <label className="finance-evidence-action">
+                    رفع الإثبات
+                    <input
+                      type="file"
+                      accept="application/pdf,image/jpeg,image/png"
+                      hidden
+                      onChange={event => {
+                        const file = event.target.files?.[0];
+                        if (file) onUploadEvidence(expense.id, file);
+                        event.currentTarget.value = "";
+                      }}
+                    />
+                  </label>
+                )}
+              </article>
+            ))
+          )}
+        </div>
+      </section>
+      <section className="finance-desk-panel">
+        <PanelTitle
+          icon={<Plus size={16} />}
+          title="إضافة مصروف"
+          action={<span className="finance-desk-context">يبدأ pending</span>}
+        />
+        <form onSubmit={onSubmit} className="finance-desk-form">
+          <label>
+            وصف المصروف
+            <input
+              value={description}
+              onChange={event => setDescription(event.target.value)}
+              placeholder="مثال: صيانة معمل"
+            />
+          </label>
+          <label>
+            الفرع
+            <select
+              value={branch}
+              disabled={liveMode}
+              onChange={event => setBranch(event.target.value)}
+            >
+              <option>مدينة نصر</option>
+              <option>المعادي</option>
+              <option>الشيخ زايد</option>
+            </select>
+          </label>
+          <label>
+            التصنيف
+            <select disabled={liveMode}>
+              <option>تشغيل وصيانة</option>
+              <option>مواد ومستلزمات</option>
+              <option>أجور مدربين</option>
+              <option>فعاليات</option>
+            </select>
+          </label>
+          <label>
+            المبلغ (ج.م)
+            <input
+              value={amount}
+              onChange={event => setAmount(event.target.value)}
+              type="number"
+              min="1"
+              placeholder="مثال: 1500"
+            />
+          </label>
+          <button className="finance-desk-primary" type="submit">
+            <Plus size={14} /> رفع للمراجعة
+          </button>
+          <p>
+            <ShieldCheck size={13} /> المصروف لا يدخل التقرير قبل الاعتماد.
+          </p>
+        </form>
+      </section>
+    </div>
+  );
+}
+function Reports({
+  invoices,
+  expenses,
+  collected,
+  approvedExpenses,
+  net,
+  report,
+  liveMode,
+  onExport,
+}: {
+  invoices: Invoice[];
+  expenses: Expense[];
+  collected: number;
+  approvedExpenses: number;
+  net: number;
+  report: FinanceReport | null;
+  liveMode: boolean;
+  onExport: () => void;
+}) {
+  if (liveMode && !report) {
+    return (
+      <section className="finance-desk-panel" role="status">
+        التقرير المالي الحي غير متاح؛ لا توجد بيانات معاينة بديلة.
+      </section>
+    );
+  }
+  const branches =
+    report?.branches ??
+    ["مدينة نصر", "المعادي", "الشيخ زايد"].map(branch => ({
+      branchId: branch,
+      branchName: branch,
+      invoiceCount: invoices.filter(item => item.branch === branch).length,
+      collectedPiastres: invoices
+        .filter(item => item.branch === branch)
+        .reduce((sum, item) => sum + item.collected * 100, 0),
+      approvedExpensesPiastres: expenses
+        .filter(item => item.branch === branch && item.status === "approved")
+        .reduce((sum, item) => sum + item.amount * 100, 0),
+      netPiastres: 0,
+    }));
+  return (
+    <section className="finance-desk-panel">
+      <PanelTitle
+        icon={<BarChart3 size={16} />}
+        title="تقرير الحركة المالية"
+        action={
+          <button className="finance-desk-secondary" onClick={onExport}>
+            <ArrowDownToLine size={14} /> تصدير التقرير
+          </button>
+        }
+      />
+      <div className="finance-report-summary">
+        <span>
+          <small>التحصيل</small>
+          <strong>
+            {money(report ? report.totalCollectedPiastres / 100 : collected)}{" "}
+            ج.م
+          </strong>
+        </span>
+        <span>
+          <small>المصروف المعتمد</small>
+          <strong>
+            {money(
+              report ? report.approvedExpensesPiastres / 100 : approvedExpenses
+            )}{" "}
+            ج.م
+          </strong>
+        </span>
+        <span>
+          <small>صافي الحركة</small>
+          <strong>{money(report ? report.netPiastres / 100 : net)} ج.م</strong>
+        </span>
+      </div>
+      <div className="finance-branch-report">
+        {branches.map(branch => (
+          <article key={branch.branchId}>
+            <div>
+              <strong>{branch.branchName}</strong>
+              <small>{branch.invoiceCount} فواتير</small>
+            </div>
+            <span>
+              <small>تحصيل</small>
+              <b>{money(branch.collectedPiastres / 100)}</b>
+            </span>
+            <span>
+              <small>مصروف معتمد</small>
+              <b>{money(branch.approvedExpensesPiastres / 100)}</b>
+            </span>
+            <span>
+              <small>صافي</small>
+              <b>{money(branch.netPiastres / 100)}</b>
+            </span>
+          </article>
+        ))}
+      </div>
+      <div className="finance-report-note">
+        <ShieldCheck size={14} /> التقرير الحي يستبعد المصروفات pending
+        وrejected من الصافي المعتمد.
+      </div>
+    </section>
+  );
+}
+function Kpi({
+  icon,
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: ReactNode;
+  hint: string;
+  tone: string;
+}) {
+  return (
+    <article className="finance-desk-kpi">
+      <span className={`finance-desk-kpi-icon ${tone}`}>{icon}</span>
+      <small>{label}</small>
+      <strong>{value}</strong>
+      <span>{hint}</span>
+    </article>
+  );
+}
+function PanelTitle({
+  icon,
+  title,
+  action,
+}: {
+  icon: ReactNode;
+  title: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="finance-desk-panel-title">
+      <div>
+        <span>{icon}</span>
+        <h2>{title}</h2>
+      </div>
+      {action}
+    </div>
+  );
+}

@@ -29,11 +29,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import { useAuth } from "@/contexts/AuthContext";
 import EnrollmentHandoff from "@/components/EnrollmentHandoff";
 import FamilyProfileCard from "@/components/FamilyProfileCard";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
+import SecretaryDeskLive from "./SecretaryDeskLive";
 
 type DeskView = "overview" | "followups" | "registration" | "operations";
 type LeadStatus = "new" | "contacted" | "trial" | "interested" | "cold";
@@ -149,7 +151,7 @@ const DISCOUNTS = [
   { code: "CAMPAIGN10", label: "خصم حملة معتمد", percent: 10 },
 ];
 
-export default function SecretaryDesk() {
+function SecretaryDeskPreview() {
   const [, navigate] = useLocation();
   const [view, setView] = useState<DeskView>("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -209,8 +211,13 @@ export default function SecretaryDesk() {
       });
       return;
     }
-    const selectedOffering = offerings.find(item => item.id === registrationGroup);
-    if (!selectedOffering || selectedOffering.seats >= selectedOffering.capacity) {
+    const selectedOffering = offerings.find(
+      item => item.id === registrationGroup
+    );
+    if (
+      !selectedOffering ||
+      selectedOffering.seats >= selectedOffering.capacity
+    ) {
       toast.error("المجموعة ممتلئة أو غير متاحة", {
         description: "اختر مجموعة بها مقعد متاح قبل إنشاء التسجيل.",
       });
@@ -221,7 +228,9 @@ export default function SecretaryDesk() {
     });
     setOfferings(current =>
       current.map(item =>
-        item.id === registrationGroup ? { ...item, seats: item.seats + 1 } : item
+        item.id === registrationGroup
+          ? { ...item, seats: item.seats + 1 }
+          : item
       )
     );
     setRegistrationName("");
@@ -975,4 +984,16 @@ function PanelTitle({
       {action}
     </div>
   );
+}
+
+export default function SecretaryDesk() {
+  const { me, loading } = useAuth();
+  if (loading) {
+    return (
+      <main className="secretary-live-loading" role="status" dir="rtl">
+        جارٍ التحقق من جلسة السكرتارية…
+      </main>
+    );
+  }
+  return me ? <SecretaryDeskLive /> : <SecretaryDeskPreview />;
 }

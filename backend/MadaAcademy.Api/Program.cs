@@ -41,12 +41,16 @@ builder.Services.AddCors(options => options.AddPolicy("frontend", policy =>
 
 var app = builder.Build();
 
-if (IsEnabled("MADA_APPLY_MIGRATIONS") || IsEnabled("MADA_SEED_DEMO_DATA"))
+var seedDemoData = IsEnabled("MADA_SEED_DEMO_DATA");
+if (seedDemoData && !app.Environment.IsDevelopment())
+    throw new InvalidOperationException("MADA_SEED_DEMO_DATA is only allowed in the Development environment.");
+
+if (IsEnabled("MADA_APPLY_MIGRATIONS") || seedDemoData)
 {
     await using var scope = app.Services.CreateAsyncScope();
     var database = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
     await database.Database.MigrateAsync();
-    if (IsEnabled("MADA_SEED_DEMO_DATA"))
+    if (seedDemoData)
         await DemoDataSeeder.SeedAsync(database);
 }
 

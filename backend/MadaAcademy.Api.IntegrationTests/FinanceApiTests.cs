@@ -180,6 +180,9 @@ public sealed class FinanceApiTests
             var response = await client.PostAsync($"/api/v1/finance/payments/{paymentId}/evidence", upload);
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         }
+        var invoiceListAfterUpload = await client.GetStringAsync("/api/v1/finance/invoices");
+        Assert.Contains("\"evidenceStatus\":\"ATTACHED\"", invoiceListAfterUpload, StringComparison.Ordinal);
+        Assert.Contains("receipt.png", invoiceListAfterUpload, StringComparison.Ordinal);
         Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsync($"/api/v1/finance/payments/{paymentId}/evidence", new MultipartFormDataContent())).StatusCode);
 
         using var otherClient = factory.CreateClient();
@@ -223,27 +226,63 @@ public sealed class FinanceApiTests
         using var factory = new TestApiFactory(useInMemory: true);
         var secretary = await TestData.CreateAccountAsync(factory, "R05_SECRETARY");
         var accountant = await TestData.CreateAccountAsync(factory, "R06_ACCOUNTANT", secretary.TenantId, secretary.BranchId);
+        var otherBranchId = Guid.NewGuid();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            db.Branches.Add(new Branch { Id = otherBranchId, TenantId = secretary.TenantId, Name = "Other Finance Branch", Code = "OTHER-FIN" });
+            await db.SaveChangesAsync();
+        }
         var studentId = await TestData.SeedStudentAsync(factory, secretary.TenantId, secretary.BranchId, "Finance Role Student");
+        var otherStudentId = await TestData.SeedStudentAsync(factory, secretary.TenantId, otherBranchId, "Hidden Finance Student");
         var invoiceId = await SeedInvoiceAsync(factory, secretary.TenantId, secretary.BranchId, "Finance Role Student", 12_000, studentId);
+        var hiddenInvoiceId = await SeedInvoiceAsync(factory, secretary.TenantId, otherBranchId, "Hidden Finance Student", 8_000, otherStudentId);
 
         using var secretaryClient = factory.CreateClient();
         TestData.Authenticate(secretaryClient, await TestData.LoginAsync(secretaryClient, secretary));
         var secretaryInvoices = await secretaryClient.GetAsync("/api/v1/finance/invoices");
         Assert.Equal(HttpStatusCode.OK, secretaryInvoices.StatusCode);
+        var secretaryInvoiceBody = await secretaryInvoices.Content.ReadAsStringAsync();
+        Assert.Contains(invoiceId.ToString(), secretaryInvoiceBody, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(hiddenInvoiceId.ToString(), secretaryInvoiceBody, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(HttpStatusCode.NotFound, (await secretaryClient.GetAsync($"/api/v1/finance/invoices/{hiddenInvoiceId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await secretaryClient.PostAsJsonAsync($"/api/v1/finance/invoices/{hiddenInvoiceId}/payments", new { amountPiastres = 1_000, method = "CASH" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await secretaryClient.GetAsync("/api/v1/finance/expenses")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await secretaryClient.PostAsJsonAsync("/api/v1/finance/expenses", new { description = "Denied expense", category = "OTHER", amountPiastres = 1_000 })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await secretaryClient.GetAsync("/api/v1/finance/reports/summary")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await secretaryClient.GetAsync("/api/v1/finance/reports/summary.csv")).StatusCode);
         var secretaryPayment = await secretaryClient.PostAsJsonAsync($"/api/v1/finance/invoices/{invoiceId}/payments", new { amountPiastres = 2_000, method = "VISA", receivedOn = "2026-10-02" });
         Assert.Equal(HttpStatusCode.Created, secretaryPayment.StatusCode);
+        var createdInvoice = await secretaryClient.PostAsJsonAsync("/api/v1/finance/invoices", new
+        {
+            studentId,
+            dueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7)),
+            lines = new[] { new { description = "Additional tuition", amountPiastres = 3_000 } }
+        });
+        Assert.Equal(HttpStatusCode.Created, createdInvoice.StatusCode);
 
         using var accountantClient = factory.CreateClient();
         TestData.Authenticate(accountantClient, await TestData.LoginAsync(accountantClient, accountant));
         var accountantInvoices = await accountantClient.GetAsync("/api/v1/finance/invoices");
         Assert.Equal(HttpStatusCode.OK, accountantInvoices.StatusCode);
+        var accountantInvoiceBody = await accountantInvoices.Content.ReadAsStringAsync();
+        Assert.DoesNotContain(hiddenInvoiceId.ToString(), accountantInvoiceBody, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(HttpStatusCode.NotFound, (await accountantClient.GetAsync($"/api/v1/finance/invoices/{hiddenInvoiceId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await accountantClient.GetAsync("/api/v1/finance/expenses")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await accountantClient.GetAsync("/api/v1/finance/reports/summary")).StatusCode);
         var accountantPayment = await accountantClient.PostAsJsonAsync($"/api/v1/finance/invoices/{invoiceId}/payments", new { amountPiastres = 3_000, method = "CASH", receivedOn = "2026-10-02" });
         Assert.Equal(HttpStatusCode.Created, accountantPayment.StatusCode);
 
-        var me = await accountantClient.GetStringAsync("/api/v1/me");
-        Assert.Contains("invoices.create", me, StringComparison.Ordinal);
-        Assert.Contains("payments.create", me, StringComparison.Ordinal);
-        Assert.DoesNotContain("finance.write", me, StringComparison.Ordinal);
+        var secretaryMe = await secretaryClient.GetStringAsync("/api/v1/me");
+        Assert.Contains("invoices.create", secretaryMe, StringComparison.Ordinal);
+        Assert.Contains("payments.create", secretaryMe, StringComparison.Ordinal);
+        Assert.DoesNotContain("finance.expenses.read", secretaryMe, StringComparison.Ordinal);
+        Assert.DoesNotContain("reports.read", secretaryMe, StringComparison.Ordinal);
+        var accountantMe = await accountantClient.GetStringAsync("/api/v1/me");
+        Assert.Contains("invoices.create", accountantMe, StringComparison.Ordinal);
+        Assert.Contains("finance.expenses.read", accountantMe, StringComparison.Ordinal);
+        Assert.Contains("reports.read", accountantMe, StringComparison.Ordinal);
+        Assert.DoesNotContain("finance.write", accountantMe, StringComparison.Ordinal);
     }
 
     private static async Task<Guid> SeedInvoiceAsync(TestApiFactory factory, Guid tenantId, Guid branchId, string studentName, int totalPiastres, Guid? studentId = null, bool createBranch = false)
