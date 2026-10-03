@@ -1,7 +1,7 @@
 # Mada Academy — Project Status
 
 **As of:** 3 October 2026
-**Verified Git state:** `feat/p2-operational-reports` at `11b35e2`, pushed to origin and tracked by [PR #34](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/34).
+**Verified Git state:** `feat/p2-operational-reports` at `48f6a76`, pushed to origin and tracked by [PR #34](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/34).
 **Latest delivery PR:** [PR #34 — scoped operational reports and acceptance hardening](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/34), open with all required checks successful.
 **Stack:** React + Vite + TypeScript (primary UI); ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions. Angular is a reference preview only.
 
@@ -15,7 +15,7 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 |---|---|---|
 | **R00 Platform Admin** | Platform shell/navigation exists. | Full platform administration and support workflows are not demonstrated as complete live APIs. |
 | **R01 Academy Owner** | Academy bootstrap, tenant-level identity/member/role, branch and classroom foundations exist; LIVE route is guarded from the old demo page. | Executive/reporting surfaces still need final acceptance evidence. |
-| **R02 Branch Manager** | Branch-scoped student/session/classroom and approval operations are available across implemented backend slices; live route no longer opens the legacy demo. | Some non-core branch panels remain outside the current P2 slice. |
+| **R02 Branch Manager** | Branch-scoped student/session/classroom and approval operations are available across implemented backend slices; live route no longer opens the legacy demo, and operational approvals remain visible when optional finance approval endpoints are forbidden. | Some non-core branch panels remain outside the current P2 slice. |
 | **R03 Head Instructors** | Branch-scoped evaluation review queue; publish or request changes; dashboard avoids demo evaluation samples in LIVE evaluation surfaces. | Other overview/team indicators may still be preview/demo data. |
 | **R04 Instructor** | Assigned sessions, attendance, evaluation drafts/submission, and relevant workflow actions are connected to APIs. | Broader instructor analytics and non-core surfaces are not all live. |
 | **R05 Secretary** | Student workflows, phone-based consumer lookup/linking, consumer invitations, and scoped invoice/payment operations exist; legacy Secretary route is guarded from LIVE sessions. | Finance follow-up is intentionally parked for the current P2 cycle; do not expand permissions without reopening the finance decision. |
@@ -50,7 +50,7 @@ The active priority is to complete the P2 acceptance pass for [PR #34](https://g
 
 Open implementation blockers and product debt:
 
-1. PR #34 still needs merge/review; its implementation and CI are complete.
+1. PR #34 still needs merge/review; its implementation is complete, including the partial-failure hardening for Approvals.
 2. Finance evidence deployment remains gated on backend secrets, authenticated staging upload/download smoke test, and durable backup evidence; see [FINANCE_RELEASE_GATE.md](FINANCE_RELEASE_GATE.md).
 3. Invoice cancellation/correction/refund and expanded financial workflows remain outside the current slice and must not be implied as supported.
 4. Production SMS provider and password recovery are later identity work; interim OTP mode remains opt-in, limited, audited, and never a hard-coded/shared code.

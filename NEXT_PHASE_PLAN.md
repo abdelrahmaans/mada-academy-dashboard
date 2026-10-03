@@ -1,7 +1,7 @@
 # خطة المرحلة القادمة — Mada Academy
 
 **تاريخ اللقطة:** 3 أكتوبر 2026
-**قاعدة العمل الحالية:** `feat/p2-operational-reports` عند `11b35e2`، مع [PR #34](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/34) مفتوحًا وكل checks ناجحة.
+**قاعدة العمل الحالية:** `feat/p2-operational-reports` عند `48f6a76`، مع [PR #34](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/34) مفتوحًا.
 **الحالة:** هذه الوثيقة تحتفظ بخطة Finance كمرجع مؤجل. قرار التنفيذ الحالي هو إكمال P2 acceptance أولًا، وترك Finance follow-up وP1 blocker كما هما دون بدء جديد.
 
 ## قرار التنفيذ الحالي
@@ -16,6 +16,7 @@
 - R01/R02: تم منع فتح مسارات demo القديمة عند وجود جلسة LIVE.
 - R03/R04/R05: مسارات Head Instructors، Instructor، وSecretary تستخدم LIVE أو تُحوّل إلى الـdesk الحي عند وجود جلسة.
 - R06/R08/R09: حالات `loading/error/forbidden/empty` لا تستبدل بيانات LIVE ببيانات DEMO، والبوابات تعرض نطاق الحساب/الروابط فقط.
+- Approvals: تم فصل موافقات التشغيل عن ملحقات Finance؛ فشل أو منع endpoint اختياري لا يمسح موافقات الجلسات المتاحة لدور R02.
 - التحقق المحلي: Vitest **11/11**، `pnpm check`، `pnpm build`، و`git diff --check` ناجحة.
 - التحقق عبر GitHub: **5/5 checks ناجحة** على PR #34.
 
