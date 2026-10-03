@@ -140,7 +140,15 @@ public static class FinanceEndpoints
         if (file is null || file.Length == 0) return Validation("file", "A file is required.");
         if (file.Length > MaxEvidenceBytes || !EvidenceTypes.Contains(file.ContentType.ToLowerInvariant())) return Validation("file", "Only PDF, JPG, and PNG files up to 10 MB are allowed.");
         await using var input = file.OpenReadStream();
-        var stored = await storage.PutAsync(input, file.ContentType.ToLowerInvariant(), file.Length, cancellationToken);
+        StoredPrivateObject stored;
+        try
+        {
+            stored = await storage.PutAsync(input, file.ContentType.ToLowerInvariant(), file.Length, cancellationToken);
+        }
+        catch (StorageUnavailableException exception)
+        {
+            return Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "PRIVATE_STORAGE_UNAVAILABLE", detail: exception.Message);
+        }
         var evidence = new PaymentEvidence { PaymentTransactionId = payment.Id, StorageKey = stored.Key, DisplayFileName = SafeFileName(file.FileName), ContentType = stored.ContentType, SizeBytes = stored.SizeBytes, Sha256 = stored.Sha256, UploadedByUserId = actorId };
         db.PaymentEvidences.Add(evidence);
         db.AuditEvents.Add(new AuditEvent { ActorUserId = actorId, TenantId = payment.TenantId, BranchId = payment.BranchId, Action = "PAYMENT_EVIDENCE_ATTACHED", TargetType = "PAYMENT", TargetId = payment.Id.ToString(), MetadataJson = JsonSerializer.Serialize(new { stored.ContentType, stored.SizeBytes, stored.Sha256 }) });

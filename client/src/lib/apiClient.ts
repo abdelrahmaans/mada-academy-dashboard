@@ -511,12 +511,22 @@ export const apiClient = {
     if (!response.ok) throw new ApiRequestError("تعذر رفع إثبات الدفع", response.status);
     return ((await response.json()) as { data: unknown }).data;
   },
+  downloadPaymentEvidence: async (paymentId: string) => {
+    const response = await fetch(`${API_BASE}/finance/payments/${paymentId}/evidence`, { headers: accessToken ? { authorization: `Bearer ${accessToken}` } : undefined });
+    if (!response.ok) throw new ApiRequestError("تعذر تنزيل إثبات الدفع", response.status);
+    return response.blob();
+  },
   uploadExpenseEvidence: async (expenseId: string, file: File) => {
     const body = new FormData();
     body.append("file", file);
     const response = await fetch(`${API_BASE}/finance/expenses/${expenseId}/evidence`, { method: "POST", headers: accessToken ? { authorization: `Bearer ${accessToken}` } : undefined, body });
     if (!response.ok) throw new ApiRequestError("تعذر رفع إثبات المصروف", response.status);
     return ((await response.json()) as { data: unknown }).data;
+  },
+  downloadExpenseEvidence: async (expenseId: string) => {
+    const response = await fetch(`${API_BASE}/finance/expenses/${expenseId}/evidence`, { headers: accessToken ? { authorization: `Bearer ${accessToken}` } : undefined });
+    if (!response.ok) throw new ApiRequestError("تعذر تنزيل إثبات المصروف", response.status);
+    return response.blob();
   },
   logout: async () => {
     const refreshToken = localStorage.getItem(REFRESH_KEY);

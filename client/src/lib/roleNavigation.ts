@@ -114,7 +114,6 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     homePath: "/finance-desk",
     navigation: [
       { path: "/finance-desk", label: "المكتب المالي", purpose: "collections, expenses, reports" },
-      { path: "/finance", label: "الماليات", purpose: "invoice and correction workflows" },
       { path: "/approvals", label: "الموافقات", purpose: "finance decisions" },
     ],
   },

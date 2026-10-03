@@ -128,3 +128,5 @@ The finance APIs and persistence are now the current hardening target. `FinanceD
 - Release gate: PostgreSQL migration test, concurrent payment test, all payment methods, evidence upload/download, R05/R06 authorization, consumer-link isolation, frontend live/demo checks, and staging smoke test.
 
 **Deployment/storage gate:** `LocalPrivateObjectStorage` must not be treated as production durability. Until a durable private backend and backup policy are configured, production must not accept real evidence uploads. The deployment handoff must document the selected private object storage, retention, backup, restore test, and secret/configuration requirements.
+
+Storage runtime now defaults to fail-closed outside Development. An optional Supabase private Storage adapter is available through server-only `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`, and `MADA_PRIVATE_STORAGE_MODE=supabase`; no Supabase project credentials are present in the repository.
