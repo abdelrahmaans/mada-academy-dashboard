@@ -279,18 +279,39 @@ export default function Approvals() {
     setRequests([]);
     setNotifications([]);
     setLoadError(null);
-    Promise.all([apiClient.listApprovals(), apiClient.listNotifications(), apiClient.invoiceCorrections(), apiClient.financeExpenses({ status: "ALL" })])
-      .then(([approvalResponse, notificationResponse, correctionResponse, expenseResponse]) => {
-        const supported = approvalResponse.items.filter(item => item.targetType === "SESSION" && ["EXTRA", "MAKEUP", "INSTRUCTOR_SUBSTITUTION"].includes(item.requestType));
-        setRequests([...supported.map(approvalFromApi), ...correctionResponse.items.map(correctionFromApi), ...expenseResponse.items.map(expenseFromApi)]);
-        setNotifications(notificationResponse.items.map(notificationFromApi));
-      })
-      .catch(cause => {
+    Promise.allSettled([
+      apiClient.listApprovals(),
+      apiClient.listNotifications(),
+      apiClient.invoiceCorrections(),
+      apiClient.financeExpenses({ status: "ALL" }),
+    ]).then(([approvalResult, notificationResult, correctionResult, expenseResult]) => {
+      if (approvalResult.status === "rejected") {
         setRequests([]);
         setNotifications([]);
-        setLoadError(cause instanceof Error ? cause.message : "تعذر تحميل الموافقات والإشعارات من الخادم.");
-      });
-  }, []);
+        const cause = approvalResult.reason;
+        setLoadError(cause instanceof Error ? cause.message : "تعذر تحميل الموافقات التشغيلية من الخادم.");
+        return;
+      }
+
+      const supported = approvalResult.value.items.filter(item => item.targetType === "SESSION" && ["EXTRA", "MAKEUP", "INSTRUCTOR_SUBSTITUTION"].includes(item.requestType));
+      const notifications = notificationResult.status === "fulfilled"
+        ? notificationResult.value.items.map(notificationFromApi)
+        : [];
+      const corrections = correctionResult.status === "fulfilled"
+        ? correctionResult.value.items.map(correctionFromApi)
+        : [];
+      const expenses = expenseResult.status === "fulfilled"
+        ? expenseResult.value.items.map(expenseFromApi)
+        : [];
+      setRequests([...supported.map(approvalFromApi), ...corrections, ...expenses]);
+      setNotifications(notifications);
+
+      const optionalFailure = [notificationResult, correctionResult, expenseResult].find(result => result.status === "rejected");
+      if (optionalFailure?.status === "rejected") {
+        setLoadError("تم تحميل الموافقات التشغيلية؛ بعض الملحقات غير متاحة لصلاحيات الحساب الحالية.");
+      }
+    });
+  }, [me?.role]);
 
   const branchRequests = useMemo(
     () => liveMode ? requests : requests.filter(item => item.branch === branch),
