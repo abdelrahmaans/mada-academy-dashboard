@@ -291,6 +291,47 @@ public sealed class PostgreSqlApiTests(PostgreSqlFixture fixture)
     }
 
     [Fact]
+    public async Task InstructorCompletesAssignedSessionAndPersistsAuditOnPostgreSql()
+    {
+        var instructor = await TestData.CreateAccountAsync(fixture.Factory, "R04_INSTRUCTOR");
+        var studentId = Guid.NewGuid();
+        var templateId = Guid.NewGuid();
+        var offeringId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        var classroomId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+        using (var scope = fixture.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            db.Students.Add(new Student { Id = studentId, TenantId = instructor.TenantId, BranchId = instructor.BranchId, FullName = "PostgreSQL Completion Student" });
+            db.CourseTemplates.Add(new CourseTemplate { Id = templateId, TenantId = instructor.TenantId, Name = "Completion Test Course", TotalSessions = 4, SessionDurationHours = 1, BasePricePiastres = 0 });
+            db.Classrooms.Add(new Classroom { Id = classroomId, BranchId = instructor.BranchId, Name = $"Room-{Guid.NewGuid():N}"[..13], Capacity = 8 });
+            db.CourseOfferings.Add(new CourseOffering { Id = offeringId, TenantId = instructor.TenantId, BranchId = instructor.BranchId, CourseTemplateId = templateId, InstructorId = instructor.UserId, ClassroomId = classroomId, StartDate = DateOnly.FromDateTime(now.UtcDateTime), EndDate = DateOnly.FromDateTime(now.UtcDateTime.AddDays(7)), MaxStudents = 8 });
+            db.StudentEnrollments.Add(new StudentEnrollment { StudentId = studentId, CourseOfferingId = offeringId, Status = "ACTIVE" });
+            db.AcademySessions.Add(new AcademySession { Id = sessionId, TenantId = instructor.TenantId, BranchId = instructor.BranchId, CourseOfferingId = offeringId, SessionNumber = 1, StartAt = now.AddHours(-2), EndAt = now.AddHours(-1), InstructorId = instructor.UserId, ClassroomId = classroomId, Status = "SCHEDULED" });
+            db.SessionAttendances.Add(new SessionAttendance { SessionId = sessionId, StudentId = studentId, Status = "PRESENT" });
+            await db.SaveChangesAsync();
+        }
+
+        using var client = fixture.Factory.CreateClient();
+        TestData.Authenticate(client, await TestData.LoginAsync(client, instructor));
+        using var response = await client.PostAsync($"/api/v1/sessions/{sessionId}/complete", content: null);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        using var auditScope = fixture.Factory.Services.CreateScope();
+        var auditDb = auditScope.ServiceProvider.GetRequiredService<MadaDbContext>();
+        var session = await auditDb.AcademySessions.SingleAsync(item => item.Id == sessionId);
+        Assert.Equal("COMPLETED", session.Status);
+        Assert.NotNull(session.CompletedAt);
+        var transition = await auditDb.StateTransitions.SingleAsync(item => item.AggregateType == "SESSION" && item.AggregateId == sessionId.ToString());
+        Assert.Equal("SCHEDULED", transition.FromState);
+        Assert.Equal("COMPLETED", transition.ToState);
+        Assert.Equal(instructor.UserId, transition.ActorUserId);
+        var audit = await auditDb.AuditEvents.SingleAsync(item => item.Action == "SESSION_COMPLETED" && item.TargetId == sessionId.ToString());
+        Assert.Equal(instructor.UserId, audit.ActorUserId);
+    }
+
+    [Fact]
     public async Task ExecutiveDashboard_AggregatesTenantMetricsOnPostgreSql()
     {
         using var client = fixture.Factory.CreateClient();
