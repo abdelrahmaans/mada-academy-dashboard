@@ -116,8 +116,8 @@ public static class DemoDataSeeder
 
         var offering = await db.CourseOfferings.SingleOrDefaultAsync(item => item.Id == offeringId && item.TenantId == tenantId && item.BranchId == mainBranchId, cancellationToken);
         if (offering is not null) offering.InstructorId = mainInstructorId;
-        var session = await db.AcademySessions.SingleOrDefaultAsync(item => item.Id == sessionId && item.TenantId == tenantId && item.BranchId == mainBranchId, cancellationToken);
-        if (session is not null) session.InstructorId = mainInstructorId;
+        var sessions = await db.AcademySessions.Where(item => item.CourseOfferingId == offeringId && item.TenantId == tenantId && item.BranchId == mainBranchId).ToListAsync(cancellationToken);
+        foreach (var sessionForOffering in sessions) sessionForOffering.InstructorId = mainInstructorId;
 
         if (!await db.Memberships.AnyAsync(item => item.UserAccountId == mainInstructorId && item.TenantId == tenantId && item.RoleCode == "R04_INSTRUCTOR" && item.Status == "ACTIVE", cancellationToken))
             db.Memberships.Add(new Membership { UserAccountId = mainInstructorId, TenantId = tenantId, BranchId = mainBranchId, RoleCode = "R04_INSTRUCTOR", ScopeLevel = "BRANCH", Status = "ACTIVE" });
