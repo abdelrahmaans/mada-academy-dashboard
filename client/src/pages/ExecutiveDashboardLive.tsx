@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, Activity, Building2, CalendarDays, CheckCircle2, GraduationCap, RefreshCw, Users, Wallet } from "lucide-react";
+import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
@@ -72,8 +73,17 @@ export default function ExecutiveDashboardLive() {
     setError(null);
     setReport(null);
     apiClient.executiveSummary({ from: range.from, to: range.to, branchId: branchId === "ALL" ? undefined : branchId })
-      .then(result => { if (!cancelled) setReport(result); })
-      .catch(reason => { if (!cancelled) setError(failureMessage(reason)); })
+      .then(result => {
+        if (cancelled) return;
+        setReport(result);
+        if (retryKey > 0) toast.success("تم تحديث لوحة الإدارة التنفيذية");
+      })
+      .catch(reason => {
+        if (cancelled) return;
+        const message = failureMessage(reason);
+        setError(message);
+        toast.error(message);
+      })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [branchId, range.from, range.to, retryKey]);
@@ -84,7 +94,12 @@ export default function ExecutiveDashboardLive() {
     setActivityError(null);
     apiClient.executiveActivity({ from: range.from, to: range.to, branchId: branchId === "ALL" ? undefined : branchId })
       .then(result => { if (!cancelled) setActivity(result.items); })
-      .catch(reason => { if (!cancelled) setActivityError(failureMessage(reason)); })
+      .catch(reason => {
+        if (cancelled) return;
+        const message = failureMessage(reason);
+        setActivityError(message);
+        toast.error(`تعذر تحميل سجل التدقيق: ${message}`);
+      })
       .finally(() => { if (!cancelled) setActivityLoading(false); });
     return () => { cancelled = true; };
   }, [branchId, range.from, range.to, retryKey]);
@@ -114,7 +129,7 @@ export default function ExecutiveDashboardLive() {
 
       <section className="r1-live-panel r1-live-activity-panel"><header><div><h2><Activity size={17} /> سجل التدقيق والقرارات</h2><p>أحداث الأكاديمية وقرارات الموافقات ضمن الفترة والفرع الحاليين.</p></div><button type="button" onClick={retry} aria-label="تحديث سجل التدقيق">تحديث</button></header>
         {activityLoading && <div className="r1-live-activity-state" role="status"><RefreshCw className="r1-live-spin" size={16} /> جارٍ تحميل السجل…</div>}
-        {!activityLoading && activityError && <div className="r1-live-warning" role="alert"><AlertCircle size={16} /> تعذر تحميل سجل التدقيق: {activityError}</div>}
+        {!activityLoading && activityError && <div className="r1-live-warning" role="alert"><AlertCircle size={16} /><span>تعذر تحميل سجل التدقيق: {activityError}</span><button type="button" onClick={retry}>إعادة المحاولة</button></div>}
         {!activityLoading && !activityError && activity.length === 0 && <p className="r1-live-empty">لا توجد أحداث تدقيق أو قرارات مسجلة لهذه الفترة والنطاق.</p>}
         {!activityLoading && !activityError && activity.length > 0 && <div className="r1-live-activity-list">{activity.map(item => <article key={`${item.source}-${item.id}`}><span className={`r1-live-activity-type ${item.source === "DECISION" ? "decision" : "audit"}`}>{item.source === "DECISION" ? "قرار" : "تدقيق"}</span><div><strong>{item.action} · {item.targetType}</strong><small>المستهدف: {item.targetId}{item.state ? ` · الحالة: ${item.state}` : ""}</small>{item.reason && <small>السبب: {item.reason}</small>}<small>بواسطة {item.actorName ?? "system"}</small></div><time>{occurredAt(item.occurredAt)}</time></article>)}</div>}
         <small className="r1-live-audit-source">المصادر: AuditEvents + ApprovalRequests. لا يتم إرجاع metadata أو بيانات الاتصال.</small>
