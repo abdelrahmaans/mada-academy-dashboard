@@ -275,8 +275,9 @@ public static class OperationalEndpoints
         var roster = await db.StudentEnrollments.AsNoTracking()
             .Where(enrollment => enrollment.CourseOfferingId == session.CourseOfferingId && enrollment.Status == "ACTIVE")
             .Join(db.Students.AsNoTracking(), enrollment => enrollment.StudentId, student => student.Id,
-                (_, student) => new RosterStudent(student.Id, student.FullName))
-            .OrderBy(item => item.FullName)
+                (_, student) => new { student.Id, student.FullName })
+            .OrderBy(student => student.FullName)
+            .Select(student => new RosterStudent(student.Id, student.FullName))
             .ToListAsync(cancellationToken);
         var attendance = await db.SessionAttendances.AsNoTracking()
             .Where(item => item.SessionId == session.Id)
