@@ -516,20 +516,33 @@ function SchedulePage() {
     setLiveMode(true);
     setSessions([]);
     setLoadError(null);
-    Promise.all([apiClient.listSessions(), apiClient.schedulingClassrooms(), apiClient.schedulingInstructors()])
-      .then(([sessionResponse, classroomResponse, instructorResponse]) => {
-        setLiveClassrooms(classroomResponse.items);
-        setLiveInstructors(instructorResponse.items);
-        setLiveClassroomsReady(true);
-        setSessions(sessionResponse.items.map(sessionFromApi));
-      })
-      .catch(cause => {
+    Promise.allSettled([
+      apiClient.listSessions(),
+      apiClient.schedulingClassrooms(),
+      apiClient.schedulingInstructors(),
+    ]).then(([sessionResult, classroomResult, instructorResult]) => {
+      if (sessionResult.status === "rejected") {
         setLiveClassrooms([]);
         setLiveInstructors([]);
         setLiveClassroomsReady(false);
         setSessions([]);
-        setLoadError(cause instanceof Error ? cause.message : "تعذر تحميل بيانات الجدول من الخادم.");
-      });
+        const cause = sessionResult.reason;
+        setLoadError(cause instanceof Error ? cause.message : "تعذر تحميل جلسات الجدول من الخادم.");
+        return;
+      }
+
+      setSessions(sessionResult.value.items.map(sessionFromApi));
+      const classrooms = classroomResult.status === "fulfilled" ? classroomResult.value.items : [];
+      const instructors = instructorResult.status === "fulfilled" ? instructorResult.value.items : [];
+      setLiveClassrooms(classrooms);
+      setLiveInstructors(instructors);
+      setLiveClassroomsReady(classroomResult.status === "fulfilled");
+
+      const optionalFailure = [classroomResult, instructorResult].find(result => result.status === "rejected");
+      if (optionalFailure?.status === "rejected") {
+        setLoadError("تم تحميل جلسات الجدول؛ بعض بيانات إنشاء الجلسة غير متاحة لصلاحيات الحساب الحالية.");
+      }
+    });
   }, []);
 
   const liveBranches = Array.from(new Map(liveClassrooms.map(room => [room.branchId, room.branchName])).entries()).map(([id, name]) => ({ id, name }));
