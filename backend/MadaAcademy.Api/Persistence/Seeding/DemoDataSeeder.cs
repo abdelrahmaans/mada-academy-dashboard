@@ -11,6 +11,7 @@ public static class DemoDataSeeder
         var existingTenant = await db.Tenants.SingleOrDefaultAsync(x => x.Slug == "mada-demo-academy", cancellationToken);
         if (existingTenant is not null)
         {
+            await EnsureCoreSliceAsync(db, existingTenant.Id, cancellationToken);
             await EnsureFinanceSliceAsync(db, existingTenant.Id, cancellationToken);
             return;
         }
@@ -33,7 +34,10 @@ public static class DemoDataSeeder
             new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000006"), Email = "accountant@mada.demo", Phone = "+201000000006", DisplayName = "Academy Accountant", AccountType = "staff", PasswordHash = demoPasswordHash, Status = "ACTIVE" },
             new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000007"), Email = "media@mada.demo", Phone = "+201000000007", DisplayName = "Media Manager", AccountType = "staff", PasswordHash = demoPasswordHash, Status = "ACTIVE" },
             new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000008"), Email = "secretary.helio@mada.demo", Phone = "+201000000008", DisplayName = "Heliopolis Secretary", AccountType = "staff", PasswordHash = demoPasswordHash, Status = "ACTIVE" },
-            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000009"), Email = "accountant.helio@mada.demo", Phone = "+201000000009", DisplayName = "Heliopolis Accountant", AccountType = "staff", PasswordHash = demoPasswordHash, Status = "ACTIVE" }
+            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000009"), Email = "accountant.helio@mada.demo", Phone = "+201000000009", DisplayName = "Heliopolis Accountant", AccountType = "staff", PasswordHash = demoPasswordHash, Status = "ACTIVE" },
+            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000010"), Email = "instructor@mada.demo", Phone = "+201000000010", DisplayName = "Main Instructor", AccountType = "staff", PasswordHash = demoPasswordHash, Status = "ACTIVE" },
+            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000011"), Email = "parent@mada.demo", Phone = "+201000000011", DisplayName = "Youssef's Parent", AccountType = "parent", PasswordHash = demoPasswordHash, Status = "ACTIVE" },
+            new UserAccount { Id = Guid.Parse("10000000-0000-0000-0000-000000000012"), Email = "student@mada.demo", Phone = "+201000000012", DisplayName = "Lina Omar", AccountType = "student", PasswordHash = demoPasswordHash, Status = "ACTIVE" }
         };
 
         var memberships = new[]
@@ -46,17 +50,20 @@ public static class DemoDataSeeder
             new Membership { UserAccountId = users[5].Id, TenantId = tenantId, BranchId = mainBranchId, RoleCode = "R06_ACCOUNTANT", ScopeLevel = "BRANCH" },
             new Membership { UserAccountId = users[6].Id, TenantId = tenantId, BranchId = mainBranchId, RoleCode = "R07_MEDIA_MANAGER", ScopeLevel = "BRANCH" },
             new Membership { UserAccountId = users[7].Id, TenantId = tenantId, BranchId = heliopolisBranchId, RoleCode = "R05_SECRETARY", ScopeLevel = "BRANCH" },
-            new Membership { UserAccountId = users[8].Id, TenantId = tenantId, BranchId = heliopolisBranchId, RoleCode = "R06_ACCOUNTANT", ScopeLevel = "BRANCH" }
+            new Membership { UserAccountId = users[8].Id, TenantId = tenantId, BranchId = heliopolisBranchId, RoleCode = "R06_ACCOUNTANT", ScopeLevel = "BRANCH" },
+            new Membership { UserAccountId = users[9].Id, TenantId = tenantId, BranchId = mainBranchId, RoleCode = "R04_INSTRUCTOR", ScopeLevel = "BRANCH" },
+            new Membership { UserAccountId = users[10].Id, TenantId = tenantId, RoleCode = "R08_PARENT", ScopeLevel = "TENANT" },
+            new Membership { UserAccountId = users[11].Id, TenantId = tenantId, RoleCode = "R09_STUDENT", ScopeLevel = "TENANT" }
         };
 
         var classroomMain = new Classroom { Id = Guid.Parse("20000000-0000-0000-0000-000000000001"), BranchId = mainBranchId, Name = "Robotics Lab A", Capacity = 14 };
         var classroomHelio = new Classroom { Id = Guid.Parse("20000000-0000-0000-0000-000000000002"), BranchId = heliopolisBranchId, Name = "Creative Lab", Capacity = 12 };
         var template = new CourseTemplate { Id = Guid.Parse("30000000-0000-0000-0000-000000000001"), TenantId = tenantId, Name = "Junior Robotics — Level 1", Track = "robotics", Type = "hard", AgeGroup = "8-12", Level = "beginner", TotalSessions = 8, SessionDurationHours = 1.5m, BasePricePiastres = 320000, Status = "PUBLISHED" };
-        var offering = new CourseOffering { Id = Guid.Parse("40000000-0000-0000-0000-000000000001"), TenantId = tenantId, BranchId = mainBranchId, CourseTemplateId = template.Id, InstructorId = users[3].Id, ClassroomId = classroomMain.Id, StartDate = new DateOnly(2026, 10, 1), EndDate = new DateOnly(2026, 11, 30), WeeklyScheduleJson = "{\"days\":[\"SATURDAY\"],\"start\":\"10:00\",\"end\":\"11:30\"}", Status = "ACTIVE", MaxStudents = 12 };
+        var offering = new CourseOffering { Id = Guid.Parse("40000000-0000-0000-0000-000000000001"), TenantId = tenantId, BranchId = mainBranchId, CourseTemplateId = template.Id, InstructorId = users[9].Id, ClassroomId = classroomMain.Id, StartDate = new DateOnly(2026, 10, 1), EndDate = new DateOnly(2026, 11, 30), WeeklyScheduleJson = "{\"days\":[\"SATURDAY\"],\"start\":\"10:00\",\"end\":\"11:30\"}", Status = "ACTIVE", MaxStudents = 12 };
 
-        var session1 = new AcademySession { Id = Guid.Parse("50000000-0000-0000-0000-000000000001"), TenantId = tenantId, BranchId = mainBranchId, CourseOfferingId = offering.Id, SessionNumber = 1, StartAt = new DateTimeOffset(2026, 10, 3, 10, 0, 0, TimeSpan.Zero), EndAt = new DateTimeOffset(2026, 10, 3, 11, 30, 0, TimeSpan.Zero), InstructorId = users[3].Id, ClassroomId = classroomMain.Id, Type = "REGULAR", Status = "SCHEDULED" };
-        var session2 = new AcademySession { Id = Guid.Parse("50000000-0000-0000-0000-000000000002"), TenantId = tenantId, BranchId = mainBranchId, CourseOfferingId = offering.Id, SessionNumber = 2, StartAt = new DateTimeOffset(2026, 10, 10, 10, 0, 0, TimeSpan.Zero), EndAt = new DateTimeOffset(2026, 10, 10, 11, 30, 0, TimeSpan.Zero), InstructorId = users[3].Id, ClassroomId = classroomMain.Id, Type = "REGULAR", Status = "SCHEDULED" };
-        var session3 = new AcademySession { Id = Guid.Parse("50000000-0000-0000-0000-000000000003"), TenantId = tenantId, BranchId = mainBranchId, CourseOfferingId = offering.Id, SessionNumber = 0, StartAt = new DateTimeOffset(2026, 9, 26, 10, 0, 0, TimeSpan.Zero), EndAt = new DateTimeOffset(2026, 9, 26, 11, 30, 0, TimeSpan.Zero), InstructorId = users[3].Id, ClassroomId = classroomMain.Id, Type = "REGULAR", Status = "COMPLETED", CompletedAt = new DateTimeOffset(2026, 9, 26, 11, 45, 0, TimeSpan.Zero) };
+        var session1 = new AcademySession { Id = Guid.Parse("50000000-0000-0000-0000-000000000001"), TenantId = tenantId, BranchId = mainBranchId, CourseOfferingId = offering.Id, SessionNumber = 1, StartAt = new DateTimeOffset(2026, 10, 3, 10, 0, 0, TimeSpan.Zero), EndAt = new DateTimeOffset(2026, 10, 3, 11, 30, 0, TimeSpan.Zero), InstructorId = users[9].Id, ClassroomId = classroomMain.Id, Type = "REGULAR", Status = "SCHEDULED" };
+        var session2 = new AcademySession { Id = Guid.Parse("50000000-0000-0000-0000-000000000002"), TenantId = tenantId, BranchId = mainBranchId, CourseOfferingId = offering.Id, SessionNumber = 2, StartAt = new DateTimeOffset(2026, 10, 10, 10, 0, 0, TimeSpan.Zero), EndAt = new DateTimeOffset(2026, 10, 10, 11, 30, 0, TimeSpan.Zero), InstructorId = users[9].Id, ClassroomId = classroomMain.Id, Type = "REGULAR", Status = "SCHEDULED" };
+        var session3 = new AcademySession { Id = Guid.Parse("50000000-0000-0000-0000-000000000003"), TenantId = tenantId, BranchId = mainBranchId, CourseOfferingId = offering.Id, SessionNumber = 3, StartAt = new DateTimeOffset(2026, 9, 26, 10, 0, 0, TimeSpan.Zero), EndAt = new DateTimeOffset(2026, 9, 26, 11, 30, 0, TimeSpan.Zero), InstructorId = users[9].Id, ClassroomId = classroomMain.Id, Type = "REGULAR", Status = "COMPLETED", CompletedAt = new DateTimeOffset(2026, 9, 26, 11, 45, 0, TimeSpan.Zero) };
         var kit = new Kit { Id = Guid.Parse("60000000-0000-0000-0000-000000000001"), TenantId = tenantId, BranchId = mainBranchId, Name = "MRT Essential Kit", QuantityAvailable = 18, TrackIndividually = false };
 
         var students = Enumerable.Range(1, 6).Select(index => new Student { Id = Guid.Parse($"70000000-0000-0000-0000-00000000000{index}"), TenantId = tenantId, BranchId = mainBranchId, FullName = index switch { 1 => "Youssef Ahmed", 2 => "Lina Omar", 3 => "Adam Khaled", 4 => "Mariam Hany", 5 => "Omar Tarek", _ => "Nour Mostafa" }, DateOfBirth = new DateOnly(2014 + (index % 3), 3 + index, 5 + index), Status = "ACTIVE" }).ToArray();
@@ -65,7 +72,8 @@ public static class DemoDataSeeder
         {
             new SessionAttendance { SessionId = session3.Id, StudentId = students[0].Id, Status = "PRESENT" },
             new SessionAttendance { SessionId = session3.Id, StudentId = students[1].Id, Status = "LATE", LateMinutes = 12 },
-            new SessionAttendance { SessionId = session3.Id, StudentId = students[2].Id, Status = "ABSENT" }
+            new SessionAttendance { SessionId = session3.Id, StudentId = students[2].Id, Status = "ABSENT" },
+            new SessionAttendance { SessionId = session3.Id, StudentId = students[3].Id, Status = "PRESENT" }
         };
         db.Add(tenant);
         db.AddRange(mainBranch, heliopolisBranch);
@@ -76,8 +84,60 @@ public static class DemoDataSeeder
         db.AddRange(students);
         db.AddRange(enrollments);
         db.AddRange(attendance);
+        db.Add(new StudentAccountLink { Id = Guid.Parse("91000000-0000-0000-0000-000000000001"), TenantId = tenantId, StudentId = students[1].Id, UserAccountId = users[11].Id, CreatedByUserId = users[1].Id });
+        db.Add(new GuardianStudentLink { Id = Guid.Parse("92000000-0000-0000-0000-000000000001"), TenantId = tenantId, StudentId = students[0].Id, UserAccountId = users[10].Id, CreatedByUserId = users[1].Id, Relationship = "ولي الأمر", Status = "ACTIVE" });
+        db.Add(new SessionEvaluation { Id = Guid.Parse("93000000-0000-0000-0000-000000000001"), SessionId = session3.Id, StudentId = students[0].Id, InstructorId = users[9].Id, Score = 88, Notes = "تقدم واضح في التطبيق العملي", Status = "PUBLISHED", SubmittedAt = new DateTimeOffset(2026, 9, 26, 12, 0, 0, TimeSpan.Zero), ReviewedByUserId = users[3].Id, ReviewedAt = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero), PublishedAt = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero) });
+        db.Add(new StateTransitionEvent { Id = Guid.Parse("94000000-0000-0000-0000-000000000001"), AggregateType = "SESSION_EVALUATION", AggregateId = "93000000-0000-0000-0000-000000000001", FromState = "SUBMITTED", ToState = "PUBLISHED", ActorUserId = users[3].Id });
         await db.SaveChangesAsync(cancellationToken);
+        await EnsureCoreSliceAsync(db, tenantId, cancellationToken);
         await EnsureFinanceSliceAsync(db, tenantId, cancellationToken);
+    }
+
+    private static async Task EnsureCoreSliceAsync(MadaDbContext db, Guid tenantId, CancellationToken cancellationToken)
+    {
+        var mainBranchId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        var mainInstructorId = Guid.Parse("10000000-0000-0000-0000-000000000010");
+        var parentId = Guid.Parse("10000000-0000-0000-0000-000000000011");
+        var studentAccountId = Guid.Parse("10000000-0000-0000-0000-000000000012");
+        var firstStudentId = Guid.Parse("70000000-0000-0000-0000-000000000001");
+        var secondStudentId = Guid.Parse("70000000-0000-0000-0000-000000000002");
+        var sessionId = Guid.Parse("50000000-0000-0000-0000-000000000003");
+        var offeringId = Guid.Parse("40000000-0000-0000-0000-000000000001");
+        var reviewerId = Guid.Parse("10000000-0000-0000-0000-000000000004");
+        var passwordHash = new PasswordHashService().Hash("Mada@2026");
+
+        if (!await db.UserAccounts.AnyAsync(item => item.Id == mainInstructorId, cancellationToken))
+            db.UserAccounts.Add(new UserAccount { Id = mainInstructorId, Email = "instructor@mada.demo", Phone = "+201000000010", DisplayName = "Main Instructor", AccountType = "staff", PasswordHash = passwordHash, Status = "ACTIVE" });
+        if (!await db.UserAccounts.AnyAsync(item => item.Id == parentId, cancellationToken))
+            db.UserAccounts.Add(new UserAccount { Id = parentId, Email = "parent@mada.demo", Phone = "+201000000011", DisplayName = "Youssef's Parent", AccountType = "parent", PasswordHash = passwordHash, Status = "ACTIVE" });
+        if (!await db.UserAccounts.AnyAsync(item => item.Id == studentAccountId, cancellationToken))
+            db.UserAccounts.Add(new UserAccount { Id = studentAccountId, Email = "student@mada.demo", Phone = "+201000000012", DisplayName = "Lina Omar", AccountType = "student", PasswordHash = passwordHash, Status = "ACTIVE" });
+        await db.SaveChangesAsync(cancellationToken);
+
+        var offering = await db.CourseOfferings.SingleOrDefaultAsync(item => item.Id == offeringId && item.TenantId == tenantId && item.BranchId == mainBranchId, cancellationToken);
+        if (offering is not null) offering.InstructorId = mainInstructorId;
+        var sessions = await db.AcademySessions.Where(item => item.CourseOfferingId == offeringId && item.TenantId == tenantId && item.BranchId == mainBranchId).ToListAsync(cancellationToken);
+        foreach (var sessionForOffering in sessions) sessionForOffering.InstructorId = mainInstructorId;
+
+        if (!await db.Memberships.AnyAsync(item => item.UserAccountId == mainInstructorId && item.TenantId == tenantId && item.RoleCode == "R04_INSTRUCTOR" && item.Status == "ACTIVE", cancellationToken))
+            db.Memberships.Add(new Membership { UserAccountId = mainInstructorId, TenantId = tenantId, BranchId = mainBranchId, RoleCode = "R04_INSTRUCTOR", ScopeLevel = "BRANCH", Status = "ACTIVE" });
+        if (!await db.Memberships.AnyAsync(item => item.UserAccountId == parentId && item.TenantId == tenantId && item.RoleCode == "R08_PARENT" && item.Status == "ACTIVE", cancellationToken))
+            db.Memberships.Add(new Membership { UserAccountId = parentId, TenantId = tenantId, RoleCode = "R08_PARENT", ScopeLevel = "TENANT", Status = "ACTIVE" });
+        if (!await db.Memberships.AnyAsync(item => item.UserAccountId == studentAccountId && item.TenantId == tenantId && item.RoleCode == "R09_STUDENT" && item.Status == "ACTIVE", cancellationToken))
+            db.Memberships.Add(new Membership { UserAccountId = studentAccountId, TenantId = tenantId, RoleCode = "R09_STUDENT", ScopeLevel = "TENANT", Status = "ACTIVE" });
+
+        if (!await db.StudentAccountLinks.AnyAsync(item => item.StudentId == secondStudentId && item.UserAccountId == studentAccountId, cancellationToken))
+            db.StudentAccountLinks.Add(new StudentAccountLink { Id = Guid.Parse("91000000-0000-0000-0000-000000000001"), TenantId = tenantId, StudentId = secondStudentId, UserAccountId = studentAccountId, CreatedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000002") });
+        if (!await db.GuardianStudentLinks.AnyAsync(item => item.StudentId == firstStudentId && item.UserAccountId == parentId, cancellationToken))
+            db.GuardianStudentLinks.Add(new GuardianStudentLink { Id = Guid.Parse("92000000-0000-0000-0000-000000000001"), TenantId = tenantId, StudentId = firstStudentId, UserAccountId = parentId, CreatedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000002"), Relationship = "ولي الأمر", Status = "ACTIVE" });
+        if (!await db.SessionAttendances.AnyAsync(item => item.SessionId == sessionId && item.StudentId == secondStudentId, cancellationToken))
+            db.SessionAttendances.Add(new SessionAttendance { SessionId = sessionId, StudentId = secondStudentId, Status = "LATE", LateMinutes = 8 });
+        if (!await db.SessionEvaluations.AnyAsync(item => item.SessionId == sessionId && item.StudentId == firstStudentId, cancellationToken))
+        {
+            db.SessionEvaluations.Add(new SessionEvaluation { Id = Guid.Parse("93000000-0000-0000-0000-000000000001"), SessionId = sessionId, StudentId = firstStudentId, InstructorId = mainInstructorId, Score = 88, Notes = "تقدم واضح في التطبيق العملي", Status = "PUBLISHED", SubmittedAt = new DateTimeOffset(2026, 9, 26, 12, 0, 0, TimeSpan.Zero), ReviewedByUserId = reviewerId, ReviewedAt = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero), PublishedAt = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero) });
+            db.StateTransitions.Add(new StateTransitionEvent { Id = Guid.Parse("94000000-0000-0000-0000-000000000001"), AggregateType = "SESSION_EVALUATION", AggregateId = "93000000-0000-0000-0000-000000000001", FromState = "SUBMITTED", ToState = "PUBLISHED", ActorUserId = reviewerId });
+        }
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     private static async Task EnsureFinanceSliceAsync(MadaDbContext db, Guid tenantId, CancellationToken cancellationToken)
