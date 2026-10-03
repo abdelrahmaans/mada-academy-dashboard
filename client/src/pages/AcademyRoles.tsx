@@ -22,15 +22,33 @@ export default function AcademyRoles() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [newMember, setNewMember] = useState({ fullName: "", email: "", phone: "", password: "", roleCode: "R04_INSTRUCTOR", branchId: "" });
 
   const selectedMemberRecord = members.find(member => member.membershipId === selectedMember) ?? null;
   const selectedRoleDefinition = roles.find(role => role.code === (selectedMemberRecord?.roleCode ?? selectedRole));
 
-  const load = async () => {
-    setLoading(true); setError(null);
-    try { const [roleResponse, memberResponse, branchResponse] = await Promise.all([apiClient.academyRoles(), apiClient.academyMembers(), apiClient.academyBranches()]); setRoles(roleResponse.roles); setMembers(memberResponse.items); setBranches(branchResponse.items.filter(branch => branch.status === "ACTIVE")); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "تعذر تحميل الصلاحيات والأعضاء."); }
+  const load = async (notifySuccess = false) => {
+    setLoading(true); setError(null); setWarning(null);
+    try {
+      const [roleResult, memberResult, branchResult] = await Promise.allSettled([apiClient.academyRoles(), apiClient.academyMembers(), apiClient.academyBranches()]);
+      if (roleResult.status === "rejected" || memberResult.status === "rejected") throw new Error("تعذر تحميل الصلاحيات أو أعضاء الأكاديمية.");
+      setRoles(roleResult.value.roles);
+      setMembers(memberResult.value.items);
+      if (branchResult.status === "fulfilled") {
+        setBranches(branchResult.value.items.filter(branch => branch.status === "ACTIVE"));
+        if (notifySuccess) toast.success("تم تحديث الصلاحيات والأعضاء");
+      } else {
+        const message = "تم تحميل الأعضاء والصلاحيات، لكن قائمة الفروع غير متاحة مؤقتًا.";
+        setWarning(message);
+        toast.error(message);
+      }
+    }
+    catch (cause) {
+      const message = cause instanceof Error ? cause.message : "تعذر تحميل الصلاحيات والأعضاء.";
+      setError(message);
+      toast.error(message);
+    }
     finally { setLoading(false); }
   };
   useEffect(() => { void load(); }, []);
@@ -72,7 +90,8 @@ export default function AcademyRoles() {
       <header className="academy-roles-topbar"><button onClick={() => navigate("/academy-owner")}><ArrowRight size={16} /> العودة إلى الأكاديمية</button><span><ShieldCheck size={15} /> R01 · صلاحيات الأكاديمية</span></header>
       <div className="academy-roles-content"><PageHeader className="academy-roles-header" eyebrow={<span><i /> GOVERNANCE · صلاحيات ونطاق</span>} title="إدارة المستخدمين والصلاحيات" description="أضف مستخدمي الأكاديمية، حدّد دور كل شخص، وثبّت الفرع الذي يعمل داخله بدون تجاوز نطاق R00." actions={<button className="academy-roles-add-button" onClick={() => setShowAdd(true)}><UserPlus size={16} /> إضافة مستخدم</button>} />
         <div className="academy-roles-scope"><ShieldCheck size={16} /><span><strong>نطاقك الحالي:</strong> {me?.academy?.name ?? "الأكاديمية"} · كل الفروع · لا يمكنك منح صلاحية مسؤول المنصة R00.</span></div>
-        {error && <div className="academy-roles-error">{error}<button onClick={() => void load()}>إعادة المحاولة</button></div>}
+        {error && <div className="academy-roles-error">{error}<button onClick={() => void load(true)}>إعادة المحاولة</button></div>}
+        {warning && !error && <div className="academy-roles-error">{warning}<button onClick={() => void load(true)}>إعادة المحاولة</button></div>}
         {loading ? <div className="academy-roles-loading"><LoaderCircle className="spin" size={22} /> جارٍ تحميل أعضاء الأكاديمية والصلاحيات…</div> : <>
           <section className="academy-roles-metrics"><Metric icon={<Users size={17} />} label="أعضاء الأكاديمية" value={members.length} /><Metric icon={<CheckCircle2 size={17} />} label="أعضاء نشطون" value={activeMembers} /><Metric icon={<KeyRound size={17} />} label="أدوار قابلة للتعيين" value={roles.filter(role => role.assignableByAcademyOwner).length} /><Metric icon={<Building2 size={17} />} label="الفروع المتاحة" value={branches.length} /></section>
           <div className="academy-roles-grid"><section className="academy-roles-panel academy-roles-members"><PanelTitle icon={<Users size={17} />} title="أعضاء الأكاديمية" note={`${members.length} حساب`} />{members.length === 0 ? <Empty text="لا يوجد أعضاء بعد." /> : <div className="academy-member-list">{members.map(member => <article className={selectedMember === member.membershipId ? "academy-member selected" : "academy-member"} key={member.membershipId} onClick={() => { setSelectedMember(member.membershipId); setSelectedRole(member.roleCode); }}><span className="academy-member-avatar">{(member.name ?? "؟").slice(0, 1)}</span><span className="academy-member-copy"><strong>{member.name ?? "بدون اسم"}</strong><small><bdi dir="ltr">{member.email}</bdi> · {member.branch?.name ?? "نطاق الأكاديمية"}</small></span><span className={`academy-member-status ${member.membershipStatus.toLowerCase()}`}>{member.membershipStatus === "ACTIVE" ? "نشط" : member.membershipStatus === "SUSPENDED" ? "موقوف" : member.membershipStatus}</span><span className="academy-member-role">{roleLabel(roles, member.roleCode)}</span></article>)}</div>}</section>
