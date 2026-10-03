@@ -1,7 +1,7 @@
 # Mada Academy — Project Status
 
 **As of:** 3 October 2026
-**Verified Git state:** `feat/p2-operational-reports` at `854cafd`, pushed to origin and tracked by [PR #34](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/34).
+**Verified Git state:** `feat/p2-operational-reports` at `44e22be`, pushed to origin and tracked by [PR #34](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/34).
 **Latest delivery PR:** [PR #34 — scoped operational reports and acceptance hardening](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/34), open with all required checks successful.
 **Stack:** React + Vite + TypeScript (primary UI); ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions. Angular is a reference preview only.
 
@@ -16,7 +16,7 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 | **R00 Platform Admin** | Platform shell/navigation exists; live console preserves available overview/academy/role data when one read endpoint fails and gives toast feedback for refresh and load/support failures. | Full platform administration and support workflows are not demonstrated as complete live APIs. |
 | **R01 Academy Owner** | Academy bootstrap, tenant-level identity/member/role, branch and classroom foundations exist; LIVE route is guarded from the old demo page, academy roles preserve members/permissions when branch lookup fails, and classroom/resource management preserves useful data on partial failures. | Executive/reporting surfaces still need final acceptance evidence. |
 | **R02 Branch Manager** | Branch-scoped student/session/classroom and approval operations are available across implemented backend slices; `/branch-operations` now routes authenticated R02 users to the live dashboard instead of the legacy demo, and approvals/classes/schedule remain visible when optional endpoints are forbidden. | Some non-core branch panels remain outside the current P2 slice. |
-| **R03 Head Instructors** | Branch-scoped evaluation review queue; publish or request changes; dashboard avoids demo evaluation samples in LIVE evaluation surfaces and keeps core team/group/session data visible when optional evaluation/notification endpoints fail. | Other overview/team indicators may still be preview/demo data. |
+| **R03 Head Instructors** | Branch-scoped evaluation review queue; publish or request changes; dashboard avoids demo evaluation samples in LIVE evaluation surfaces, keeps core team/group/session data visible when optional endpoints fail, and preserves groups or sessions when one Academic Programs read fails. | Other overview/team indicators may still be preview/demo data. |
 | **R04 Instructor** | Assigned sessions, attendance, evaluation drafts/submission, and relevant workflow actions are connected to APIs. | Broader instructor analytics and non-core surfaces are not all live. |
 | **R05 Secretary** | Student workflows, phone-based consumer lookup/linking, consumer invitations, and scoped invoice/payment operations exist; legacy Secretary route is guarded from LIVE sessions. | Finance follow-up is intentionally parked for the current P2 cycle; do not expand permissions without reopening the finance decision. |
 | **R06 Accountant** | FinanceDesk is connected to scoped invoice/payment/expense/report APIs with role-aware loading, forbidden, and error states. | Production evidence/storage smoke test and release-gate deployment work remain parked; do not mark Finance fully production-ready from UI checks alone. |
