@@ -24,11 +24,12 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useLocation } from "wouter";
+import { Redirect, useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import StatusBadge from "@/components/StatusBadge";
+import { apiClient } from "@/lib/apiClient";
 import "@/components/PreviewBanner.css";
 
 type OpsView = "departments" | "trainers" | "schedule";
@@ -130,6 +131,8 @@ export default function BranchOperations() {
     setNewSession(current => ({ ...current, course: "" }));
     toast.success("تمت إضافة الحصة للمراجعة", { description: "الحصة الجديدة بانتظار اعتماد مدير الفرع محليًا." });
   };
+
+  if (apiClient.hasSession()) return <Redirect to="/" />;
 
   return <RoleDashboardShell className="app-shell r02-operations-shell" roleCode="R02" roleLabel="مدير الفرع" scopeLevel="branch" scopeLabel="فرع مدينة نصر" tenantName="أكاديمية مدى" branchName="فرع مدينة نصر">
     {mobileNavOpen && <button className="mobile-scrim" aria-label="إغلاق القائمة" onClick={() => setMobileNavOpen(false)} />}
