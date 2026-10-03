@@ -125,8 +125,8 @@ public static class ExpenseEndpoints
     }
 
     private static object ToResponse(Expense expense) => new { id = expense.Id, tenantId = expense.TenantId, branchId = expense.BranchId, branchName = expense.Branch?.Name, description = expense.Description, category = expense.Category, amountPiastres = expense.AmountPiastres, spentOn = expense.SpentOn, createdAt = expense.CreatedAt, status = expense.Status, createdByUserId = expense.CreatedByUserId, approvalRequestId = expense.ApprovalRequestId ?? expense.ApprovalRequest?.Id, approvalReason = expense.ApprovalRequest?.Reason, decidedAt = expense.ApprovalRequest?.DecidedAt, decidedByUserId = expense.ApprovalRequest?.DecidedByUserId, evidenceStatus = expense.Evidence is null ? "NOT_ATTACHED" : "ATTACHED", evidenceFileName = expense.Evidence?.DisplayFileName };
-    private static bool CanRead(ClaimsPrincipal user) => user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R05_SECRETARY") || user.IsInRole("R06_ACCOUNTANT");
-    private static bool CanWrite(ClaimsPrincipal user) => user.IsInRole("R05_SECRETARY") || user.IsInRole("R06_ACCOUNTANT");
+    private static bool CanRead(ClaimsPrincipal user) => user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R06_ACCOUNTANT");
+    private static bool CanWrite(ClaimsPrincipal user) => user.IsInRole("R06_ACCOUNTANT");
     private static bool CanApprove(ClaimsPrincipal user) => user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R06_ACCOUNTANT");
     private static bool TryScope(ClaimsPrincipal user, out ExpenseScope scope, out IResult? error)
     {

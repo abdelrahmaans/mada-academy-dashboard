@@ -182,7 +182,7 @@ public static class AcademyIdentityEndpoints
         "R02_BRANCH_MANAGER" => ["branch.read", "students.read", "students.create", "sessions.read", "sessions.create", "attendance.read", "attendance.write", "finance.summary.read", "finance.expenses.read", "finance.expenses.approve"],
         "R03_HEAD_INSTRUCTORS" => ["branch.read", "sessions.read", "attendance.read", "attendance.write", "evaluations.write", "evaluations.review"],
         "R04_INSTRUCTOR" => ["sessions.assigned.read", "attendance.read", "attendance.write", "evaluations.write"],
-        "R05_SECRETARY" => ["branch.read", "students.read", "students.create", "sessions.read", "staff.read", "invoices.read", "invoices.create", "payments.create", "payments.evidence.read", "payments.evidence.write", "finance.expenses.read", "finance.expenses.write"],
+        "R05_SECRETARY" => ["branch.read", "students.read", "students.create", "sessions.read", "staff.read", "invoices.read", "invoices.create", "payments.create", "payments.evidence.read", "payments.evidence.write"],
         "R06_ACCOUNTANT" => ["branch.read", "students.read", "sessions.read", "finance.read", "invoices.read", "invoices.create", "payments.create", "payments.evidence.read", "payments.evidence.write", "finance.expenses.read", "finance.expenses.write", "finance.expenses.approve", "reports.read"],
         "R07_MEDIA_MANAGER" => ["branch.read", "marketing.read", "marketing.write", "reports.read"],
         "R08_PARENT" => ["consumer.students.read", "consumer.sessions.read", "consumer.evaluations.read"],

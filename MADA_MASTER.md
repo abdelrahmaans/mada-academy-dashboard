@@ -281,3 +281,14 @@ R00 إلى R09 مغطاة كواجهات prototype مع role code وscope labels
 - OTP/SMS الحقيقي غير مضبوط: Development فقط يولد رمزًا عشوائيًا لأغراض الاختبار، وما عدا Development يفشل مغلقًا. أعد `OTP_MVP_TEMPORARY_PLAN.md` مسار pilot مساعدًا يدويًا ومحدودًا خلف flag وallowlist؛ لم ينفذ بعد، وليس بديلًا دائمًا لمزود SMS.
 - استعادة كلمة المرور، تخزين إثبات الدفع الخاص، صلاحيات R05 المالية الدقيقة، توصيل الماليات للمستهلك، وتدقيق صفحات demo/route guards ما زالت فجوات معلنة.
 - نقطة البدء للوكيل التالي: `AGENT_START_HERE.md`، والحالة المفصلة: `PROJECT_STATUS.md`. الحزمة القديمة في مجلد ملفات المشروع المشتركة مؤرخة 30 سبتمبر 2026 ولا تعكس الدمج الأخير.
+
+
+## 2026-10-03 — Finance Vertical Slice: Production Readiness & UI Contract Hardening
+
+The current phase is **Finance/Operations production hardening**, not a new OTP, marketing, or dashboard feature. The repository `main` after PR #30/#31 is the source of truth.
+
+This PR hardens `FinanceDesk` as the only operational finance route: payment method state now supports `CASH`, `VISA`, `INSTAPAY`, and `VODAFONE_CASH`; live payment requests carry `receivedOn` and require `externalReference` for digital-wallet methods; payment and evidence states are explicit; `/finance` redirects to `/finance-desk` and is not an operational surface.
+
+Authorization remains server-side and narrow: R05 secretary can perform invoice/payment operations required by the secretary workflow; R06 accountant can perform the finance workflow; there is no broad `finance.write`; all financial queries and consumer invoice/evidence reads remain tenant/branch/link scoped. PostgreSQL migration, concurrency, method, evidence, role, and consumer isolation tests are release gates.
+
+**Storage decision:** real production evidence uploads remain blocked until the hosting environment provides durable private storage with backup, preferably S3-compatible object storage. Local disk is acceptable only for development/test or an explicitly persistent, backed-up deployment; it is not a production default.

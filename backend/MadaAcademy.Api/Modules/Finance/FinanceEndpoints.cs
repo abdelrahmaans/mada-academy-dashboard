@@ -85,7 +85,9 @@ public static class FinanceEndpoints
     {
         if (!TryStaffScope(context.User, out var scope, out var error)) return error;
         if (!CanWritePayments(context.User)) return Forbidden("PAYMENT_CREATE_FORBIDDEN");
-        if (!PaymentMethods.Contains(request.Method?.Trim().ToUpperInvariant() ?? "")) return Validation("method", "Method must be CASH, VISA, INSTAPAY, or VODAFONE_CASH.");
+        var method = request.Method?.Trim().ToUpperInvariant() ?? "";
+        if (!PaymentMethods.Contains(method)) return Validation("method", "Method must be CASH, VISA, INSTAPAY, or VODAFONE_CASH.");
+        if (method is "INSTAPAY" or "VODAFONE_CASH" && string.IsNullOrWhiteSpace(request.ExternalReference)) return Validation("externalReference", "An external reference is required for InstaPay and Vodafone Cash.");
         if (request.AmountPiastres <= 0) return Validation("amountPiastres", "Payment amount must be positive.");
         if (request.ExternalReference?.Length > 120 || request.Note?.Length > 500) return Validation("payment", "Reference or note is too long.");
         if (!Guid.TryParse(context.User.FindFirstValue("sub"), out var actorId)) return Forbidden("ACTOR_REQUIRED");

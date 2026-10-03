@@ -115,3 +115,16 @@ React أصبح متصلًا بالـASP.NET Core عبر `client/src/lib/apiClien
 - **OTP:** `DevelopmentSmsMessageSender` is registered only in ASP.NET Development; non-Development uses `UnconfiguredSmsMessageSender` and returns a closed failure when no provider is configured. Never switch production to Development or add a shared code. The staff-assisted, allowlisted manual pilot is only a plan in `OTP_MVP_TEMPORARY_PLAN.md`, not a backend behavior.
 - **Next backend milestone:** implement branch-scoped invoice/payments schema and endpoints, narrow permissions for R05/R06, durable private evidence storage with scoped download, consumer invoice reads restricted by active account links, then PostgreSQL/InMemory isolation and concurrency tests. The financial contract and open blockers are in `NEXT_PHASE_PLAN.md` and `INVOICES_PAYMENTS_MVP_PLAN.md`.
 - Still not implemented: password recovery, production SMS provider, payment processing/reconciliation, official tax invoicing, expense APIs, and broad live reporting. Do not represent these as supported.
+
+
+## 21. Finance Vertical Slice — Production Readiness & UI Contract Hardening — 3 October 2026
+
+The finance APIs and persistence are now the current hardening target. `FinanceDesk` is the operational UI; `/finance` redirects to it rather than exposing a second demo workflow.
+
+- Payment methods are constrained to `CASH`, `VISA`, `INSTAPAY`, and `VODAFONE_CASH`.
+- Payment records expose and persist `receivedOn`; InstaPay/Vodafone Cash require an external reference.
+- Evidence responses distinguish `ATTACHED` from `NOT_ATTACHED`, and the UI distinguishes registered payment, evidence attached, and evidence not attached.
+- R05/R06 access is tested against tenant/branch scope and narrow operations; no `finance.write` permission is granted.
+- Release gate: PostgreSQL migration test, concurrent payment test, all payment methods, evidence upload/download, R05/R06 authorization, consumer-link isolation, frontend live/demo checks, and staging smoke test.
+
+**Deployment/storage gate:** `LocalPrivateObjectStorage` must not be treated as production durability. Until a durable private backend and backup policy are configured, production must not accept real evidence uploads. The deployment handoff must document the selected private object storage, retention, backup, restore test, and secret/configuration requirements.
