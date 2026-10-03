@@ -50,6 +50,7 @@ export default function HeadInstructorsLive() {
   const [data, setData] = useState<LiveData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [markingId, setMarkingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -61,18 +62,35 @@ export default function HeadInstructorsLive() {
     }
     setLoading(true);
     setError(null);
+    setWarning(null);
     try {
       const now = new Date();
       const from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const to = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000).toISOString();
-      const [groups, instructors, sessions, evaluations, notifications] = await Promise.all([
+      const [groupsResult, instructorsResult, sessionsResult, evaluationsResult, notificationsResult] = await Promise.allSettled([
         apiClient.listGroups(),
         apiClient.schedulingInstructors(me.branchId),
         apiClient.listSessions({ from, to }),
         apiClient.evaluationStatusSummary(),
         apiClient.listNotifications(true),
       ]);
-      setData({ groups: groups.items, instructors: instructors.items, sessions: sessions.items, evaluations, notifications: notifications.items });
+      const coreFailures = [groupsResult, instructorsResult, sessionsResult].filter(result => result.status === "rejected");
+      if (coreFailures.length > 0) throw new Error("تعذر تحميل بيانات المجموعات أو المدربين أو الجلسات الأساسية.");
+      const warnings: string[] = [];
+      const evaluations = evaluationsResult.status === "fulfilled"
+        ? evaluationsResult.value
+        : { branchId: me.branchId, counts: { DRAFT: 0, SUBMITTED: 0, CHANGES_REQUESTED: 0, PUBLISHED: 0 } };
+      if (evaluationsResult.status === "rejected") warnings.push("ملخص التقييمات غير متاح مؤقتًا.");
+      const notifications = notificationsResult.status === "fulfilled" ? notificationsResult.value : { items: [], total: 0 };
+      if (notificationsResult.status === "rejected") warnings.push("التنبيهات غير متاحة مؤقتًا.");
+      setData({
+        groups: groupsResult.status === "fulfilled" ? groupsResult.value.items : [],
+        instructors: instructorsResult.status === "fulfilled" ? instructorsResult.value.items : [],
+        sessions: sessionsResult.status === "fulfilled" ? sessionsResult.value.items : [],
+        evaluations,
+        notifications: notifications.items,
+      });
+      setWarning(warnings.length > 0 ? warnings.join(" ") : null);
     } catch (cause) {
       setData(null);
       setError(cause instanceof Error ? cause.message : "تعذر تحميل بيانات الفرع من الخادم.");
@@ -127,6 +145,7 @@ export default function HeadInstructorsLive() {
         </nav>
         {loading && <LoadingState label="جارٍ تحميل بيانات الفريق والمجموعات والجلسات والتقييمات…" compact />}
         {!loading && error && <section className="r03-live-error" role="alert"><ShieldCheck size={20} /><div><strong>تعذر عرض لوحة R03 الحية</strong><p>{error} لم يتم استبدال بيانات الخادم ببيانات تجريبية.</p></div><button type="button" onClick={() => void load()}>إعادة المحاولة</button></section>}
+        {!loading && !error && warning && <section className="r03-live-error" role="status"><ShieldCheck size={20} /><div><strong>بعض الملحقات غير متاحة</strong><p>{warning} البيانات الأساسية ما زالت معروضة من الخادم.</p></div><button type="button" onClick={() => void load()}>إعادة المحاولة</button></section>}
         {!loading && !error && data && view === "overview" && (
           <>
             <section className="r03-live-metrics" aria-label="مؤشرات الفرع الحية">
