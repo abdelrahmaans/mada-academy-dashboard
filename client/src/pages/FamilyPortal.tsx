@@ -102,6 +102,10 @@ export default function FamilyPortal() {
   const [liveMode, setLiveMode] = useState(apiClient.hasSession());
   const [dataLoading, setDataLoading] = useState(apiClient.hasSession());
   const [dataError, setDataError] = useState<string | null>(null);
+  const [dataWarning, setDataWarning] = useState<string | null>(null);
+  const [invoiceLoading, setInvoiceLoading] = useState(apiClient.hasSession());
+  const [invoiceError, setInvoiceError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
   const [selectedId, setSelectedId] = useState(apiClient.hasSession() ? "" : CHILDREN[0].id);
   const [tab, setTab] = useState<PortalTab>("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -110,23 +114,55 @@ export default function FamilyPortal() {
   useEffect(() => {
     if (!apiClient.hasSession()) return;
     let cancelled = false;
-    setLiveMode(true); setDataLoading(true); setChildren([]);
-    Promise.all([apiClient.consumerStudents(), apiClient.consumerSessions(), apiClient.consumerInvoices()])
-      .then(([students, sessions, invoiceResponse]) => {
-        if (cancelled) return;
-        const mapped = students.items.map((student, index) => mapFamilyChild(student, sessions.items, index));
-        for (const item of mapped) {
-          item.invoices = invoiceResponse.items.filter(invoice => invoice.studentId === item.id);
-          const outstanding = item.invoices.reduce((sum, invoice) => sum + invoice.remainingPiastres, 0);
-          item.invoiceStatus = item.invoices.length === 0 ? "لا توجد فواتير" : outstanding > 0 ? "قسط متبقٍ" : "مدفوع";
-          item.invoiceDue = item.invoices.find(invoice => invoice.remainingPiastres > 0)?.dueDate ?? "لا توجد مستحقات حالية";
-        }
-        setChildren(mapped); setSelectedId(mapped[0]?.id ?? ""); setDataError(null);
-      })
-      .catch(error => { if (!cancelled) { setChildren([]); setDataError(error instanceof Error ? error.message : "تعذر تحميل بيانات الأسرة"); } })
-      .finally(() => { if (!cancelled) setDataLoading(false); });
+    let invoiceItems: FinanceInvoice[] = [];
+    let invoiceState: "loading" | "ready" | "error" = "loading";
+    setLiveMode(true); setDataLoading(true); setInvoiceLoading(true); setChildren([]);
+    setDataError(null); setDataWarning(null); setInvoiceError(null);
+    const studentsRequest = apiClient.consumerStudents();
+    const sessionsRequest = apiClient.consumerSessions();
+    const invoicesRequest = apiClient.consumerInvoices();
+    const applyInvoices = (items: ChildData[]) => items.map(item => {
+      if (invoiceState === "loading") return { ...item, invoices: [], invoiceStatus: "جارٍ التحميل", invoiceDue: "يتم جلب بيانات الفواتير…" };
+      if (invoiceState === "error") return { ...item, invoices: [], invoiceStatus: "غير متاح", invoiceDue: "تعذر تحميل بيانات الفواتير." };
+      const invoices = invoiceItems.filter(invoice => invoice.studentId === item.id);
+      const outstanding = invoices.reduce((sum, invoice) => sum + invoice.remainingPiastres, 0);
+      return { ...item, invoices, invoiceStatus: invoices.length === 0 ? "لا توجد فواتير" : outstanding > 0 ? "قسط متبقٍ" : "مدفوع", invoiceDue: invoices.find(invoice => invoice.remainingPiastres > 0)?.dueDate ?? "لا توجد مستحقات حالية" };
+    });
+    Promise.allSettled([studentsRequest, sessionsRequest]).then(([studentsResult, sessionsResult]) => {
+      if (cancelled) return;
+      setDataLoading(false);
+      if (studentsResult.status === "rejected") {
+        const message = studentsResult.reason instanceof Error ? studentsResult.reason.message : "تعذر تحميل الأطفال المرتبطين بالحساب.";
+        setChildren([]); setDataError(message); toast.error(message); return;
+      }
+      const sessions = sessionsResult.status === "fulfilled" ? sessionsResult.value.items : [];
+      const mapped = applyInvoices(studentsResult.value.items.map((student, index) => mapFamilyChild(student, sessions, index)));
+      setChildren(mapped); setSelectedId(current => mapped.some(item => item.id === current) ? current : mapped[0]?.id ?? ""); setDataError(null);
+      if (sessionsResult.status === "rejected") {
+        const message = sessionsResult.reason instanceof Error ? sessionsResult.reason.message : "تعذر تحميل جلسات الأطفال.";
+        setDataWarning(message); toast.error(`تعذر تحميل الجلسات: ${message}`);
+      }
+    });
+    invoicesRequest.then(response => {
+      if (cancelled) return;
+      invoiceItems = response.items;
+      invoiceState = "ready";
+      setInvoiceLoading(false); setInvoiceError(null);
+      setChildren(current => applyInvoices(current));
+    }).catch(error => {
+      if (cancelled) return;
+      const message = error instanceof Error ? error.message : "تعذر تحميل فواتير الأطفال.";
+      invoiceState = "error";
+      setInvoiceLoading(false); setInvoiceError(message); toast.error(`تعذر تحميل الفواتير: ${message}`);
+      setChildren(current => applyInvoices(current));
+    });
+    Promise.allSettled([studentsRequest, sessionsRequest, invoicesRequest]).then(results => {
+      if (cancelled || retryKey === 0) return;
+      if (results.every(result => result.status === "fulfilled")) toast.success("تم تحديث بيانات بوابة الأسرة");
+    });
     return () => { cancelled = true; };
-  }, []);
+  }, [retryKey]);
+  const retry = () => setRetryKey(value => value + 1);
   const tabs: Array<{ id: PortalTab; label: string; icon: typeof Home }> = [
     { id: "overview", label: "ملخص الطفل", icon: Home },
     { id: "attendance", label: "الحضور", icon: CalendarDays },
@@ -255,6 +291,7 @@ export default function FamilyPortal() {
           </div>
           {dataLoading && <div className="family-info-note">جارٍ تحميل الأطفال والجلسات المرتبطة بحسابك…</div>}
           {dataError && <div className="family-info-note" role="alert">تعذر تحميل بيانات الأسرة: {dataError}</div>}
+          {dataWarning && !dataError && <div className="family-info-note" role="status">تم تحميل الأطفال، لكن الجلسات غير متاحة مؤقتًا: {dataWarning} <button type="button" onClick={retry}>إعادة المحاولة</button></div>}
           {children.length > 0 && <ChildrenSwitcher
             children={children}
             selectedId={selectedId}
@@ -279,7 +316,7 @@ export default function FamilyPortal() {
           {child && tab === "overview" && <Overview child={child} onTab={setTab} liveMode={liveMode} />}
           {child && tab === "attendance" && <Attendance child={child} liveMode={liveMode} />}
           {child && tab === "evaluations" && <Evaluations child={child} liveMode={liveMode} />}
-          {child && tab === "invoices" && (liveMode ? <LiveInvoices invoices={child.invoices ?? []} /> : <Invoices child={child} supportRequested={supportRequested} onRequestSupport={() => { setSupportRequested(true); toast.success("تم تسجيل طلب المراجعة في المعاينة فقط."); }} />)}
+          {child && tab === "invoices" && (liveMode ? <LiveInvoices invoices={child.invoices ?? []} loading={invoiceLoading} error={invoiceError} onRetry={retry} /> : <Invoices child={child} supportRequested={supportRequested} onRequestSupport={() => { setSupportRequested(true); toast.success("تم تسجيل طلب المراجعة في المعاينة فقط."); }} />)}
           <footer className="family-portal-privacy">
             <ShieldCheck size={14} />
             <span>
@@ -461,9 +498,9 @@ function Evaluations({ child, liveMode }: { child: ChildData; liveMode: boolean 
     </section>
   );
 }
-function LiveInvoices({ invoices }: { invoices: FinanceInvoice[] }) {
+function LiveInvoices({ invoices, loading, error, onRetry }: { invoices: FinanceInvoice[]; loading: boolean; error: string | null; onRetry: () => void }) {
   return <section className="family-portal-panel family-detail-panel"><PanelTitle icon={<Wallet size={16} />} title="الفواتير والمدفوعات" />
-    {invoices.length === 0 ? <div className="family-info-note"><AlertCircle size={14} /> لا توجد فواتير مرتبطة بهذا الملف حاليًا.</div> : <div className="family-invoice-list">{invoices.map(invoice => <article className="family-invoice-card" key={invoice.id}><div><strong>{invoice.invoiceNumber}</strong><small>استحقاق {invoice.dueDate} · {invoice.status}</small></div><div><b>{(invoice.remainingPiastres / 100).toLocaleString("ar-EG")} ج.م متبقي</b><small>الإجمالي {(invoice.totalPiastres / 100).toLocaleString("ar-EG")} · المدفوع {(invoice.paidPiastres / 100).toLocaleString("ar-EG")}</small></div></article>)}</div>}
+    {loading ? <div className="family-info-note" role="status">جارٍ تحميل فواتير الأطفال المرتبطين…</div> : error ? <div className="family-info-note" role="alert"><AlertCircle size={14} /> تعذر تحميل الفواتير: {error} <button type="button" onClick={onRetry}>إعادة المحاولة</button></div> : invoices.length === 0 ? <div className="family-info-note"><AlertCircle size={14} /> لا توجد فواتير مرتبطة بهذا الملف حاليًا.</div> : <div className="family-invoice-list">{invoices.map(invoice => <article className="family-invoice-card" key={invoice.id}><div><strong>{invoice.invoiceNumber}</strong><small>استحقاق {invoice.dueDate} · {invoice.status}</small></div><div><b>{(invoice.remainingPiastres / 100).toLocaleString("ar-EG")} ج.م متبقي</b><small>الإجمالي {(invoice.totalPiastres / 100).toLocaleString("ar-EG")} · المدفوع {(invoice.paidPiastres / 100).toLocaleString("ar-EG")}</small></div></article>)}</div>}
     <div className="family-info-note"><ShieldCheck size={14} /> عرض للقراءة فقط؛ تسجيل التحصيل وإثباتاته يتم عبر الأكاديمية.</div>
   </section>;
 }
