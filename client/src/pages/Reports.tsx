@@ -662,8 +662,8 @@ export default function Reports() {
   const { me, loading, error } = useAuth();
   if (loading) return <main className="r02-home-auth-state" dir="rtl" role="status">جارٍ التحقق من الجلسة وتحميل التقرير…</main>;
   if (apiClient.hasSession()) {
-    if (me?.role === "R01_ACADEMY_OWNER" || me?.role === "R02_BRANCH_MANAGER") return <ReportsLive me={me} />;
-    return <main className="r02-home-auth-state r02-home-auth-error" dir="rtl" role="alert">التقارير المالية غير متاحة لهذا الدور.</main>;
+    if (me?.role === "R01_ACADEMY_OWNER" || me?.role === "R02_BRANCH_MANAGER" || me?.role === "R06_ACCOUNTANT") return <ReportsLive me={me} />;
+    return <main className="r02-home-auth-state r02-home-auth-error" dir="rtl" role="alert">التقارير التشغيلية غير متاحة لهذا الدور.</main>;
   }
   if (error) return <main className="r02-home-auth-state r02-home-auth-error" dir="rtl" role="alert">تعذر التحقق من الجلسة. سجّل الدخول مجددًا؛ لن نعرض أرقامًا تجريبية بدل التقرير.</main>;
   return <ReportsPreview />;
