@@ -24,12 +24,14 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Redirect, useLocation } from "wouter";
+import { useLocation } from "wouter";
+import { useAuth } from "@/contexts/AuthContext";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import StatusBadge from "@/components/StatusBadge";
 import { apiClient } from "@/lib/apiClient";
+import HomeLive from "./HomeLive";
 import "@/components/PreviewBanner.css";
 
 type OpsView = "departments" | "trainers" | "schedule";
@@ -92,6 +94,7 @@ const TRAINER_STATUS_LABELS: Record<TrainerStatus, string> = { active: "نشط",
 const SESSION_STATUS_LABELS: Record<SessionStatus, string> = { confirmed: "مؤكدة", needs_room: "تحتاج قاعة", pending_approval: "بانتظار الاعتماد" };
 
 export default function BranchOperations() {
+  const { me, loading, error } = useAuth();
   const [, navigate] = useLocation();
   const [view, setView] = useState<OpsView>("departments");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -132,7 +135,11 @@ export default function BranchOperations() {
     toast.success("تمت إضافة الحصة للمراجعة", { description: "الحصة الجديدة بانتظار اعتماد مدير الفرع محليًا." });
   };
 
-  if (apiClient.hasSession()) return <Redirect to="/" />;
+  if (apiClient.hasSession()) {
+    if (loading) return <main className="r02-home-auth-state" dir="rtl" role="status">جارٍ التحقق من الجلسة وتحميل تشغيل الفرع…</main>;
+    if (me?.role === "R02_BRANCH_MANAGER") return <HomeLive me={me} />;
+    return <main className="r02-home-auth-state r02-home-auth-error" dir="rtl" role="alert">مسار تشغيل الفرع غير متاح لهذا الدور{error ? `: ${error}` : "."}</main>;
+  }
 
   return <RoleDashboardShell className="app-shell r02-operations-shell" roleCode="R02" roleLabel="مدير الفرع" scopeLevel="branch" scopeLabel="فرع مدينة نصر" tenantName="أكاديمية مدى" branchName="فرع مدينة نصر">
     {mobileNavOpen && <button className="mobile-scrim" aria-label="إغلاق القائمة" onClick={() => setMobileNavOpen(false)} />}
