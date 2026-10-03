@@ -297,3 +297,10 @@ Storage runtime now defaults to fail-closed outside Development. An optional Sup
 
 
 Current state: Finance evidence storage is in testing on the private Supabase `private-evidence` bucket. Manual owner backups are accepted during testing. Production sign-off still requires a documented durable/off-site object backup policy.
+
+
+## 2026-10-03 — P1 Core Journey Closed / Consumer Smoke Phase Started
+
+تم دمج PR #35 (`1d13815`) بعد نجاح كل checks: backend PostgreSQL integration **70/70**، وفحوصات الـfrontend والـpreviews. أصبح `DemoDataSeeder` repairable/idempotent للـcore graph، بما يشمل حسابات R04/R08/R09 وروابطهم وبيانات enrollment وattendance والتقييم المنشور وانتقالات الحالة. أضيفت رحلة API من حفظ التقييم وإرساله للمراجعة ونشره حتى ظهوره للمستهلك، مع عزل parent/student والـbranch scope.
+
+المرحلة النشطة التالية هي manual authenticated smoke test لـR08/R09. الحسابات والبيانات التجريبية جاهزة، لكن الاختبار اليدوي ينتظر API غير إنتاجي مضبوط؛ Finance deployment وSupabase secrets وevidence storage ما زالت مؤجلة. الـrunbook التنفيذي هو `CONSUMER_STAGING_SMOKE_TEST.md`.
