@@ -1,7 +1,7 @@
 # خطة المرحلة القادمة — Mada Academy
 
 **تاريخ اللقطة:** 3 أكتوبر 2026
-**قاعدة العمل الحالية:** `feat/p2-operational-reports` عند `ae79b85`، مع [PR #34](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/34) مفتوحًا.
+**قاعدة العمل الحالية:** `feat/p2-operational-reports` عند `c244e06`، مع [PR #34](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/34) مفتوحًا.
 **الحالة:** هذه الوثيقة تحتفظ بخطة Finance كمرجع مؤجل. قرار التنفيذ الحالي هو إكمال P2 acceptance أولًا، وترك Finance follow-up وP1 blocker كما هما دون بدء جديد.
 
 ## قرار التنفيذ الحالي
@@ -27,7 +27,8 @@
 - AcademyRoles: تم فصل الصلاحيات والأعضاء عن lookup الفروع؛ فشل الفروع لا يمنع إدارة الأعضاء، ويظهر كتحذير وtoast خطأ، بينما retry الناجح يعطي toast نجاح.
 - AcademicProgramsLive: تم فصل مجموعات البرامج عن الجلسات؛ فشل قراءة أحدهما لا يمسح البيانات الأخرى، ويظهر warning وtoast خطأ، بينما زر التحديث الناجح يعطي toast نجاح.
 - ExecutiveDashboardLive: فشل تقرير R01 أو سجل التدقيق يظهر كـtoast وخطأ داخل الصفحة، مع إعادة محاولة لسجل التدقيق، ونجاح التحديث اليدوي يعطي toast نجاح؛ لا يتم عرض بدائل تجريبية.
-- API feedback interceptor: تم توحيد بث أخطاء API من `apiClient`، وإضافة جسر عام يعرض toast واحدًا لانتهاء جلسة الدخول بعد 401؛ أخطاء النطاق/العملية تظل محلية عندما تحتاج رسالة وسياقًا خاصًا، لتجنب تكرار التوست.
+- API feedback interceptor: تم توحيد بث أخطاء API من `apiClient`، والجسر العام يعرض toast واحدًا لـ401، وtoast صلاحية لـ403، وtoast خطأ خادم لـ5xx؛ اختبارات interceptor الفعلية تغطي 403 و500، وأخطاء النطاق/العملية تظل محلية عندما تحتاج رسالة وسياقًا خاصًا.
+- **الفجوة التالية المثبتة:** تدقيق `FamilyPortal` ثم `StudentPortal` لمسارات consumer التي تستخدم تحميلًا all-or-nothing؛ نبدأ بفصل بيانات الطلاب والجلسات عن endpoint الفواتير الاختياري حتى لا يؤدي منع/فشل قراءة الفواتير إلى شاشة فارغة، مع إضافة retry/toast، دون بدء تنفيذ Finance نفسه أو تغيير صلاحياته.
 - التحقق المحلي: Vitest **11/11**، `pnpm check`، `pnpm build`، و`git diff --check` ناجحة.
 - التحقق عبر GitHub: **5/5 checks ناجحة** على PR #34.
 
