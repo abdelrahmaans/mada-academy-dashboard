@@ -1,8 +1,8 @@
 # Mada Academy — Project Status
 
 **As of:** 3 October 2026
-**Verified Git state:** `main` at `bc01cb3`, pushed to origin after PR #37 merge.
-**Latest delivery PR:** [PR #37 — enable local consumer smoke run](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/37), merged with all required checks successful.
+**Verified Git state:** `main` at `c08dc35`, pushed to origin after PR #38 merge. Production-preparation changes are being delivered in the next PR.
+**Latest delivery PR:** [PR #38 — Finance and Consumer Browser E2E](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/38), merged with all required checks successful.
 **Stack:** React + Vite + TypeScript (primary UI); ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions. Angular is a reference preview only.
 
 ## Executive summary
@@ -35,7 +35,7 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 
 ## CI and verified baseline
 
-At PR #37, all four GitHub checks passed, including PostgreSQL/backend integration and both frontend deployments. The backend suite passed **70/70** in CI; local frontend validation passed Vitest, `pnpm check`, `pnpm build`, and `git diff --check`. Local Finance and invoice-correction tests pass **11/11**; local InMemory backend tests pass **54/54**; browser E2E passes **3/3** for R06/R08/R09 using Chromium. The local API preflight verified linked scope and published score `88`.
+At PR #38, all four GitHub checks passed, including frontend TypeScript/unit/build and both frontend deployments. The backend baseline passed **70/70** in CI; local frontend validation passed Vitest **13/13**, `pnpm check`, `pnpm build`, and `git diff --check`. Local Finance and invoice-correction tests pass **11/11**; local InMemory backend tests pass **54/54**; browser E2E now passes **4/4** using Chromium, including invoice creation, payment, over-collection rejection, evidence upload/download, R06, R08, and R09. A production Dockerfile, environment template, and `PRE_PRODUCTION_RUNBOOK.md` are now prepared; no real deployment secrets are stored in Git.
 
 ## OTP status
 
@@ -46,7 +46,7 @@ At PR #37, all four GitHub checks passed, including PostgreSQL/backend integrati
 
 ## Next milestone and open issues
 
-The P1/P2 consumer acceptance and Finance local acceptance are complete. The next phase is production-readiness evidence: configure the server-only Supabase key, run authenticated private-bucket upload/download smoke, define durable object backup/restore, and run deployed API/frontend staging acceptance. The finance design and release gates remain documented in [INVOICES_PAYMENTS_MVP_PLAN.md](INVOICES_PAYMENTS_MVP_PLAN.md) and [FINANCE_RELEASE_GATE.md](FINANCE_RELEASE_GATE.md).
+The P1/P2 consumer acceptance and Finance local acceptance are complete. The next phase is production-readiness evidence: deploy the API using [backend/Dockerfile](backend/Dockerfile), configure the server-only Supabase key, run authenticated private-bucket upload/download smoke using [scripts/staging-smoke.sh](scripts/staging-smoke.sh), define durable object backup/restore, and run deployed API/frontend staging acceptance. The complete sequence is in [PRE_PRODUCTION_RUNBOOK.md](PRE_PRODUCTION_RUNBOOK.md); finance design and release gates remain in [INVOICES_PAYMENTS_MVP_PLAN.md](INVOICES_PAYMENTS_MVP_PLAN.md) and [FINANCE_RELEASE_GATE.md](FINANCE_RELEASE_GATE.md).
 
 Open implementation blockers and product debt:
 

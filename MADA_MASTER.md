@@ -310,3 +310,9 @@ Current state: Finance evidence storage is in testing on the private Supabase `p
 تم إغلاق شريحة Finance على مستوى الكود والقبول المحلي. اختبارات Finance وInvoice correction نجحت **11/11**، والواجهة نجحت في `pnpm check` وVitest و`pnpm build`، وأضاف الريبو Playwright E2E حقيقية باستخدام Chromium. النتيجة **3/3**: R06 FinanceDesk LIVE، R08 Family Portal بعزل الطفل المرتبط، وR09 Student Portal بعزل الطالب.
 
 المتبقي ليس كودًا محليًا: حقن `SUPABASE_SERVICE_ROLE_KEY` في خادم غير الواجهة، تشغيل upload/download smoke على bucket `private-evidence`، توثيق backup/restore دائم للـobjects، ثم staging smoke بعد النشر. لذلك Finance أصبح **code/local-accepted** وليس **production-ready** بعد.
+
+## 2026-10-03 — Production Preparation Pack + Expanded E2E
+
+اكتملت كل الأعمال الداخلية المطلوبة قبل النشر: أضيفت دورة E2E موسعة ونجحت **4/4**، وتشمل إنشاء فاتورة، تسجيل دفعة، منع تجاوز الرصيد، رفع/تنزيل إثبات، إضافة إلى R06/R08/R09. أضيف `backend/Dockerfile`، و`backend/.env.production.example` بدون أسرار، و`scripts/staging-smoke.sh`، و`PRE_PRODUCTION_RUNBOOK.md`.
+
+ما زال القرار/التشغيل الخارجي فقط: اختيار منصة API، إدخال secrets في secret manager، تشغيل PostgreSQL وprivate Supabase storage، تنفيذ backup/restore، ثم تشغيل staging smoke. لا توجد أسرار أو مفاتيح إنتاج في الريبو.
