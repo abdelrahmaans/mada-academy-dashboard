@@ -31,7 +31,7 @@
 - FamilyPortal: تم فصل تحميل الأطفال والجلسات عن endpoint الفواتير؛ فشل الفواتير يعرض حالة مستقلة وtoast وRetry، ويحافظ على بيانات الأطفال والجلسات، كما لا تعرض بطاقة الطفل حالة فواتير مضللة أثناء التحميل أو الفشل.
 - StudentPortal: تم فصل ملف الطالب عن الجلسات باستخدام `Promise.allSettled`؛ فشل الجلسات يحافظ على ملف الطالب ويعرض warning وtoast وRetry، وفشل الملف الأساسي يعرض error وRetry، مع منع Demo fallback في LIVE.
 - Consumer final acceptance: اكتملت مراجعة R08/R09 وتوثقت في `CONSUMER_FINAL_ACCEPTANCE.md`; تم التأكد من عزل Demo، حالات empty/error/loading، Toast وRetry، وفصل البيانات الأساسية عن الفواتير/الجلسات الاختيارية.
-- **الفجوة التالية المثبتة:** manual authenticated staging smoke test لمسارات R08/R09؛ الحسابات والبيانات أصبحت مضبوطة في الـseeder، والمتبقي فقط controlled API URL.
+- **الفجوة التالية المثبتة:** manual authenticated browser smoke test لمسارات R08/R09؛ الحسابات والبيانات أصبحت مضبوطة، والـAPI local-only preflight نجح، والمتبقي click-through محلي أو controlled API URL.
 - التحقق المحلي: Vitest **11/11**، `pnpm check`، `pnpm build`، و`git diff --check` ناجحة.
 - التحقق عبر GitHub: **4/4 checks ناجحة** على PR #35، منها **70/70 backend tests**.
 
