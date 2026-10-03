@@ -23,16 +23,30 @@ export default function AcademyClassrooms() {
   const [resourceRoom, setResourceRoom] = useState<AcademyClassroom | null>(null);
   const [resources, setResources] = useState<ClassroomResource[]>([]);
   const [resourceLoading, setResourceLoading] = useState(false);
+  const [resourceError, setResourceError] = useState<string | null>(null);
   const [resourceForm, setResourceForm] = useState({ kind: "EQUIPMENT" as "SEATING" | "EQUIPMENT", name: "", quantity: "1", status: "AVAILABLE", notes: "" });
 
   const load = async () => {
     setLoading(true); setError(null);
-    try {
-      const [branchResponse, classroomResponse] = await Promise.all([apiClient.academyBranches(), apiClient.academyClassrooms(branchFilter === "all" ? undefined : branchFilter)]);
-      setBranches(branchResponse.items.filter(branch => branch.status === "ACTIVE"));
-      setClassrooms(classroomResponse.items);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "تعذر تحميل القاعات."); }
-    finally { setLoading(false); }
+    const [branchResult, classroomResult] = await Promise.allSettled([
+      apiClient.academyBranches(),
+      apiClient.academyClassrooms(branchFilter === "all" ? undefined : branchFilter),
+    ]);
+    if (classroomResult.status === "fulfilled") {
+      setClassrooms(classroomResult.value.items);
+      if (branchResult.status === "fulfilled") {
+        setBranches(branchResult.value.items.filter(branch => branch.status === "ACTIVE"));
+      } else {
+        setBranches([]);
+        setError("تم تحميل القاعات، لكن تعذر تحميل قائمة الفروع؛ بعض خيارات الإدارة غير متاحة.");
+      }
+    } else {
+      setClassrooms([]);
+      setBranches(branchResult.status === "fulfilled" ? branchResult.value.items.filter(branch => branch.status === "ACTIVE") : []);
+      const cause = classroomResult.reason;
+      setError(cause instanceof Error ? cause.message : "تعذر تحميل القاعات.");
+    }
+    setLoading(false);
   };
   useEffect(() => { void load(); }, [branchFilter]);
 
@@ -69,9 +83,9 @@ export default function AcademyClassrooms() {
     finally { setSaving(false); }
   };
   const openResources = async (room: AcademyClassroom) => {
-    setResourceRoom(room); setResourceLoading(true);
+    setResourceRoom(room); setResourceLoading(true); setResourceError(null); setResources([]);
     try { const response = await apiClient.classroomResources(room.id); setResources(response.items); }
-    catch (cause) { toast.error(cause instanceof Error ? cause.message : "تعذر تحميل تجهيزات القاعة."); }
+    catch (cause) { setResourceError(cause instanceof Error ? cause.message : "تعذر تحميل تجهيزات القاعة."); }
     finally { setResourceLoading(false); }
   };
   const addResource = async (event: React.FormEvent) => {
@@ -85,6 +99,7 @@ export default function AcademyClassrooms() {
     try { await apiClient.deleteClassroomResource(resourceRoom.id, resource.id); setResources(current => current.filter(item => item.id !== resource.id)); toast.success("تم حذف المورد"); }
     catch (cause) { toast.error(cause instanceof Error ? cause.message : "تعذر حذف المورد."); }
   };
+  const retryResources = () => { if (resourceRoom) void openResources(resourceRoom); };
 
   return <RoleDashboardShell className="academy-classrooms-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية">
     <main className="academy-classrooms-page" dir="rtl">
@@ -100,7 +115,7 @@ export default function AcademyClassrooms() {
       </div>
     </main>
     {showForm && <div className="academy-classrooms-overlay"><form className="academy-classrooms-modal" onSubmit={save}><header><div><span><Building2 size={17} /></span><h2>{editing ? "تعديل القاعة" : "إضافة قاعة جديدة"}</h2></div><button type="button" onClick={() => setShowForm(false)}><X size={18} /></button></header><p>ربط القاعة بفرع نشط يجعلها متاحة للاستخدام في جدولة الحصص.</p><label>الفرع<select value={form.branchId} onChange={event => setForm({ ...form, branchId: event.target.value })} disabled={Boolean(editing)}><option value="">اختر الفرع</option>{branches.map(branch => <option key={branch.id} value={branch.id}>{branch.name} · {branch.code}</option>)}</select></label><label>اسم القاعة<input value={form.name} onChange={event => setForm({ ...form, name: event.target.value })} placeholder="معمل الروبوتات" /></label><label>السعة القصوى<input type="number" min="1" max="500" value={form.capacity} onChange={event => setForm({ ...form, capacity: event.target.value })} /></label><footer><button type="button" onClick={() => setShowForm(false)}>إلغاء</button><button className="primary" disabled={saving}>{saving ? "جارٍ الحفظ…" : "حفظ القاعة"}</button></footer></form></div>}
-    {resourceRoom && <div className="academy-classrooms-overlay"><section className="academy-classrooms-modal academy-resources-modal"><header><div><span><Wrench size={17} /></span><h2>المقاعد والأجهزة · {resourceRoom.name}</h2></div><button type="button" onClick={() => setResourceRoom(null)}><X size={18} /></button></header><p>أضف مخزون المقاعد أو الأجهزة المتاحة داخل القاعة لمساعدة التشغيل والجدولة.</p><form className="academy-resource-form" onSubmit={addResource}><select value={resourceForm.kind} onChange={event => setResourceForm({ ...resourceForm, kind: event.target.value as "SEATING" | "EQUIPMENT" })}><option value="SEATING">مقاعد</option><option value="EQUIPMENT">أجهزة</option></select><input value={resourceForm.name} onChange={event => setResourceForm({ ...resourceForm, name: event.target.value })} placeholder="مثال: مقاعد طلاب" /><input type="number" min="1" value={resourceForm.quantity} onChange={event => setResourceForm({ ...resourceForm, quantity: event.target.value })} /><button className="primary"><Plus size={14} /> إضافة</button></form><div className="academy-resources-list">{resourceLoading ? <div className="academy-classrooms-loading"><LoaderCircle className="spin" size={19} /> جارٍ التحميل…</div> : resources.length === 0 ? <div className="academy-resources-empty"><Armchair size={22} /> لا توجد مقاعد أو أجهزة مسجلة.</div> : resources.map(resource => <div className="academy-resource-row" key={resource.id}><span className={`academy-resource-kind ${resource.kind === "SEATING" ? "seating" : "equipment"}`}>{resource.kind === "SEATING" ? <Armchair size={15} /> : <Settings2 size={15} />}</span><div><strong>{resource.name}</strong><small>{resource.kind === "SEATING" ? "مقاعد" : "أجهزة"} · {resource.status === "AVAILABLE" ? "متاح" : resource.status === "MAINTENANCE" ? "صيانة" : "موقوف"}</small></div><b>{resource.quantity}</b><button onClick={() => void removeResource(resource)} aria-label={`حذف ${resource.name}`}><Trash2 size={15} /></button></div>)}</div></section></div>}
+    {resourceRoom && <div className="academy-classrooms-overlay"><section className="academy-classrooms-modal academy-resources-modal"><header><div><span><Wrench size={17} /></span><h2>المقاعد والأجهزة · {resourceRoom.name}</h2></div><button type="button" onClick={() => setResourceRoom(null)}><X size={18} /></button></header><p>أضف مخزون المقاعد أو الأجهزة المتاحة داخل القاعة لمساعدة التشغيل والجدولة.</p><form className="academy-resource-form" onSubmit={addResource}><select value={resourceForm.kind} onChange={event => setResourceForm({ ...resourceForm, kind: event.target.value as "SEATING" | "EQUIPMENT" })}><option value="SEATING">مقاعد</option><option value="EQUIPMENT">أجهزة</option></select><input value={resourceForm.name} onChange={event => setResourceForm({ ...resourceForm, name: event.target.value })} placeholder="مثال: مقاعد طلاب" /><input type="number" min="1" value={resourceForm.quantity} onChange={event => setResourceForm({ ...resourceForm, quantity: event.target.value })} /><button className="primary"><Plus size={14} /> إضافة</button></form><div className="academy-resources-list">{resourceLoading ? <div className="academy-classrooms-loading"><LoaderCircle className="spin" size={19} /> جارٍ التحميل…</div> : resourceError ? <div className="academy-classrooms-error" role="alert">تعذر تحميل الموارد: {resourceError}<button type="button" onClick={retryResources}>إعادة المحاولة</button></div> : resources.length === 0 ? <div className="academy-resources-empty"><Armchair size={22} /> لا توجد مقاعد أو أجهزة مسجلة.</div> : resources.map(resource => <div className="academy-resource-row" key={resource.id}><span className={`academy-resource-kind ${resource.kind === "SEATING" ? "seating" : "equipment"}`}>{resource.kind === "SEATING" ? <Armchair size={15} /> : <Settings2 size={15} />}</span><div><strong>{resource.name}</strong><small>{resource.kind === "SEATING" ? "مقاعد" : "أجهزة"} · {resource.status === "AVAILABLE" ? "متاح" : resource.status === "MAINTENANCE" ? "صيانة" : "موقوف"}</small></div><b>{resource.quantity}</b><button onClick={() => void removeResource(resource)} aria-label={`حذف ${resource.name}`}><Trash2 size={15} /></button></div>)}</div></section></div>}
   </RoleDashboardShell>;
 }
 function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) { return <div className="academy-classrooms-metric"><span>{icon}</span><div><strong>{value}</strong><small>{label}</small></div></div>; }

@@ -86,6 +86,8 @@ export default function StudentPortal() {
   const [liveMode, setLiveMode] = useState(apiClient.hasSession());
   const [dataLoading, setDataLoading] = useState(apiClient.hasSession());
   const [dataError, setDataError] = useState<string | null>(null);
+  const [dataWarning, setDataWarning] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
   const [hasStudentProfile, setHasStudentProfile] = useState(!apiClient.hasSession());
   const nav = [
     { id: "home" as const, label: "رحلتي", icon: Home },
@@ -99,22 +101,35 @@ export default function StudentPortal() {
   useEffect(() => {
     if (!apiClient.hasSession()) return;
     let cancelled = false;
-    setLiveMode(true); setDataLoading(true); setSessions([]);
-    Promise.all([apiClient.consumerStudents(), apiClient.consumerSessions()])
-      .then(([students, response]) => {
-        if (cancelled) return;
-        const student = students.items[0];
-        const ownRecords = student ? response.items.filter(item => item.studentId === student.id) : [];
-        setHasStudentProfile(Boolean(student));
-        setStudentName(student?.name ?? me?.user?.displayName ?? "الطالب");
-        setCourseName(ownRecords[0]?.courseName ?? "لا توجد مجموعة مسجلة");
-        setSessions(ownRecords.map(mapConsumerSession));
-        setDataError(null);
-      })
-      .catch(error => { if (!cancelled) { setSessions([]); setHasStudentProfile(false); setDataError(error instanceof Error ? error.message : "تعذر تحميل بيانات الطالب"); } })
-      .finally(() => { if (!cancelled) setDataLoading(false); });
+    setLiveMode(true); setDataLoading(true); setSessions([]); setDataError(null); setDataWarning(null);
+    const studentsRequest = apiClient.consumerStudents();
+    const sessionsRequest = apiClient.consumerSessions();
+    Promise.allSettled([studentsRequest, sessionsRequest]).then(([studentsResult, sessionsResult]) => {
+      if (cancelled) return;
+      setDataLoading(false);
+      if (studentsResult.status === "rejected") {
+        const message = studentsResult.reason instanceof Error ? studentsResult.reason.message : "تعذر تحميل ملف الطالب.";
+        setSessions([]); setHasStudentProfile(false); setDataError(message); toast.error(message); return;
+      }
+      const student = studentsResult.value.items[0];
+      const records = sessionsResult.status === "fulfilled" ? sessionsResult.value.items : [];
+      const ownRecords = student ? records.filter(item => item.studentId === student.id) : [];
+      setHasStudentProfile(Boolean(student));
+      setStudentName(student?.name ?? me?.user?.displayName ?? "الطالب");
+      setCourseName(ownRecords[0]?.courseName ?? "لا توجد مجموعة مسجلة");
+      setSessions(ownRecords.map(mapConsumerSession));
+      setDataError(null);
+      if (sessionsResult.status === "rejected") {
+        const message = sessionsResult.reason instanceof Error ? sessionsResult.reason.message : "تعذر تحميل جلسات الطالب.";
+        setDataWarning(message); toast.error(`تعذر تحميل الجلسات: ${message}`);
+      }
+    });
+    Promise.allSettled([studentsRequest, sessionsRequest]).then(results => {
+      if (!cancelled && retryKey > 0 && results.every(result => result.status === "fulfilled")) toast.success("تم تحديث بيانات الطالب");
+    });
     return () => { cancelled = true; };
-  }, []);
+  }, [me?.user?.displayName, retryKey]);
+  const retry = () => setRetryKey(value => value + 1);
   const completedSessions = sessions.filter(item => item.status === "مكتملة").length;
   const attendanceRecords = sessions.filter(item => item.attendanceStatus && item.attendanceStatus !== "UNMARKED");
   const attendanceRate = attendanceRecords.length ? Math.round(attendanceRecords.filter(item => item.attendanceStatus === "PRESENT" || item.attendanceStatus === "LATE").length / attendanceRecords.length * 100) : 0;
@@ -256,7 +271,8 @@ export default function StudentPortal() {
             </span>
           </div>
           {dataLoading && <div className="student-note">جارٍ تحميل الجلسات المرتبطة بحسابك…</div>}
-          {dataError && <div className="student-note" role="alert">تعذر تحميل بيانات الطالب: {dataError}</div>}
+          {dataError && <div className="student-note" role="alert">تعذر تحميل بيانات الطالب: {dataError} <button type="button" onClick={retry}>إعادة المحاولة</button></div>}
+          {dataWarning && !dataError && <div className="student-note" role="status">تم تحميل ملف الطالب، لكن الجلسات غير متاحة مؤقتًا: {dataWarning} <button type="button" onClick={retry}>إعادة المحاولة</button></div>}
           {!dataLoading && !dataError && liveMode && !hasStudentProfile && <div className="student-note" role="status">لا يوجد ملف طالب مرتبط بهذا الحساب حتى الآن. تواصل مع الأكاديمية لربط الملف الصحيح.</div>}
           {hasStudentProfile && !dataLoading && !dataError && <>
           {tab === "home" && (

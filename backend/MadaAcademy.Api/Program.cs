@@ -74,6 +74,7 @@ app.MapMadaExecutiveDashboardEndpoints();
 app.MapMadaInvoiceCorrectionEndpoints();
 app.MapMadaExpenseEndpoints();
 app.MapMadaPlatformAdminEndpoints();
+app.MapMadaOperationalReportEndpoints();
 
 app.MapPost("/api/v1/auth/otp/send", (OtpSendRequest request, AuthService auth) =>
 {

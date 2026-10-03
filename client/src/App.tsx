@@ -1,11 +1,13 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { toast } from "sonner";
 import NotFound from "@/pages/NotFound";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Redirect, Route, Switch, Router as WouterRouter } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { subscribeApiErrors } from "./lib/apiClient";
 
 const Home = lazy(() => import("./pages/Home"));
 const Students = lazy(() => import("./pages/Students"));
@@ -103,12 +105,27 @@ function Router() {
   );
 }
 
+function ApiFeedbackBridge() {
+  useEffect(() => subscribeApiErrors(({ error, path }) => {
+    if (path.startsWith("/auth/") || path.startsWith("/consumer-invitations/")) return;
+    if (error.status === 401) {
+      toast.error("انتهت جلسة الدخول، سجّل الدخول مرة أخرى.", { id: "mada-session-expired" });
+    } else if (error.status === 403) {
+      toast.error("ليس لديك صلاحية لتنفيذ هذا الإجراء.", { id: "mada-api-forbidden" });
+    } else if (error.status >= 500) {
+      toast.error("حدث خطأ في الخادم، حاول مرة أخرى.", { id: "mada-api-server-error" });
+    }
+  }), []);
+  return null;
+}
+
 function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
+          <ApiFeedbackBridge />
           <Router />
         </TooltipProvider>
       </ThemeProvider>

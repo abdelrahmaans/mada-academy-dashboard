@@ -264,6 +264,7 @@ export type FinanceInvoicesResponse = { items: FinanceInvoice[]; total: number }
 export type FinanceExpense = { id: string; tenantId: string; branchId: string; branchName?: string | null; description: string; category: string; amountPiastres: number; spentOn: string; createdAt: string; status: string; createdByUserId: string; approvalRequestId?: string | null; approvalReason?: string | null; decidedAt?: string | null; decidedByUserId?: string | null; evidenceStatus: string; evidenceFileName?: string | null };
 export type FinanceExpensesResponse = { items: FinanceExpense[]; total: number };
 export type FinanceReport = { from: string | null; to: string | null; totalBilledPiastres: number; totalCollectedPiastres: number; totalOutstandingPiastres: number; approvedExpensesPiastres: number; netPiastres: number; branches: Array<{ branchId: string; branchName: string; invoiceCount: number; collectedPiastres: number; approvedExpensesPiastres: number; netPiastres: number }> };
+export type OperationalReport = { from: string | null; to: string | null; branchId: string | null; activeStudents: number; activeEnrollments: number; sessions: number; completedSessions: number; attendanceMarkedCount: number; attendedCount: number; attendancePercent: number | null; invoiceCount: number; totalBilledPiastres: number; totalCollectedPiastres: number; totalOutstandingPiastres: number; paymentsMissingEvidence: number; pendingExpenses: number; approvedExpenses: number; approvedExpensesPiastres: number };
 export type InvoiceCorrection = { id: string; tenantId: string; branchId: string; invoiceId: string; invoiceNumber?: string | null; studentName?: string | null; approvalRequestId: string; requestedByUserId: string; currentTotalPiastres: number; currentDueDate: string; proposedTotalPiastres: number; proposedDueDate: string; reason: string; status: string; decidedAt?: string | null; decidedByUserId?: string | null; createdAt: string };
 export type InvoiceCorrectionsResponse = { items: InvoiceCorrection[]; total: number };
 
@@ -277,6 +278,17 @@ export class ApiRequestError extends Error {
     super(message);
     this.name = "ApiRequestError";
   }
+}
+
+export type ApiErrorEvent = { error: ApiRequestError; path: string; method: string };
+type ApiErrorListener = (event: ApiErrorEvent) => void;
+const apiErrorListeners = new Set<ApiErrorListener>();
+export function subscribeApiErrors(listener: ApiErrorListener) {
+  apiErrorListeners.add(listener);
+  return () => { apiErrorListeners.delete(listener); };
+}
+function emitApiError(event: ApiErrorEvent) {
+  apiErrorListeners.forEach(listener => listener(event));
 }
 
 type TokenResponse = {
@@ -339,7 +351,9 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
     } catch {
       // Keep the raw response when the backend does not return JSON.
     }
-    throw new ApiRequestError(message, response.status, code, source);
+    const error = new ApiRequestError(message, response.status, code, source);
+    emitApiError({ error, path, method: (init.method ?? "GET").toUpperCase() });
+    throw error;
   }
   if (response.status === 204) return undefined as T;
   const payload = await response.json();
@@ -491,6 +505,8 @@ export const apiClient = {
   createFinanceInvoice: (input: { studentId: string; dueDate: string; enrollmentId?: string; lines: Array<{ description: string; amountPiastres: number }> }) => request<FinanceInvoice>("/finance/invoices", { method: "POST", body: JSON.stringify(input) }),
   createFinancePayment: (invoiceId: string, input: { amountPiastres: number; method: string; receivedOn?: string; externalReference?: string; note?: string }) => request<{ payment: FinancePayment; invoiceId: string }>(`/finance/invoices/${invoiceId}/payments`, { method: "POST", body: JSON.stringify(input) }),
   financeReport: (params: { from?: string; to?: string; branchId?: string } = {}) => { const query = new URLSearchParams(); if (params.from) query.set("from", params.from); if (params.to) query.set("to", params.to); if (params.branchId) query.set("branchId", params.branchId); const suffix = query.toString() ? `?${query}` : ""; return request<FinanceReport>(`/finance/reports/summary${suffix}`); },
+  operationalReport: (params: { from?: string; to?: string; branchId?: string } = {}) => { const query = new URLSearchParams(); if (params.from) query.set("from", params.from); if (params.to) query.set("to", params.to); if (params.branchId) query.set("branchId", params.branchId); const suffix = query.toString() ? `?${query}` : ""; return request<OperationalReport>(`/reports/operational${suffix}`); },
+  downloadOperationalReport: async (params: { from?: string; to?: string; branchId?: string } = {}) => { const query = new URLSearchParams(); if (params.from) query.set("from", params.from); if (params.to) query.set("to", params.to); if (params.branchId) query.set("branchId", params.branchId); const response = await fetch(`${API_BASE}/reports/operational.csv?${query}`, { headers: accessToken ? { authorization: `Bearer ${accessToken}` } : undefined }); if (!response.ok) throw new ApiRequestError("تعذر تصدير التقرير التشغيلي", response.status); return response.blob(); },
   downloadFinanceReport: async (params: { from?: string; to?: string; branchId?: string } = {}) => { const query = new URLSearchParams(); if (params.from) query.set("from", params.from); if (params.to) query.set("to", params.to); if (params.branchId) query.set("branchId", params.branchId); const response = await fetch(`${API_BASE}/finance/reports/summary.csv?${query}`, { headers: accessToken ? { authorization: `Bearer ${accessToken}` } : undefined }); if (!response.ok) throw new ApiRequestError("تعذر تصدير التقرير المالي", response.status); return response.blob(); },
   financeExpenses: (params: { status?: string; branchId?: string } = {}) => {
     const query = new URLSearchParams();

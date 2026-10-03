@@ -791,7 +791,7 @@ function StudentPage() {
             <ErrorState
               compact
               title="تعذر تحميل الطلاب من الـAPI"
-              description={`${dataError} · تم عرض بيانات DEMO بدلًا منها.`}
+              description={`${dataError} · لم يتم استبدال بيانات الخادم ببيانات تجريبية.`}
             />
           )}
           {!dataLoading && !dataError && dataMode === "live" && (

@@ -24,7 +24,8 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useLocation } from "wouter";
+import { Redirect, useLocation } from "wouter";
+import { apiClient } from "@/lib/apiClient";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
@@ -172,6 +173,7 @@ const PRIORITY_LABELS: Record<TicketPriority, string> = {
 };
 
 export default function AcademyOwner() {
+  if (apiClient.hasSession()) return <Redirect to="/executive-dashboard" />;
   const [, navigate] = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [view, setView] = useState<OwnerView>("overview");

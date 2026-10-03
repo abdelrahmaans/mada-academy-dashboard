@@ -26,10 +26,11 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useLocation } from "wouter";
+import { Redirect, useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import { EmptyState, LockedState } from "@/components/FeedbackStates";
+import { apiClient } from "@/lib/apiClient";
 
 type WorkspaceView =
   | "overview"
@@ -307,7 +308,7 @@ function InstructorBrand() {
   );
 }
 
-export default function Instructor() {
+function InstructorPreview() {
   const [, navigate] = useLocation();
   const [view, setView] = useState<WorkspaceView>(() => {
     const requested = new URLSearchParams(window.location.search).get("view");
@@ -1650,4 +1651,8 @@ export default function Instructor() {
       </main>
     </RoleDashboardShell>
   );
+}
+
+export default function Instructor() {
+  return apiClient.hasSession() ? <Redirect to="/instructor-desk" /> : <InstructorPreview />;
 }

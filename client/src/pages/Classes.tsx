@@ -393,30 +393,51 @@ function ClassesPage() {
     setCourses([]);
     setOfferings([]);
     setLoadError(null);
-    Promise.all([apiClient.courseTemplates(), apiClient.listGroups(), apiClient.schedulingClassrooms(), apiClient.schedulingInstructors(), apiClient.listStudents()])
-      .then(([courseResponse, groupResponse, roomResponse, instructorResponse, studentResponse]) => {
-        const mappedCourses = courseResponse.items.map(courseFromApi);
-        setCourses(mappedCourses);
-        setOfferings(groupResponse.items.map(offeringFromApi));
-        setLiveClassrooms(roomResponse.items);
-        setLiveInstructors(instructorResponse.items);
-        setLiveStudents(studentResponse.items);
-        setOfferingCourseId(mappedCourses[0]?.id ?? "");
-        const firstRoom = roomResponse.items.find(room => room.status === "AVAILABLE");
-        if (firstRoom) { setOfferingBranchId(firstRoom.branchId); setOfferingBranch(firstRoom.branchName); setSelectedClassroomId(firstRoom.id); setClassroom(firstRoom.name); }
-        const firstInstructor = instructorResponse.items[0];
-        if (firstInstructor) { setSelectedInstructorId(firstInstructor.id); setInstructor(firstInstructor.name ?? ""); }
-        setLiveRoomsReady(true);
-      })
-      .catch(cause => {
+    Promise.allSettled([
+      apiClient.courseTemplates(),
+      apiClient.listGroups(),
+      apiClient.schedulingClassrooms(),
+      apiClient.schedulingInstructors(),
+      apiClient.listStudents(),
+    ]).then(([courseResult, groupResult, roomResult, instructorResult, studentResult]) => {
+      if (courseResult.status === "rejected" || groupResult.status === "rejected") {
         setCourses([]);
         setOfferings([]);
         setLiveClassrooms([]);
         setLiveInstructors([]);
         setLiveStudents([]);
         setLiveRoomsReady(false);
-        setLoadError(cause instanceof Error ? cause.message : "تعذر تحميل بيانات الكورسات والمجموعات من الخادم.");
-      });
+        const cause = courseResult.status === "rejected"
+          ? courseResult.reason
+          : groupResult.status === "rejected"
+            ? groupResult.reason
+            : "تعذر تحميل بيانات الكورسات والمجموعات من الخادم.";
+        setLoadError(cause instanceof Error ? cause.message : "تعذر تحميل الكورسات والمجموعات من الخادم.");
+        return;
+      }
+
+      const mappedCourses = courseResult.value.items.map(courseFromApi);
+      setCourses(mappedCourses);
+      setOfferings(groupResult.value.items.map(offeringFromApi));
+
+      const rooms = roomResult.status === "fulfilled" ? roomResult.value.items : [];
+      const instructors = instructorResult.status === "fulfilled" ? instructorResult.value.items : [];
+      const students = studentResult.status === "fulfilled" ? studentResult.value.items : [];
+      setLiveClassrooms(rooms);
+      setLiveInstructors(instructors);
+      setLiveStudents(students);
+      setOfferingCourseId(mappedCourses[0]?.id ?? "");
+      const firstRoom = rooms.find(room => room.status === "AVAILABLE");
+      if (firstRoom) { setOfferingBranchId(firstRoom.branchId); setOfferingBranch(firstRoom.branchName); setSelectedClassroomId(firstRoom.id); setClassroom(firstRoom.name); }
+      const firstInstructor = instructors[0];
+      if (firstInstructor) { setSelectedInstructorId(firstInstructor.id); setInstructor(firstInstructor.name ?? ""); }
+      setLiveRoomsReady(roomResult.status === "fulfilled");
+
+      const optionalFailure = [roomResult, instructorResult, studentResult].find(result => result.status === "rejected");
+      if (optionalFailure?.status === "rejected") {
+        setLoadError("تم تحميل الكورسات والمجموعات؛ بعض بيانات إنشاء المجموعة غير متاحة لصلاحيات الحساب الحالية.");
+      }
+    });
   }, []);
 
   const filteredCourses = useMemo(
