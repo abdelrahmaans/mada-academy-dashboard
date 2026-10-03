@@ -1,15 +1,15 @@
 # خطة المرحلة القادمة — Mada Academy
 
 **تاريخ اللقطة:** 3 أكتوبر 2026
-**قاعدة العمل الحالية:** `main` عند `b0f54c2` بعد دمج [PR #34](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/34).
-**الحالة:** هذه الوثيقة تحتفظ بخطة Finance كمرجع مؤجل. قرار التنفيذ الحالي هو إكمال P2 acceptance أولًا، وترك Finance follow-up وP1 blocker كما هما دون بدء جديد.
+**قاعدة العمل الحالية:** `main` عند `1d13815` بعد دمج [PR #35](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/35).
+**الحالة:** P1 core seed/API journey تم دمجه والتحقق منه. هذه الوثيقة تحتفظ بخطة Finance كمرجع مؤجل. قرار التنفيذ الحالي هو إغلاق manual consumer acceptance أولًا، ثم اختيار gap P2 التالية.
 
 ## قرار التنفيذ الحالي
 
-1. **نغلق شريحة P2 الحالية:** تقارير التشغيل، عزل النطاق، تصدير CSV، وحماية مسارات LIVE من فتح صفحات demo القديمة.
-2. **نراجع ونُبقي PR #34 جاهزًا للدمج:** لا توجد checks فاشلة، والـworking tree نظيف بعد آخر push.
-3. **لا نبدأ تاسكة فواتير جديدة ولا P1:** Finance وP1 متوقفان عمدًا في هذه الدورة، وأي استئناف يحتاج قرارًا جديدًا.
-4. بعد دمج PR #34، تكون الخطوة التالية مراجعة قبول مختصرة للـroutes المتبقية فقط، ثم نختار شريحة P2 التالية من gaps المثبتة بدل إعادة فتح أعمال Finance.
+1. **تم إغلاق شريحة P2 source acceptance:** تقارير التشغيل، عزل النطاق، حماية LIVE، وحالات R08/R09 الجزئية مثبتة.
+2. **تم دمج P1 core journey:** الـseeder repairable، وحسابات R04/R08/R09 وروابطهم واختبارات الرحلة موجودة في `main`.
+3. **الخطوة النشطة:** تنفيذ [CONSUMER_STAGING_SMOKE_TEST.md](CONSUMER_STAGING_SMOKE_TEST.md) بمجرد توفر API غير إنتاجي مضبوط؛ لا نعتبر source-level tests بديلًا عن click-through.
+4. **لا نبدأ Finance deployment أو secrets أو evidence storage:** Finance يظل مؤجلًا كما طلب المستخدم.
 
 ## نتيجة acceptance الحالية
 
@@ -31,9 +31,9 @@
 - FamilyPortal: تم فصل تحميل الأطفال والجلسات عن endpoint الفواتير؛ فشل الفواتير يعرض حالة مستقلة وtoast وRetry، ويحافظ على بيانات الأطفال والجلسات، كما لا تعرض بطاقة الطفل حالة فواتير مضللة أثناء التحميل أو الفشل.
 - StudentPortal: تم فصل ملف الطالب عن الجلسات باستخدام `Promise.allSettled`؛ فشل الجلسات يحافظ على ملف الطالب ويعرض warning وtoast وRetry، وفشل الملف الأساسي يعرض error وRetry، مع منع Demo fallback في LIVE.
 - Consumer final acceptance: اكتملت مراجعة R08/R09 وتوثقت في `CONSUMER_FINAL_ACCEPTANCE.md`; تم التأكد من عزل Demo، حالات empty/error/loading، Toast وRetry، وفصل البيانات الأساسية عن الفواتير/الجلسات الاختيارية.
-- **الفجوة التالية المثبتة:** manual authenticated staging smoke test لمسارات R08/R09 عند توفر الحسابات والبيانات المضبوطة؛ Finance وP1 يظلان متوقفين.
+- **الفجوة التالية المثبتة:** manual authenticated staging smoke test لمسارات R08/R09؛ الحسابات والبيانات أصبحت مضبوطة في الـseeder، والمتبقي فقط controlled API URL.
 - التحقق المحلي: Vitest **11/11**، `pnpm check`، `pnpm build`، و`git diff --check` ناجحة.
-- التحقق عبر GitHub: **5/5 checks ناجحة** على PR #34.
+- التحقق عبر GitHub: **4/4 checks ناجحة** على PR #35، منها **70/70 backend tests**.
 
 ## الهدف
 

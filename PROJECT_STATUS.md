@@ -1,8 +1,8 @@
 # Mada Academy — Project Status
 
 **As of:** 3 October 2026
-**Verified Git state:** `main` at `b0f54c2`, pushed to origin after PR #34 merge.
-**Latest delivery PR:** [PR #34 — scoped operational reports and acceptance hardening](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/34), merged with all required checks successful.
+**Verified Git state:** `main` at `1d13815`, pushed to origin after PR #35 merge.
+**Latest delivery PR:** [PR #35 — seed and verify the P1 core journey](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/35), merged with all required checks successful.
 **Stack:** React + Vite + TypeScript (primary UI); ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions. Angular is a reference preview only.
 
 ## Executive summary
@@ -35,7 +35,7 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 
 ## CI and verified baseline
 
-At PR #34, all five GitHub checks passed: PostgreSQL/backend integration, frontend typecheck/tests/build, preview comments, and both deployments. Latest local validation on the delivery branch: Vitest **13/13**, `pnpm check`, `pnpm build`, and `git diff --check` passed; interceptor tests cover structured 403 and 500 events. CI workflows cover backend/PostgreSQL and frontend checks.
+At PR #35, all four GitHub checks passed: PostgreSQL/backend integration, preview comments, and both deployments. The backend suite passed **70/70**, while local frontend validation passed Vitest **13/13**, `pnpm check`, `pnpm build`, and `git diff --check`. CI workflows cover backend/PostgreSQL and frontend checks.
 
 ## OTP status
 
@@ -46,12 +46,12 @@ At PR #34, all five GitHub checks passed: PostgreSQL/backend integration, fronte
 
 ## Next milestone and open issues
 
-The P2 consumer final acceptance review is complete for R08/R09 and PR #34 is merged; the findings are recorded in [CONSUMER_FINAL_ACCEPTANCE.md](CONSUMER_FINAL_ACCEPTANCE.md). The remaining validation is a credentialed staging smoke test, blocked only until R08/R09 accounts and controlled staging data are available. The Finance follow-up and the blocked P1 task are intentionally parked and must not be restarted during this cycle. The finance design and release gates remain documented in [INVOICES_PAYMENTS_MVP_PLAN.md](INVOICES_PAYMENTS_MVP_PLAN.md) and [FINANCE_RELEASE_GATE.md](FINANCE_RELEASE_GATE.md).
+The P2 consumer final acceptance review is complete for R08/R09 and PR #35 is merged; the seeded accounts, links, attendance, and published evaluation are now repairable and covered by API integration tests. The next phase is the credentialed staging smoke test; its exact checklist is in [CONSUMER_STAGING_SMOKE_TEST.md](CONSUMER_STAGING_SMOKE_TEST.md), and it remains pending until a controlled non-production API URL exists. The Finance follow-up remains intentionally parked. The finance design and release gates remain documented in [INVOICES_PAYMENTS_MVP_PLAN.md](INVOICES_PAYMENTS_MVP_PLAN.md) and [FINANCE_RELEASE_GATE.md](FINANCE_RELEASE_GATE.md).
 
 Open implementation blockers and product debt:
 
-1. PR #34 still needs merge/review; its implementation is complete, including partial-failure hardening for Approvals, Classes, Schedule, AcademyClassrooms, and the BranchOperations live route.
+1. Manual R08/R09 browser click-through is the active next-phase gate; automation and seeded data are ready, but no controlled deployed API exists yet.
 2. Finance evidence deployment remains gated on backend secrets, authenticated staging upload/download smoke test, and durable backup evidence; see [FINANCE_RELEASE_GATE.md](FINANCE_RELEASE_GATE.md).
 3. Invoice cancellation/correction/refund and expanded financial workflows remain outside the current slice and must not be implied as supported.
 4. Production SMS provider and password recovery are later identity work; interim OTP mode remains opt-in, limited, audited, and never a hard-coded/shared code.
-5. Obtain controlled R08/R09 staging credentials/data and run the manual authenticated smoke test; do not reopen parked Finance/P1 work without a new decision.
+5. Run [CONSUMER_STAGING_SMOKE_TEST.md](CONSUMER_STAGING_SMOKE_TEST.md) against a controlled non-production API; do not reopen parked Finance work without a new decision.
