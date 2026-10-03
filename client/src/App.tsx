@@ -1,11 +1,13 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { toast } from "sonner";
 import NotFound from "@/pages/NotFound";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Redirect, Route, Switch, Router as WouterRouter } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { subscribeApiErrors } from "./lib/apiClient";
 
 const Home = lazy(() => import("./pages/Home"));
 const Students = lazy(() => import("./pages/Students"));
@@ -103,12 +105,22 @@ function Router() {
   );
 }
 
+function ApiFeedbackBridge() {
+  useEffect(() => subscribeApiErrors(({ error, path }) => {
+    if (error.status === 401 && !path.startsWith("/auth/") && !path.startsWith("/consumer-invitations/")) {
+      toast.error("انتهت جلسة الدخول، سجّل الدخول مرة أخرى.", { id: "mada-session-expired" });
+    }
+  }), []);
+  return null;
+}
+
 function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
+          <ApiFeedbackBridge />
           <Router />
         </TooltipProvider>
       </ThemeProvider>

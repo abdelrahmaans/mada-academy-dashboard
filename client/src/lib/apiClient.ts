@@ -280,6 +280,17 @@ export class ApiRequestError extends Error {
   }
 }
 
+export type ApiErrorEvent = { error: ApiRequestError; path: string; method: string };
+type ApiErrorListener = (event: ApiErrorEvent) => void;
+const apiErrorListeners = new Set<ApiErrorListener>();
+export function subscribeApiErrors(listener: ApiErrorListener) {
+  apiErrorListeners.add(listener);
+  return () => { apiErrorListeners.delete(listener); };
+}
+function emitApiError(event: ApiErrorEvent) {
+  apiErrorListeners.forEach(listener => listener(event));
+}
+
 type TokenResponse = {
   accessToken: string;
   refreshToken: string;
@@ -340,7 +351,9 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
     } catch {
       // Keep the raw response when the backend does not return JSON.
     }
-    throw new ApiRequestError(message, response.status, code, source);
+    const error = new ApiRequestError(message, response.status, code, source);
+    emitApiError({ error, path, method: (init.method ?? "GET").toUpperCase() });
+    throw error;
   }
   if (response.status === 204) return undefined as T;
   const payload = await response.json();
