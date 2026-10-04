@@ -193,6 +193,57 @@ public sealed class ConsumerInvitationApiTests
         Assert.False(await db.UserAccounts.AnyAsync(item => item.Phone == "+201222222222"));
     }
 
+    [Fact]
+    public async Task ConsumerInvitationPreview_RateLimitsSensitiveRequestsPerClientIp()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var client = factory.CreateClient();
+
+        for (var attempt = 0; attempt < 30; attempt++)
+        {
+            using var response = await client.PostAsJsonAsync("/api/v1/consumer-invitations/preview", new { token = "invalid-token" });
+            Assert.NotEqual(HttpStatusCode.TooManyRequests, response.StatusCode);
+        }
+
+        using var limited = await client.PostAsJsonAsync("/api/v1/consumer-invitations/preview", new { token = "invalid-token" });
+        Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
+    }
+
+    [Fact]
+    public async Task ConsumerLookup_RateLimitsRequestsPerClientIp()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var client = factory.CreateClient();
+        var staff = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
+        var studentId = await TestData.SeedStudentAsync(factory, staff.TenantId, staff.BranchId, "Lookup Student");
+        TestData.Authenticate(client, await TestData.LoginAsync(client, staff));
+
+        for (var attempt = 0; attempt < 60; attempt++)
+        {
+            using var response = await client.GetAsync($"/api/v1/students/{studentId}/consumer-accounts?accountType=parent&phone=%2B201011112222");
+            Assert.NotEqual(HttpStatusCode.TooManyRequests, response.StatusCode);
+        }
+
+        using var limited = await client.GetAsync($"/api/v1/students/{studentId}/consumer-accounts?accountType=parent&phone=%2B201011112222");
+        Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
+    }
+
+    [Fact]
+    public async Task OtpSend_RateLimitsSensitiveRequestsPerClientIp()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var client = factory.CreateClient();
+
+        for (var attempt = 0; attempt < 30; attempt++)
+        {
+            using var response = await client.PostAsJsonAsync("/api/v1/auth/otp/send", new { phone = "+201099999999", accountType = "staff" });
+            Assert.NotEqual(HttpStatusCode.TooManyRequests, response.StatusCode);
+        }
+
+        using var limited = await client.PostAsJsonAsync("/api/v1/auth/otp/send", new { phone = "+201099999999", accountType = "staff" });
+        Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
+    }
+
     private static string ReadToken(string url)
     {
         var fragment = new Uri(url).Fragment;
