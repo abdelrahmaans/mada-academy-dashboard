@@ -1,8 +1,8 @@
 # Mada Academy — Project Status
 
 **As of:** 4 October 2026
-**Verified Git state:** `main` includes PR #41 and PR #42 and is pushed to origin.
-**Latest delivery PR:** [PR #42 — optional analytics and expense evidence filename fixes](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/42), merged successfully.
+**Verified Git state:** `main` includes PR #46 and is pushed to origin.
+**Latest delivery PR:** [PR #46 — CI, security safeguards, and legacy cleanup](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/46), merged successfully.
 **Stack:** React + Vite + TypeScript; ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions.
 
 ## Executive summary
@@ -14,10 +14,10 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 | Role | What is implemented | Important gaps / truth to preserve |
 |---|---|---|
 | **R00 Platform Admin** | Platform shell/navigation exists; live console preserves available overview/academy/role data when one read endpoint fails and gives toast feedback for refresh and load/support failures. | Full platform administration and support workflows are not demonstrated as complete live APIs. |
-| **R01 Academy Owner** | Academy bootstrap, tenant-level identity/member/role, branch and classroom foundations exist; LIVE route is guarded from the old demo page, academy roles preserve members/permissions when branch lookup fails, classroom/resource management preserves useful data on partial failures, the executive dashboard gives toast/error feedback for report and audit loading, and the global interceptor now covers 401, 403, and 5xx with automated tests. | Executive/reporting surfaces still need final acceptance evidence. |
+| **R01 Academy Owner** | Academy bootstrap, tenant-level identity/member/role, branch and classroom foundations exist; LIVE route is guarded from the old demo page, academy roles preserve members/permissions when branch lookup fails, classroom/resource management preserves useful data on partial failures, the executive dashboard gives toast/error feedback for report and audit loading, and the global interceptor now covers 401, 403, and 5xx with automated tests. | Local acceptance evidence is documented; deployed staging acceptance remains open. |
 | **R02 Branch Manager** | Branch-scoped student/session/classroom and approval operations are available across implemented backend slices; `/branch-operations` now routes authenticated R02 users to the live dashboard instead of the legacy demo, and approvals/classes/schedule remain visible when optional endpoints are forbidden. | Some non-core branch panels remain outside the current P2 slice. |
-| **R03 Head Instructors** | Branch-scoped evaluation review queue; publish or request changes; dashboard avoids demo evaluation samples in LIVE evaluation surfaces, keeps core team/group/session data visible when optional endpoints fail, and preserves groups or sessions when one Academic Programs read fails. | Other overview/team indicators may still be preview/demo data. |
-| **R04 Instructor** | Assigned sessions, attendance, evaluation drafts/submission, and relevant workflow actions are connected to APIs. | Broader instructor analytics and non-core surfaces are not all live. |
+| **R03 Head Instructors** | Branch-scoped evaluation review queue; publish or request changes; dashboard avoids demo evaluation samples in LIVE evaluation surfaces, keeps core team/group/session data visible when optional endpoints fail, and preserves groups or sessions when one Academic Programs read fails. | Unsupported mastery/checkpoint analytics remain explicitly outside the LIVE contract. |
+| **R04 Instructor** | Assigned sessions, attendance, evaluation drafts/submission, and relevant workflow actions are connected to APIs; loading/error/retry behavior is separated from unsupported analytics. | Broader instructor analytics and non-core surfaces are not all live. |
 | **R05 Secretary** | Student workflows, phone-based consumer lookup/linking, consumer invitations, and scoped invoice/payment operations exist; legacy Secretary route is guarded from LIVE sessions. | Production evidence/storage and deployed staging remain open; no broad `finance.write`. |
 | **R06 Accountant** | FinanceDesk is connected to scoped invoice/payment/expense/report APIs with role-aware loading, forbidden, and error states; local browser E2E passes. | Production evidence/storage and deployed staging remain open. |
 | **R07 Marketing Manager** | Branch scope is aligned in navigation metadata and copy. | Marketing campaign/lead operations are not all backed by live APIs. |
@@ -35,14 +35,18 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 
 ## CI and verified baseline
 
-The current merged baseline includes PR #41 (UI/flow hardening) and PR #42 (optional analytics and evidence filename fix). Local frontend validation is green: Vitest **13/13**, `pnpm check`, `pnpm build`, `git diff --check`, and browser E2E **7/7** using Chromium, including invoice creation, payment, over-collection rejection, evidence upload/download, role isolation, anonymous redirect, and logout. Backend CI and integration evidence are recorded in the GitHub checks and backend integration-test suite; no real deployment secrets are stored in Git.
+The current merged baseline includes PR #41 (UI/flow hardening), PR #42 (optional analytics and evidence filename fix), and PR #46 (CI/security/legacy cleanup). Local frontend validation is green: Vitest **15/15** on main, `pnpm check`, `pnpm build`, `git diff --check`, and browser E2E **7/7** using Chromium. Backend CI and integration evidence are recorded in the GitHub checks and backend integration-test suite; no real deployment secrets are stored in Git.
+
+## LIVE acceptance evidence — 4 October 2026
+
+The auditable R01/R03/R04 endpoint, role/scope, failure, empty-state, and preview-boundary checklist is maintained in [LIVE_ACCEPTANCE_EVIDENCE.md](LIVE_ACCEPTANCE_EVIDENCE.md). It documents local evidence only; staging and production acceptance are separate gates.
 
 ## UI / Flow / Architecture review — 4 October 2026
 
 تمت مراجعة R00–R09. أُضيفت route guards صريحة حسب الدور، حماية للـworkspace والأسطح التشغيلية، فصل LIVE/DEMO في الأغلفة الحية، stylesheet مشترك RTL/responsive، تصميم Academy Bootstrap، وE2E للـanonymous redirect والعزل والخروج.
 
 - `pnpm check`: PASS
-- `pnpm test`: PASS — 13/13
+- `pnpm test`: PASS — 15/15 on main; this branch adds 3 acceptance tests
 - `pnpm build`: PASS
 - الجولة الأولى من E2E: 6/7، وتم تعديل assertion العزل لقبول الرفض الصريح أو العودة الآمنة إلى login.
 - Marketing ما زال Preview/local ويحتاج API قبل اعتباره LIVE.
