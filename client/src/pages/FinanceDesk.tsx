@@ -86,6 +86,7 @@ type Expense = {
   createdBy: string;
   reason?: string;
   evidenceStatus?: string;
+  evidenceFileName?: string | null;
 };
 const INVOICES: Invoice[] = [
   {
@@ -236,6 +237,7 @@ function mapFinanceExpense(expense: FinanceExpense): Expense {
     createdBy: expense.createdByUserId,
     reason: expense.approvalReason ?? undefined,
     evidenceStatus: expense.evidenceStatus,
+    evidenceFileName: expense.evidenceFileName,
   };
 }
 function invoiceStatus(invoice: Invoice): InvoiceStatus {
@@ -699,7 +701,7 @@ export default function FinanceDesk() {
         setExpenses(current =>
           current.map(expense =>
             expense.id === expenseId
-              ? { ...expense, evidenceStatus: "ATTACHED" }
+              ? { ...expense, evidenceStatus: "ATTACHED", evidenceFileName: file.name }
               : expense
           )
         );
@@ -1609,7 +1611,7 @@ function Expenses({
                     onClick={() =>
                       onDownloadEvidence(
                         expense.id,
-                        expense.evidenceStatus ??
+                        expense.evidenceFileName ??
                           `expense-${expense.id}-evidence`
                       )
                     }
