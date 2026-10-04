@@ -21,6 +21,7 @@
 :where(.marketing-form input:focus,.marketing-form select:focus,.marketing-form textarea:focus,.finance-form input:focus,.finance-form select:focus,.student-form input:focus,.academy-bootstrap-form input:focus) { outline:3px solid rgba(24,135,157,.18); border-color:#16879d; }
 :where(.marketing-primary,.button-primary,.pc-live-primary,.r03-live-refresh,.r03-program-refresh) { border:0; border-radius:10px; padding:10px 16px; background:#0d8295; color:#fff; cursor:pointer; font-weight:700; }
 :where(button:disabled,input:disabled,select:disabled,textarea:disabled) { opacity:.58; cursor:not-allowed; }
+:where(.route-loading) { min-height:100vh; display:grid; place-items:center; padding:24px; color:#31515d; background:#f4f7fa; font:700 13px/1.8 var(--mada-font-ar,"Cairo",sans-serif); }
 :where(.student-note,.family-note,.marketing-banner,.finance-footer-note,.students-demo-note,.role-feedback-state) { padding:12px 14px; border-radius:12px; background:#eef7f8; color:#31515d; }
 :where(.family-portal-scrim,.student-portal-scrim) { display:none; }
 @media (max-width: 1050px) { :where(.student-stat-grid,.student-stats-grid,.marketing-kpis,.finance-stats-grid,.schedule-stats,.r03-live-metrics,.pc-live-metrics) { grid-template-columns:repeat(2,minmax(0,1fr)); } }
