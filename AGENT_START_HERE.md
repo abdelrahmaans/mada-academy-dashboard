@@ -1,5 +1,7 @@
 # Mada Academy — Start Here for the Next Agent
 
+> **Current handoff:** This file contains an older milestone snapshot. Read [AGENT_HANDOFF.md](AGENT_HANDOFF.md) first for the verified `main` baseline at commit `8b76844` (4 October 2026). The historical details below are preserved for context and are not the current project truth.
+
 **Snapshot date:** 1 October 2026
 **Verified base:** `main` at `92bec875` (`feat: add evaluation review and publication workflow`, merged PR #18).
 **Product:** Arabic-first, RTL academy operations system. **React + Vite is the main frontend**; `client-angular/` is a reference preview, not the default implementation.
