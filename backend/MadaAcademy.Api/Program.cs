@@ -15,10 +15,12 @@ using MadaAcademy.Api.Persistence.Seeding;
 using MadaAcademy.Api.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 var jwtOptions = JwtOptions.Load(builder.Configuration, builder.Environment);
 var authSecurityOptions = AuthSecurityOptions.Load(builder.Configuration);
+var trustedProxyAddresses = LoadTrustedProxyAddresses(builder.Configuration);
 
 builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecks();
@@ -34,6 +36,32 @@ builder.Services.AddRateLimiter(options =>
             QueueLimit = 0,
             AutoReplenishment = true
         }));
+    options.AddPolicy("auth-sensitive", context => RateLimitPartition.GetFixedWindowLimiter(
+        GetClientAddress(context),
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = authSecurityOptions.SensitivePermitLimit,
+            Window = TimeSpan.FromSeconds(authSecurityOptions.SensitiveWindowSeconds),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+    options.AddPolicy("consumer-lookup", context => RateLimitPartition.GetFixedWindowLimiter(
+        GetClientAddress(context),
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = authSecurityOptions.ConsumerLookupPermitLimit,
+            Window = TimeSpan.FromSeconds(authSecurityOptions.ConsumerLookupWindowSeconds),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+});
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+    foreach (var address in trustedProxyAddresses)
+        options.KnownProxies.Add(address);
 });
 builder.Services.AddMadaPersistence(builder.Configuration);
 var storageMode = builder.Configuration["Mada:PrivateStorageMode"] ?? Environment.GetEnvironmentVariable("MADA_PRIVATE_STORAGE_MODE") ?? (builder.Environment.IsDevelopment() ? "local" : "disabled");
@@ -73,6 +101,7 @@ if (IsEnabled("MADA_APPLY_MIGRATIONS") || seedDemoData)
 }
 
 app.UseExceptionHandler();
+app.UseForwardedHeaders();
 app.UseCors("frontend");
 app.UseRateLimiter();
 app.UseAuthentication();
@@ -100,13 +129,13 @@ app.MapPost("/api/v1/auth/otp/send", (OtpSendRequest request, AuthService auth) 
     if (string.IsNullOrWhiteSpace(request.Phone) || request.AccountType is not ("staff" or "parent" or "student"))
         return Results.BadRequest(new { error = new { code = "INVALID_OTP_REQUEST", message = "Phone and accountType are required." } });
     return Results.Ok(new { data = auth.SendOtp(request) });
-});
+}).RequireRateLimiting("auth-sensitive");
 
 app.MapPost("/api/v1/auth/otp/verify", async (OtpVerifyRequest request, AuthService auth, CancellationToken cancellationToken) =>
 {
     var tokens = await auth.VerifyOtpAsync(request, cancellationToken);
     return tokens is null ? Results.Unauthorized() : Results.Ok(new { data = tokens });
-});
+}).RequireRateLimiting("auth-sensitive");
 
 app.MapPost("/api/v1/auth/login", async (PasswordLoginRequest request, AuthService auth, CancellationToken cancellationToken) =>
 {
@@ -121,7 +150,7 @@ app.MapPost("/api/v1/auth/refresh", async (RefreshRequest request, AuthService a
 {
     var tokens = await auth.RefreshAsync(request, cancellationToken);
     return tokens is null ? Results.Unauthorized() : Results.Ok(new { data = tokens });
-});
+}).RequireRateLimiting("auth-sensitive");
 
 app.MapPost("/api/v1/auth/logout", async (LogoutRequest request, AuthService auth, CancellationToken cancellationToken) =>
 {
@@ -211,6 +240,20 @@ app.MapPost("/api/v1/scheduling/check-conflict", async (ConflictCheckRequest req
 app.Run();
 
 static bool IsEnabled(string name) => string.Equals(Environment.GetEnvironmentVariable(name), "true", StringComparison.OrdinalIgnoreCase);
+static IReadOnlyList<System.Net.IPAddress> LoadTrustedProxyAddresses(IConfiguration configuration)
+{
+    var raw = configuration["MADA_TRUSTED_PROXIES"] ?? Environment.GetEnvironmentVariable("MADA_TRUSTED_PROXIES");
+    if (string.IsNullOrWhiteSpace(raw)) return [];
+
+    var addresses = new List<System.Net.IPAddress>();
+    foreach (var value in raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+    {
+        if (!System.Net.IPAddress.TryParse(value, out var address))
+            throw new InvalidOperationException($"MADA_TRUSTED_PROXIES contains an invalid IP address: '{value}'.");
+        addresses.Add(address);
+    }
+    return addresses;
+}
 static string GetClientAddress(HttpContext context) => context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 public sealed record AuditInput(string Action, string TargetType, string TargetId, string? TenantId, string? BranchId, string? Reason);
 public interface IAuditSink { Task AppendAsync(AuditInput input); }

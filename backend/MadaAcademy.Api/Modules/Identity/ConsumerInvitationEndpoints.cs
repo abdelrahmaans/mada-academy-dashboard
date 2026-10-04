@@ -9,6 +9,7 @@ using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace MadaAcademy.Api.Modules.Identity;
 
@@ -24,9 +25,9 @@ public static class ConsumerInvitationEndpoints
     {
         endpoints.MapPost("/api/v1/students/{studentId:guid}/consumer-invitations", CreateAsync).RequireAuthorization("staff");
         var publicInvitations = endpoints.MapGroup("/api/v1/consumer-invitations");
-        publicInvitations.MapPost("/preview", PreviewAsync);
-        publicInvitations.MapPost("/resend-code", ResendCodeAsync);
-        publicInvitations.MapPost("/accept", AcceptAsync);
+        publicInvitations.MapPost("/preview", PreviewAsync).RequireRateLimiting("auth-sensitive");
+        publicInvitations.MapPost("/resend-code", ResendCodeAsync).RequireRateLimiting("auth-sensitive");
+        publicInvitations.MapPost("/accept", AcceptAsync).RequireRateLimiting("auth-sensitive");
         return endpoints;
     }
 

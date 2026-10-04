@@ -1,7 +1,7 @@
 # Mada Academy — خطة التنفيذ المعدلة
 
 **التاريخ:** 4 أكتوبر 2026
-**القرار الحالي:** تأجيل P0 الأمني والتنفيذي مؤقتًا، والعمل على تحسينات الجودة، والـCI، وحدود LIVE/DEMO، والاختبارات، والصيانة.
+**القرار الحالي:** ضوابط P0 الأساسية منفذة محليًا، بينما تظل جاهزية التشغيل الموزع والإطلاق العام مشروطة بمراجعة البنية التحتية والـCORS/storage/staging.
 
 ## 1. نطاق المرحلة الحالية
 
@@ -17,12 +17,13 @@
 8. تقسيم الصفحات الضخمة تدريجيًا بدون إعادة كتابة architecture.
 9. مراجعة CORS configuration والتأكد من توثيق شرط origins في الإنتاج، بدون اعتبارها مسار إطلاق P0 الآن.
 
-### P0 auth hardening — منفذ في هذه الدفعة
+### P0 auth hardening — منفذ محليًا
 
-- تم تنفيذ rate limiting على password login حسب IP.
+- تم تنفيذ rate limiting على password login حسب IP، وعلى OTP/الدعوات الحساسة وبحث حسابات المستهلك.
 - تم تنفيذ persisted account lockout بعد محاولات الفشل.
 - تمت إضافة integration coverage للـ429 والـlockout والـreset-on-success.
-- ما زال يلزم قبل الإطلاق العام اختبار distributed behavior ومراجعة إعدادات البنية الأفقية.
+- تم ضبط forwarded headers بحيث لا تُقبل إلا من `MADA_TRUSTED_PROXIES`.
+- ما زال يلزم قبل الإطلاق العام اختبار distributed behavior ومراجعة lockout/DoS وإعدادات البنية الأفقية.
 
 > تنفيذ الحماية محليًا لا يعني اعتبار النظام Production-ready؛ تبقى اختبارات النشر والتشغيل الموزع وCORS/storage/staging gates مطلوبة.
 
@@ -280,23 +281,26 @@
 - إضافة configuration test أو startup warning واضح.
 - منع `*` في production configuration.
 - التأكد من أن `AllowAnyHeader/AllowAnyMethod` لا تعني فتح origins.
-- تم تنفيذ rate limiting وlockout في مسار auth مستقل؛ هذا القسم يركز فقط على origins ورفض wildcard في Production.
+- تم تنفيذ rate limiting وlockout وtrusted proxy handling في مسار auth مستقل؛ هذا القسم يركز فقط على origins ورفض wildcard في Production.
 
 ---
 
-## 10. P0 المؤجل — Release blocker لاحقًا
+## 10. P0 auth hardening — منفذ محليًا، مع بوابات إطلاق مفتوحة
 
-عند فتح مسار الأمان لاحقًا ننفذ:
+تم تنفيذ وتغطية الضوابط التالية:
 
-- Rate limit لـpassword login حسب IP وphone/accountType.
-- persisted failed-login count و`LockedUntil`.
-- `429` و`Retry-After`.
-- رسائل فشل موحدة لمنع user enumeration.
-- reset بعد النجاح.
+- rate limiting حسب عنوان العميل لتسجيل الدخول، وواجهات OTP/الدعوات الحساسة، وبحث حسابات المستهلك.
+- persisted failed-login count و`LockedUntil` مع reset بعد النجاح.
+- `429` ورسائل فشل لا تكشف وجود الحساب.
 - integration tests للـlockout والـrate limit.
-- مراجعة distributed behavior قبل horizontal scaling.
+- معالجة `X-Forwarded-For` و`X-Forwarded-Proto` فقط من عناوين proxy مضبوطة في `MADA_TRUSTED_PROXIES`.
 
-**لا يتم إعلان النظام جاهزًا لإطلاق عام قبل إغلاق هذا القسم.**
+تبقى قبل الإطلاق العام:
+
+- اختبار distributed behavior أو استخدام limiter مشترك عند تشغيل أكثر من instance؛ limiter الحالي in-memory لكل instance.
+- مراجعة تشغيلية لقيم proxy الموثوقة، ومراقبة/استجابة lockout حتى لا يتحول إلى DoS على حساب معروف.
+
+لا يتم اعتبار النظام Production-ready قبل إغلاق بوابات التشغيل الموزع وCORS/storage/staging.
 
 ---
 
@@ -318,9 +322,9 @@ R07 explicit Preview، R00 capability labels، R01 acceptance evidence، R03/R04
 
 اختبارات السلوك الحرج واستخراج pure logic عند الحاجة.
 
-### PR-5 — CORS configuration hardening
+### PR-5 — CORS and proxy configuration hardening
 
-تثبيت شرط origins المحددة في Production مع tests/docs، بدون تنفيذ P0 auth hardening.
+تثبيت شرط origins المحددة في Production، وتوثيق `MADA_TRUSTED_PROXIES` وforwarded headers، مع إبقاء distributed limiter بوابة إطلاق منفصلة.
 
 ### PR-6 — Legacy cleanup
 
@@ -329,10 +333,6 @@ R07 explicit Preview، R00 capability labels، R01 acceptance evidence، R03/R04
 ### PR-7 — Page decomposition
 
 Refactor تدريجي للصفحات الكبيرة، صفحة واحدة لكل PR عند الإمكان.
-
-### لاحقًا — P0 Security PR
-
-Rate limiting وaccount lockout قبل أي إطلاق عام.
 
 ---
 
@@ -350,7 +350,7 @@ Rate limiting وaccount lockout قبل أي إطلاق عام.
 - لا تظهر fixtures على أنها LIVE.
 - كل API mutation يحترم tenant/branch/consumer scope.
 - التوثيق يعكس الحقيقة ولا يعلن Preview كميزة مكتملة.
-- لا يتم اعتبار النظام Production-ready مع بقاء P0 الأمني مؤجلًا.
+- لا يتم اعتبار النظام Production-ready قبل إثبات distributed rate limiting وضبط proxy وCORS/storage/staging gates.
 
 ## 13. نقطة البداية العملية
 
@@ -364,4 +364,4 @@ Rate limiting وaccount lockout قبل أي إطلاق عام.
 6. PR-5: CORS configuration review.
 7. PR-6 ثم PR-7 للتنظيف والتقسيم.
 
-أما Rate Limiting وAccount Lockout فهما **مؤجلان عمدًا** كمسار P0 مستقل وشرط قبل الإطلاق العام.
+Rate Limiting وAccount Lockout منفذان محليًا؛ المتبقي هو إثبات التشغيل الموزع، ضبط proxy الموثوق، ومراجعة lockout كخطر DoS تشغيلي قبل الإطلاق العام.
