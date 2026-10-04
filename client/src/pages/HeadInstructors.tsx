@@ -4,7 +4,6 @@ import {
   useRef,
   useState,
   type KeyboardEvent,
-  type RefObject,
 } from "react";
 import {
   Activity,
@@ -54,6 +53,11 @@ import {
 import WorkflowStepper from "@/components/WorkflowStepper";
 import { apiClient } from "@/lib/apiClient";
 import HeadInstructorsLive from "./HeadInstructorsLive";
+import {
+  EvaluationCard,
+  HeadInstructorsEvaluationsView,
+  HeadInstructorsSessionsView,
+} from "@/components/HeadInstructorsPreviewViews";
 
 type WorkspaceView =
   | "overview"
@@ -61,13 +65,13 @@ type WorkspaceView =
   | "sessions"
   | "approvals"
   | "evaluations";
-type SessionStatus =
+export type SessionStatus =
   | "scheduled"
   | "completed"
   | "pending_approval"
   | "cancelled"
   | "rescheduled";
-type EvaluationCardStatus = "pending" | "generating" | "ready";
+export type EvaluationCardStatus = "pending" | "generating" | "ready";
 type EvaluationReviewStatus = "pending" | "approved" | "changes_requested";
 type AttendanceEntry = {
   studentId: string;
@@ -76,7 +80,7 @@ type AttendanceEntry = {
   lateMinutes?: number;
   note?: string;
 };
-type SessionRecord = {
+export type SessionRecord = {
   id: string;
   offeringId: string;
   courseName: string;
@@ -109,7 +113,7 @@ type AttendanceDecision = {
   note: string;
   decidedAt: string;
 };
-type EvaluationRecord = {
+export type EvaluationRecord = {
   id: string;
   student: string;
   studentId: string;
@@ -548,54 +552,6 @@ function MadaMark() {
   );
 }
 
-function EvaluationCard({
-  evaluation,
-  reviewed,
-  onOpen,
-}: {
-  evaluation: EvaluationRecord;
-  reviewed: boolean;
-  onOpen: () => void;
-}) {
-  const avg = (
-    Object.values(evaluation.scores).reduce((sum, value) => sum + value, 0) /
-    Object.values(evaluation.scores).length
-  ).toFixed(1);
-  return (
-    <button className="academic-evaluation-card" onClick={onOpen}>
-      <span
-        className={`academic-evaluation-avatar eval-${evaluation.cardStatus}`}
-      >
-        {evaluation.student.slice(0, 1)}
-      </span>
-      <span className="academic-evaluation-main">
-        <strong>{evaluation.student}</strong>
-        <small>
-          {evaluation.courseName} · {formatDate(evaluation.sessionDate)}
-        </small>
-        <span className="academic-evaluation-comment">
-          {evaluation.comment}
-        </span>
-      </span>
-      <span className="academic-evaluation-score">
-        <strong>
-          <Star size={13} fill="currentColor" />
-          {avg}
-        </strong>
-        <small>من ٥</small>
-      </span>
-      {evaluation.cardStatus === "generating" ? (
-        <LoadingState compact label="جارٍ تجهيز البطاقة" />
-      ) : (
-        <span className={`academic-card-status ${evaluation.cardStatus}`}>
-          {reviewed ? "تم الاطلاع" : CARD_STATUS_LABELS[evaluation.cardStatus]}
-        </span>
-      )}
-      <ChevronLeft size={15} className="academic-row-chevron" />
-    </button>
-  );
-}
-
 function HeadInstructorsPreview() {
   const [, navigate] = useLocation();
   const liveMode = apiClient.hasSession();
@@ -633,9 +589,9 @@ function HeadInstructorsPreview() {
 
   const selectedSession =
     SESSIONS.find(session => session.id === selectedSessionId) ?? SESSIONS[0];
-  const selectedEvaluation = liveMode ? undefined : EVALUATIONS.find(
-    evaluation => evaluation.id === selectedEvaluationId
-  );
+  const selectedEvaluation = liveMode
+    ? undefined
+    : EVALUATIONS.find(evaluation => evaluation.id === selectedEvaluationId);
   const selectedEvaluationReviewStatus = selectedEvaluation
     ? (evaluationReviewStatuses[selectedEvaluation.id] ?? "pending")
     : "pending";
@@ -1067,7 +1023,9 @@ function HeadInstructorsPreview() {
               <AlertCircle size={15} />
             </span>
             <span>
-              {liveMode ? "مراجعة التقييمات LIVE من الخادم؛ بقية بيانات الفريق والحصص في هذه الصفحة ما زالت توضيحية." : "بيانات الفريق والحصص والتقييمات توضيحية ومحلية. لا يوجد حفظ فعلي أو اعتماد إداري من هذه المعاينة."}
+              {liveMode
+                ? "مراجعة التقييمات LIVE من الخادم؛ بقية بيانات الفريق والحصص في هذه الصفحة ما زالت توضيحية."
+                : "بيانات الفريق والحصص والتقييمات توضيحية ومحلية. لا يوجد حفظ فعلي أو اعتماد إداري من هذه المعاينة."}
             </span>
             <b>{liveMode ? "LIVE + DEMO" : "DEMO"}</b>
           </div>
@@ -1091,7 +1049,7 @@ function HeadInstructorsPreview() {
           )}
           {view === "team" && <TeamView onNavigate={goToView} />}
           {view === "sessions" && (
-            <SessionsView
+            <HeadInstructorsSessionsView
               query={sessionQuery}
               setQuery={setSessionQuery}
               searchRef={sessionSearchRef}
@@ -1103,6 +1061,9 @@ function HeadInstructorsPreview() {
               selectedSession={selectedSession}
               onSelectSession={setSelectedSessionId}
               onKeyDown={onSessionKeyDown}
+              statusLabels={SESSION_STATUS_LABELS}
+              branch={BRANCH}
+              presentRate={presentRate}
             />
           )}
           {view === "approvals" && (
@@ -1117,8 +1078,11 @@ function HeadInstructorsPreview() {
               onReopen={reopenAttendanceReview}
             />
           )}
-          {view === "evaluations" && (
-            liveMode ? <EvaluationReviewQueue /> : <EvaluationsView
+          {view === "evaluations" &&
+            (liveMode ? (
+              <EvaluationReviewQueue />
+            ) : (
+              <HeadInstructorsEvaluationsView
                 query={evaluationQuery}
                 setQuery={setEvaluationQuery}
                 statusFilter={evaluationStatusFilter}
@@ -1126,8 +1090,10 @@ function HeadInstructorsPreview() {
                 evaluations={filteredEvaluations}
                 reviewedIds={reviewedIds}
                 onOpen={openEvaluation}
+                allEvaluations={EVALUATIONS}
+                cardStatusLabels={CARD_STATUS_LABELS}
               />
-          )}
+            ))}
 
           <footer className="academic-footnote">
             <span>
@@ -1311,7 +1277,11 @@ function HeadInstructorsPreview() {
 }
 
 export default function HeadInstructors() {
-  return apiClient.hasSession() ? <HeadInstructorsLive /> : <HeadInstructorsPreview />;
+  return apiClient.hasSession() ? (
+    <HeadInstructorsLive />
+  ) : (
+    <HeadInstructorsPreview />
+  );
 }
 
 function ArrowRightSafe() {
@@ -1611,61 +1581,81 @@ function OverviewView({
         </section>
 
         {liveMode ? (
-        <section className="academic-panel academic-evaluation-panel">
-          <div className="academic-panel-heading">
-            <div>
-              <span className="academic-panel-kicker">تقييمات حية · من API</span>
-              <h2>مراجعة واعتماد التقييمات</h2>
-              <p>لا تُعرض درجات تجريبية هنا. افتح قائمة المراجعة للاطلاع على تقييمات المدربين الفعلية.</p>
+          <section className="academic-panel academic-evaluation-panel">
+            <div className="academic-panel-heading">
+              <div>
+                <span className="academic-panel-kicker">
+                  تقييمات حية · من API
+                </span>
+                <h2>مراجعة واعتماد التقييمات</h2>
+                <p>
+                  لا تُعرض درجات تجريبية هنا. افتح قائمة المراجعة للاطلاع على
+                  تقييمات المدربين الفعلية.
+                </p>
+              </div>
+              <button
+                className="academic-review-count"
+                onClick={() => onNavigate("evaluations")}
+              >
+                <span>LIVE</span>
+                <small>قائمة المراجعة</small>
+                <ChevronLeft size={13} />
+              </button>
             </div>
-            <button className="academic-review-count" onClick={() => onNavigate("evaluations")}>
-              <span>LIVE</span><small>قائمة المراجعة</small><ChevronLeft size={13} />
-            </button>
-          </div>
-          <div className="academic-panel-footer"><span><ShieldCheck size={13} /> لا تظهر النتائج للمستهلك حتى النشر.</span><button onClick={() => onNavigate("evaluations")}>فتح المراجعات <ChevronLeft size={13} /></button></div>
-        </section>
+            <div className="academic-panel-footer">
+              <span>
+                <ShieldCheck size={13} /> لا تظهر النتائج للمستهلك حتى النشر.
+              </span>
+              <button onClick={() => onNavigate("evaluations")}>
+                فتح المراجعات <ChevronLeft size={13} />
+              </button>
+            </div>
+          </section>
         ) : (
-        <section className="academic-panel academic-evaluation-panel">
-          <div className="academic-panel-heading">
-            <div>
-              <span className="academic-panel-kicker">متابعة جودة التعلّم</span>
-              <h2>آخر التقييمات</h2>
-              <p>
-                متوسط الدرجات التوضيحي{" "}
-                <b>
-                  <Star size={12} fill="currentColor" />
-                  {averageScore} / ٥
-                </b>
-              </p>
+          <section className="academic-panel academic-evaluation-panel">
+            <div className="academic-panel-heading">
+              <div>
+                <span className="academic-panel-kicker">
+                  متابعة جودة التعلّم
+                </span>
+                <h2>آخر التقييمات</h2>
+                <p>
+                  متوسط الدرجات التوضيحي{" "}
+                  <b>
+                    <Star size={12} fill="currentColor" />
+                    {averageScore} / ٥
+                  </b>
+                </p>
+              </div>
+              <button
+                className="academic-review-count"
+                onClick={() => onNavigate("evaluations")}
+              >
+                <span>{followUpEvaluationCount}</span>
+                <small>تحتاج متابعة</small>
+                <ChevronLeft size={13} />
+              </button>
             </div>
-            <button
-              className="academic-review-count"
-              onClick={() => onNavigate("evaluations")}
-            >
-              <span>{followUpEvaluationCount}</span>
-              <small>تحتاج متابعة</small>
-              <ChevronLeft size={13} />
-            </button>
-          </div>
-          <div className="academic-evaluation-list">
-            {EVALUATIONS.slice(0, 3).map(evaluation => (
-              <EvaluationCard
-                key={evaluation.id}
-                evaluation={evaluation}
-                reviewed={reviewedIds.includes(evaluation.id)}
-                onOpen={() => onOpenEvaluation(evaluation.id)}
-              />
-            ))}
-          </div>
-          <div className="academic-panel-footer">
-            <span>
-              <CheckCircle2 size={13} /> {readyEvaluationCount} بطاقات جاهزة
-            </span>
-            <button onClick={() => onNavigate("evaluations")}>
-              مراجعة التقييمات <ChevronLeft size={13} />
-            </button>
-          </div>
-        </section>
+            <div className="academic-evaluation-list">
+              {EVALUATIONS.slice(0, 3).map(evaluation => (
+                <EvaluationCard
+                  key={evaluation.id}
+                  evaluation={evaluation}
+                  reviewed={reviewedIds.includes(evaluation.id)}
+                  onOpen={() => onOpenEvaluation(evaluation.id)}
+                  cardStatusLabels={CARD_STATUS_LABELS}
+                />
+              ))}
+            </div>
+            <div className="academic-panel-footer">
+              <span>
+                <CheckCircle2 size={13} /> {readyEvaluationCount} بطاقات جاهزة
+              </span>
+              <button onClick={() => onNavigate("evaluations")}>
+                مراجعة التقييمات <ChevronLeft size={13} />
+              </button>
+            </div>
+          </section>
         )}
       </div>
 
@@ -2251,417 +2241,6 @@ function AttendanceApprovalsView({
             <ShieldCheck size={13} /> السجل لا يُحفظ بعد إغلاق المعاينة المحلية
           </span>
           <span>لا يوجد اتصال بخدمة اعتماد فعلية</span>
-        </div>
-      </section>
-    </>
-  );
-}
-
-function SessionsView({
-  query,
-  setQuery,
-  searchRef,
-  statusFilter,
-  setStatusFilter,
-  sessions,
-  summarySessions,
-  selectedSessionId,
-  selectedSession,
-  onSelectSession,
-  onKeyDown,
-}: {
-  query: string;
-  setQuery: (value: string) => void;
-  searchRef: RefObject<HTMLInputElement | null>;
-  statusFilter: string;
-  setStatusFilter: (value: string) => void;
-  sessions: SessionRecord[];
-  summarySessions: SessionRecord[];
-  selectedSessionId: string;
-  selectedSession: SessionRecord;
-  onSelectSession: (id: string) => void;
-  onKeyDown: (
-    event: KeyboardEvent<HTMLTableRowElement>,
-    sessionId: string
-  ) => void;
-}) {
-  const currentCompletedCount = summarySessions.filter(
-    session => session.status === "completed"
-  ).length;
-  const currentPendingCount = summarySessions.filter(
-    session => session.status === "pending_approval"
-  ).length;
-  const currentScheduledCount = summarySessions.filter(
-    session => session.status === "scheduled"
-  ).length;
-  return (
-    <>
-      <div className="academic-mini-kpis">
-        <span>
-          <i className="mini-teal" />
-          <b>{summarySessions.length}</b> جلسات في العينة
-        </span>
-        <span>
-          <i className="mini-blue" />
-          <b>{currentCompletedCount}</b> مكتملة
-        </span>
-        <span>
-          <i className="mini-amber" />
-          <b>{currentPendingCount}</b> مراجعة تسجيل
-        </span>
-        <span>
-          <i className="mini-violet" />
-          <b>{currentScheduledCount}</b> قادمة
-        </span>
-      </div>
-      <div className="academic-workspace-grid">
-        <section className="academic-panel academic-sessions-panel">
-          <div className="academic-panel-heading">
-            <div>
-              <span className="academic-panel-kicker">
-                جلسات الفرع · بيانات توضيحية
-              </span>
-              <h2>
-                سجل الحصص والحضور <small>{sessions.length} نتائج</small>
-              </h2>
-            </div>
-          </div>
-          <div className="academic-filter-row">
-            <label className="academic-search">
-              <Search size={15} />
-              <input
-                aria-label="بحث في الحصص"
-                placeholder="ابحث بالكورس أو المدرب أو المجموعة..."
-                ref={searchRef}
-                value={query}
-                onChange={event => setQuery(event.target.value)}
-              />
-              <kbd>⌘ K</kbd>
-            </label>
-            <label className="academic-filter-select">
-              <span>الحالة</span>
-              <select
-                aria-label="تصفية الحصص حسب الحالة"
-                value={statusFilter}
-                onChange={event => setStatusFilter(event.target.value)}
-              >
-                <option value="all">كل الحالات</option>
-                {Object.entries(SESSION_STATUS_LABELS).map(([key, label]) => (
-                  <option value={key} key={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <div className="academic-session-table-wrap">
-            <table className="academic-session-table">
-              <thead>
-                <tr>
-                  <th>الجلسة</th>
-                  <th>المدرب</th>
-                  <th>التاريخ والوقت</th>
-                  <th>الحضور</th>
-                  <th>الحالة</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sessions.map(session => (
-                  <tr
-                    key={session.id}
-                    tabIndex={0}
-                    aria-label={`تفاصيل جلسة ${session.courseName}`}
-                    aria-current={
-                      selectedSessionId === session.id ? "true" : undefined
-                    }
-                    className={
-                      selectedSessionId === session.id ? "selected" : ""
-                    }
-                    onClick={() => onSelectSession(session.id)}
-                    onKeyDown={event => onKeyDown(event, session.id)}
-                  >
-                    <td>
-                      <span className="academic-session-name">
-                        <i>
-                          <BookOpen size={14} />
-                        </i>
-                        <span>
-                          <strong>{session.courseName}</strong>
-                          <small>
-                            {session.groupName} · {session.offeringId}
-                          </small>
-                        </span>
-                      </span>
-                    </td>
-                    <td>{session.instructor}</td>
-                    <td>
-                      <span className="academic-session-date">
-                        {session.dateLabel}
-                        <small>
-                          <bdi dir="ltr">{session.time}</bdi>
-                        </small>
-                      </span>
-                    </td>
-                    <td>
-                      {session.attendance ? (
-                        <span className="academic-attendance-ratio">
-                          <strong>
-                            {session.attendance.present +
-                              session.attendance.late}
-                          </strong>{" "}
-                          / {session.students}
-                          <small>{presentRate(session)}%</small>
-                        </span>
-                      ) : (
-                        <span className="academic-not-recorded">
-                          لم يُسجّل بعد
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      <span
-                        className={`academic-session-status ${session.status}`}
-                      >
-                        {SESSION_STATUS_LABELS[session.status]}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-                {sessions.length === 0 && (
-                  <tr>
-                    <td colSpan={5}>
-                      <div className="academic-empty">
-                        <Search size={18} />
-                        <strong>لا توجد جلسات مطابقة</strong>
-                        <button
-                          onClick={() => {
-                            setQuery("");
-                            setStatusFilter("all");
-                          }}
-                        >
-                          مسح الفلاتر
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          <div className="academic-table-footer">
-            <span>
-              <ShieldCheck size={13} /> مراجعة أكاديمية ضمن فرع {BRANCH}
-            </span>
-            <span>لا يوجد تعديل على الجدول</span>
-          </div>
-        </section>
-        <SessionDetail session={selectedSession} />
-      </div>
-    </>
-  );
-}
-
-function SessionDetail({ session }: { session: SessionRecord }) {
-  const attendance = session.attendance;
-  const items = attendance
-    ? [
-        { label: "حاضر", value: attendance.present, className: "present" },
-        { label: "متأخر", value: attendance.late, className: "late" },
-        { label: "غائب", value: attendance.absent, className: "absent" },
-        { label: "بعذر", value: attendance.excused, className: "excused" },
-      ]
-    : [];
-  return (
-    <aside className="academic-panel academic-session-detail">
-      <div className="academic-detail-kicker">
-        تفاصيل الجلسة <small dir="ltr">{session.id}</small>
-      </div>
-      <div className="academic-detail-icon">
-        <BookOpen size={20} />
-      </div>
-      <h3>{session.courseName}</h3>
-      <p>{session.groupName}</p>
-      <span className={`academic-session-status ${session.status}`}>
-        {SESSION_STATUS_LABELS[session.status]}
-      </span>
-      <div className="academic-detail-list">
-        <div>
-          <span>المدرب</span>
-          <strong>{session.instructor}</strong>
-        </div>
-        <div>
-          <span>التاريخ</span>
-          <strong>{session.dateLabel}</strong>
-        </div>
-        <div>
-          <span>الوقت</span>
-          <strong dir="ltr">{session.time}</strong>
-        </div>
-        <div>
-          <span>المكان</span>
-          <strong>{session.room}</strong>
-        </div>
-        <div>
-          <span>المجموعة</span>
-          <strong dir="ltr">{session.offeringId}</strong>
-        </div>
-      </div>
-      <div className="academic-attendance-breakdown">
-        <div className="academic-breakdown-heading">
-          <strong>ملخص تسجيل الحضور</strong>
-          <small>{attendance ? `${session.students} طلاب` : "لم يُسجّل"}</small>
-        </div>
-        {attendance ? (
-          items.map(item => (
-            <div className="academic-attendance-line" key={item.className}>
-              <span>
-                <i className={item.className} />
-                {item.label}
-              </span>
-              <strong>{item.value}</strong>
-            </div>
-          ))
-        ) : (
-          <div className="academic-attendance-empty">
-            <Clock3 size={14} /> ستظهر تفاصيل الحضور بعد التسجيل
-          </div>
-        )}
-      </div>
-      {session.status === "pending_approval" && (
-        <div className="academic-session-hint">
-          <AlertCircle size={14} />
-          <span>
-            حالة الجلسة تشير إلى مراجعة التسجيل. أي اعتماد رسمي خارج نطاق هذه
-            المعاينة.
-          </span>
-        </div>
-      )}
-      <div className="academic-detail-local-note">
-        <ShieldCheck size={13} /> للعرض فقط · لا يمكن تعديل السجل هنا
-      </div>
-    </aside>
-  );
-}
-
-function EvaluationsView({
-  query,
-  setQuery,
-  statusFilter,
-  setStatusFilter,
-  evaluations,
-  reviewedIds,
-  onOpen,
-}: {
-  query: string;
-  setQuery: (value: string) => void;
-  statusFilter: string;
-  setStatusFilter: (value: string) => void;
-  evaluations: EvaluationRecord[];
-  reviewedIds: string[];
-  onOpen: (id: string) => void;
-}) {
-  return (
-    <>
-      <section className="academic-review-summary">
-        <div>
-          <span className="academic-panel-kicker">
-            التقييمات الأكاديمية · بيانات توضيحية
-          </span>
-          <h2>متابعة تقدّم الطلاب</h2>
-          <p>
-            استعرض درجات المعايير وملاحظات المدرب، وسجّل الاطلاع محليًا عند
-            الانتهاء.
-          </p>
-        </div>
-        <div className="academic-review-summary-stats">
-          <span>
-            <strong>{EVALUATIONS.length}</strong>
-            <small>نماذج تقييم</small>
-          </span>
-          <span>
-            <strong>
-              {EVALUATIONS.filter(item => item.cardStatus === "ready").length}
-            </strong>
-            <small>بطاقات جاهزة</small>
-          </span>
-          <span>
-            <strong>
-              {EVALUATIONS.filter(item => item.cardStatus !== "ready").length}
-            </strong>
-            <small>بطاقات قيد التجهيز</small>
-          </span>
-        </div>
-      </section>
-      <section className="academic-panel academic-evaluation-workspace">
-        <div className="academic-panel-heading">
-          <div>
-            <span className="academic-panel-kicker">
-              المعيار مأخوذ من نموذج التقييم
-            </span>
-            <h2>
-              قائمة تقييمات الطلاب <small>{evaluations.length} نتائج</small>
-            </h2>
-          </div>
-          <div className="academic-rubric-note">
-            <Star size={13} /> ٣ معايير · كل معيار من ٥
-          </div>
-        </div>
-        <div className="academic-filter-row">
-          <label className="academic-search">
-            <Search size={15} />
-            <input
-              aria-label="بحث في التقييمات"
-              placeholder="ابحث باسم الطالب أو المجموعة..."
-              value={query}
-              onChange={event => setQuery(event.target.value)}
-            />
-          </label>
-          <label className="academic-filter-select">
-            <span>حالة البطاقة</span>
-            <select
-              aria-label="تصفية التقييمات حسب حالة البطاقة"
-              value={statusFilter}
-              onChange={event => setStatusFilter(event.target.value)}
-            >
-              <option value="all">كل الحالات</option>
-              {Object.entries(CARD_STATUS_LABELS).map(([key, label]) => (
-                <option value={key} key={key}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="academic-evaluation-list academic-evaluation-list-full">
-          {evaluations.map(evaluation => (
-            <EvaluationCard
-              key={evaluation.id}
-              evaluation={evaluation}
-              reviewed={reviewedIds.includes(evaluation.id)}
-              onOpen={() => onOpen(evaluation.id)}
-            />
-          ))}
-          {evaluations.length === 0 && (
-            <div className="academic-empty">
-              <Search size={18} />
-              <strong>لا توجد تقييمات مطابقة</strong>
-              <button
-                onClick={() => {
-                  setQuery("");
-                  setStatusFilter("all");
-                }}
-              >
-                مسح الفلاتر
-              </button>
-            </div>
-          )}
-        </div>
-        <div className="academic-table-footer">
-          <span>
-            <ShieldCheck size={13} /> «تم الاطلاع» حالة محلية للاستخدام خلال
-            المعاينة فقط
-          </span>
-          <span>لا يوجد تعديل على درجات الطلاب</span>
         </div>
       </section>
     </>
