@@ -1,3 +1,6 @@
+# Mada Academy — Master Delivery Log
+
+> **Document status — 4 October 2026:** This file is the chronological delivery log. Current truth is maintained in [PROJECT_STATUS.md](PROJECT_STATUS.md), [NEXT_PHASE_PLAN.md](NEXT_PHASE_PLAN.md), and [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md). Older entries intentionally preserve the state and counts that were true at the time; do not treat their “next step” or “current” wording as today’s status.
 
 ### 29 سبتمبر 2026 — Workspace Hub / Role Walkthrough Entry Point
 

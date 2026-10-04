@@ -1,4 +1,6 @@
+# Backend Status and Delivery History
 
+> **Current truth — 4 October 2026:** This file is a chronological delivery log. For current state, use [PROJECT_STATUS.md](PROJECT_STATUS.md), [NEXT_PHASE_PLAN.md](NEXT_PHASE_PLAN.md), and [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md). Entries below are historical snapshots unless explicitly labeled as current.
 
 ---
 
@@ -107,7 +109,7 @@ React أصبح متصلًا بالـASP.NET Core عبر `client/src/lib/apiClien
 
 ---
 
-## 20. Current Backend Handoff — 1 October 2026
+## 20. Historical Backend Handoff — 1 October 2026
 
 - Current merged base: PR #18, commit `92bec875` (`feature/evaluation-review-publish`). GitHub CI passed. Latest recorded local validation: **29/29** backend integration tests on PostgreSQL 16 + InMemory; frontend Vitest **5/5**, `pnpm check`, `pnpm build`, and `dotnet ef migrations has-pending-model-changes` passed.
 - Current persisted slices include identity/JWT, tenant/branch-scoped operations and scheduling, consumer account links/invitations, and review/publication of session evaluations. Consumer sessions expose evaluation score/notes only after `PUBLISHED`.
