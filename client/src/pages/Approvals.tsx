@@ -7,12 +7,9 @@ import {
   BookOpen,
   CalendarDays,
   Check,
-  CheckCircle2,
   ChevronDown,
   ChevronLeft,
   CircleHelp,
-  Clock3,
-  FileText,
   GraduationCap,
   LayoutDashboard,
   LogOut,
@@ -22,27 +19,35 @@ import {
   Settings,
   ShieldCheck,
   Sparkles,
-  UserCheck,
   Users,
   Wallet,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
-import ApprovalCard, {
+import {
   APPROVAL_STATUS_LABELS,
   type ApprovalItem,
   type ApprovalKind,
   type ApprovalStatus,
 } from "@/components/ApprovalCard";
-import ApprovalQueueTabs from "@/components/ApprovalQueueTabs";
-import AuditTimeline, { type AuditEvent } from "@/components/AuditTimeline";
+import { type AuditEvent } from "@/components/AuditTimeline";
 import DecisionDialog from "@/components/DecisionDialog";
 import NotificationCenter, {
   type NotificationItem,
 } from "@/components/NotificationCenter";
-import { apiClient, type ApprovalRequestRecord, type FinanceExpense, type InvoiceCorrection, type NotificationRecord } from "@/lib/apiClient";
+import {
+  apiClient,
+  type ApprovalRequestRecord,
+  type FinanceExpense,
+  type InvoiceCorrection,
+  type NotificationRecord,
+} from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  ApprovalQueueAndHistory,
+  ApprovalSummaryStats,
+} from "@/components/ApprovalsViews";
 
 type QueueTab = "all" | ApprovalKind;
 type ApprovalSort = "priority" | "oldest" | "newest";
@@ -195,36 +200,104 @@ function formatMoney(value: number) {
 
 function approvalFromApi(record: ApprovalRequestRecord): ApprovalItem {
   const isSubstitution = record.requestType === "INSTRUCTOR_SUBSTITUTION";
-  const typeName = record.requestType === "EXTRA" ? "جلسة إضافية" : record.requestType === "MAKEUP" ? "جلسة تعويضية" : "طلب مدرب بديل";
+  const typeName =
+    record.requestType === "EXTRA"
+      ? "جلسة إضافية"
+      : record.requestType === "MAKEUP"
+        ? "جلسة تعويضية"
+        : "طلب مدرب بديل";
   const start = record.sessionStartAt ? new Date(record.sessionStartAt) : null;
   const end = record.sessionEndAt ? new Date(record.sessionEndAt) : null;
-  const time = start ? `${start.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}${end ? ` – ${end.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}` : ""}` : undefined;
+  const time = start
+    ? `${start.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}${end ? ` – ${end.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}` : ""}`
+    : undefined;
   return {
-    id: record.id, kind: isSubstitution ? "substitute" : "session", title: typeName,
-    summary: record.reason || (record.courseName ? `${record.courseName} · جلسة ${record.sessionNumber ?? ""}` : "طلب تشغيلي مسجل على الخادم"),
-    branch: record.branchName ?? record.branchId ?? "كل الفروع", requestedBy: record.instructorName ?? record.submittedByRole,
-    submittedAt: new Date(record.createdAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" }),
-    submittedAtSort: record.createdAt, status: record.state.toLowerCase() as ApprovalStatus,
-    decidedAt: record.decidedAt ? new Date(record.decidedAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" }) : undefined,
-    decidedAtSort: record.decidedAt ? new Date(record.decidedAt).getTime() : undefined,
-    decidedBy: record.decidedByUserId ?? undefined, decisionNote: record.reason ?? undefined,
-    requestType: record.requestType, targetId: record.targetId, proposedInstructorId: record.proposedInstructorId,
-    course: record.courseName ?? undefined, instructor: record.instructorName ?? undefined,
+    id: record.id,
+    kind: isSubstitution ? "substitute" : "session",
+    title: typeName,
+    summary:
+      record.reason ||
+      (record.courseName
+        ? `${record.courseName} · جلسة ${record.sessionNumber ?? ""}`
+        : "طلب تشغيلي مسجل على الخادم"),
+    branch: record.branchName ?? record.branchId ?? "كل الفروع",
+    requestedBy: record.instructorName ?? record.submittedByRole,
+    submittedAt: new Date(record.createdAt).toLocaleString("ar-EG", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }),
+    submittedAtSort: record.createdAt,
+    status: record.state.toLowerCase() as ApprovalStatus,
+    decidedAt: record.decidedAt
+      ? new Date(record.decidedAt).toLocaleString("ar-EG", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })
+      : undefined,
+    decidedAtSort: record.decidedAt
+      ? new Date(record.decidedAt).getTime()
+      : undefined,
+    decidedBy: record.decidedByUserId ?? undefined,
+    decisionNote: record.reason ?? undefined,
+    requestType: record.requestType,
+    targetId: record.targetId,
+    proposedInstructorId: record.proposedInstructorId,
+    course: record.courseName ?? undefined,
+    instructor: record.instructorName ?? undefined,
     substitute: record.proposedInstructorId ?? undefined,
-    sessionDate: start?.toLocaleDateString("ar-EG", { dateStyle: "medium" }), sessionTime: time, live: true,
+    sessionDate: start?.toLocaleDateString("ar-EG", { dateStyle: "medium" }),
+    sessionTime: time,
+    live: true,
   };
 }
 
 function notificationFromApi(record: NotificationRecord): NotificationItem {
-  const isApproval = record.type.includes("APPROVAL") || record.type.includes("SUBSTITUTION");
+  const isApproval =
+    record.type.includes("APPROVAL") || record.type.includes("SUBSTITUTION");
   return {
-    id: record.id, kind: isApproval ? "approval" : "warning", title: record.title, description: record.body,
-    time: new Date(record.createdAt).toLocaleString("ar-EG", { dateStyle: "short", timeStyle: "short" }),
-    unread: !record.isRead, actionLabel: isApproval ? "فتح الطلبات" : undefined,
+    id: record.id,
+    kind: isApproval ? "approval" : "warning",
+    title: record.title,
+    description: record.body,
+    time: new Date(record.createdAt).toLocaleString("ar-EG", {
+      dateStyle: "short",
+      timeStyle: "short",
+    }),
+    unread: !record.isRead,
+    actionLabel: isApproval ? "فتح الطلبات" : undefined,
   };
 }
 function correctionFromApi(record: InvoiceCorrection): ApprovalItem {
-  return { id: record.id, kind: "correction", title: "تصحيح فاتورة يحتاج اعتمادًا", summary: record.reason, branch: record.branchId, requestedBy: "المحاسبة", submittedAt: new Date(record.createdAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" }), submittedAtSort: record.createdAt, status: record.status.toLowerCase() as ApprovalStatus, decidedAt: record.decidedAt ? new Date(record.decidedAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" }) : undefined, decidedAtSort: record.decidedAt ? new Date(record.decidedAt).getTime() : undefined, decidedBy: record.decidedByUserId ?? undefined, decisionNote: record.reason, targetId: record.id, correctionInvoice: record.invoiceNumber ?? record.invoiceId, correctionCurrentAmount: Math.round(record.currentTotalPiastres / 100), correctionProposedAmount: Math.round(record.proposedTotalPiastres / 100), live: true };
+  return {
+    id: record.id,
+    kind: "correction",
+    title: "تصحيح فاتورة يحتاج اعتمادًا",
+    summary: record.reason,
+    branch: record.branchId,
+    requestedBy: "المحاسبة",
+    submittedAt: new Date(record.createdAt).toLocaleString("ar-EG", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }),
+    submittedAtSort: record.createdAt,
+    status: record.status.toLowerCase() as ApprovalStatus,
+    decidedAt: record.decidedAt
+      ? new Date(record.decidedAt).toLocaleString("ar-EG", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })
+      : undefined,
+    decidedAtSort: record.decidedAt
+      ? new Date(record.decidedAt).getTime()
+      : undefined,
+    decidedBy: record.decidedByUserId ?? undefined,
+    decisionNote: record.reason,
+    targetId: record.id,
+    correctionInvoice: record.invoiceNumber ?? record.invoiceId,
+    correctionCurrentAmount: Math.round(record.currentTotalPiastres / 100),
+    correctionProposedAmount: Math.round(record.proposedTotalPiastres / 100),
+    live: true,
+  };
 }
 
 function expenseFromApi(record: FinanceExpense): ApprovalItem {
@@ -235,11 +308,21 @@ function expenseFromApi(record: FinanceExpense): ApprovalItem {
     summary: record.description,
     branch: record.branchName ?? record.branchId,
     requestedBy: "مقدم الطلب",
-    submittedAt: new Date(record.createdAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" }),
+    submittedAt: new Date(record.createdAt).toLocaleString("ar-EG", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }),
     submittedAtSort: record.createdAt,
     status: record.status.toLowerCase() as ApprovalStatus,
-    decidedAt: record.decidedAt ? new Date(record.decidedAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" }) : undefined,
-    decidedAtSort: record.decidedAt ? new Date(record.decidedAt).getTime() : undefined,
+    decidedAt: record.decidedAt
+      ? new Date(record.decidedAt).toLocaleString("ar-EG", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })
+      : undefined,
+    decidedAtSort: record.decidedAt
+      ? new Date(record.decidedAt).getTime()
+      : undefined,
     decidedBy: record.decidedByUserId ?? undefined,
     decisionNote: record.approvalReason ?? undefined,
     expenseDescription: record.description,
@@ -257,7 +340,9 @@ export default function Approvals() {
   const [liveMode, setLiveMode] = useState(() => apiClient.hasSession());
   const [loadError, setLoadError] = useState<string | null>(null);
   const branch = liveMode
-    ? me?.branches?.find(item => item.id === me.branchId)?.name ?? me?.branches?.[0]?.name ?? "الفرع المصرح"
+    ? (me?.branches?.find(item => item.id === me.branchId)?.name ??
+      me?.branches?.[0]?.name ??
+      "الفرع المصرح")
     : "مدينة نصر";
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -271,10 +356,16 @@ export default function Approvals() {
   const [expenseRejectionMode, setExpenseRejectionMode] = useState(false);
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
   const canApproveSelected =
-    selected?.kind === "substitute" ? Boolean(selected.proposedInstructorId) : selected?.kind !== "discount" || (selected.discountValue ?? 0) <= BRANCH_MANAGER_DISCOUNT_LIMIT;
+    selected?.kind === "substitute"
+      ? Boolean(selected.proposedInstructorId)
+      : selected?.kind !== "discount" ||
+        (selected.discountValue ?? 0) <= BRANCH_MANAGER_DISCOUNT_LIMIT;
 
   useEffect(() => {
-    if (!apiClient.hasSession()) { setLiveMode(false); return; }
+    if (!apiClient.hasSession()) {
+      setLiveMode(false);
+      return;
+    }
     setLiveMode(true);
     setRequests([]);
     setNotifications([]);
@@ -284,37 +375,68 @@ export default function Approvals() {
       apiClient.listNotifications(),
       apiClient.invoiceCorrections(),
       apiClient.financeExpenses({ status: "ALL" }),
-    ]).then(([approvalResult, notificationResult, correctionResult, expenseResult]) => {
-      if (approvalResult.status === "rejected") {
-        setRequests([]);
-        setNotifications([]);
-        const cause = approvalResult.reason;
-        setLoadError(cause instanceof Error ? cause.message : "تعذر تحميل الموافقات التشغيلية من الخادم.");
-        return;
-      }
+    ]).then(
+      ([
+        approvalResult,
+        notificationResult,
+        correctionResult,
+        expenseResult,
+      ]) => {
+        if (approvalResult.status === "rejected") {
+          setRequests([]);
+          setNotifications([]);
+          const cause = approvalResult.reason;
+          setLoadError(
+            cause instanceof Error
+              ? cause.message
+              : "تعذر تحميل الموافقات التشغيلية من الخادم."
+          );
+          return;
+        }
 
-      const supported = approvalResult.value.items.filter(item => item.targetType === "SESSION" && ["EXTRA", "MAKEUP", "INSTRUCTOR_SUBSTITUTION"].includes(item.requestType));
-      const notifications = notificationResult.status === "fulfilled"
-        ? notificationResult.value.items.map(notificationFromApi)
-        : [];
-      const corrections = correctionResult.status === "fulfilled"
-        ? correctionResult.value.items.map(correctionFromApi)
-        : [];
-      const expenses = expenseResult.status === "fulfilled"
-        ? expenseResult.value.items.map(expenseFromApi)
-        : [];
-      setRequests([...supported.map(approvalFromApi), ...corrections, ...expenses]);
-      setNotifications(notifications);
+        const supported = approvalResult.value.items.filter(
+          item =>
+            item.targetType === "SESSION" &&
+            ["EXTRA", "MAKEUP", "INSTRUCTOR_SUBSTITUTION"].includes(
+              item.requestType
+            )
+        );
+        const notifications =
+          notificationResult.status === "fulfilled"
+            ? notificationResult.value.items.map(notificationFromApi)
+            : [];
+        const corrections =
+          correctionResult.status === "fulfilled"
+            ? correctionResult.value.items.map(correctionFromApi)
+            : [];
+        const expenses =
+          expenseResult.status === "fulfilled"
+            ? expenseResult.value.items.map(expenseFromApi)
+            : [];
+        setRequests([
+          ...supported.map(approvalFromApi),
+          ...corrections,
+          ...expenses,
+        ]);
+        setNotifications(notifications);
 
-      const optionalFailure = [notificationResult, correctionResult, expenseResult].find(result => result.status === "rejected");
-      if (optionalFailure?.status === "rejected") {
-        setLoadError("تم تحميل الموافقات التشغيلية؛ بعض الملحقات غير متاحة لصلاحيات الحساب الحالية.");
+        const optionalFailure = [
+          notificationResult,
+          correctionResult,
+          expenseResult,
+        ].find(result => result.status === "rejected");
+        if (optionalFailure?.status === "rejected") {
+          setLoadError(
+            "تم تحميل الموافقات التشغيلية؛ بعض الملحقات غير متاحة لصلاحيات الحساب الحالية."
+          );
+        }
       }
-    });
+    );
   }, [me?.role]);
 
   const branchRequests = useMemo(
-    () => liveMode ? requests : requests.filter(item => item.branch === branch),
+    () =>
+      liveMode ? requests : requests.filter(item => item.branch === branch),
     [requests, branch, liveMode]
   );
   const visibleRequests = useMemo(() => {
@@ -363,7 +485,9 @@ export default function Approvals() {
   const pendingExpenses = pending.filter(
     item => item.kind === "expense"
   ).length;
-  const pendingSessionRequests = pending.filter(item => item.kind === "session").length;
+  const pendingSessionRequests = pending.filter(
+    item => item.kind === "session"
+  ).length;
   const reviewedRequests = branchRequests
     .filter(item => item.status !== "pending")
     .sort((a, b) => (b.decidedAtSort ?? 0) - (a.decidedAtSort ?? 0));
@@ -394,12 +518,21 @@ export default function Approvals() {
   const handleNotificationAction = async (notification: NotificationItem) => {
     let marked = !liveMode;
     if (liveMode) {
-      try { await apiClient.markNotificationRead(notification.id); marked = true; }
-      catch (cause) { toast.error("تعذر تحديث حالة الإشعار", { description: cause instanceof Error ? cause.message : "فشل الاتصال بالخادم." }); }
+      try {
+        await apiClient.markNotificationRead(notification.id);
+        marked = true;
+      } catch (cause) {
+        toast.error("تعذر تحديث حالة الإشعار", {
+          description:
+            cause instanceof Error ? cause.message : "فشل الاتصال بالخادم.",
+        });
+      }
     }
     setNotifications(current =>
       current.map(item =>
-        item.id === notification.id ? { ...item, unread: marked ? false : item.unread } : item
+        item.id === notification.id
+          ? { ...item, unread: marked ? false : item.unread }
+          : item
       )
     );
     if (notification.id.includes("expense")) setTab("expense");
@@ -407,20 +540,37 @@ export default function Approvals() {
     else setTab("all");
     setQuery("");
     toast.success("تم فتح قائمة الموافقات", {
-      description: liveMode ? "تم فتح قائمة الطلبات المسجلة على الخادم." : "البيانات توضيحية ومحلية داخل هذه المعاينة.",
+      description: liveMode
+        ? "تم فتح قائمة الطلبات المسجلة على الخادم."
+        : "البيانات توضيحية ومحلية داخل هذه المعاينة.",
     });
   };
   const markAllNotificationsRead = async () => {
     let successfullyMarked: Set<string> | null = null;
     if (liveMode) {
-      const unreadIds = notifications.filter(item => item.unread).map(item => item.id);
-      const results = await Promise.allSettled(unreadIds.map(id => apiClient.markNotificationRead(id)));
-      successfullyMarked = new Set(unreadIds.filter((_, index) => results[index]?.status === "fulfilled"));
+      const unreadIds = notifications
+        .filter(item => item.unread)
+        .map(item => item.id);
+      const results = await Promise.allSettled(
+        unreadIds.map(id => apiClient.markNotificationRead(id))
+      );
+      successfullyMarked = new Set(
+        unreadIds.filter((_, index) => results[index]?.status === "fulfilled")
+      );
       if (results.some(result => result.status === "rejected")) {
         toast.error("تعذر تحديث بعض الإشعارات على الخادم.");
       }
     }
-    setNotifications(current => current.map(item => ({ ...item, unread: successfullyMarked ? successfullyMarked.has(item.id) ? false : item.unread : false })));
+    setNotifications(current =>
+      current.map(item => ({
+        ...item,
+        unread: successfullyMarked
+          ? successfullyMarked.has(item.id)
+            ? false
+            : item.unread
+          : false,
+      }))
+    );
   };
   const openReview = (item: ApprovalItem) => {
     setDecisionNote("");
@@ -444,35 +594,77 @@ export default function Approvals() {
       toast.error("اكتب سبب الرفض قبل إغلاق الطلب");
       return;
     }
-    if (item.live && liveMode && status === "approved" && ["expense", "correction"].includes(item.kind) && !decisionNote.trim()) {
+    if (
+      item.live &&
+      liveMode &&
+      status === "approved" &&
+      ["expense", "correction"].includes(item.kind) &&
+      !decisionNote.trim()
+    ) {
       toast.error("اكتب مبرر الاعتماد قبل إغلاق الطلب");
       return;
     }
     if (item.live && liveMode) {
-      if (item.kind === "substitute" && status === "approved" && !item.proposedInstructorId) {
+      if (
+        item.kind === "substitute" &&
+        status === "approved" &&
+        !item.proposedInstructorId
+      ) {
         toast.error("لا يمكن اعتماد الاستبدال قبل اقتراح مدرب بديل.");
         return;
       }
       try {
         if (item.kind === "expense") {
-          if (status === "approved") await apiClient.approveFinanceExpense(id, decisionNote.trim());
+          if (status === "approved")
+            await apiClient.approveFinanceExpense(id, decisionNote.trim());
           else await apiClient.rejectFinanceExpense(id, decisionNote.trim());
         } else if (item.kind === "correction") {
-          await apiClient.decideInvoiceCorrection(id, { decision: status.toUpperCase() as "APPROVED" | "REJECTED", reason: decisionNote.trim() });
+          await apiClient.decideInvoiceCorrection(id, {
+            decision: status.toUpperCase() as "APPROVED" | "REJECTED",
+            reason: decisionNote.trim(),
+          });
         } else {
           await apiClient.decideApproval(id, {
             decision: status.toUpperCase() as "APPROVED" | "REJECTED",
-            assignedInstructorId: status === "approved" && item.kind === "substitute" ? item.proposedInstructorId ?? undefined : undefined,
+            assignedInstructorId:
+              status === "approved" && item.kind === "substitute"
+                ? (item.proposedInstructorId ?? undefined)
+                : undefined,
             reason: decisionNote.trim() || undefined,
           });
         }
         const decidedAtDate = new Date();
-        const decidedAt = new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium", timeStyle: "short" }).format(decidedAtDate);
-        setRequests(current => current.map(request => request.id === id ? { ...request, status, decidedAt, decidedAtSort: decidedAtDate.getTime(), decidedBy: "المستخدم الحالي", decisionNote: decisionNote.trim() || undefined } : request));
-        setSelected(null); setDecisionNote(""); setExpenseRejectionMode(false);
-        toast.success(status === "approved" ? "تم اعتماد الطلب على الخادم" : "تم رفض الطلب على الخادم");
+        const decidedAt = new Intl.DateTimeFormat("ar-EG", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        }).format(decidedAtDate);
+        setRequests(current =>
+          current.map(request =>
+            request.id === id
+              ? {
+                  ...request,
+                  status,
+                  decidedAt,
+                  decidedAtSort: decidedAtDate.getTime(),
+                  decidedBy: "المستخدم الحالي",
+                  decisionNote: decisionNote.trim() || undefined,
+                }
+              : request
+          )
+        );
+        setSelected(null);
+        setDecisionNote("");
+        setExpenseRejectionMode(false);
+        toast.success(
+          status === "approved"
+            ? "تم اعتماد الطلب على الخادم"
+            : "تم رفض الطلب على الخادم"
+        );
       } catch (cause) {
-        toast.error("تعذر تسجيل القرار", { description: cause instanceof Error ? cause.message : "فشل الاتصال بالخادم." });
+        toast.error("تعذر تسجيل القرار", {
+          description:
+            cause instanceof Error ? cause.message : "فشل الاتصال بالخادم.",
+        });
       }
       return;
     }
@@ -642,7 +834,9 @@ export default function Approvals() {
           </button>
           <button
             className="nav-link"
-            onClick={() => { void logout().then(() => navigate("/login")); }}
+            onClick={() => {
+              void logout().then(() => navigate("/login"));
+            }}
           >
             <LogOut size={19} />
             <span>تسجيل الخروج</span>
@@ -665,7 +859,9 @@ export default function Approvals() {
             </button>
             <div
               className="branch-select assigned-branch"
-              aria-label={liveMode ? "النطاق المصرح به" : `النطاق: فرع ${branch}`}
+              aria-label={
+                liveMode ? "النطاق المصرح به" : `النطاق: فرع ${branch}`
+              }
             >
               <span className="branch-icon">
                 <MapPin size={17} />
@@ -714,10 +910,17 @@ export default function Approvals() {
           <section className="students-welcome approvals-welcome">
             <div>
               <div className="eyebrow">
-                <span className="eyebrow-dot" /> {liveMode ? "طلبات الجلسات المسجلة على الخادم" : "قرارات مدير الفرع · طلبات تحتاج مراجعة"}
+                <span className="eyebrow-dot" />{" "}
+                {liveMode
+                  ? "طلبات الجلسات المسجلة على الخادم"
+                  : "قرارات مدير الفرع · طلبات تحتاج مراجعة"}
               </div>
               <h1>الموافقات</h1>
-              <p>{liveMode ? "راجع طلبات الجلسات وطلبات البديل ضمن نطاق صلاحيتك." : `راجع طلبات الخصم وتغيير مدرب الحصة قبل اعتمادها لفرع ${branch}.`}</p>
+              <p>
+                {liveMode
+                  ? "راجع طلبات الجلسات وطلبات البديل ضمن نطاق صلاحيتك."
+                  : `راجع طلبات الخصم وتغيير مدرب الحصة قبل اعتمادها لفرع ${branch}.`}
+              </p>
             </div>
             <div className="welcome-actions">
               <button className="button button-secondary" onClick={downloadCsv}>
@@ -728,251 +931,87 @@ export default function Approvals() {
               </span>
             </div>
           </section>
-          {loadError && <section className="team-demo-note approvals-demo-note" role="alert"><AlertCircle size={16} /><span>تعذر تحميل الموافقات والإشعارات: {loadError}</span></section>}
+          {loadError && (
+            <section
+              className="team-demo-note approvals-demo-note"
+              role="alert"
+            >
+              <AlertCircle size={16} />
+              <span>تعذر تحميل الموافقات والإشعارات: {loadError}</span>
+            </section>
+          )}
           <section className="team-demo-note approvals-demo-note" role="note">
             <AlertCircle size={16} />
             <span>
-              {liveMode ? "الطلبات التشغيلية تُقرأ من الـAPI. يمكن تسجيل القرار من هذه الشاشة؛ الخصومات والمصروفات لا يدعمها هذا endpoint." : "بيانات توضيحية محلية. الموافقة أو الرفض يغيّر حالة الطلب داخل هذه المعاينة فقط ولا يحفظ قرارًا رسميًا."}
+              {liveMode
+                ? "الطلبات التشغيلية تُقرأ من الـAPI. يمكن تسجيل القرار من هذه الشاشة؛ الخصومات والمصروفات لا يدعمها هذا endpoint."
+                : "بيانات توضيحية محلية. الموافقة أو الرفض يغيّر حالة الطلب داخل هذه المعاينة فقط ولا يحفظ قرارًا رسميًا."}
             </span>
             {!liveMode && <span className="demo-tag">DEMO</span>}
           </section>
-          {!liveMode && <section
-            className="manager-policy-card"
-            aria-label="صلاحيات مدير الفرع"
-          >
-            <span className="manager-policy-icon">
-              <ShieldCheck size={18} />
-            </span>
-            <div>
-              <strong>نطاق مدير فرع مدينة نصر</strong>
-              <p>
-                اعتماد الخصومات حتى {BRANCH_MANAGER_DISCOUNT_LIMIT}% وتبديل
-                المدربين داخل الفرع.
-              </p>
-            </div>
-            <span className="manager-policy-escalation">
-              ما فوق {BRANCH_MANAGER_DISCOUNT_LIMIT}% <b>يُرفع للإدارة</b>
-            </span>
-          </section>}
+          {!liveMode && (
+            <section
+              className="manager-policy-card"
+              aria-label="صلاحيات مدير الفرع"
+            >
+              <span className="manager-policy-icon">
+                <ShieldCheck size={18} />
+              </span>
+              <div>
+                <strong>نطاق مدير فرع مدينة نصر</strong>
+                <p>
+                  اعتماد الخصومات حتى {BRANCH_MANAGER_DISCOUNT_LIMIT}% وتبديل
+                  المدربين داخل الفرع.
+                </p>
+              </div>
+              <span className="manager-policy-escalation">
+                ما فوق {BRANCH_MANAGER_DISCOUNT_LIMIT}% <b>يُرفع للإدارة</b>
+              </span>
+            </section>
+          )}
 
-          <section
-            className="finance-stats-grid approval-stats"
-            aria-label="ملخص الموافقات"
-          >
-            <article className="finance-stat">
-              <span className="finance-stat-icon icon-amber">
-                <Clock3 size={18} />
-              </span>
-              <span className="finance-stat-label">بانتظار قرارك</span>
-              <div>
-                <strong>{pending.length}</strong>
-                <small>{liveMode ? "طلب ضمن نطاقك" : "طلب داخل الفرع"}</small>
-              </div>
-              <small>ابدأ بالأقدم أو الأكثر تأثيرًا</small>
-            </article>
-            <article className="finance-stat">
-              <span className="finance-stat-icon icon-blue">
-                <FileText size={18} />
-              </span>
-              <span className="finance-stat-label">{liveMode ? "طلبات جلسة" : "طلبات الخصم"}</span>
-              <div>
-                <strong>{liveMode ? pendingSessionRequests : pendingDiscounts}</strong>
-                <small>تحتاج مراجعة</small>
-              </div>
-              <small>{liveMode ? "إضافية أو تعويضية" : "خصم إخوة أو حملة توضيحية"}</small>
-            </article>
-            <article className="finance-stat">
-              <span className="finance-stat-icon icon-violet">
-                <UserCheck size={18} />
-              </span>
-              <span className="finance-stat-label">طلبات مدرب بديل</span>
-              <div>
-                <strong>{pendingSubstitutes}</strong>
-                <small>تحتاج مراجعة</small>
-              </div>
-              <small>تبديل مؤقت لجلسة محددة</small>
-            </article>
-            <article className="finance-stat">
-              <span className="finance-stat-icon icon-teal">
-                <Wallet size={18} />
-              </span>
-              <span className="finance-stat-label">مصروفات تحتاج تأكيدًا</span>
-              <div>
-                <strong>{liveMode ? "—" : pendingExpenses}</strong>
-                <small>{liveMode ? "غير مدعومة هنا" : "ترفعها المحاسبة"}</small>
-              </div>
-              <small>{liveMode ? "تحتاج endpoint مالي منفصل" : "تظهر في الماليات بعد اعتمادك"}</small>
-            </article>
-            <article className="finance-stat">
-              <span className="finance-stat-icon icon-teal">
-                <CheckCircle2 size={18} />
-              </span>
-              <span className="finance-stat-label">تمت مراجعتها</span>
-              <div>
-                <strong>
-                  {
-                    reviewedRequests.length
-                  }
-                </strong>
-                <small>{liveMode ? "من الخادم" : "في هذه المعاينة"}</small>
-              </div>
-              <small>يمكن متابعة سجل القرار في كل بطاقة</small>
-            </article>
-          </section>
-
-          <section className="panel approvals-panel">
-            <div className="approval-toolbar-top">
-              <div className="panel-title-group">
-                <span className="panel-icon panel-icon-amber">
-                  <ShieldCheck size={18} />
-                </span>
-                <div>
-                  <h2>قائمة المراجعة</h2>
-                  <p>الطلبات المرسلة إلى مدير الفرع</p>
-                </div>
-              </div>
-              <span className="team-table-total">
-                {visibleRequests.length} طلب
-              </span>
-            </div>
-            <div className="approval-controls">
-              <ApprovalQueueTabs
-                activeTab={tab}
-                onChange={setTab}
-                tabs={liveMode ? [
-                  { id: "all", label: "كل الطلبات", count: branchRequests.length },
-                  { id: "session", label: "طلبات الجلسات", count: pendingSessionRequests },
-                  { id: "substitute", label: "مدرب بديل", count: pendingSubstitutes },
-                  { id: "correction", label: "تصحيح فواتير", count: pending.filter(item => item.kind === "correction").length },
-                ] : [
-                  {
-                    id: "all",
-                    label: "كل الطلبات",
-                    count: branchRequests.length,
-                  },
-                  {
-                    id: "discount",
-                    label: "خصومات",
-                    count: branchRequests.filter(
-                      item => item.kind === "discount"
-                    ).length,
-                  },
-                  {
-                    id: "substitute",
-                    label: "مدرب بديل",
-                    count: branchRequests.filter(
-                      item => item.kind === "substitute"
-                    ).length,
-                  },
-                  {
-                    id: "expense",
-                    label: "مصروفات",
-                    count: branchRequests.filter(
-                      item => item.kind === "expense"
-                    ).length,
-                  },
-                ]}
-              />
-              <label className="approval-search">
-                <Search size={15} />
-                <input
-                  aria-label="بحث في قائمة المراجعة"
-                  placeholder="بحث في الطلبات..."
-                  value={query}
-                  onChange={event => setQuery(event.target.value)}
-                />
-              </label>
-            </div>
-            <div className="approval-filter-row">
-              <label>
-                حالة الطلب
-                <select
-                  aria-label="تصفية حسب حالة الطلب"
-                  value={statusFilter}
-                  onChange={event =>
-                    setStatusFilter(
-                      event.target.value as ApprovalStatus | "all"
-                    )
-                  }
-                >
-                  <option value="all">كل الحالات</option>
-                  <option value="pending">بانتظار المراجعة</option>
-                  <option value="approved">تمت الموافقة</option>
-                  <option value="rejected">تم الرفض</option>
-                </select>
-              </label>
-              <label>
-                ترتيب القائمة
-                <select
-                  aria-label="ترتيب قائمة الطلبات"
-                  value={sortOrder}
-                  onChange={event =>
-                    setSortOrder(event.target.value as ApprovalSort)
-                  }
-                >
-                  <option value="priority">المعلّق أولًا · الأقدم</option>
-                  <option value="oldest">الأقدم إرسالًا</option>
-                  <option value="newest">الأحدث إرسالًا</option>
-                </select>
-              </label>
-              <span className="approval-filter-summary">
-                {visibleRequests.length} نتيجة · {pending.length} معلّق
-              </span>
-            </div>
-            {visibleRequests.length ? (
-              <div className="approval-list">
-                {visibleRequests.map(item => (
-                  <ApprovalCard
-                    key={item.id}
-                    item={item}
-                    onReview={openReview}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="team-empty approval-empty">
-                <Search size={20} />
-                <strong>مفيش طلبات مطابقة</strong>
-                <span>جرّب نوع طلب مختلف أو ابحث بكلمة أقصر.</span>
-                <button
-                  className="text-link"
-                  onClick={() => {
-                    setQuery("");
-                    setTab("all");
-                  }}
-                >
-                  مسح البحث والفلاتر
-                </button>
-              </div>
-            )}
-            <div className="team-table-footer">
-              <span>{liveMode ? "طلبات الخادم" : "قائمة توضيحية"} · {visibleRequests.length} من {branchRequests.length} طلب</span>
-              <span>النطاق: {branch}</span>
-            </div>
-          </section>
-          <section
-            className="panel approval-history-panel"
-            aria-labelledby="approval-history-title"
-          >
-            <div className="approval-history-heading">
-              <div className="panel-title-group">
-                <span className="panel-icon panel-icon-teal">
-                  <Activity size={18} />
-                </span>
-                <div>
-                  <h2 id="approval-history-title">سجل القرارات</h2>
-                  <p>آخر قرارات مدير الفرع · {branch}</p>
-                </div>
-              </div>
-              <span className="team-table-total">
-                {reviewedRequests.length} قرار
-              </span>
-            </div>
-            <AuditTimeline
-              events={auditEvents}
-              emptyLabel={liveMode ? "لا توجد قرارات محفوظة في هذا النطاق بعد." : "لا توجد قرارات مسجلة في بيانات العرض بعد."}
-            />
-          </section>
+          <ApprovalSummaryStats
+            liveMode={liveMode}
+            pendingCount={pending.length}
+            pendingDiscounts={pendingDiscounts}
+            pendingSessionRequests={pendingSessionRequests}
+            pendingSubstitutes={pendingSubstitutes}
+            pendingExpenses={pendingExpenses}
+            reviewedCount={reviewedRequests.length}
+          />
+          <ApprovalQueueAndHistory
+            liveMode={liveMode}
+            branch={branch}
+            visibleRequests={visibleRequests}
+            branchRequestCount={branchRequests.length}
+            pendingCount={pending.length}
+            pendingSessionRequests={pendingSessionRequests}
+            pendingSubstitutes={pendingSubstitutes}
+            pendingCorrectionCount={
+              pending.filter(item => item.kind === "correction").length
+            }
+            discountCount={
+              branchRequests.filter(item => item.kind === "discount").length
+            }
+            expenseCount={
+              branchRequests.filter(item => item.kind === "expense").length
+            }
+            tab={tab}
+            setTab={setTab}
+            query={query}
+            setQuery={setQuery}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            sortOrder={sortOrder}
+            setSortOrder={setSortOrder}
+            onReview={openReview}
+            onClearFilters={() => {
+              setQuery("");
+              setTab("all");
+            }}
+            auditEvents={auditEvents}
+            reviewedCount={reviewedRequests.length}
+          />
           <div className="finance-footer-note">
             <span>
               <AlertCircle size={14} />
