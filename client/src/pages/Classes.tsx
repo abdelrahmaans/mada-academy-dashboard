@@ -29,11 +29,19 @@ import {
   X,
 } from "lucide-react";
 import { useLocation } from "wouter";
-import { apiClient, type CourseTemplateRecord, type GroupRecord, type SchedulingClassroom, type SchedulingInstructor, type StudentRecord } from "@/lib/apiClient";
+import {
+  apiClient,
+  type CourseTemplateRecord,
+  type GroupRecord,
+  type SchedulingClassroom,
+  type SchedulingInstructor,
+  type StudentRecord,
+} from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import ClassesCatalogPanel from "@/components/ClassesCatalogPanel";
 import ClassesDetailDialogs from "@/components/ClassesDetailDialogs";
+import { ClassesCreateDialogs } from "@/components/ClassesCreateDialogs";
 
 export type Track =
   | "robotics"
@@ -288,30 +296,80 @@ const formatArabicTime = (value: string) => {
   const hour = hoursRaw % 12 || 12;
   return `${String(hour).padStart(2, "0")}:${String(minutesRaw).padStart(2, "0")} ${hoursRaw >= 12 ? "م" : "ص"}`;
 };
-const apiWeekdays = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
-const normalizeTrack = (value: string): Track => (Object.keys(trackLabels).includes(value) ? value as Track : "robotics");
+const apiWeekdays = [
+  "الأحد",
+  "الإثنين",
+  "الثلاثاء",
+  "الأربعاء",
+  "الخميس",
+  "الجمعة",
+  "السبت",
+];
+const normalizeTrack = (value: string): Track =>
+  Object.keys(trackLabels).includes(value) ? (value as Track) : "robotics";
 const courseFromApi = (course: CourseTemplateRecord): Course => ({
-  id: course.id, name: course.name, track: normalizeTrack(course.track), type: course.type === "soft" ? "soft" : "hard",
-  ageGroup: course.ageGroup, level: course.level === "intermediate" || course.level === "advanced" ? course.level : "beginner",
-  totalSessions: course.totalSessions, durationHours: Number(course.sessionDurationHours), basePricePiasters: course.basePricePiastres,
-  status: course.status === "ARCHIVED" ? "archived" : course.status === "ACTIVE" ? "active" : "draft", description: "قالب كورس محفوظ على الخادم.",
+  id: course.id,
+  name: course.name,
+  track: normalizeTrack(course.track),
+  type: course.type === "soft" ? "soft" : "hard",
+  ageGroup: course.ageGroup,
+  level:
+    course.level === "intermediate" || course.level === "advanced"
+      ? course.level
+      : "beginner",
+  totalSessions: course.totalSessions,
+  durationHours: Number(course.sessionDurationHours),
+  basePricePiasters: course.basePricePiastres,
+  status:
+    course.status === "ARCHIVED"
+      ? "archived"
+      : course.status === "ACTIVE"
+        ? "active"
+        : "draft",
+  description: "قالب كورس محفوظ على الخادم.",
 });
 const offeringFromApi = (group: GroupRecord): Offering => {
-  let scheduleData: { daysOfWeek?: number[]; startTime?: string; durationMinutes?: number } = {};
-  try { scheduleData = JSON.parse(group.weeklyScheduleJson) as typeof scheduleData; } catch { /* leave an honest empty schedule label */ }
-  const days = (scheduleData.daysOfWeek ?? []).map(day => apiWeekdays[day]).filter((day): day is string => Boolean(day));
+  let scheduleData: {
+    daysOfWeek?: number[];
+    startTime?: string;
+    durationMinutes?: number;
+  } = {};
+  try {
+    scheduleData = JSON.parse(group.weeklyScheduleJson) as typeof scheduleData;
+  } catch {
+    /* leave an honest empty schedule label */
+  }
+  const days = (scheduleData.daysOfWeek ?? [])
+    .map(day => apiWeekdays[day])
+    .filter((day): day is string => Boolean(day));
   const startTime = (scheduleData.startTime ?? "09:00").slice(0, 5);
   const duration = scheduleData.durationMinutes ?? 60;
   const [hours, minutes] = startTime.split(":").map(Number);
   const endMinutes = hours * 60 + minutes + duration;
   const endTime = `${String(Math.floor(endMinutes / 60) % 24).padStart(2, "0")}:${String(endMinutes % 60).padStart(2, "0")}`;
   const today = new Date().toISOString().slice(0, 10);
-  const status: OfferingStatus = group.endDate < today ? "completed" : group.startDate <= today ? "ongoing" : "upcoming";
+  const status: OfferingStatus =
+    group.endDate < today
+      ? "completed"
+      : group.startDate <= today
+        ? "ongoing"
+        : "upcoming";
   return {
-    id: group.id, courseId: group.courseTemplateId, courseName: group.courseName, track: normalizeTrack(group.track),
-    instructor: group.instructorName ?? group.instructorId, branch: group.branchName, classroom: group.classroomName,
-    startDate: group.startDate, schedule: `${days.join(" و") || "جدول غير محدد"} · ${formatArabicTime(startTime)}`,
-    days, startTime, endTime, status, maxStudents: group.maxStudents, enrolledStudents: group.enrolledStudents,
+    id: group.id,
+    courseId: group.courseTemplateId,
+    courseName: group.courseName,
+    track: normalizeTrack(group.track),
+    instructor: group.instructorName ?? group.instructorId,
+    branch: group.branchName,
+    classroom: group.classroomName,
+    startDate: group.startDate,
+    schedule: `${days.join(" و") || "جدول غير محدد"} · ${formatArabicTime(startTime)}`,
+    days,
+    startTime,
+    endTime,
+    status,
+    maxStudents: group.maxStudents,
+    enrolledStudents: group.enrolledStudents,
   };
 };
 
@@ -384,13 +442,20 @@ function ClassesPage() {
   ]);
   const [startTime, setStartTime] = useState("10:00");
   const [endTime, setEndTime] = useState("11:30");
-  const [liveClassrooms, setLiveClassrooms] = useState<SchedulingClassroom[]>([]);
+  const [liveClassrooms, setLiveClassrooms] = useState<SchedulingClassroom[]>(
+    []
+  );
   const [liveRoomsReady, setLiveRoomsReady] = useState(false);
-  const [liveInstructors, setLiveInstructors] = useState<SchedulingInstructor[]>([]);
+  const [liveInstructors, setLiveInstructors] = useState<
+    SchedulingInstructor[]
+  >([]);
   const [liveStudents, setLiveStudents] = useState<StudentRecord[]>([]);
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   useEffect(() => {
-    if (!apiClient.hasSession()) { setLiveMode(false); return; }
+    if (!apiClient.hasSession()) {
+      setLiveMode(false);
+      return;
+    }
     setLiveMode(true);
     setCourses([]);
     setOfferings([]);
@@ -401,45 +466,80 @@ function ClassesPage() {
       apiClient.schedulingClassrooms(),
       apiClient.schedulingInstructors(),
       apiClient.listStudents(),
-    ]).then(([courseResult, groupResult, roomResult, instructorResult, studentResult]) => {
-      if (courseResult.status === "rejected" || groupResult.status === "rejected") {
-        setCourses([]);
-        setOfferings([]);
-        setLiveClassrooms([]);
-        setLiveInstructors([]);
-        setLiveStudents([]);
-        setLiveRoomsReady(false);
-        const cause = courseResult.status === "rejected"
-          ? courseResult.reason
-          : groupResult.status === "rejected"
-            ? groupResult.reason
-            : "تعذر تحميل بيانات الكورسات والمجموعات من الخادم.";
-        setLoadError(cause instanceof Error ? cause.message : "تعذر تحميل الكورسات والمجموعات من الخادم.");
-        return;
+    ]).then(
+      ([
+        courseResult,
+        groupResult,
+        roomResult,
+        instructorResult,
+        studentResult,
+      ]) => {
+        if (
+          courseResult.status === "rejected" ||
+          groupResult.status === "rejected"
+        ) {
+          setCourses([]);
+          setOfferings([]);
+          setLiveClassrooms([]);
+          setLiveInstructors([]);
+          setLiveStudents([]);
+          setLiveRoomsReady(false);
+          const cause =
+            courseResult.status === "rejected"
+              ? courseResult.reason
+              : groupResult.status === "rejected"
+                ? groupResult.reason
+                : "تعذر تحميل بيانات الكورسات والمجموعات من الخادم.";
+          setLoadError(
+            cause instanceof Error
+              ? cause.message
+              : "تعذر تحميل الكورسات والمجموعات من الخادم."
+          );
+          return;
+        }
+
+        const mappedCourses = courseResult.value.items.map(courseFromApi);
+        setCourses(mappedCourses);
+        setOfferings(groupResult.value.items.map(offeringFromApi));
+
+        const rooms =
+          roomResult.status === "fulfilled" ? roomResult.value.items : [];
+        const instructors =
+          instructorResult.status === "fulfilled"
+            ? instructorResult.value.items
+            : [];
+        const students =
+          studentResult.status === "fulfilled" ? studentResult.value.items : [];
+        setLiveClassrooms(rooms);
+        setLiveInstructors(instructors);
+        setLiveStudents(students);
+        setOfferingCourseId(mappedCourses[0]?.id ?? "");
+        const firstRoom = rooms.find(room => room.status === "AVAILABLE");
+        if (firstRoom) {
+          setOfferingBranchId(firstRoom.branchId);
+          setOfferingBranch(firstRoom.branchName);
+          setSelectedClassroomId(firstRoom.id);
+          setClassroom(firstRoom.name);
+        }
+        const firstInstructor = instructors[0];
+        if (firstInstructor) {
+          setSelectedInstructorId(firstInstructor.id);
+          setInstructor(firstInstructor.name ?? "");
+        }
+        setLiveRoomsReady(roomResult.status === "fulfilled");
+
+        const optionalFailure = [
+          roomResult,
+          instructorResult,
+          studentResult,
+        ].find(result => result.status === "rejected");
+        if (optionalFailure?.status === "rejected") {
+          setLoadError(
+            "تم تحميل الكورسات والمجموعات؛ بعض بيانات إنشاء المجموعة غير متاحة لصلاحيات الحساب الحالية."
+          );
+        }
       }
-
-      const mappedCourses = courseResult.value.items.map(courseFromApi);
-      setCourses(mappedCourses);
-      setOfferings(groupResult.value.items.map(offeringFromApi));
-
-      const rooms = roomResult.status === "fulfilled" ? roomResult.value.items : [];
-      const instructors = instructorResult.status === "fulfilled" ? instructorResult.value.items : [];
-      const students = studentResult.status === "fulfilled" ? studentResult.value.items : [];
-      setLiveClassrooms(rooms);
-      setLiveInstructors(instructors);
-      setLiveStudents(students);
-      setOfferingCourseId(mappedCourses[0]?.id ?? "");
-      const firstRoom = rooms.find(room => room.status === "AVAILABLE");
-      if (firstRoom) { setOfferingBranchId(firstRoom.branchId); setOfferingBranch(firstRoom.branchName); setSelectedClassroomId(firstRoom.id); setClassroom(firstRoom.name); }
-      const firstInstructor = instructors[0];
-      if (firstInstructor) { setSelectedInstructorId(firstInstructor.id); setInstructor(firstInstructor.name ?? ""); }
-      setLiveRoomsReady(roomResult.status === "fulfilled");
-
-      const optionalFailure = [roomResult, instructorResult, studentResult].find(result => result.status === "rejected");
-      if (optionalFailure?.status === "rejected") {
-        setLoadError("تم تحميل الكورسات والمجموعات؛ بعض بيانات إنشاء المجموعة غير متاحة لصلاحيات الحساب الحالية.");
-      }
-    });
+    );
   }, []);
 
   const filteredCourses = useMemo(
@@ -543,17 +643,29 @@ function ClassesPage() {
     if (liveMode) {
       try {
         const saved = await apiClient.createCourseTemplate({
-          name: courseName.trim(), track: newTrack, type: newCourseType, ageGroup, level,
-          totalSessions: Number(totalSessions), sessionDurationHours: Number(durationHours),
+          name: courseName.trim(),
+          track: newTrack,
+          type: newCourseType,
+          ageGroup,
+          level,
+          totalSessions: Number(totalSessions),
+          sessionDurationHours: Number(durationHours),
           basePricePiastres: Math.round(Number(price) * 100),
         });
         const course = courseFromApi(saved);
         setCourses(current => [course, ...current]);
-        setTab("courses"); setTrackFilter("all"); setStatusFilter("all"); setSearch("");
-        setCourseModalOpen(false); resetCourseForm();
+        setTab("courses");
+        setTrackFilter("all");
+        setStatusFilter("all");
+        setSearch("");
+        setCourseModalOpen(false);
+        resetCourseForm();
         toast.success("تم حفظ قالب الكورس على الخادم كمسودة.");
       } catch (cause) {
-        toast.error("تعذر حفظ قالب الكورس", { description: cause instanceof Error ? cause.message : "فشل الاتصال بالخادم." });
+        toast.error("تعذر حفظ قالب الكورس", {
+          description:
+            cause instanceof Error ? cause.message : "فشل الاتصال بالخادم.",
+        });
       }
       return;
     }
@@ -600,17 +712,33 @@ function ClassesPage() {
     }
     const course = courses.find(item => item.id === offeringCourseId);
     if (liveMode) {
-      const room = liveClassrooms.find(item => item.id === selectedClassroomId && item.branchId === offeringBranchId && item.status === "AVAILABLE");
-      const selectedInstructor = liveInstructors.find(item => item.id === selectedInstructorId);
+      const room = liveClassrooms.find(
+        item =>
+          item.id === selectedClassroomId &&
+          item.branchId === offeringBranchId &&
+          item.status === "AVAILABLE"
+      );
+      const selectedInstructor = liveInstructors.find(
+        item => item.id === selectedInstructorId
+      );
       if (!course || !room || !selectedInstructor || !offeringBranchId) {
-        toast.error("اختر قالب كورس، مدربًا، فرعًا وقاعة نشطة من بيانات الخادم.");
+        toast.error(
+          "اختر قالب كورس، مدربًا، فرعًا وقاعة نشطة من بيانات الخادم."
+        );
         return;
       }
-      const startMinutes = Number(startTime.slice(0, 2)) * 60 + Number(startTime.slice(3, 5));
-      const endMinutes = Number(endTime.slice(0, 2)) * 60 + Number(endTime.slice(3, 5));
+      const startMinutes =
+        Number(startTime.slice(0, 2)) * 60 + Number(startTime.slice(3, 5));
+      const endMinutes =
+        Number(endTime.slice(0, 2)) * 60 + Number(endTime.slice(3, 5));
       const durationMinutes = (endMinutes - startMinutes + 1440) % 1440;
-      if (durationMinutes <= 0) { toast.error("مدة المجموعة غير صالحة."); return; }
-      const weekdays = scheduleDays.map(day => apiWeekdays.indexOf(day)).filter(day => day >= 0);
+      if (durationMinutes <= 0) {
+        toast.error("مدة المجموعة غير صالحة.");
+        return;
+      }
+      const weekdays = scheduleDays
+        .map(day => apiWeekdays.indexOf(day))
+        .filter(day => day >= 0);
       const cursor = new Date(`${startDate}T00:00:00`);
       let scheduled = 0;
       let endDate = startDate;
@@ -623,25 +751,61 @@ function ClassesPage() {
         cursor.setDate(cursor.getDate() + 1);
         guard += 1;
       }
-      if (scheduled < course.totalSessions) { toast.error("تعذر حساب تاريخ نهاية المجموعة."); return; }
+      if (scheduled < course.totalSessions) {
+        toast.error("تعذر حساب تاريخ نهاية المجموعة.");
+        return;
+      }
       try {
         const response = await apiClient.createGroup({
-          branchId: offeringBranchId, courseTemplateId: course.id, instructorId: selectedInstructor.id, classroomId: room.id,
-          startDate, endDate, daysOfWeek: weekdays, startTime, durationMinutes, maxStudents: Number(maxStudents),
-          studentIds: selectedStudentIds, finalPricePiastres: course.basePricePiasters,
+          branchId: offeringBranchId,
+          courseTemplateId: course.id,
+          instructorId: selectedInstructor.id,
+          classroomId: room.id,
+          startDate,
+          endDate,
+          daysOfWeek: weekdays,
+          startTime,
+          durationMinutes,
+          maxStudents: Number(maxStudents),
+          studentIds: selectedStudentIds,
+          finalPricePiastres: course.basePricePiasters,
         });
-        setOfferingModalOpen(false); resetOfferingForm();
-        toast.success("تم حفظ المجموعة وتوليد جلساتها على الخادم.", { description: `${response.sessionsCreated} جلسة · ${response.studentCount} طالب` });
-        try { setOfferings((await apiClient.listGroups()).items.map(offeringFromApi)); }
-        catch (refreshError) { setLoadError(refreshError instanceof Error ? refreshError.message : "تم الحفظ، لكن تعذر تحديث القائمة."); }
+        setOfferingModalOpen(false);
+        resetOfferingForm();
+        toast.success("تم حفظ المجموعة وتوليد جلساتها على الخادم.", {
+          description: `${response.sessionsCreated} جلسة · ${response.studentCount} طالب`,
+        });
+        try {
+          setOfferings(
+            (await apiClient.listGroups()).items.map(offeringFromApi)
+          );
+        } catch (refreshError) {
+          setLoadError(
+            refreshError instanceof Error
+              ? refreshError.message
+              : "تم الحفظ، لكن تعذر تحديث القائمة."
+          );
+        }
       } catch (cause) {
-        toast.error("تعذر حفظ المجموعة", { description: cause instanceof Error ? cause.message : "فشل الاتصال بالخادم." });
+        toast.error("تعذر حفظ المجموعة", {
+          description:
+            cause instanceof Error ? cause.message : "فشل الاتصال بالخادم.",
+        });
       }
       return;
     }
-    const duplicateRoomSlot = offerings.find(item => item.branch === offeringBranch && item.classroom === classroom.trim() && item.days.some(day => scheduleDays.includes(day)) && startTime < item.endTime && endTime > item.startTime);
+    const duplicateRoomSlot = offerings.find(
+      item =>
+        item.branch === offeringBranch &&
+        item.classroom === classroom.trim() &&
+        item.days.some(day => scheduleDays.includes(day)) &&
+        startTime < item.endTime &&
+        endTime > item.startTime
+    );
     if (duplicateRoomSlot) {
-      toast.error("تعارض حجز القاعة", { description: `القاعة محجوزة بالفعل مع «${duplicateRoomSlot.courseName}» في يوم مشترك. غيّر القاعة أو الوقت.` });
+      toast.error("تعارض حجز القاعة", {
+        description: `القاعة محجوزة بالفعل مع «${duplicateRoomSlot.courseName}» في يوم مشترك. غيّر القاعة أو الوقت.`,
+      });
       return;
     }
     const localCourse = course ?? courses[0];
@@ -688,7 +852,9 @@ function ClassesPage() {
   const trackOptions = Object.entries(trackLabels) as [Track, string][];
   const currentCount =
     tab === "courses" ? filteredCourses.length : filteredOfferings.length;
-  const liveBranchNames = Array.from(new Set(liveClassrooms.map(room => room.branchName)));
+  const liveBranchNames = Array.from(
+    new Set(liveClassrooms.map(room => room.branchName))
+  );
 
   return (
     <div className="app-shell" dir="rtl">
@@ -784,7 +950,9 @@ function ClassesPage() {
           </button>
           <button
             className="nav-link"
-            onClick={() => { void logout().then(() => setLocation("/login")); }}
+            onClick={() => {
+              void logout().then(() => setLocation("/login"));
+            }}
           >
             <LogOut size={19} />
             <span>تسجيل الخروج</span>
@@ -823,7 +991,10 @@ function ClassesPage() {
               </button>
               {branchMenuOpen && (
                 <div className="branch-menu">
-                  {(liveMode ? ["كل الفروع", ...liveBranchNames] : branches).map(branch => (
+                  {(liveMode
+                    ? ["كل الفروع", ...liveBranchNames]
+                    : branches
+                  ).map(branch => (
                     <button
                       key={branch}
                       className={branchFilter === branch ? "selected" : ""}
@@ -915,8 +1086,22 @@ function ClassesPage() {
               </button>
             </div>
           </section>
-          <div className="students-demo-note" role="status"><strong>{liveMode ? "بيانات الأكاديمية الحية" : "DEMO · بيانات توضيحية"}</strong><span>{liveMode ? "الكورسات والمجموعات تُقرأ من الـAPI؛ إنشاء القوالب والمجموعات يُحفظ على الخادم." : "الإضافات في هذه الصفحة محلية للعرض التجريبي فقط."}</span></div>
-          {loadError && <div className="students-demo-note" role="alert"><strong>تعذر تحميل بيانات الأكاديمية</strong><span>{loadError}</span></div>}
+          <div className="students-demo-note" role="status">
+            <strong>
+              {liveMode ? "بيانات الأكاديمية الحية" : "DEMO · بيانات توضيحية"}
+            </strong>
+            <span>
+              {liveMode
+                ? "الكورسات والمجموعات تُقرأ من الـAPI؛ إنشاء القوالب والمجموعات يُحفظ على الخادم."
+                : "الإضافات في هذه الصفحة محلية للعرض التجريبي فقط."}
+            </span>
+          </div>
+          {loadError && (
+            <div className="students-demo-note" role="alert">
+              <strong>تعذر تحميل بيانات الأكاديمية</strong>
+              <span>{loadError}</span>
+            </div>
+          )}
 
           <section
             className="course-stats-grid"
@@ -950,18 +1135,24 @@ function ClassesPage() {
               <span className="course-stat-icon icon-violet">
                 <Users size={18} />
               </span>
-              <span className="course-stat-label">{liveMode ? "طلاب في المجموعات" : "طلاب في مجموعات العينة"}</span>
+              <span className="course-stat-label">
+                {liveMode ? "طلاب في المجموعات" : "طلاب في مجموعات العينة"}
+              </span>
               <div>
                 <strong>{String(enrolledTotal).padStart(2, "0")}</strong>
                 <span>طالب</span>
               </div>
-              <small className="course-neutral">{liveMode ? "إجمالي المسجلين بالخادم" : "مجموع بيانات تجريبية"}</small>
+              <small className="course-neutral">
+                {liveMode ? "إجمالي المسجلين بالخادم" : "مجموع بيانات تجريبية"}
+              </small>
             </article>
             <article className="course-stat">
               <span className="course-stat-icon icon-amber">
                 <Sparkles size={18} />
               </span>
-              <span className="course-stat-label">{liveMode ? "أماكن متاحة" : "أماكن متاحة في العينة"}</span>
+              <span className="course-stat-label">
+                {liveMode ? "أماكن متاحة" : "أماكن متاحة في العينة"}
+              </span>
               <div>
                 <strong>{String(availableSeats).padStart(2, "0")}</strong>
                 <span>مقعد</span>
@@ -1000,360 +1191,82 @@ function ClassesPage() {
           <div className="students-demo-note">
             <Activity size={14} />
             <span>
-              {liveMode ? "إنشاء قوالب الكورسات والمجموعات يُحفظ في قاعدة البيانات. تعديل/أرشفة القوالب والمجموعات غير متاح بعد." : "المحتوى والجداول والأسعار المعروضة تجريبية. الإضافة مؤقتة داخل الواجهة ولا تُحفظ في قاعدة بيانات."}
+              {liveMode
+                ? "إنشاء قوالب الكورسات والمجموعات يُحفظ في قاعدة البيانات. تعديل/أرشفة القوالب والمجموعات غير متاح بعد."
+                : "المحتوى والجداول والأسعار المعروضة تجريبية. الإضافة مؤقتة داخل الواجهة ولا تُحفظ في قاعدة بيانات."}
             </span>
           </div>
           <footer className="workspace-footer">
             <span>© مدى 2026</span>
-            <span>{liveMode ? "واجهة مرتبطة بـAPI — إصدار 0.1" : "واجهة تجريبية — إصدار 0.1"}</span>
+            <span>
+              {liveMode
+                ? "واجهة مرتبطة بـAPI — إصدار 0.1"
+                : "واجهة تجريبية — إصدار 0.1"}
+            </span>
           </footer>
         </div>
       </main>
 
-      {courseModalOpen && (
-        <div
-          className="dialog-backdrop"
-          role="presentation"
-          onMouseDown={event => {
-            if (event.target === event.currentTarget) {
-              setCourseModalOpen(false);
-              resetCourseForm();
-            }
-          }}
-        >
-          <section
-            className="student-dialog academic-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="add-course-title"
-          >
-            <div className="dialog-top">
-              <span className="dialog-mark">
-                <BookOpen size={21} />
-              </span>
-              <button
-                className="icon-button"
-                aria-label="إغلاق"
-                onClick={() => {
-                  setCourseModalOpen(false);
-                  resetCourseForm();
-                }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <h2 id="add-course-title">إنشاء قالب كورس</h2>
-            <p>عرّف محتوى المسار التعليمي قبل فتح مجموعات للتسجيل.</p>
-            <form onSubmit={addCourse}>
-              <label className="form-field">
-                <span>
-                  اسم الكورس <b>*</b>
-                </span>
-                <input
-                  autoFocus
-                  value={courseName}
-                  onChange={event => setCourseName(event.target.value)}
-                  placeholder="مثال: الروبوتات والأنظمة الذكية"
-                />
-              </label>
-              <div className="form-row">
-                <label className="form-field">
-                  <span>
-                    المسار <b>*</b>
-                  </span>
-                  <select
-                    value={newTrack}
-                    onChange={event => setNewTrack(event.target.value as Track)}
-                  >
-                    {trackOptions.map(([key, label]) => (
-                      <option value={key} key={key}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="form-field">
-                  <span>نوع المسار</span>
-                  <select
-                    value={newCourseType}
-                    onChange={event =>
-                      setNewCourseType(event.target.value as "hard" | "soft")
-                    }
-                  >
-                    <option value="hard">تقني (Hard Skills)</option>
-                    <option value="soft">مهارات شخصية (Soft Skills)</option>
-                  </select>
-                </label>
-              </div>
-              <div className="form-row">
-                <label className="form-field">
-                  <span>الفئة العمرية</span>
-                  <select
-                    value={ageGroup}
-                    onChange={event => setAgeGroup(event.target.value)}
-                  >
-                    {["4-6", "7-9", "10-12", "13-15", "16-18"].map(age => (
-                      <option key={age} value={age}>
-                        {age} سنة
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="form-field">
-                  <span>المستوى</span>
-                  <select
-                    value={level}
-                    onChange={event =>
-                      setLevel(event.target.value as Course["level"])
-                    }
-                  >
-                    {Object.entries(levelLabels).map(([key, label]) => (
-                      <option value={key} key={key}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <div className="form-row">
-                <label className="form-field">
-                  <span>
-                    عدد الحصص <b>*</b>
-                  </span>
-                  <input
-                    type="number"
-                    min="1"
-                    value={totalSessions}
-                    onChange={event => setTotalSessions(event.target.value)}
-                  />
-                </label>
-                <label className="form-field">
-                  <span>
-                    مدة الحصة بالساعات <b>*</b>
-                  </span>
-                  <input
-                    type="number"
-                    min="0.25"
-                    step="0.25"
-                    value={durationHours}
-                    onChange={event => setDurationHours(event.target.value)}
-                  />
-                </label>
-              </div>
-              <label className="form-field">
-                <span>
-                  السعر الأساسي بالجنيه <b>*</b>
-                </span>
-                <input
-                  type="number"
-                  min="1"
-                  value={price}
-                  onChange={event => setPrice(event.target.value)}
-                  placeholder="مثال: 3500"
-                  inputMode="decimal"
-                />
-              </label>
-              <div className="dialog-info">
-                <Activity size={15} />
-                <span>
-                  {liveMode ? "سيحفظ الخادم قالب الكورس كمسودة قابلة للاستخدام في إنشاء المجموعات." : "المسودة محلية للعرض فقط؛ لا تُحفظ في قاعدة البيانات."}
-                </span>
-              </div>
-              <div className="dialog-actions">
-                <button
-                  type="button"
-                  className="button button-secondary"
-                  onClick={() => {
-                    setCourseModalOpen(false);
-                    resetCourseForm();
-                  }}
-                >
-                  إلغاء
-                </button>
-                <button type="submit" className="button button-primary">
-                  <Plus size={16} /> حفظ كمسودة
-                </button>
-              </div>
-            </form>
-          </section>
-        </div>
-      )}
-
-      {offeringModalOpen && (
-        <div
-          className="dialog-backdrop"
-          role="presentation"
-          onMouseDown={event => {
-            if (event.target === event.currentTarget) {
-              setOfferingModalOpen(false);
-              resetOfferingForm();
-            }
-          }}
-        >
-          <section
-            className="student-dialog academic-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="add-offering-title"
-          >
-            <div className="dialog-top">
-              <span className="dialog-mark">
-                <CalendarDays size={21} />
-              </span>
-              <button
-                className="icon-button"
-                aria-label="إغلاق"
-                onClick={() => {
-                  setOfferingModalOpen(false);
-                  resetOfferingForm();
-                }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <h2 id="add-offering-title">إضافة مجموعة جديدة</h2>
-            <p>اربط قالب الكورس بفرع ومدرب ومعمل ومواعيد أسبوعية.</p>
-            <form onSubmit={addOffering}>
-              <label className="form-field">
-                <span>
-                  قالب الكورس <b>*</b>
-                </span>
-                <select
-                  value={offeringCourseId}
-                  onChange={event => setOfferingCourseId(event.target.value)}
-                >
-                  {courses
-                    .filter(course => liveMode || course.status === "active")
-                    .map(course => (
-                      <option value={course.id} key={course.id}>
-                        {course.name}
-                      </option>
-                    ))}
-                </select>
-              </label>
-              <div className="form-row">
-                <label className="form-field">
-                  <span>
-                    المدرب <b>*</b>
-                  </span>
-                  {liveMode ? <select value={selectedInstructorId} onChange={event => { const selected = liveInstructors.find(item => item.id === event.target.value); setSelectedInstructorId(event.target.value); setInstructor(selected?.name ?? ""); }}><option value="">اختر مدربًا</option>{liveInstructors.filter(item => !item.branchId || item.branchId === offeringBranchId).map(item => <option key={item.id} value={item.id}>{item.name ?? item.id}</option>)}</select> : <input value={instructor} onChange={event => setInstructor(event.target.value)} placeholder="اسم المدرب" />}
-                </label>
-                <label className="form-field">
-                  <span>
-                    تاريخ البداية <b>*</b>
-                  </span>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={event => setStartDate(event.target.value)}
-                  />
-                </label>
-              </div>
-              <div className="form-row">
-                <label className="form-field">
-                  <span>الفرع</span>
-                  <select
-                    value={liveMode ? offeringBranchId : offeringBranch}
-                    onChange={event => {
-                      if (!liveMode) { setOfferingBranch(event.target.value); return; }
-                      const selected = liveClassrooms.find(room => room.branchId === event.target.value);
-                      const nextRoom = liveClassrooms.find(room => room.branchId === event.target.value && room.status === "AVAILABLE");
-                      setOfferingBranchId(event.target.value); setOfferingBranch(selected?.branchName ?? "");
-                      setSelectedClassroomId(nextRoom?.id ?? ""); setClassroom(nextRoom?.name ?? "");
-                      setSelectedStudentIds(current => current.filter(id => liveStudents.some(student => student.id === id && student.branchId === event.target.value)));
-                    }}
-                  >
-                    {(liveMode ? Array.from(new Map(liveClassrooms.map(room => [room.branchId, room.branchName])).entries()).map(([id, name]) => ({ id, name })) : branches.slice(1).map(name => ({ id: name, name }))).map(branch => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
-                  </select>
-                </label>
-                <label className="form-field">
-                  <span>
-                    المعمل / القاعة <b>*</b>
-                  </span>
-                  {liveMode ? <select value={selectedClassroomId} onChange={event => { const selected = liveClassrooms.find(room => room.id === event.target.value); setSelectedClassroomId(event.target.value); setClassroom(selected?.name ?? ""); if (selected) setMaxStudents(String(Math.min(Number(maxStudents), selected.capacity))); }}><option value="">اختر قاعة متاحة</option>{liveClassrooms.filter(room => room.branchId === offeringBranchId && room.status === "AVAILABLE").map(room => <option key={room.id} value={room.id}>{room.name} · سعة {room.capacity}</option>)}</select> : <input value={classroom} onChange={event => setClassroom(event.target.value)} placeholder="معمل 1" />}
-                </label>
-              </div>
-              <fieldset className="weekday-field">
-                <legend>
-                  أيام المجموعة <b>*</b>
-                </legend>
-                <div>
-                  {[
-                    "السبت",
-                    "الأحد",
-                    "الإثنين",
-                    "الثلاثاء",
-                    "الأربعاء",
-                    "الخميس",
-                    "الجمعة",
-                  ].map(day => (
-                    <button
-                      type="button"
-                      key={day}
-                      className={
-                        scheduleDays.includes(day)
-                          ? "weekday-chip selected"
-                          : "weekday-chip"
-                      }
-                      aria-pressed={scheduleDays.includes(day)}
-                      onClick={() => toggleDay(day)}
-                    >
-                      {day}
-                    </button>
-                  ))}
-                </div>
-              </fieldset>
-              <div className="form-row">
-                <label className="form-field">
-                  <span>من الساعة</span>
-                  <input
-                    type="time"
-                    value={startTime}
-                    onChange={event => setStartTime(event.target.value)}
-                  />
-                </label>
-                <label className="form-field">
-                  <span>إلى الساعة</span>
-                  <input
-                    type="time"
-                    value={endTime}
-                    onChange={event => setEndTime(event.target.value)}
-                  />
-                </label>
-              </div>
-              <label className="form-field">
-                <span>الحد الأقصى للطلاب</span>
-                <input
-                  type="number"
-                  min="1"
-                  value={maxStudents}
-                  onChange={event => setMaxStudents(event.target.value)}
-                />
-              </label>
-              {liveMode && <fieldset className="weekday-field"><legend>إضافة طلاب للمجموعة (اختياري)</legend><div className="consumer-student-picks">{liveStudents.filter(student => student.branchId === offeringBranchId).map(student => <label key={student.id}><input type="checkbox" checked={selectedStudentIds.includes(student.id)} onChange={event => setSelectedStudentIds(current => event.target.checked ? [...current, student.id] : current.filter(id => id !== student.id))} />{student.fullName}</label>)}{!liveStudents.some(student => student.branchId === offeringBranchId) && <small>لا يوجد طلاب نشطون في هذا الفرع للاختيار.</small>}</div></fieldset>}
-              <div className="dialog-info">
-                <Activity size={15} />
-                <span>{liveMode ? "سيُنشئ الخادم المجموعة والجلسات الأسبوعية ويربط الطلاب المحددين." : "المجموعة القادمة ستظهر كعرض تجريبي غير محفوظ."}</span>
-              </div>
-              <div className="dialog-actions">
-                <button
-                  type="button"
-                  className="button button-secondary"
-                  onClick={() => {
-                    setOfferingModalOpen(false);
-                    resetOfferingForm();
-                  }}
-                >
-                  إلغاء
-                </button>
-                <button type="submit" className="button button-primary">
-                  <Plus size={16} /> إضافة المجموعة
-                </button>
-              </div>
-            </form>
-          </section>
-        </div>
-      )}
+      <ClassesCreateDialogs
+        courseModalOpen={courseModalOpen}
+        offeringModalOpen={offeringModalOpen}
+        setCourseModalOpen={setCourseModalOpen}
+        setOfferingModalOpen={setOfferingModalOpen}
+        resetCourseForm={resetCourseForm}
+        resetOfferingForm={resetOfferingForm}
+        addCourse={addCourse}
+        addOffering={addOffering}
+        liveMode={liveMode}
+        courseName={courseName}
+        setCourseName={setCourseName}
+        newTrack={newTrack}
+        setNewTrack={setNewTrack}
+        newCourseType={newCourseType}
+        setNewCourseType={setNewCourseType}
+        ageGroup={ageGroup}
+        setAgeGroup={setAgeGroup}
+        level={level}
+        setLevel={setLevel}
+        totalSessions={totalSessions}
+        setTotalSessions={setTotalSessions}
+        durationHours={durationHours}
+        setDurationHours={setDurationHours}
+        price={price}
+        setPrice={setPrice}
+        trackOptions={trackOptions}
+        levelLabels={levelLabels}
+        courses={courses}
+        offeringCourseId={offeringCourseId}
+        setOfferingCourseId={setOfferingCourseId}
+        instructor={instructor}
+        setInstructor={setInstructor}
+        selectedInstructorId={selectedInstructorId}
+        setSelectedInstructorId={setSelectedInstructorId}
+        liveInstructors={liveInstructors}
+        startDate={startDate}
+        setStartDate={setStartDate}
+        offeringBranch={offeringBranch}
+        setOfferingBranch={setOfferingBranch}
+        offeringBranchId={offeringBranchId}
+        setOfferingBranchId={setOfferingBranchId}
+        liveClassrooms={liveClassrooms}
+        classroom={classroom}
+        setClassroom={setClassroom}
+        selectedClassroomId={selectedClassroomId}
+        setSelectedClassroomId={setSelectedClassroomId}
+        branches={branches}
+        scheduleDays={scheduleDays}
+        toggleDay={toggleDay}
+        startTime={startTime}
+        setStartTime={setStartTime}
+        endTime={endTime}
+        setEndTime={setEndTime}
+        maxStudents={maxStudents}
+        setMaxStudents={setMaxStudents}
+        liveStudents={liveStudents}
+        selectedStudentIds={selectedStudentIds}
+        setSelectedStudentIds={setSelectedStudentIds}
+      />
 
       <ClassesDetailDialogs
         selectedCourse={selectedCourse}
