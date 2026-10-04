@@ -1,8 +1,8 @@
 # خطة المرحلة القادمة — Mada Academy
 
 **تاريخ اللقطة:** 4 أكتوبر 2026
-**قاعدة العمل الحالية:** `main` بعد دمج PR #41 وPR #42؛ آخر commit موثق `ecf23be`.
-**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وexpanded E2E تم إغلاقها. المتبقي production-readiness فقط: deployment، private storage smoke، backup/restore، وstaging acceptance.
+**قاعدة العمل الحالية:** `main` بعد دمج PRs #55، #56، #58، #61، #62، #63، و#64؛ آخر commit موثق هو `3c828aa`.
+**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وموجة التقسيم الأولى مغلقة. الخطوة التالية هي اختبارات frontend الحرجة، refresh-token reuse، فصل auth endpoints، وجرد R00؛ وتظل deployment/private storage/backup-restore/staging بوابات production منفصلة.
 
 ## قرار التنفيذ الحالي
 
@@ -33,8 +33,17 @@
 - StudentPortal: تم فصل ملف الطالب عن الجلسات باستخدام `Promise.allSettled`؛ فشل الجلسات يحافظ على ملف الطالب ويعرض warning وtoast وRetry، وفشل الملف الأساسي يعرض error وRetry، مع منع Demo fallback في LIVE.
 - Consumer final acceptance: اكتملت مراجعة R08/R09 وتوثقت في `CONSUMER_FINAL_ACCEPTANCE.md`; تم التأكد من عزل Demo، حالات empty/error/loading، Toast وRetry، وفصل البيانات الأساسية عن الفواتير/الجلسات الاختيارية.
 - **الفجوة التالية المثبتة:** production evidence/storage and staging acceptance؛ الـlocal API preflight والـbrowser E2E أُنجزا بالفعل.
-- التحقق المحلي: Finance/Invoice correction **11/11**، InMemory backend **54/54**، browser/API E2E **7/7**، Vitest **13/13**، `pnpm check`، `pnpm build`، و`git diff --check` ناجحة.
+- التحقق المحلي: Finance/Invoice correction **11/11**، InMemory backend **54/54**، browser/API E2E **7/7**، Vitest **18/18**، `pnpm check`، `pnpm build`، و`git diff --check` ناجحة.
 - التحقق عبر GitHub: PR #41 وPR #42 مرّا بـ **4/4 checks ناجحة** لكل PR.
+
+## الخطة التالية بعد موجة التقسيم
+
+1. اختبارات frontend لـFinance mutations، بما في ذلك loading/disabled، over-collection، evidence، وحفظ الأخطاء.
+2. اختبارات frontend لعزل family/student scope، partial failure، وغياب Demo fallback في LIVE.
+3. اختبار backend لإعادة استخدام refresh token بعد rotation، مع التحقق من reuse detection/revocation.
+4. نقل endpoints الـauth من `Program.cs` إلى module مستقل دون تغيير العقود أو سياسات rate limiting.
+5. جرد R00 Platform Admin وتصنيف كل action إلى `LIVE` أو `PREVIEW` أو `NOT AVAILABLE` مع authorization/audit checklist.
+6. بعد ذلك: CORS production enforcement، distributed limiter evidence، private storage smoke، backup/restore، وstaging acceptance.
 
 ## الهدف
 

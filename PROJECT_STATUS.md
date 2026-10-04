@@ -1,8 +1,8 @@
 # Mada Academy — Project Status
 
 **As of:** 4 October 2026
-**Verified Git state:** `main` includes PR #46 and is pushed to origin.
-**Latest delivery PR:** [PR #46 — CI, security safeguards, and legacy cleanup](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/46), merged successfully.
+**Verified Git state:** `main` includes merged PRs #55, #56, #58, #61, #62, #63, and #64 and is pushed to origin.
+**Latest delivery PR:** [PR #63 — extract Classes creation dialogs](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/63), merged successfully.
 **Stack:** React + Vite + TypeScript; ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions.
 
 ## Executive summary
@@ -35,7 +35,7 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 
 ## CI and verified baseline
 
-The current merged baseline includes PR #41 (UI/flow hardening), PR #42 (optional analytics and evidence filename fix), and PR #46 (CI/security/legacy cleanup). Local frontend validation is green: Vitest **18/18**, `pnpm check`, `pnpm build`, `git diff --check`, and browser E2E **7/7** using Chromium. Backend CI and integration evidence are recorded in the GitHub checks and backend integration-test suite; no real deployment secrets are stored in Git.
+The current merged baseline includes PRs #41, #42, #46, #55, #56, #58, #61, #62, #63, and #64. The merged refactors cover Head Instructors, Schedule, Platform Console, Marketing/legacy cleanup, Classes, and Team. Local frontend validation is green: Vitest **18/18**, `pnpm check`, `pnpm build`, `git diff --check`, and browser E2E **7/7** using Chromium. PR #61 also passed backend integration and Playwright CI after adding invitation, consumer-lookup, and OTP rate-limit coverage. Vercel checks on these PRs were externally rate-limited and were not repository failures; no real deployment secrets are stored in Git.
 
 ## LIVE acceptance evidence — 4 October 2026
 
@@ -73,7 +73,7 @@ Follow-up fixes prepared after PR #41: analytics is now loaded only when both op
 
 ## Next milestone and open issues
 
-The P1/P2 consumer acceptance and Finance local acceptance are complete. The next phase is production-readiness evidence: deploy the API using [backend/Dockerfile](backend/Dockerfile), configure the server-only Supabase key, run authenticated private-bucket upload/download smoke using [scripts/staging-smoke.sh](scripts/staging-smoke.sh), define durable object backup/restore, and run deployed API/frontend staging acceptance. The complete sequence is in [PRE_PRODUCTION_RUNBOOK.md](PRE_PRODUCTION_RUNBOOK.md); finance design and release gates remain in [INVOICES_PAYMENTS_MVP_PLAN.md](INVOICES_PAYMENTS_MVP_PLAN.md) and [FINANCE_RELEASE_GATE.md](FINANCE_RELEASE_GATE.md).
+The P1/P2 consumer acceptance, Finance local acceptance, and the first page-decomposition wave are complete. The next implementation phase is focused quality and auth architecture work: frontend tests for finance mutations and family/student scope, a backend refresh-token-reuse test, moving auth endpoints out of `Program.cs` into a module, and a full R00 Platform Admin action inventory. Production-readiness evidence remains a separate gate: deploy the API using [backend/Dockerfile](backend/Dockerfile), configure the server-only Supabase key, run authenticated private-bucket upload/download smoke using [scripts/staging-smoke.sh](scripts/staging-smoke.sh), define durable object backup/restore, and run deployed API/frontend staging acceptance.
 
 Open implementation blockers and product debt:
 
@@ -82,11 +82,11 @@ Open implementation blockers and product debt:
 3. Production SMS provider and password recovery are later identity work; interim OTP mode remains opt-in, limited, audited, and never a hard-coded/shared code.
 4. Run [CONSUMER_STAGING_SMOKE_TEST.md](CONSUMER_STAGING_SMOKE_TEST.md) against a controlled non-production API when deployment is authorized; local E2E is already automated in `e2e/critical-flows.spec.ts`.
 5. `deploy-pages.yml` publishes a static frontend to GitHub Pages. It is intentionally not a production API deployment; LIVE screens require `VITE_API_URL` to point to an accessible HTTPS API, otherwise the published site is only a preview shell or shows its explicit unavailable/empty states.
-6. Large-page decomposition remains incremental. The current open refactor PRs cover Head Instructors, Schedule, Students, Platform Console, Approvals, and Instructor Desk; they are not part of `main` until reviewed and merged.
-7. `client/src/components/Map.tsx` and `ManusDialog.tsx` have no operational imports outside their own files in the current source inventory. They remain pending deletion in a separate cleanup PR to avoid mixing legacy removal with behavior/security changes.
+6. The first decomposition wave is merged for Head Instructors (#55), Schedule (#56), Platform Console (#58), Marketing/legacy cleanup (#62), Classes (#63), and Team (#64). Students (#57), Approvals (#59), and Instructor Desk (#60) were closed because the proposed extraction did not materially reduce the page size; they require a smaller, higher-value split before reopening.
+7. `client/src/components/Map.tsx` and `ManusDialog.tsx` were confirmed unused and removed in merged PR #62.
 
 ## Frontend coverage and architecture debt
 
-- The frontend unit suite currently has 5 test files covering 18 tests; it does not yet provide broad page-level mutation or authorization coverage.
-- Finance mutation and consumer scope behavior remain primarily covered by backend integration tests and the critical browser flow; dedicated frontend tests are still a follow-up.
+- The frontend unit suite currently has 5 test files covering **18 tests**; it does not yet provide broad page-level mutation or authorization coverage.
+- Finance mutation and family/student consumer-scope behavior remain primarily covered by backend integration tests and the critical browser flow; dedicated frontend tests are the next implementation priority.
 - PostgreSQL coverage is separate from the InMemory E2E path. CI backend integration coverage is required for persistence-specific regressions; local sandbox runs without the .NET SDK cannot reproduce those tests.

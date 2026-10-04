@@ -178,7 +178,7 @@
 
 ## 6. الأولوية الرابعة — Frontend critical test coverage
 
-الحالة الحالية: 3 ملفات اختبار وحوالي 13 test مقابل حجم كبير من الواجهة. لا نحتاج اختبار كل JSX، بل حماية السلوك المؤثر.
+الحالة الحالية: 5 ملفات اختبار و18 test مقابل حجم كبير من الواجهة. لا نحتاج اختبار كل JSX، بل حماية السلوك المؤثر.
 
 الترتيب:
 
@@ -242,12 +242,16 @@
 
 ## 8. الأولوية السادسة — تقسيم الصفحات الضخمة
 
-الصفحات المرشحة:
+الصفحات التي دخلت موجة التقسيم الأولى:
 
-1. `HeadInstructors.tsx`
-2. `Secretary.tsx`
-3. `Classes.tsx`
-4. `FinanceDesk.tsx`
+1. `HeadInstructors.tsx` — merged in PR #55
+2. `Schedule.tsx` — merged in PR #56
+3. `PlatformConsole.tsx` — merged in PR #58
+4. `MarketingDesk.tsx` and legacy components — merged in PR #62
+5. `Classes.tsx` — merged in PR #63
+6. `Team.tsx` — merged in PR #64
+
+Students (#57), Approvals (#59), and Instructor Desk (#60) were closed because their proposed extractions did not materially shrink the original page. Reopen only with a smaller, higher-value boundary.
 
 ### طريقة التنفيذ
 
@@ -306,33 +310,24 @@
 
 ## 11. ترتيب الـPRs المعدل
 
-### PR-1 — Playwright CI
+### مكتمل — CI، الأمن، والتنظيف والتقسيم الأول
 
-Workflow + artifacts + startup stabilization، بدون product changes.
+- Playwright CI وإصلاح startup؛ `pnpm e2e` يمر في PRs التقسيم.
+- PR #61: forwarded headers، limits للـlogin/refresh/OTP/invitations/consumer lookup، واختبارات invitation/lookup/OTP.
+- PR #62: إزالة `Map.tsx` و`ManusDialog.tsx` وتقسيم Marketing.
+- PRs #55، #56، #58، #63، #64: تقسيم Head Instructors وSchedule وPlatform Console وClasses وTeam.
 
-### PR-2 — LIVE/DEMO boundaries
+### المرحلة التالية — جودة الواجهة والأمن المعماري
 
-R07 explicit Preview، R00 capability labels، R01 acceptance evidence، R03/R04 metric cleanup، مع الاختبارات اللازمة.
+1. إضافة اختبارات frontend لـFinance mutations.
+2. إضافة اختبارات frontend لعزل family/student scope وحالات partial failure/no-demo fallback.
+3. إضافة backend test لإعادة استخدام refresh token بعد rotation (reuse detection/revocation).
+4. نقل endpoints الخاصة بـauth من `Program.cs` إلى module مستقل مع الحفاظ على العقود والـrate-limit policies.
+5. جرد R00 Platform Admin وتصنيف كل action إلى `LIVE` أو `PREVIEW` أو `NOT AVAILABLE` مع اختبار الصلاحيات والتدقيق قبل أي mutation جديدة.
 
-### PR-3 — Finance correction coverage
+### مؤجل — جاهزية الإنتاج
 
-توسيع الاختبارات والتوثيق فقط، بدون refund/cancel.
-
-### PR-4 — Frontend critical coverage
-
-اختبارات السلوك الحرج واستخراج pure logic عند الحاجة.
-
-### PR-5 — CORS and proxy configuration hardening
-
-تثبيت شرط origins المحددة في Production، وتوثيق `MADA_TRUSTED_PROXIES` وforwarded headers، مع إبقاء distributed limiter بوابة إطلاق منفصلة.
-
-### PR-6 — Legacy cleanup
-
-حذف `server/` أو الصفحات التي ثبت عدم استخدامها، كل مجموعة في PR صغير.
-
-### PR-7 — Page decomposition
-
-Refactor تدريجي للصفحات الكبيرة، صفحة واحدة لكل PR عند الإمكان.
+- CORS production enforcement، distributed rate limiting، private storage smoke، backup/restore، وstaging acceptance.
 
 ---
 
@@ -356,12 +351,11 @@ Refactor تدريجي للصفحات الكبيرة، صفحة واحدة لكل
 
 نبدأ بـ:
 
-1. PR-1: Playwright CI.
-2. جرد LIVE/DEMO للأدوار R00/R01/R03/R04/R07.
-3. PR-2: تثبيت الحدود والعلامات والـacceptance evidence.
-4. PR-3: توسيع Finance correction tests.
-5. PR-4: Frontend critical coverage.
-6. PR-5: CORS configuration review.
-7. PR-6 ثم PR-7 للتنظيف والتقسيم.
+1. Frontend finance mutation tests.
+2. Frontend family/student scope tests.
+3. Backend refresh-token reuse test.
+4. Auth endpoint module extraction.
+5. R00 Platform Admin inventory and acceptance checklist.
+6. بعد ذلك نغلق بوابات CORS/distributed limiter/storage/backup/staging للإطلاق.
 
 Rate Limiting وAccount Lockout منفذان محليًا؛ المتبقي هو إثبات التشغيل الموزع، ضبط proxy الموثوق، ومراجعة lockout كخطر DoS تشغيلي قبل الإطلاق العام.
