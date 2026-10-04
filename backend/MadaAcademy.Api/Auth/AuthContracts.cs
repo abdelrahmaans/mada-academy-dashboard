@@ -5,6 +5,7 @@ namespace MadaAcademy.Api.Auth;
 public sealed record OtpSendRequest(string Phone, string AccountType = "staff");
 public sealed record OtpVerifyRequest(string Phone, string Code, string AccountType = "staff");
 public sealed record PasswordLoginRequest(string Phone, string Password, string AccountType = "staff");
+public sealed record PasswordLoginResult(AuthTokenResponse? Tokens, bool IsLocked = false);
 public sealed record RefreshRequest(string RefreshToken);
 public sealed record LogoutRequest(string RefreshToken);
 public sealed record DevSeedRequest(string Phone, string Email, string DisplayName, string RoleCode, Guid TenantId, Guid? BranchId);

@@ -68,6 +68,7 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
             entity.Property(x => x.AccountType).HasMaxLength(16).IsRequired();
             entity.Property(x => x.PasswordHash).HasMaxLength(256);
             entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.FailedPasswordAttempts).HasDefaultValue(0).IsRequired();
         });
 
         modelBuilder.Entity<Membership>(entity =>

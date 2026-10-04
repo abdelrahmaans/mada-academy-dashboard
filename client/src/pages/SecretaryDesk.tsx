@@ -257,7 +257,7 @@ function SecretaryDeskPreview() {
         <div className="sidebar-top">
           <button
             className="secretary-desk-brand"
-            onClick={() => navigate("/secretary")}
+            onClick={() => navigate("/secretary-desk")}
           >
             <strong>مدى</strong>
             <small>خدمة العملاء والتسجيل · R05</small>

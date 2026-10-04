@@ -13,7 +13,6 @@ The primary stack is:
 - **Backend:** ASP.NET Core in `backend/MadaAcademy.Api/`
 - **Database:** PostgreSQL + EF Core migrations
 - **Tests:** Vitest, Playwright, and ASP.NET integration tests
-- `client-angular/` is a reference/preview client, not the primary implementation.
 
 ## Read this before coding
 

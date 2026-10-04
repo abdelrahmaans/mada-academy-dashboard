@@ -1545,6 +1545,10 @@ namespace MadaAcademy.Api.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("FailedPasswordAttempts")
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<string>("DisplayName")
                         .HasColumnType("text");
 
@@ -1558,6 +1562,9 @@ namespace MadaAcademy.Api.Persistence.Migrations
                     b.Property<string>("PasswordHash")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
+
+                    b.Property<DateTimeOffset?>("PasswordLockedUntil")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Phone")
                         .IsRequired()
