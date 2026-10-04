@@ -28,17 +28,30 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
-import { apiClient, type SchedulingClassroom, type SchedulingInstructor, type SessionRecord } from "@/lib/apiClient";
+import {
+  apiClient,
+  type SchedulingClassroom,
+  type SchedulingInstructor,
+  type SessionRecord,
+} from "@/lib/apiClient";
+import {
+  ScheduleCalendar,
+  ScheduleDetailsDialog,
+  ScheduleFormDialog,
+} from "@/components/ScheduleViews";
 
-type SessionStatus =
+export type SessionStatus =
   | "scheduled"
   | "ongoing"
   | "completed"
   | "pending_approval"
   | "cancelled"
   | "rescheduled";
-type SessionType = "regular" | "competition_training" | "competition_day";
-type Session = {
+export type SessionType =
+  | "regular"
+  | "competition_training"
+  | "competition_day";
+export type Session = {
   id: string;
   date: string;
   startTime: string;
@@ -60,7 +73,7 @@ type SessionTemplate = Omit<Session, "date" | "status"> & {
   day: number;
   baseStatus?: SessionStatus;
 };
-type SessionForm = Pick<
+export type SessionForm = Pick<
   Session,
   | "date"
   | "startTime"
@@ -78,9 +91,24 @@ function sessionFromApi(record: SessionRecord): Session {
   const end = new Date(record.endAt);
   const date = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
   const startTime = `${String(start.getHours()).padStart(2, "0")}:${String(start.getMinutes()).padStart(2, "0")}`;
-  const duration = Math.max(1, Math.round((end.getTime() - start.getTime()) / 60000));
-  const status: SessionStatus = record.status === "COMPLETED" ? "completed" : record.status === "CANCELLED" ? "cancelled" : record.status === "PENDING_APPROVAL" ? "pending_approval" : "scheduled";
-  const type: SessionType = record.type === "COMPETITION_TRAINING" ? "competition_training" : record.type === "COMPETITION_DAY" ? "competition_day" : "regular";
+  const duration = Math.max(
+    1,
+    Math.round((end.getTime() - start.getTime()) / 60000)
+  );
+  const status: SessionStatus =
+    record.status === "COMPLETED"
+      ? "completed"
+      : record.status === "CANCELLED"
+        ? "cancelled"
+        : record.status === "PENDING_APPROVAL"
+          ? "pending_approval"
+          : "scheduled";
+  const type: SessionType =
+    record.type === "COMPETITION_TRAINING"
+      ? "competition_training"
+      : record.type === "COMPETITION_DAY"
+        ? "competition_day"
+        : "regular";
   return {
     id: record.id,
     date,
@@ -497,9 +525,13 @@ function SchedulePage() {
   const [detailsSession, setDetailsSession] = useState<Session | null>(null);
   const [liveMode, setLiveMode] = useState(() => apiClient.hasSession());
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [liveClassrooms, setLiveClassrooms] = useState<SchedulingClassroom[]>([]);
+  const [liveClassrooms, setLiveClassrooms] = useState<SchedulingClassroom[]>(
+    []
+  );
   const [liveClassroomsReady, setLiveClassroomsReady] = useState(false);
-  const [liveInstructors, setLiveInstructors] = useState<SchedulingInstructor[]>([]);
+  const [liveInstructors, setLiveInstructors] = useState<
+    SchedulingInstructor[]
+  >([]);
   const [form, setForm] = useState<SessionForm>(() => ({
     date: toISODate(BASE_DATE),
     startTime: "16:00",
@@ -512,7 +544,10 @@ function SchedulePage() {
     type: "regular",
   }));
   useEffect(() => {
-    if (!apiClient.hasSession()) { setLiveMode(false); return; }
+    if (!apiClient.hasSession()) {
+      setLiveMode(false);
+      return;
+    }
     setLiveMode(true);
     setSessions([]);
     setLoadError(null);
@@ -527,26 +562,46 @@ function SchedulePage() {
         setLiveClassroomsReady(false);
         setSessions([]);
         const cause = sessionResult.reason;
-        setLoadError(cause instanceof Error ? cause.message : "تعذر تحميل جلسات الجدول من الخادم.");
+        setLoadError(
+          cause instanceof Error
+            ? cause.message
+            : "تعذر تحميل جلسات الجدول من الخادم."
+        );
         return;
       }
 
       setSessions(sessionResult.value.items.map(sessionFromApi));
-      const classrooms = classroomResult.status === "fulfilled" ? classroomResult.value.items : [];
-      const instructors = instructorResult.status === "fulfilled" ? instructorResult.value.items : [];
+      const classrooms =
+        classroomResult.status === "fulfilled"
+          ? classroomResult.value.items
+          : [];
+      const instructors =
+        instructorResult.status === "fulfilled"
+          ? instructorResult.value.items
+          : [];
       setLiveClassrooms(classrooms);
       setLiveInstructors(instructors);
       setLiveClassroomsReady(classroomResult.status === "fulfilled");
 
-      const optionalFailure = [classroomResult, instructorResult].find(result => result.status === "rejected");
+      const optionalFailure = [classroomResult, instructorResult].find(
+        result => result.status === "rejected"
+      );
       if (optionalFailure?.status === "rejected") {
-        setLoadError("تم تحميل جلسات الجدول؛ بعض بيانات إنشاء الجلسة غير متاحة لصلاحيات الحساب الحالية.");
+        setLoadError(
+          "تم تحميل جلسات الجدول؛ بعض بيانات إنشاء الجلسة غير متاحة لصلاحيات الحساب الحالية."
+        );
       }
     });
   }, []);
 
-  const liveBranches = Array.from(new Map(liveClassrooms.map(room => [room.branchId, room.branchName])).entries()).map(([id, name]) => ({ id, name }));
-  const selectedLiveRooms = liveClassrooms.filter(room => room.branchId === form.branchId && room.status === "AVAILABLE");
+  const liveBranches = Array.from(
+    new Map(
+      liveClassrooms.map(room => [room.branchId, room.branchName])
+    ).entries()
+  ).map(([id, name]) => ({ id, name }));
+  const selectedLiveRooms = liveClassrooms.filter(
+    room => room.branchId === form.branchId && room.status === "AVAILABLE"
+  );
 
   const weekStart = useMemo(
     () => addDays(BASE_DATE, weekOffset * 7),
@@ -651,7 +706,9 @@ function SchedulePage() {
 
   const openAddDialog = () => {
     const date = view === "day" ? days[selectedDay].iso : toISODate(weekStart);
-    const defaultRoom = liveClassrooms.find(room => room.branchName === branch) ?? liveClassrooms[0];
+    const defaultRoom =
+      liveClassrooms.find(room => room.branchName === branch) ??
+      liveClassrooms[0];
     const defaultInstructor = liveInstructors[0];
     setEditingId(null);
     setForm({
@@ -664,7 +721,9 @@ function SchedulePage() {
       instructorId: defaultInstructor?.id,
       room: defaultRoom?.name ?? ROOMS[0],
       classroomId: defaultRoom?.id,
-      branch: defaultRoom?.branchName ?? (branch === "كل الفروع" ? BRANCHES[0] : branch),
+      branch:
+        defaultRoom?.branchName ??
+        (branch === "كل الفروع" ? BRANCHES[0] : branch),
       branchId: defaultRoom?.branchId,
       type: "regular",
     });
@@ -673,7 +732,9 @@ function SchedulePage() {
 
   const openEditDialog = (session: Session) => {
     if (liveMode) {
-      toast.info("تعديل الجلسة من الجدول غير متاح عبر الـAPI الحالي", { description: "لن يتم حفظ أي تعديل محلي على جلسة خادمية." });
+      toast.info("تعديل الجلسة من الجدول غير متاح عبر الـAPI الحالي", {
+        description: "لن يتم حفظ أي تعديل محلي على جلسة خادمية.",
+      });
       return;
     }
     setEditingId(session.id);
@@ -704,8 +765,12 @@ function SchedulePage() {
         toast.error("لا يتوفر endpoint لتعديل الجلسة بعد.");
         return;
       }
-      const liveRoom = liveClassrooms.find(room => room.id === form.classroomId);
-      const liveInstructor = liveInstructors.find(instructor => instructor.id === form.instructorId);
+      const liveRoom = liveClassrooms.find(
+        room => room.id === form.classroomId
+      );
+      const liveInstructor = liveInstructors.find(
+        instructor => instructor.id === form.instructorId
+      );
       if (!liveRoom || !liveInstructor) {
         toast.error("اختر مدربًا وقاعة متاحة من بيانات الأكاديمية الحية.");
         return;
@@ -741,12 +806,22 @@ function SchedulePage() {
         };
         setSessions(current => [created, ...current]);
         const chosenDate = fromISODate(form.date);
-        setWeekOffset(Math.floor((chosenDate.getTime() - BASE_DATE.getTime()) / (7 * 24 * 60 * 60 * 1000)));
+        setWeekOffset(
+          Math.floor(
+            (chosenDate.getTime() - BASE_DATE.getTime()) /
+              (7 * 24 * 60 * 60 * 1000)
+          )
+        );
         setSelectedDay((chosenDate.getDay() + 1) % 7);
-        toast.success("تم حفظ الجلسة على الخادم", { description: `رقم الجلسة: ${response.sessionNumber} · ${response.status}` });
+        toast.success("تم حفظ الجلسة على الخادم", {
+          description: `رقم الجلسة: ${response.sessionNumber} · ${response.status}`,
+        });
         closeDialog();
       } catch (cause) {
-        toast.error("تعذر حفظ الجلسة", { description: cause instanceof Error ? cause.message : "فشل الاتصال بالخادم." });
+        toast.error("تعذر حفظ الجلسة", {
+          description:
+            cause instanceof Error ? cause.message : "فشل الاتصال بالخادم.",
+        });
       }
       return;
     }
@@ -764,7 +839,8 @@ function SchedulePage() {
       const overlaps = start < sessionEnd && sessionStart < end;
       return (
         overlaps &&
-        ((session.room === form.room && session.branch === form.branch) || session.instructor === form.instructor)
+        ((session.room === form.room && session.branch === form.branch) ||
+          session.instructor === form.instructor)
       );
     });
     if (conflict) {
@@ -816,7 +892,10 @@ function SchedulePage() {
 
   const cancelSession = (session: Session) => {
     if (liveMode) {
-      toast.info("إلغاء الجلسة غير متاح من هذه الشاشة", { description: "لا يوجد endpoint إلغاء في الـAPI الحالي؛ لم يتغير سجل الخادم." });
+      toast.info("إلغاء الجلسة غير متاح من هذه الشاشة", {
+        description:
+          "لا يوجد endpoint إلغاء في الـAPI الحالي؛ لم يتغير سجل الخادم.",
+      });
       return;
     }
     setSessions(current =>
@@ -973,7 +1052,10 @@ function SchedulePage() {
                   >
                     كل الفروع
                   </button>
-                  {(liveMode ? liveBranches.map(item => item.name) : BRANCHES).map(item => (
+                  {(liveMode
+                    ? liveBranches.map(item => item.name)
+                    : BRANCHES
+                  ).map(item => (
                     <button
                       className={branch === item ? "selected" : ""}
                       key={item}
@@ -1037,10 +1119,21 @@ function SchedulePage() {
               <h1>الجدول</h1>
               <p>نظّم حصص الأسبوع وتابع الكوتشيز والقاعات من شاشة واحدة.</p>
               <div className="students-demo-note" role="status">
-                <strong>{liveMode ? "بيانات حية من الخادم" : "DEMO · بيانات توضيحية"}</strong>
-                <span>{liveMode ? "الحفظ ينشئ جلسة جديدة على الـAPI؛ التعديل والإلغاء غير متاحين من هذه الشاشة." : "الإضافات والتعديلات محلية للعرض التجريبي فقط."}</span>
+                <strong>
+                  {liveMode ? "بيانات حية من الخادم" : "DEMO · بيانات توضيحية"}
+                </strong>
+                <span>
+                  {liveMode
+                    ? "الحفظ ينشئ جلسة جديدة على الـAPI؛ التعديل والإلغاء غير متاحين من هذه الشاشة."
+                    : "الإضافات والتعديلات محلية للعرض التجريبي فقط."}
+                </span>
               </div>
-              {loadError && <div className="students-demo-note" role="alert"><strong>تعذر تحميل الجدول</strong><span>{loadError}</span></div>}
+              {loadError && (
+                <div className="students-demo-note" role="alert">
+                  <strong>تعذر تحميل الجدول</strong>
+                  <span>{loadError}</span>
+                </div>
+              )}
             </div>
             <div className="welcome-actions">
               <button
@@ -1102,242 +1195,35 @@ function SchedulePage() {
             </article>
           </section>
 
-          <section
-            className="panel schedule-board-panel"
-            aria-label="الجدول الأسبوعي للحصص"
-          >
-            <div className="schedule-board-heading">
-              <div className="panel-title-group">
-                <span className="panel-icon panel-icon-teal">
-                  <CalendarDays size={18} />
-                </span>
-                <div>
-                  <h2>مواعيد الحصص</h2>
-                  <p>عرض أسبوعي — السبت إلى الجمعة</p>
-                </div>
-              </div>
-              <div className="schedule-date-tools">
-                <button
-                  className="button button-secondary schedule-today"
-                  onClick={() => {
-                    setWeekOffset(0);
-                    setSelectedDay(0);
-                  }}
-                >
-                  اليوم
-                </button>
-                <div className="schedule-nav-arrows">
-                  <button
-                    aria-label={
-                      view === "week" ? "الأسبوع السابق" : "اليوم السابق"
-                    }
-                    onClick={() => shiftSelection(-1)}
-                  >
-                    <ChevronRight size={17} />
-                  </button>
-                  <button
-                    aria-label={
-                      view === "week" ? "الأسبوع التالي" : "اليوم التالي"
-                    }
-                    onClick={() => shiftSelection(1)}
-                  >
-                    <ChevronLeft size={17} />
-                  </button>
-                </div>
-                <strong className="schedule-range">
-                  {formatDate(weekStart, { day: "numeric", month: "long" })} —{" "}
-                  {formatDate(addDays(weekStart, 6), {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </strong>
-              </div>
-            </div>
-
-            <div className="schedule-toolbar">
-              <div
-                className="schedule-filter-tabs"
-                role="tablist"
-                aria-label="تصفية حسب حالة الحصة"
-              >
-                {filteredTabs.map(tab => (
-                  <button
-                    key={tab.key}
-                    role="tab"
-                    aria-selected={statusFilter === tab.key}
-                    className={`schedule-filter-tab ${statusFilter === tab.key ? "active" : ""}`}
-                    onClick={() => setStatusFilter(tab.key)}
-                  >
-                    {tab.label}
-                    {tab.key === "pending_approval" && reviewCount > 0 && (
-                      <span>{reviewCount}</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-              <div className="schedule-toolbar-controls">
-                <label className="schedule-select">
-                  <Users size={15} />
-                  <select
-                    aria-label="فلترة حسب الكوتش"
-                    value={instructorFilter}
-                    onChange={event => setInstructorFilter(event.target.value)}
-                  >
-                    {instructors.map(item => (
-                      <option key={item}>{item}</option>
-                    ))}
-                  </select>
-                  <ChevronDown size={13} />
-                </label>
-                <div
-                  className="schedule-view-switch"
-                  role="tablist"
-                  aria-label="طريقة عرض الجدول"
-                >
-                  <button
-                    role="tab"
-                    aria-selected={view === "week"}
-                    className={view === "week" ? "active" : ""}
-                    onClick={() => setView("week")}
-                  >
-                    أسبوع
-                  </button>
-                  <button
-                    role="tab"
-                    aria-selected={view === "day"}
-                    className={view === "day" ? "active" : ""}
-                    onClick={() => setView("day")}
-                  >
-                    يوم
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <section
-              className="schedule-mobile-day-picker"
-              aria-label="اختيار يوم الأسبوع"
-            >
-              {days.map(day => (
-                <button
-                  key={day.iso}
-                  className={selectedDay === day.index ? "active" : ""}
-                  onClick={() => {
-                    setSelectedDay(day.index);
-                    setView("day");
-                  }}
-                >
-                  <span>{day.name.slice(0, 2)}</span>
-                  <strong>{formatDate(day.date, { day: "numeric" })}</strong>
-                </button>
-              ))}
-            </section>
-            <div className="schedule-calendar-scroll" aria-label="تقويم الحصص">
-              <div
-                className={`schedule-calendar ${view === "day" ? "is-day-view" : ""}`}
-              >
-                <div className="calendar-header-row">
-                  <div className="calendar-time-heading">
-                    <span>التوقيت</span>
-                  </div>
-                  {visibleDays.map(day => (
-                    <button
-                      key={day.iso}
-                      className={`calendar-day-heading ${day.index === selectedDay ? "selected" : ""}`}
-                      onClick={() => setSelectedDay(day.index)}
-                    >
-                      <span>{day.name}</span>
-                      <strong>
-                        {formatDate(day.date, { day: "numeric" })}
-                      </strong>
-                      <small>{formatDate(day.date, { month: "short" })}</small>
-                      {day.index === 0 && weekOffset === 0 && <i>اليوم</i>}
-                    </button>
-                  ))}
-                </div>
-                <div className="calendar-body-row">
-                  <div className="calendar-time-rail">
-                    {Array.from(
-                      { length: LAST_HOUR - FIRST_HOUR },
-                      (_, index) => FIRST_HOUR + index
-                    ).map(hour => (
-                      <div className="calendar-time-label" key={hour}>
-                        <span>
-                          {String(hour % 12 || 12).padStart(2, "0")}:00
-                        </span>
-                        <small>{hour < 12 ? "ص" : "م"}</small>
-                      </div>
-                    ))}
-                  </div>
-                  {visibleDays.map(day => {
-                    const daySessions = matchingSessions.filter(
-                      session => session.date === day.iso
-                    );
-                    return (
-                      <div className="calendar-day-track" key={day.iso}>
-                        {daySessions.map(session => {
-                          const start = minutesFromTime(session.startTime);
-                          const top =
-                            ((start - FIRST_HOUR * 60) / 60) * HOUR_HEIGHT + 4;
-                          const height = Math.max(
-                            62,
-                            (session.duration / 60) * HOUR_HEIGHT - 8
-                          );
-                          const inView =
-                            start >= FIRST_HOUR * 60 && start < LAST_HOUR * 60;
-                          if (!inView) return null;
-                          return (
-                            <button
-                              key={session.id}
-                              className={`calendar-session-card tone-${session.type} state-${session.status}`}
-                              style={{ top, height }}
-                              onClick={() => setDetailsSession(session)}
-                              aria-label={`${session.title}، ${timeLabel(session.startTime)}، ${session.instructor}`}
-                            >
-                              <span className="session-card-time">
-                                <Clock3 size={11} />
-                                {timeLabel(session.startTime)}
-                              </span>
-                              <strong>{session.title}</strong>
-                              <small>
-                                {session.instructor} <i /> {session.room}
-                              </small>
-                              {height > 88 && (
-                                <span className="session-card-status">
-                                  {STATUS_LABELS[session.status]}
-                                </span>
-                              )}
-                            </button>
-                          );
-                        })}
-                        {daySessions.length === 0 && (
-                          <div className="calendar-day-empty">
-                            <span>لا توجد حصص مطابقة</span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-            <div className="schedule-board-footer">
-              <span>
-                <i className="legend-status legend-scheduled" /> قادمة
-              </span>
-              <span>
-                <i className="legend-status legend-live" /> جارية
-              </span>
-              <span>
-                <i className="legend-status legend-review" /> تحتاج مراجعة
-              </span>
-              <small>
-                <Clock3 size={13} /> ساعات العرض من 9 ص إلى 6 م
-              </small>
-            </div>
-          </section>
-
+          <ScheduleCalendar
+            weekStart={weekStart}
+            days={days}
+            visibleDays={visibleDays}
+            matchingSessions={matchingSessions}
+            filteredTabs={filteredTabs}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            instructors={instructors}
+            instructorFilter={instructorFilter}
+            setInstructorFilter={setInstructorFilter}
+            reviewCount={reviewCount}
+            view={view}
+            setView={setView}
+            selectedDay={selectedDay}
+            weekOffset={weekOffset}
+            shiftSelection={shiftSelection}
+            setWeekOffset={setWeekOffset}
+            setSelectedDay={setSelectedDay}
+            setDetailsSession={setDetailsSession}
+            formatDate={formatDate}
+            addDays={addDays}
+            minutesFromTime={minutesFromTime}
+            timeLabel={timeLabel}
+            statusLabels={STATUS_LABELS}
+            firstHour={FIRST_HOUR}
+            lastHour={LAST_HOUR}
+            hourHeight={HOUR_HEIGHT}
+          />
           <div className="students-demo-note">
             <AlertCircle size={14} />
             <span>
@@ -1351,318 +1237,37 @@ function SchedulePage() {
           </footer>
         </div>
       </main>
-
       {detailsSession && (
-        <div
-          className="dialog-backdrop"
-          role="presentation"
-          onMouseDown={event => {
-            if (event.target === event.currentTarget) setDetailsSession(null);
-          }}
-        >
-          <section
-            className="student-dialog schedule-details-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="schedule-details-title"
-          >
-            <div className="dialog-top">
-              <span className="dialog-mark">
-                <CalendarDays size={20} />
-              </span>
-              <button
-                className="icon-button"
-                aria-label="إغلاق"
-                onClick={() => setDetailsSession(null)}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="schedule-detail-heading">
-              <h2 id="schedule-details-title">{detailsSession.title}</h2>
-              <span
-                className={`schedule-status-badge status-${detailsSession.status}`}
-              >
-                <i />
-                {STATUS_LABELS[detailsSession.status]}
-              </span>
-            </div>
-            <p className="schedule-detail-subtitle">{detailsSession.level}</p>
-            <div className="schedule-detail-grid">
-              <div>
-                <small>اليوم والتاريخ</small>
-                <strong>
-                  <CalendarDays size={14} />
-                  {
-                    DAY_NAMES[
-                      fromISODate(detailsSession.date).getDay() === 6
-                        ? 0
-                        : (fromISODate(detailsSession.date).getDay() + 1) % 7
-                    ]
-                  }
-                  ،{" "}
-                  {formatDate(fromISODate(detailsSession.date), {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </strong>
-              </div>
-              <div>
-                <small>وقت الحصة</small>
-                <strong>
-                  <Clock3 size={14} />
-                  <span dir="ltr">
-                    {timeLabel(detailsSession.startTime)} ·{" "}
-                    {detailsSession.duration} دقيقة
-                  </span>
-                </strong>
-              </div>
-              <div>
-                <small>الكوتش</small>
-                <strong>
-                  <Users size={14} />
-                  {detailsSession.instructor}
-                </strong>
-              </div>
-              <div>
-                <small>القاعة والفرع</small>
-                <strong>
-                  <MapPin size={14} />
-                  {detailsSession.room} · {detailsSession.branch}
-                </strong>
-              </div>
-              <div>
-                <small>تسجيل الطلاب</small>
-                <strong>
-                  <CheckCircle2 size={14} />
-                  <span dir="ltr">
-                    {detailsSession.enrolled} / {detailsSession.capacity}
-                  </span>
-                </strong>
-              </div>
-              <div>
-                <small>نوع الحصة</small>
-                <strong>
-                  <BookOpen size={14} />
-                  {TYPE_LABELS[detailsSession.type]}
-                </strong>
-              </div>
-            </div>
-            <div className="dialog-info">
-              <AlertCircle size={15} />
-              <span>تفاصيل هذه الحصة توضيحية ولا تمثل سجلًا حقيقيًا.</span>
-            </div>
-            <div className="dialog-actions">
-              <button
-                className="button button-secondary"
-                onClick={() => cancelSession(detailsSession)}
-                disabled={detailsSession.status === "cancelled"}
-              >
-                إلغاء الحصة
-              </button>
-              <button
-                className="button button-primary"
-                onClick={() => openEditDialog(detailsSession)}
-              >
-                <Check size={15} /> تعديل الحصة
-              </button>
-            </div>
-          </section>
-        </div>
+        <ScheduleDetailsDialog
+          session={detailsSession}
+          onClose={() => setDetailsSession(null)}
+          onCancel={cancelSession}
+          onEdit={openEditDialog}
+          statusLabels={STATUS_LABELS}
+          dayNames={DAY_NAMES}
+          fromISODate={fromISODate}
+          formatDate={formatDate}
+          timeLabel={timeLabel}
+          typeLabels={TYPE_LABELS}
+        />
       )}
-
       {dialogMode && (
-        <div
-          className="dialog-backdrop"
-          role="presentation"
-          onMouseDown={event => {
-            if (event.target === event.currentTarget) closeDialog();
-          }}
-        >
-          <section
-            className="student-dialog schedule-form-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="schedule-form-title"
-          >
-            <div className="dialog-top">
-              <span className="dialog-mark">
-                <CalendarDays size={20} />
-              </span>
-              <button
-                className="icon-button"
-                aria-label="إغلاق"
-                onClick={closeDialog}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <h2 id="schedule-form-title">
-              {dialogMode === "edit" ? "تعديل الحصة" : "إضافة حصة للجدول"}
-            </h2>
-            <p>{liveMode ? "سيتم حفظ جلسة جديدة على الخادم بعد التحقق من الصلاحية والتعارض." : "وضع العرض التجريبي: التغييرات تُحفظ محليًا فقط."}</p>
-            <form onSubmit={handleSessionSubmit}>
-              <label className="form-field">
-                <span>
-                  اسم الحصة <b>*</b>
-                </span>
-                <input
-                  required
-                  value={form.title}
-                  onChange={event =>
-                    setForm(current => ({
-                      ...current,
-                      title: event.target.value,
-                    }))
-                  }
-                  placeholder="مثال: روبوتكس مستوى 1"
-                />
-              </label>
-              <div className="form-row">
-                <label className="form-field">
-                  <span>
-                    التاريخ <b>*</b>
-                  </span>
-                  <input
-                    required
-                    type="date"
-                    value={form.date}
-                    onChange={event =>
-                      setForm(current => ({
-                        ...current,
-                        date: event.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="form-field">
-                  <span>
-                    بداية الحصة <b>*</b>
-                  </span>
-                  <input
-                    required
-                    type="time"
-                    value={form.startTime}
-                    onChange={event =>
-                      setForm(current => ({
-                        ...current,
-                        startTime: event.target.value,
-                      }))
-                    }
-                  />
-                </label>
-              </div>
-              <div className="form-row">
-                <label className="form-field">
-                  <span>
-                    الكوتش <b>*</b>
-                  </span>
-                  <select
-                    value={liveMode ? form.instructorId ?? "" : form.instructor}
-                    onChange={event => {
-                      const selected = liveInstructors.find(item => item.id === event.target.value);
-                      setForm(current => ({ ...current, instructorId: liveMode ? event.target.value : undefined, instructor: selected?.name ?? event.target.value }));
-                    }}
-                  >
-                    {liveMode && <option value="">اختر مدربًا</option>}
-                    {(liveMode ? liveInstructors.filter(item => !item.branchId || item.branchId === form.branchId).map(item => ({ value: item.id, label: item.name ?? item.id })) : INSTRUCTORS.map(item => ({ value: item, label: item }))).map(item => (
-                      <option key={item.value} value={item.value}>{item.label}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="form-field">
-                  <span>
-                    القاعة <b>*</b>
-                  </span>
-                  <select
-                    value={liveMode ? form.classroomId ?? "" : form.room}
-                    onChange={event => {
-                      const selected = liveClassrooms.find(item => item.id === event.target.value);
-                      setForm(current => ({ ...current, classroomId: liveMode ? event.target.value : undefined, room: selected?.name ?? event.target.value }));
-                    }}
-                  >
-                    {liveMode && <option value="">اختر قاعة متاحة</option>}
-                    {(liveMode ? selectedLiveRooms.map(item => ({ value: item.id, label: item.name })) : ROOMS.map(item => ({ value: item, label: item }))).map(item => (
-                      <option key={item.value} value={item.value}>{item.label}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <div className="form-row">
-                <label className="form-field">
-                  <span>الفرع</span>
-                  <select
-                    value={liveMode ? form.branchId ?? "" : form.branch}
-                    onChange={event => {
-                      const selected = liveBranches.find(item => item.id === event.target.value);
-                      const nextRoom = liveClassrooms.find(room => room.branchId === event.target.value && room.status === "AVAILABLE");
-                      setForm(current => ({ ...current, branchId: liveMode ? event.target.value : undefined, branch: selected?.name ?? event.target.value, classroomId: nextRoom?.id, room: nextRoom?.name ?? current.room }));
-                    }}
-                  >
-                    {(liveMode ? liveBranches.map(item => ({ value: item.id, label: item.name })) : BRANCHES.map(item => ({ value: item, label: item }))).map(item => (
-                      <option key={item.value} value={item.value}>{item.label}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="form-field">
-                  <span>المدة</span>
-                  <select
-                    value={form.duration}
-                    onChange={event =>
-                      setForm(current => ({
-                        ...current,
-                        duration: Number(event.target.value),
-                      }))
-                    }
-                  >
-                    <option value={60}>60 دقيقة</option>
-                    <option value={90}>90 دقيقة</option>
-                    <option value={120}>120 دقيقة</option>
-                    <option value={180}>180 دقيقة</option>
-                  </select>
-                </label>
-              </div>
-              <label className="form-field">
-                <span>نوع الحصة</span>
-                <select
-                  value={form.type}
-                  onChange={event =>
-                    setForm(current => ({
-                      ...current,
-                      type: event.target.value as SessionType,
-                    }))
-                  }
-                >
-                  {Object.entries(TYPE_LABELS).map(([key, label]) => (
-                    <option value={key} key={key}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="dialog-info">
-                <AlertCircle size={15} />
-                <span>
-                  المحاكاة تمنع تداخل المواعيد محليًا حسب الكوتش أو القاعة فقط.
-                </span>
-              </div>
-              <div className="dialog-actions">
-                <button
-                  type="button"
-                  className="button button-secondary"
-                  onClick={closeDialog}
-                >
-                  إلغاء
-                </button>
-                <button type="submit" className="button button-primary">
-                  <Plus size={16} />
-                  {dialogMode === "edit" ? "حفظ التعديل" : "إضافة للجدول"}
-                </button>
-              </div>
-            </form>
-          </section>
-        </div>
+        <ScheduleFormDialog
+          dialogMode={dialogMode}
+          form={form}
+          liveMode={liveMode}
+          liveBranches={liveBranches}
+          liveInstructors={liveInstructors}
+          liveClassrooms={liveClassrooms}
+          selectedLiveRooms={selectedLiveRooms}
+          branchOptions={BRANCHES}
+          instructorOptions={INSTRUCTORS}
+          roomOptions={ROOMS}
+          typeLabels={TYPE_LABELS}
+          setForm={setForm}
+          onClose={closeDialog}
+          onSubmit={handleSessionSubmit}
+        />
       )}
     </div>
   );
