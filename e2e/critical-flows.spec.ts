@@ -15,7 +15,7 @@ async function login(page: Page, accountType: "staff" | "parent" | "student", ph
   await page.goto("/login");
   await page.getByLabel("نوع الحساب").selectOption(accountType);
   await page.getByLabel("رقم الهاتف").fill(phone);
-  await page.getByLabel("كلمة المرور").fill("Mada@2026");
+  await page.getByRole("textbox", { name: "كلمة المرور" }).fill("Mada@2026");
   await page.getByRole("button", { name: /دخول إلى المساحة/ }).click();
 }
 

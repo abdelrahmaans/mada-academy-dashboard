@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.RateLimiting;
 using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Modules.Identity;
 using MadaAcademy.Api.Modules.Finance;
@@ -13,12 +14,27 @@ using MadaAcademy.Api.Persistence.Entities;
 using MadaAcademy.Api.Persistence.Seeding;
 using MadaAcademy.Api.Storage;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 var jwtOptions = JwtOptions.Load(builder.Configuration, builder.Environment);
+var authSecurityOptions = AuthSecurityOptions.Load(builder.Configuration);
 
 builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecks();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("password-login", context => RateLimitPartition.GetFixedWindowLimiter(
+        GetClientAddress(context),
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = authSecurityOptions.LoginPermitLimit,
+            Window = TimeSpan.FromSeconds(authSecurityOptions.LoginWindowSeconds),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+});
 builder.Services.AddMadaPersistence(builder.Configuration);
 var storageMode = builder.Configuration["Mada:PrivateStorageMode"] ?? Environment.GetEnvironmentVariable("MADA_PRIVATE_STORAGE_MODE") ?? (builder.Environment.IsDevelopment() ? "local" : "disabled");
 builder.Services.AddHttpClient<SupabasePrivateObjectStorage>();
@@ -26,17 +42,18 @@ if (string.Equals(storageMode, "supabase", StringComparison.OrdinalIgnoreCase)) 
 else if (string.Equals(storageMode, "local", StringComparison.OrdinalIgnoreCase) && builder.Environment.IsDevelopment()) builder.Services.AddSingleton<IPrivateObjectStorage, LocalPrivateObjectStorage>();
 else builder.Services.AddSingleton<IPrivateObjectStorage, UnavailablePrivateObjectStorage>();
 builder.Services.AddMadaAuthentication(jwtOptions);
+builder.Services.AddSingleton(authSecurityOptions);
 if (builder.Environment.IsDevelopment()) builder.Services.AddSingleton<ISmsMessageSender, DevelopmentSmsMessageSender>();
 else builder.Services.AddSingleton<ISmsMessageSender, UnconfiguredSmsMessageSender>();
 builder.Services.AddScoped<ConflictService>();
 builder.Services.AddSingleton<IAuditSink, DevelopmentAuditSink>();
 builder.Services.AddCors(options => options.AddPolicy("frontend", policy =>
 {
-    var configuredOrigins = Environment.GetEnvironmentVariable("MADA_CORS_ORIGINS")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-    if (builder.Environment.IsDevelopment() && (configuredOrigins is null || configuredOrigins.Length == 0))
+    var configuredOrigins = CorsOriginResolver.Resolve(builder.Environment.IsDevelopment(), builder.Configuration["MADA_CORS_ORIGINS"] ?? Environment.GetEnvironmentVariable("MADA_CORS_ORIGINS"));
+    if (builder.Environment.IsDevelopment() && configuredOrigins.Length == 0)
         policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
     else
-        policy.WithOrigins(configuredOrigins ?? []).AllowAnyHeader().AllowAnyMethod();
+        policy.WithOrigins(configuredOrigins).AllowAnyHeader().AllowAnyMethod();
 }));
 
 var app = builder.Build();
@@ -57,6 +74,7 @@ if (IsEnabled("MADA_APPLY_MIGRATIONS") || seedDemoData)
 
 app.UseExceptionHandler();
 app.UseCors("frontend");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapHealthChecks("/api/v1/health");
@@ -94,9 +112,10 @@ app.MapPost("/api/v1/auth/login", async (PasswordLoginRequest request, AuthServi
 {
     if (string.IsNullOrWhiteSpace(request.Phone) || string.IsNullOrWhiteSpace(request.Password) || request.AccountType is not ("staff" or "parent" or "student"))
         return Results.BadRequest(new { error = new { code = "INVALID_LOGIN_REQUEST", message = "Phone, password, and a supported accountType (staff, parent, or student) are required." } });
-    var tokens = await auth.LoginWithPasswordAsync(request, cancellationToken);
-    return tokens is null ? Results.Unauthorized() : Results.Ok(new { data = tokens });
-});
+    var result = await auth.LoginWithPasswordAsync(request, cancellationToken);
+    if (result.IsLocked) return Results.Problem(statusCode: StatusCodes.Status429TooManyRequests, title: "Login temporarily unavailable", extensions: new Dictionary<string, object?> { ["code"] = "LOGIN_LOCKED" });
+    return result.Tokens is null ? Results.Unauthorized() : Results.Ok(new { data = result.Tokens });
+}).RequireRateLimiting("password-login");
 
 app.MapPost("/api/v1/auth/refresh", async (RefreshRequest request, AuthService auth, CancellationToken cancellationToken) =>
 {
@@ -192,6 +211,7 @@ app.MapPost("/api/v1/scheduling/check-conflict", async (ConflictCheckRequest req
 app.Run();
 
 static bool IsEnabled(string name) => string.Equals(Environment.GetEnvironmentVariable(name), "true", StringComparison.OrdinalIgnoreCase);
+static string GetClientAddress(HttpContext context) => context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 public sealed record AuditInput(string Action, string TargetType, string TargetId, string? TenantId, string? BranchId, string? Reason);
 public interface IAuditSink { Task AppendAsync(AuditInput input); }
 public sealed class DevelopmentAuditSink : IAuditSink { private readonly List<AuditInput> _events = []; public Task AppendAsync(AuditInput input) { _events.Add(input); return Task.CompletedTask; } }

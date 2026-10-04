@@ -17,6 +17,15 @@ Content-Type: application/json
 
 A successful response returns the same `accessToken`, `refreshToken`, `tokenType`, and `expiresIn` contract used by the existing refresh flow. The backend verifies a PBKDF2 password hash, requires an `ACTIVE` user and an `ACTIVE` membership, then issues a scoped JWT.
 
+## Login protection
+
+- Password login is rate limited per client IP. The default is 20 requests per 60 seconds and returns `429 Too Many Requests` after the limit.
+- Active accounts are temporarily locked after 5 failed password attempts. The default lockout duration is 15 minutes.
+- A locked account returns `429` with `extensions.code: "LOGIN_LOCKED"`; a correct password does not bypass the lockout.
+- Failed-login counters reset after a successful password login.
+- Invalid credentials continue to return the same `401 Unauthorized` response for unknown, inactive, and incorrect-password cases.
+- Thresholds can be overridden through `AuthenticationSecurity__*` configuration values.
+
 ## Password creation
 
 - Academy Bootstrap requires an owner password of at least 8 characters.

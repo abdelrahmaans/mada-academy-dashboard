@@ -8,7 +8,10 @@ export default defineConfig({
   timeout: 45_000,
   fullyParallel: false,
   retries: 0,
-  reporter: [["list"], ["html", { outputFolder: "playwright-report", open: "never" }]],
+  reporter: [
+    ["list"],
+    ["html", { outputFolder: "playwright-report", open: "never" }],
+  ],
   use: {
     baseURL: webUrl,
     ...devices["Desktop Chrome"],
@@ -24,13 +27,14 @@ export default defineConfig({
   webServer: [
     {
       command:
-        "export DOTNET_ROOT=$HOME/.dotnet; export PATH=$DOTNET_ROOT:$PATH; ASPNETCORE_ENVIRONMENT=Development DOTNET_ENVIRONMENT=Development MADA_DATABASE_MODE=memory MADA_SEED_DEMO_DATA=true ASPNETCORE_URLS=http://127.0.0.1:5180 dotnet run --project backend/MadaAcademy.Api/MadaAcademy.Api.csproj --no-launch-profile",
+        "ASPNETCORE_ENVIRONMENT=Development DOTNET_ENVIRONMENT=Development MADA_DATABASE_MODE=memory MADA_SEED_DEMO_DATA=true ASPNETCORE_URLS=http://127.0.0.1:5180 dotnet run --project backend/MadaAcademy.Api/MadaAcademy.Api.csproj --no-launch-profile",
       url: `${apiUrl}/api/v1/health`,
       reuseExistingServer: false,
       timeout: 120_000,
     },
     {
-      command: "VITE_API_URL=http://127.0.0.1:5180/api/v1 pnpm dev --host 127.0.0.1",
+      command:
+        "VITE_API_URL=http://127.0.0.1:5180/api/v1 pnpm dev --host 127.0.0.1",
       url: `${webUrl}/login`,
       reuseExistingServer: false,
       timeout: 120_000,

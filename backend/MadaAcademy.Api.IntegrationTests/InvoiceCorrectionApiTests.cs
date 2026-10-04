@@ -112,6 +112,65 @@ public sealed class InvoiceCorrectionApiTests
         Assert.Equal(HttpStatusCode.NotFound, (await client.PostAsJsonAsync($"/api/v1/finance/invoice-corrections/{hiddenCorrectionId}/decision", new { decision = "APPROVED", reason = "Not in this branch." })).StatusCode);
     }
 
+    [Fact]
+    public async Task Correction_CannotHaveTwoPendingRequestsForTheSameInvoice()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var client = factory.CreateClient();
+        var requester = await TestData.CreateAccountAsync(factory, "R06_ACCOUNTANT");
+        var invoiceId = await SeedInvoiceAsync(factory, requester.TenantId, requester.BranchId, 10_000);
+        TestData.Authenticate(client, await TestData.LoginAsync(client, requester));
+        var request = new { proposedDueDate = "2026-10-20", lines = new[] { new { description = "Updated tuition", amountPiastres = 11_000 } }, reason = "Duplicate guard test" };
+
+        Assert.Equal(HttpStatusCode.Created, (await client.PostAsJsonAsync($"/api/v1/finance/invoices/{invoiceId}/correction-requests", request)).StatusCode);
+        var duplicate = await client.PostAsJsonAsync($"/api/v1/finance/invoices/{invoiceId}/correction-requests", request);
+
+        Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
+        Assert.Contains("INVOICE_CORRECTION_ALREADY_PENDING", await duplicate.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Correction_RejectsInvalidAndDuplicateDecisions()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var requesterClient = factory.CreateClient();
+        var requester = await TestData.CreateAccountAsync(factory, "R06_ACCOUNTANT");
+        var manager = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER", requester.TenantId, requester.BranchId);
+        var correctionId = await SeedCorrectionAsync(factory, requester.TenantId, requester.BranchId, "Transition test");
+        using var managerClient = factory.CreateClient();
+        TestData.Authenticate(managerClient, await TestData.LoginAsync(managerClient, manager));
+
+        var invalid = await managerClient.PostAsJsonAsync($"/api/v1/finance/invoice-corrections/{correctionId}/decision", new { decision = "PENDING", reason = "Invalid transition" });
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await managerClient.PostAsJsonAsync($"/api/v1/finance/invoice-corrections/{correctionId}/decision", new { decision = "REJECTED", reason = "Rejected after review" })).StatusCode);
+
+        var duplicate = await managerClient.PostAsJsonAsync($"/api/v1/finance/invoice-corrections/{correctionId}/decision", new { decision = "APPROVED", reason = "Second decision" });
+        Assert.Equal(HttpStatusCode.NotFound, duplicate.StatusCode);
+    }
+
+    [Fact]
+    public async Task Correction_RejectsUnsupportedRolesAndForeignTenants()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        var requester = await TestData.CreateAccountAsync(factory, "R06_ACCOUNTANT");
+        var manager = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER", requester.TenantId, requester.BranchId);
+        var foreignManager = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
+        var instructor = await TestData.CreateAccountAsync(factory, "R04_INSTRUCTOR", requester.TenantId, requester.BranchId);
+        var correctionId = await SeedCorrectionAsync(factory, requester.TenantId, requester.BranchId, "Authorization test");
+
+        using var instructorClient = factory.CreateClient();
+        TestData.Authenticate(instructorClient, await TestData.LoginAsync(instructorClient, instructor));
+        Assert.Equal(HttpStatusCode.Forbidden, (await instructorClient.GetAsync("/api/v1/finance/invoice-corrections")).StatusCode);
+
+        using var foreignClient = factory.CreateClient();
+        TestData.Authenticate(foreignClient, await TestData.LoginAsync(foreignClient, foreignManager));
+        Assert.Equal(HttpStatusCode.NotFound, (await foreignClient.PostAsJsonAsync($"/api/v1/finance/invoice-corrections/{correctionId}/decision", new { decision = "APPROVED", reason = "Foreign tenant" })).StatusCode);
+
+        using var managerClient = factory.CreateClient();
+        TestData.Authenticate(managerClient, await TestData.LoginAsync(managerClient, manager));
+        Assert.Equal(HttpStatusCode.OK, (await managerClient.GetAsync("/api/v1/finance/invoice-corrections")).StatusCode);
+    }
+
     private static async Task<Guid> SeedInvoiceAsync(TestApiFactory factory, Guid tenantId, Guid branchId, int total)
     {
         using var scope = factory.Services.CreateScope();

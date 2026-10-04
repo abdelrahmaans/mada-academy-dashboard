@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from "react";
 import { ShieldAlert } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
+import { isRouteAllowed } from "@/lib/routeAccess";
 
 export default function ProtectedRoute({ children, roles, permission }: { children: ReactNode; roles?: string[]; permission?: string }) {
   const { me, loading } = useAuth();
@@ -13,9 +14,7 @@ export default function ProtectedRoute({ children, roles, permission }: { childr
 
   if (loading) return <div className="route-loading">جارٍ التحقق من الجلسة…</div>;
   if (!me) return null;
-  const allowedRole = !roles || roles.includes(me.role);
-  const allowedPermission = !permission || me.permissions?.includes(permission);
-  if (!allowedRole || !allowedPermission) {
+  if (!isRouteAllowed(me, roles, permission)) {
     return <main className="auth-locked-page" dir="rtl"><section><ShieldAlert size={30} /><h1>الوصول غير متاح</h1><p>هذه الشاشة خارج نطاق دورك أو الصلاحيات الممنوحة لحسابك.</p><button onClick={() => navigate("/workspace")}>العودة إلى مساحة العمل</button></section></main>;
   }
   return <>{children}</>;

@@ -3,7 +3,7 @@
 **As of:** 4 October 2026
 **Verified Git state:** `main` includes PR #41 and PR #42 and is pushed to origin.
 **Latest delivery PR:** [PR #42 — optional analytics and expense evidence filename fixes](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/42), merged successfully.
-**Stack:** React + Vite + TypeScript (primary UI); ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions. Angular is a reference preview only.
+**Stack:** React + Vite + TypeScript; ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions.
 
 ## Executive summary
 

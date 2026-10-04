@@ -89,7 +89,6 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     homePath: "/instructor-desk",
     navigation: [
       { path: "/instructor-desk", label: "مكتب المدرب", purpose: "today, attendance, evaluation" },
-      { path: "/instructor", label: "مساحتي الأكاديمية", purpose: "assigned students and progress" },
     ],
   },
   R05: {

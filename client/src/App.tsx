@@ -13,7 +13,6 @@ const Home = lazy(() => import("./pages/Home"));
 const Students = lazy(() => import("./pages/Students"));
 const Classes = lazy(() => import("./pages/Classes"));
 const Schedule = lazy(() => import("./pages/Schedule"));
-const Secretary = lazy(() => import("./pages/Secretary"));
 const SecretaryDesk = lazy(() => import("./pages/SecretaryDesk"));
 const FinanceDesk = lazy(() => import("./pages/FinanceDesk"));
 const MarketingDesk = lazy(() => import("./pages/MarketingDesk"));
@@ -21,7 +20,6 @@ const Team = lazy(() => import("./pages/Team"));
 const BranchOperations = lazy(() => import("./pages/BranchOperations"));
 const Approvals = lazy(() => import("./pages/Approvals"));
 const Reports = lazy(() => import("./pages/Reports"));
-const Instructor = lazy(() => import("./pages/Instructor"));
 const InstructorDesk = lazy(() => import("./pages/InstructorDesk"));
 const HeadInstructors = lazy(() => import("./pages/HeadInstructors"));
 const AcademicPrograms = lazy(() => import("./pages/AcademicPrograms"));
@@ -74,7 +72,7 @@ const APP_ROUTES = [
   ["/students", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R05_SECRETARY"]}><Students /></Guard>],
   ["/classes", () => <Guard roles={["R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS"]}><Classes /></Guard>],
   ["/schedule", () => <Guard roles={["R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS", "R04_INSTRUCTOR", "R05_SECRETARY"]}><Schedule /></Guard>],
-  ["/secretary", () => <Guard roles={["R05_SECRETARY"]}><Secretary /></Guard>],
+  ["/secretary", () => <Guard roles={["R05_SECRETARY"]}><Redirect to="/secretary-desk" /></Guard>],
   ["/secretary-desk", () => <Guard roles={["R05_SECRETARY"]}><SecretaryDesk /></Guard>],
   ["/finance", () => <Guard roles={["R05_SECRETARY", "R06_ACCOUNTANT"]}><FinanceRedirect /></Guard>],
   ["/finance-desk", () => <Guard roles={["R05_SECRETARY", "R06_ACCOUNTANT"]}><FinanceDesk /></Guard>],
@@ -83,7 +81,7 @@ const APP_ROUTES = [
   ["/branch-operations", () => <Guard roles={["R02_BRANCH_MANAGER"]}><BranchOperations /></Guard>],
   ["/approvals", () => <Guard roles={["R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS", "R05_SECRETARY", "R06_ACCOUNTANT"]}><Approvals /></Guard>],
   ["/reports", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R06_ACCOUNTANT"]}><Reports /></Guard>],
-  ["/instructor", () => <Guard roles={["R04_INSTRUCTOR"]}><Instructor /></Guard>],
+  ["/instructor", () => <Guard roles={["R04_INSTRUCTOR"]}><Redirect to="/instructor-desk" /></Guard>],
   ["/instructor-desk", () => <Guard roles={["R04_INSTRUCTOR"]}><InstructorDesk /></Guard>],
   ["/head-instructors", () => <Guard roles={["R03_HEAD_INSTRUCTORS"]}><HeadInstructors /></Guard>],
   ["/academic-programs", () => <Guard roles={["R03_HEAD_INSTRUCTORS"]}><AcademicPrograms /></Guard>],
