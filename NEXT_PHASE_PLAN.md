@@ -128,3 +128,15 @@
 - إنشاء فواتير ضريبية رسمية أو ضريبة/دفتر أستاذ.
 - المصروفات، الموافقات المالية المتقدمة، الإلغاء/الاسترداد، reconciliation وتقارير مالية موسعة.
 - إطلاق SMS واسع النطاق قبل اختيار المزود وإعداد أسراره على الخادم.
+
+## 2026-10-04 — UI / Flow / Architecture Review Pack
+
+تمت مراجعة الأدوار R00–R09 والصفحات والـactions والـrouting والـauth والـCSS. أُغلقت في هذا الفرع حماية المسارات حسب الدور، منع DEMO من الظهور داخل LIVE shells، طبقة CSS مشتركة RTL/responsive، تصميم Academy Bootstrap، وE2E للعزل وإعادة التوجيه والخروج.
+
+**الترتيب التالي قبل production:**
+
+1. مراجعة/دمج PR الخاص بهذه الحزمة بعد نجاح CI وE2E.
+2. تشغيل staging API/frontend ثم `scripts/staging-smoke.sh` مع server-only storage secret.
+3. إغلاق الأدلة التشغيلية: private bucket upload/download، backup/restore، secrets، وstaging acceptance.
+4. قرار منتج صريح بشأن R07 Marketing: API حقيقية أو إبقاؤه Preview معلنًا خارج MVP.
+5. إصلاح Finance mutation pending states واسم ملف evidence قبل الإطلاق المالي النهائي.

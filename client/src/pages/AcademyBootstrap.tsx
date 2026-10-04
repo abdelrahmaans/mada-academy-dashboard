@@ -3,6 +3,7 @@ import { ArrowLeft, Building2, CheckCircle2, ChevronLeft, GraduationCap, MapPin,
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { apiClient, type BootstrapAcademyResponse } from "@/lib/apiClient";
+import "./AcademyBootstrap.css";
 
 const initialForm = {
   name: "",

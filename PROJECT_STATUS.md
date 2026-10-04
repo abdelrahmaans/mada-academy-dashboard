@@ -1,8 +1,8 @@
 # Mada Academy — Project Status
 
-**As of:** 3 October 2026
+**As of:** 4 October 2026
 **Verified Git state:** `main` includes PR #40 and is pushed to origin.
-**Latest delivery PR:** [PR #40 — record production preparation merge](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/40), merged successfully.
+**Latest delivery PR:** PR for the UI/Flow/Architecture Review Pack is being prepared from this branch; PR #40 remains the last merged baseline.
 **Stack:** React + Vite + TypeScript (primary UI); ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions. Angular is a reference preview only.
 
 ## Executive summary
@@ -36,6 +36,19 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 ## CI and verified baseline
 
 At PR #38, all four GitHub checks passed, including frontend TypeScript/unit/build and both frontend deployments. The backend baseline passed **70/70** in CI; local frontend validation passed Vitest **13/13**, `pnpm check`, `pnpm build`, and `git diff --check`. Local Finance and invoice-correction tests pass **11/11**; local InMemory backend tests pass **54/54**; browser E2E now passes **4/4** using Chromium, including invoice creation, payment, over-collection rejection, evidence upload/download, R06, R08, and R09. A production Dockerfile, environment template, and `PRE_PRODUCTION_RUNBOOK.md` are now prepared; no real deployment secrets are stored in Git.
+
+## UI / Flow / Architecture review — 4 October 2026
+
+تمت مراجعة R00–R09. أُضيفت route guards صريحة حسب الدور، حماية للـworkspace والأسطح التشغيلية، فصل LIVE/DEMO في الأغلفة الحية، stylesheet مشترك RTL/responsive، تصميم Academy Bootstrap، وE2E للـanonymous redirect والعزل والخروج.
+
+- `pnpm check`: PASS
+- `pnpm test`: PASS — 13/13
+- `pnpm build`: PASS
+- الجولة الأولى من E2E: 6/7، وتم تعديل assertion العزل لقبول الرفض الصريح أو العودة الآمنة إلى login.
+- Marketing ما زال Preview/local ويحتاج API قبل اعتباره LIVE.
+- Production storage/secrets/staging/backup-restore وFinance pending states ما زالت مفتوحة.
+
+التفاصيل الكاملة في [UI_FLOW_REVIEW_STATUS.md](UI_FLOW_REVIEW_STATUS.md).
 
 ## OTP status
 
