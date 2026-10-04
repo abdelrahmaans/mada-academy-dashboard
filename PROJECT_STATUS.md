@@ -1,8 +1,8 @@
 # Mada Academy — Project Status
 
 **As of:** 4 October 2026
-**Verified Git state:** `main` includes PR #40 and is pushed to origin.
-**Latest delivery PR:** PR for the UI/Flow/Architecture Review Pack is being prepared from this branch; PR #40 remains the last merged baseline.
+**Verified Git state:** `main` includes PR #41 and PR #42 and is pushed to origin.
+**Latest delivery PR:** [PR #42 — optional analytics and expense evidence filename fixes](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/42), merged successfully.
 **Stack:** React + Vite + TypeScript (primary UI); ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions. Angular is a reference preview only.
 
 ## Executive summary
@@ -35,7 +35,7 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 
 ## CI and verified baseline
 
-At PR #38, all four GitHub checks passed, including frontend TypeScript/unit/build and both frontend deployments. The backend baseline passed **70/70** in CI; local frontend validation passed Vitest **13/13**, `pnpm check`, `pnpm build`, and `git diff --check`. Local Finance and invoice-correction tests pass **11/11**; local InMemory backend tests pass **54/54**; browser E2E now passes **4/4** using Chromium, including invoice creation, payment, over-collection rejection, evidence upload/download, R06, R08, and R09. A production Dockerfile, environment template, and `PRE_PRODUCTION_RUNBOOK.md` are now prepared; no real deployment secrets are stored in Git.
+The current merged baseline includes PR #41 (UI/flow hardening) and PR #42 (optional analytics and evidence filename fix). Local frontend validation is green: Vitest **13/13**, `pnpm check`, `pnpm build`, `git diff --check`, and browser E2E **7/7** using Chromium, including invoice creation, payment, over-collection rejection, evidence upload/download, role isolation, anonymous redirect, and logout. Backend CI and integration evidence are recorded in `BACKEND_STATUS.md`; no real deployment secrets are stored in Git.
 
 ## UI / Flow / Architecture review — 4 October 2026
 
@@ -66,6 +66,6 @@ The P1/P2 consumer acceptance and Finance local acceptance are complete. The nex
 Open implementation blockers and product debt:
 
 1. Finance production evidence deployment remains gated on backend secrets, authenticated staging upload/download smoke test, and durable backup evidence; see [FINANCE_RELEASE_GATE.md](FINANCE_RELEASE_GATE.md).
-3. Invoice cancellation/correction/refund and expanded financial workflows remain outside the current slice and must not be implied as supported.
-4. Production SMS provider and password recovery are later identity work; interim OTP mode remains opt-in, limited, audited, and never a hard-coded/shared code.
-5. Run [CONSUMER_STAGING_SMOKE_TEST.md](CONSUMER_STAGING_SMOKE_TEST.md) against a controlled non-production API when deployment is authorized; local E2E is already automated in `e2e/critical-flows.spec.ts`.
+2. Invoice cancellation/correction/refund and expanded financial workflows remain outside the current slice and must not be implied as supported.
+3. Production SMS provider and password recovery are later identity work; interim OTP mode remains opt-in, limited, audited, and never a hard-coded/shared code.
+4. Run [CONSUMER_STAGING_SMOKE_TEST.md](CONSUMER_STAGING_SMOKE_TEST.md) against a controlled non-production API when deployment is authorized; local E2E is already automated in `e2e/critical-flows.spec.ts`.

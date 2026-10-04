@@ -1,6 +1,6 @@
 # Finance Vertical Slice — Release Gate
 
-**PR:** Finance Vertical Slice — Production Readiness & UI Contract Hardening
+**Current baseline:** `main` after PR #42 — Finance code/local acceptance is complete; production gate remains open.
 
 ## Scope
 
@@ -21,18 +21,18 @@ This gate covers the existing Finance/Operations vertical slice. It does not aut
 - [x] Created private Supabase bucket `private-evidence` in project `mada-software` (`wooivgjevouoybibxsao`), with private ACL, 10 MiB limit, and PDF/JPG/PNG MIME allow-list.
 - [ ] Configure backend secrets and run an authenticated upload/download smoke test against the bucket.
 - [ ] Real staging smoke test against the deployed API and frontend.
-- [ ] PostgreSQL integration suite in the current execution environment (requires the .NET SDK and PostgreSQL service).
+- [ ] PostgreSQL integration suite against the target staging database (requires the deployment environment and PostgreSQL access).
 
 ## Verification completed locally — 3 October 2026
 
 - [x] Finance and invoice-correction InMemory integration tests: **11/11**.
 - [x] Frontend `pnpm check`, Vitest, and production build pass.
-- [x] Browser E2E with Chromium: **3/3** — R06 FinanceDesk LIVE surface, R08 Family Portal linked scope, and R09 Student Portal self-scope.
+- [x] Browser E2E with Chromium: **7/7** — R06 FinanceDesk LIVE surface, R08 Family Portal linked scope, and R09 Student Portal self-scope.
 - [x] Expanded Finance browser/API E2E: invoice creation, payment recording, over-collection rejection, and local evidence upload/download.
 - [x] Local API preflight with seeded InMemory data: health, password login, linked-student scope, and published evaluation visibility.
 - [x] Production preparation: `backend/Dockerfile`, `backend/.env.production.example`, `scripts/staging-smoke.sh`, and `PRE_PRODUCTION_RUNBOOK.md`.
 
-These checks close the **code and local acceptance** portion of the Finance MVP. They do not close production evidence storage, backup/restore, or deployed staging acceptance. The current automated browser/API suite is **4/4 passed**.
+These checks close the **code and local acceptance** portion of the Finance MVP. They do not close production evidence storage, backup/restore, or deployed staging acceptance. The current automated browser/API suite is **7/7 passed**.
 
 ## Storage and deployment decision
 

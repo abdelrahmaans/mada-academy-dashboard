@@ -1,3 +1,4 @@
+# Consumer / Staging Smoke Test — R08/R09
 
 ## Local-only execution path
 
@@ -56,4 +57,4 @@ Run it locally with:
 pnpm e2e
 ```
 
-The Playwright config starts the seeded InMemory API and Vite automatically and uses the system Chromium binary. Latest verified result: **3/3 passed**.
+The Playwright config starts the seeded InMemory API and Vite automatically and uses the system Chromium binary. Latest verified result: **7/7 passed**, including route guards, role isolation, and logout.

@@ -2,7 +2,7 @@
 
 ## Scope reviewed
 
-تمت مراجعة الأدوار R00–R09، المسارات، AuthContext وProtectedRoute وapiClient، صفحات الـLIVE/DEMO، مكونات RoleDashboardShell، تدفقات logout، وأسماء CSS/حالات loading/error/empty/forbidden. تمت المراجعة بدون تعديل من المراجعين ثم نُفذت حزمة إصلاح أساسية في هذا الفرع.
+تمت مراجعة الأدوار R00–R09، المسارات، AuthContext وProtectedRoute وapiClient، صفحات الـLIVE/DEMO، مكونات RoleDashboardShell، تدفقات logout، وأسماء CSS/حالات loading/error/empty/forbidden. أُغلقت الحزمة الأساسية في PR #41، ثم أُغلقت إصلاحات المتابعة في PR #42.
 
 ## Closed in this PR
 
@@ -20,16 +20,15 @@
 - `pnpm test`: PASS — 13/13
 - `pnpm build`: PASS
 - `git diff --check`: PASS
-- E2E: 6/7 passed في الجولة الأولى؛ السيناريو الوحيد عدّل assertion ليقبل الرفض الصريح أو العودة الآمنة إلى login عندما تكون الجلسة غير صالحة.
+- E2E: **7/7 PASS** بعد تثبيت assertion العزل ليقبل الرفض الصريح أو العودة الآمنة إلى login عندما تكون الجلسة غير صالحة.
 
 ## Remaining product-level gaps (not hidden)
 
 1. R07 Marketing ما زال سطحًا محليًا؛ الحملات والـleads وhandoff تحتاج API حقيقية قبل اعتبارها LIVE.
 2. بعض الصفحات legacy/preview ما زالت موجودة ويجب إبقاؤها خارج المسارات التشغيلية أو حذفها بعد قبول البديل الحي.
-3. Finance mutations تحتاج pending/disabled states أدق في كل زر، وتصحيح اسم ملف تنزيل إثبات المصروف.
-4. Private storage, production secrets, deployed staging smoke, backup/restore وSMS/password recovery ما زالت خارج هذا PR.
-5. تحذيرا analytics في Vite يحتاجان قيم `VITE_ANALYTICS_ENDPOINT` و`VITE_ANALYTICS_WEBSITE_ID` في بيئة النشر، وليس في Git.
+3. Finance mutations تحتاج pending/disabled states أدق في كل زر.
+4. Private storage, production secrets, deployed staging smoke, backup/restore وSMS/password recovery ما زالت خارج الـMVP production gate.
 
 ## Production interpretation
 
-هذه الحزمة تقفل أساس routing/UI consistency وتمنع كشف أسطح الأدوار بالـURL المباشر، لكنها لا تعني أن كل workflow product capability صار LIVE. لا يتم الإعلان عن Marketing أو SMS أو storage production كميزات مكتملة قبل إغلاق البنود أعلاه.
+هذه الحزمة تقفل أساس routing/UI consistency وتمنع كشف أسطح الأدوار بالـURL المباشر، لكنها لا تعني أن كل workflow product capability صار LIVE. لا يتم الإعلان عن Marketing أو SMS أو storage production كميزات مكتملة قبل إغلاق البنود أعلاه. Analytics اختياري الآن ولا يُحمّل محليًا دون إعداداته.

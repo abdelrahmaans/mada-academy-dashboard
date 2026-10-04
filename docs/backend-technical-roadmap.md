@@ -1,5 +1,7 @@
 # Mada Academy Backend Technical Roadmap
 
+> **Document status — 4 October 2026:** This is a target-architecture and deferred-roadmap document, not a file-by-file description of the implemented ASP.NET Core tree. For implemented backend truth, use [../BACKEND_STATUS.md](../BACKEND_STATUS.md) and [../backend/DATABASE_STATUS.md](../backend/DATABASE_STATUS.md). Historical examples such as `app.ts`, `index.ts`, Prisma and Zod describe the earlier target sketch and are not current implementation requirements.
+
 ## القرار المعماري
 
 سنضع الـBackend داخل نفس الريبو كـ **Modular Monolith** بـC#/.NET 10 LTS وASP.NET Core، وليس Microservices مبكرة. السبب أن حدود الدومين واضحة، لكن المنتج ما زال في مرحلة تأسيس؛ فصل الـmodules داخل process واحد يعطينا سرعة، معاملات مشتركة، ووضوحًا في الصلاحيات دون تكلفة تشغيلية مبكرة.

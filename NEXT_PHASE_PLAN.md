@@ -1,14 +1,14 @@
 # خطة المرحلة القادمة — Mada Academy
 
-**تاريخ اللقطة:** 3 أكتوبر 2026
-**قاعدة العمل الحالية:** `main` بعد دمج [PR #40](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/40).
+**تاريخ اللقطة:** 4 أكتوبر 2026
+**قاعدة العمل الحالية:** `main` بعد دمج PR #41 وPR #42؛ آخر commit موثق `ecf23be`.
 **الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وexpanded E2E تم إغلاقها. المتبقي production-readiness فقط: deployment، private storage smoke، backup/restore، وstaging acceptance.
 
 ## قرار التنفيذ الحالي
 
 1. **تم إغلاق شريحة P2 source acceptance:** تقارير التشغيل، عزل النطاق، حماية LIVE، وحالات R08/R09 الجزئية مثبتة.
 2. **تم دمج P1 core journey:** الـseeder repairable، وحسابات R04/R08/R09 وروابطهم واختبارات الرحلة موجودة في `main`.
-3. **تم تنفيذ local browser/API E2E:** `pnpm e2e` يمر بـ **4/4** ويغطي R06/R08/R09 ودورة الفاتورة/الدفع/الإثبات.
+3. **تم تنفيذ local browser/API E2E:** `pnpm e2e` يمر بـ **7/7** ويغطي R06/R08/R09 ودورة الفاتورة/الدفع/الإثبات.
 4. **تم تجهيز بيئة النشر داخل الريبو:** Dockerfile، production env template، staging smoke script، وrunbook.
 5. **الخطوة المتبقية الوحيدة للـFinance:** secret injection + authenticated private-storage smoke + durable backup/restore policy + deployed staging smoke. لا نعتبرها مكتملة محليًا.
 
@@ -33,8 +33,8 @@
 - StudentPortal: تم فصل ملف الطالب عن الجلسات باستخدام `Promise.allSettled`؛ فشل الجلسات يحافظ على ملف الطالب ويعرض warning وtoast وRetry، وفشل الملف الأساسي يعرض error وRetry، مع منع Demo fallback في LIVE.
 - Consumer final acceptance: اكتملت مراجعة R08/R09 وتوثقت في `CONSUMER_FINAL_ACCEPTANCE.md`; تم التأكد من عزل Demo، حالات empty/error/loading، Toast وRetry، وفصل البيانات الأساسية عن الفواتير/الجلسات الاختيارية.
 - **الفجوة التالية المثبتة:** production evidence/storage and staging acceptance؛ الـlocal API preflight والـbrowser E2E أُنجزا بالفعل.
-- التحقق المحلي: Finance/Invoice correction **11/11**، InMemory backend **54/54**، browser/API E2E **4/4**، Vitest **13/13**، `pnpm check`، `pnpm build`، و`git diff --check` ناجحة.
-- التحقق عبر GitHub: **4/4 checks ناجحة** على PR #35، منها **70/70 backend tests**.
+- التحقق المحلي: Finance/Invoice correction **11/11**، InMemory backend **54/54**، browser/API E2E **7/7**، Vitest **13/13**، `pnpm check`، `pnpm build`، و`git diff --check` ناجحة.
+- التحقق عبر GitHub: PR #41 وPR #42 مرّا بـ **4/4 checks ناجحة** لكل PR.
 
 ## الهدف
 
@@ -100,17 +100,14 @@
 
 ## المشاكل والموانع المفتوحة
 
-| المشكلة | أثرها | ما يلزم قبل الإطلاق |
+| المشكلة | الحالة الحالية | ما يلزم قبل الإطلاق |
 |---|---|---|
-| لا توجد كيانات/API للفواتير والدفعات | شاشة Finance تعرض بيانات محلية demo فقط | EF migration + CRUD/append-only API واختبارات |
-| لا يوجد رفع/تخزين مرفقات | الاختيار الحالي يحفظ الاسم فقط؛ لا يوجد إثبات دائم | اختيار storage خاص ودائم، endpoints upload/download مفوضة |
-| R05 بلا صلاحية مالية | السكرتير لا يستطيع تنفيذ تدفق الفاتورة حاليًا | permissions محددة وصلاحيات backend/UI متزامنة |
-| FAMILY/Student Finance غير موصول | لا يمكن عرض رصيد حقيقي للمستهلك | endpoint يفحص الروابط ويعيد البيانات المسموحة فقط |
-| لا توجد بوابة دفع | لا يمكن القول إن Visa/المحافظ تمت تسويتها آليًا | MVP يسجل وسيلة الدفع فقط؛ لا يدّعي processing |
-| الإلغاء/التصحيح/الاسترداد غير محدد | لا ينبغي حذف أو تعديل دفعة خاطئة | خارج المرحلة الأولى؛ يلزم reversal audited قبل دعمها |
-| OTP/SMS غير موصول | لا يوجد إرسال آلي في الإنتاج | pilot يدوي محدود أو اختيار provider لاحقًا؛ الوضع الحالي fail-closed |
-| استعادة كلمة المرور غير موجودة | لا يوجد self-service recovery | مرحلة هوية لاحقة؛ عدم الوعد بأنها موجودة |
-| بعض صفحات الأدوار/التقارير ما زالت demo | خطر التباس live/demo | تدقيق routes والـfallbacks بعد اكتمال vertical slices |
+| Private evidence storage | Adapter موجود، لكن الإنتاج fail-closed حتى تُحقن secrets وتنجح اختبارات staging | server-only Supabase secret + authenticated upload/download smoke |
+| Backup/restore | bucket خاص موجود؛ النسخ المستقل للـobjects غير مثبت | backup schedule مستقل وrestore test موثق |
+| Deployment/staging | Dockerfile وrunbook وsmoke script جاهزة؛ لا يوجد deployment مقبول بعد | نشر API/frontend وتشغيل smoke على بيئة controlled |
+| Marketing R07 | ما زال Preview/local في أجزاء من الواجهة | API حقيقية أو إبقاؤه معلنًا خارج MVP |
+| Identity | SMS production وpassword recovery غير منفذين | اختيار SMS provider وتنفيذ recovery لاحقًا؛ لا يوقف local MVP |
+| Finance corrections/refunds | خارج Finance slice الحالية | قرار reversal/audit قبل إضافة workflow |
 
 ## الخطة الاختبارية ومعايير القبول
 

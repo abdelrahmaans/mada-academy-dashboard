@@ -1,15 +1,18 @@
 # Mada Academy — PostgreSQL Database Status
 
+> **Current documentation note — 4 October 2026:** This file is the PostgreSQL/local database reference. The repository currently contains and applies the identity, OTP, scheduling/student, model-alignment, consumer-link, consumer-onboarding, evaluation-review, finance, expense, and invoice-correction migrations. The exact list is maintained by EF Core under `Persistence/Migrations`; do not use the original “three migrations” count below as current truth.
+
 ## Current state
 
 - PostgreSQL **16.15** is installed and running locally on port `5432`.
 - Database: `mada_academy`.
 - Application role: `mada_app`.
 - Provider: PostgreSQL through EF Core/Npgsql.
-- All three migrations are applied:
+- The initial migrations were:
   - `InitialIdentityAndGovernance`
   - `AddOtpIdentityFields`
   - `AddSchedulingAndStudentCore`
+- Later applied migrations include `AlignCurrentModel`, `AddConsumerIdentityLinks`, `AddConsumerPhoneOnboarding`, `AddEvaluationReviewWorkflow`, `AddFinanceInvoicesPayments`, `AddFinanceExpensesWorkflow`, and `AddInvoiceCorrectionWorkflow`.
 - Demo seed is implemented in `Persistence/Seeding/DemoDataSeeder.cs` and is idempotent by tenant slug.
 
 ## Run the backend against PostgreSQL
