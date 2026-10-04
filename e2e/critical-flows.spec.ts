@@ -97,3 +97,35 @@ test.describe("critical local MVP journeys", () => {
     await expect(page.getByText("Youssef Ahmed", { exact: true })).toHaveCount(0);
   });
 });
+
+
+test.describe("route guards and session lifecycle", () => {
+  test("anonymous users are redirected to login instead of seeing a DEMO operational surface", async ({ page }) => {
+    await page.goto("/finance-desk");
+    await expect(page).toHaveURL(/\/login$/);
+    await page.goto("/student-portal");
+    await expect(page).toHaveURL(/\/login$/);
+  });
+
+  test("a parent cannot open the accountant surface", async ({ page }) => {
+    await login(page, "parent", "+201000000011");
+    await page.goto("/finance-desk");
+    await expect(page).toHaveURL(/\/(finance-desk|login)$/);
+    const forbidden = page.getByRole("heading", { name: "الوصول غير متاح" });
+    if (await forbidden.count()) {
+      await expect(forbidden).toBeVisible();
+      await expect(page.getByText("هذه الشاشة خارج نطاق دورك")).toBeVisible();
+    } else {
+      await expect(page.getByRole("heading", { name: "تسجيل الدخول" })).toBeVisible();
+    }
+  });
+
+  test("student logout clears the session and returns to login", async ({ page }) => {
+    await login(page, "student", "+201000000012");
+    await expect(page).toHaveURL(/\/student-portal$/);
+    await page.getByRole("button", { name: "تسجيل الخروج" }).click();
+    await expect(page).toHaveURL(/\/login$/);
+    await page.goto("/student-portal");
+    await expect(page).toHaveURL(/\/login$/);
+  });
+});

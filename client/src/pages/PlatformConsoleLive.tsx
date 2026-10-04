@@ -154,7 +154,7 @@ export default function PlatformConsoleLive() {
   };
 
   const title = nav.find(item => item.id === view)?.label ?? "إدارة المنصة";
-  return <RoleDashboardShell className="app-shell pc-live-shell" roleCode="R00" roleLabel="أدمن منصة مدى" scopeLevel="platform" scopeLabel="نطاق المنصة" tenantName="منصة مدى">
+  return <RoleDashboardShell className="app-shell pc-live-shell" roleCode="R00" roleLabel="مسؤول المنصة" scopeLevel="platform" scopeLabel="نطاق المنصة" tenantName="منصة مدى" demo={false}>
     <aside className="pc-live-sidebar" aria-label="تنقل إدارة المنصة">
       <div className="pc-live-brand"><span><ShieldCheck size={20} /></span><div><strong>مدى</strong><small>إدارة المنصة · R00</small></div></div>
       <nav>{nav.map(item => { const Icon = item.icon; return <button key={item.id} className={view === item.id ? "active" : ""} onClick={() => setView(item.id)} type="button"><Icon size={17} /><span>{item.label}</span></button>; })}</nav>

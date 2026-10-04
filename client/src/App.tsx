@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import NotFound from "@/pages/NotFound";
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { Redirect, Route, Switch, Router as WouterRouter } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -58,36 +58,40 @@ function ProtectedAcademyClassrooms() {
   return <ProtectedRoute roles={["R01_ACADEMY_OWNER"]} permission="classrooms.manage"><AcademyClassrooms /></ProtectedRoute>;
 }
 
+function Guard({ children, roles, permission }: { children: ReactNode; roles?: string[]; permission?: string }) {
+  return <ProtectedRoute roles={roles} permission={permission}>{children}</ProtectedRoute>;
+}
+
 const APP_ROUTES = [
   ["/login", Login],
   ["/accept-invitation", ConsumerInvitationAccept],
-  ["/workspace", WorkspaceHub],
+  ["/workspace", () => <Guard><WorkspaceHub /></Guard>],
   ["/platform/academies/new", ProtectedAcademyBootstrap],
   ["/academy/roles", ProtectedAcademyRoles],
   ["/academy/branches", ProtectedAcademyBranches],
   ["/academy/classrooms", ProtectedAcademyClassrooms],
-  ["/", Home],
-  ["/students", Students],
-  ["/classes", Classes],
-  ["/schedule", Schedule],
-  ["/secretary", Secretary],
-  ["/secretary-desk", SecretaryDesk],
-  ["/finance", FinanceRedirect],
-  ["/finance-desk", FinanceDesk],
-  ["/marketing-desk", MarketingDesk],
-  ["/team", Team],
-  ["/branch-operations", BranchOperations],
-  ["/approvals", Approvals],
-  ["/reports", Reports],
-  ["/instructor", Instructor],
-  ["/instructor-desk", InstructorDesk],
-  ["/head-instructors", HeadInstructors],
-  ["/academic-programs", AcademicPrograms],
-  ["/academy-owner", AcademyOwner],
-  ["/executive-dashboard", ExecutiveDashboard],
-  ["/platform-console", PlatformConsole],
-  ["/family-portal", FamilyPortal],
-  ["/student-portal", StudentPortal],
+  ["/", () => <Guard roles={["R02_BRANCH_MANAGER"]}><Home /></Guard>],
+  ["/students", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R05_SECRETARY"]}><Students /></Guard>],
+  ["/classes", () => <Guard roles={["R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS"]}><Classes /></Guard>],
+  ["/schedule", () => <Guard roles={["R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS", "R04_INSTRUCTOR", "R05_SECRETARY"]}><Schedule /></Guard>],
+  ["/secretary", () => <Guard roles={["R05_SECRETARY"]}><Secretary /></Guard>],
+  ["/secretary-desk", () => <Guard roles={["R05_SECRETARY"]}><SecretaryDesk /></Guard>],
+  ["/finance", () => <Guard roles={["R05_SECRETARY", "R06_ACCOUNTANT"]}><FinanceRedirect /></Guard>],
+  ["/finance-desk", () => <Guard roles={["R05_SECRETARY", "R06_ACCOUNTANT"]}><FinanceDesk /></Guard>],
+  ["/marketing-desk", () => <Guard roles={["R07_MEDIA_MANAGER"]} permission="marketing.read"><MarketingDesk /></Guard>],
+  ["/team", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS"]}><Team /></Guard>],
+  ["/branch-operations", () => <Guard roles={["R02_BRANCH_MANAGER"]}><BranchOperations /></Guard>],
+  ["/approvals", () => <Guard roles={["R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS", "R05_SECRETARY", "R06_ACCOUNTANT"]}><Approvals /></Guard>],
+  ["/reports", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R06_ACCOUNTANT"]}><Reports /></Guard>],
+  ["/instructor", () => <Guard roles={["R04_INSTRUCTOR"]}><Instructor /></Guard>],
+  ["/instructor-desk", () => <Guard roles={["R04_INSTRUCTOR"]}><InstructorDesk /></Guard>],
+  ["/head-instructors", () => <Guard roles={["R03_HEAD_INSTRUCTORS"]}><HeadInstructors /></Guard>],
+  ["/academic-programs", () => <Guard roles={["R03_HEAD_INSTRUCTORS"]}><AcademicPrograms /></Guard>],
+  ["/academy-owner", () => <Guard roles={["R01_ACADEMY_OWNER"]}><AcademyOwner /></Guard>],
+  ["/executive-dashboard", () => <Guard roles={["R01_ACADEMY_OWNER"]}><ExecutiveDashboard /></Guard>],
+  ["/platform-console", () => <Guard roles={["R00_PLATFORM_ADMIN"]}><PlatformConsole /></Guard>],
+  ["/family-portal", () => <Guard roles={["R08_PARENT"]}><FamilyPortal /></Guard>],
+  ["/student-portal", () => <Guard roles={["R09_STUDENT"]}><StudentPortal /></Guard>],
 ] as const;
 
 function Router() {

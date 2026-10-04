@@ -79,7 +79,7 @@ export default function AcademicProgramsLive() {
   if (!me || me.role !== "R03_HEAD_INSTRUCTORS") return <main className="r03-program-live" dir="rtl"><section className="r03-program-error" role="alert"><strong>هذه الصفحة مخصصة لرئيس المدربين.</strong><p>بيانات البرامج لم تُحمّل.</p></section></main>;
 
   return (
-    <RoleDashboardShell className="r03-program-shell" roleCode="R03" roleLabel="رئيس المدربين" scopeLevel="branch" scopeLabel={`فرع واحد · ${branch}`} branchName={branch} tenantName={me.academy?.name}>
+    <RoleDashboardShell className="r03-program-shell" roleCode="R03" roleLabel="رئيس المدربين" scopeLevel="branch" scopeLabel={`فرع واحد · ${branch}`} branchName={me.academy?.name} demo={false}>
       <main className="r03-program-live" dir="rtl">
         <header className="r03-program-header"><div><span className="r03-program-kicker"><span /> البرامج الأكاديمية · LIVE</span><h1>برامج الفرع وجلساته</h1><p>المجموعات والجلسات الفعلية من قواعد بيانات الفرع؛ لا تتضمن أسعارًا أو عمليات مالية.</p></div><button type="button" className="r03-program-refresh" onClick={() => void load(true)} disabled={loading}><RefreshCw size={15} /> تحديث</button></header>
         <RoleScopeCard className="r03-program-scope" compact />

@@ -375,6 +375,7 @@ export default function InstructorDeskLive() {
       roleLabel="المدرب"
       scopeLevel="assigned"
       scopeLabel="الجلسات والطلاب المسندون فقط"
+      demo={false}
       branchName={branch}
       tenantName={me.academy?.name}
     >

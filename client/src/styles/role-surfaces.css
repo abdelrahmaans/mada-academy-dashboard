@@ -1,0 +1,37 @@
+/* Shared production surface styling. Pages keep their semantic class names; this file supplies the missing layout layer. */
+:where(.family-portal,.student-portal,.app-shell,.marketing-desk-shell,.finance-desk-shell,.r04-live-shell,.r03-live-shell,.r03-program-shell) { min-height:100vh; background:#f6f8fb; color:#182230; }
+:where(.family-portal,.student-portal) { display:grid; grid-template-columns:260px minmax(0,1fr); direction:rtl; }
+:where(.family-portal-sidebar,.student-portal-sidebar) { position:sticky; top:0; height:100vh; padding:24px 18px; background:#10283a; color:#fff; display:flex; flex-direction:column; gap:18px; z-index:10; }
+:where(.family-portal-main,.student-portal-main) { min-width:0; min-height:100vh; }
+:where(.family-portal-content,.student-content) { max-width:1440px; margin:auto; padding:30px clamp(18px,4vw,56px) 48px; }
+:where(.family-portal-nav,.student-nav) { display:grid; gap:6px; }
+:where(.family-portal-nav button,.student-nav button) { display:flex; align-items:center; gap:10px; width:100%; padding:11px 12px; border:0; border-radius:12px; background:transparent; color:#d8e6ee; text-align:right; cursor:pointer; }
+:where(.family-portal-nav button:hover,.student-nav button:hover,.family-portal-nav button.active,.student-nav button.active) { background:#1d5269; color:#fff; }
+:where(.family-portal-topbar,.student-topbar) { display:flex; justify-content:space-between; align-items:center; gap:16px; min-height:70px; padding:14px clamp(18px,4vw,56px); background:#fff; border-bottom:1px solid #e4ebf0; }
+:where(.family-portal-grid,.student-home-grid,.student-progress-layout,.marketing-grid,.marketing-two-col,.finance-desk-two-col,.r03-live-two-col) { display:grid; gap:18px; }
+:where(.family-portal-grid,.student-home-grid,.marketing-two-col,.finance-desk-two-col,.r03-live-two-col) { grid-template-columns:repeat(2,minmax(0,1fr)); }
+:where(.student-stat-grid,.student-stats-grid,.marketing-kpis,.finance-stats-grid,.schedule-stats,.r03-live-metrics,.pc-live-metrics) { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+:where(.student-stat,.student-panel,.student-hero-card,.family-panel,.family-invoice-card,.family-session-card,.marketing-panel,.finance-desk-panel,.finance-panel,.students-panel,.schedule-panel,.approval-panel,.r03-live-panel,.r03-program-panel,.pc-live-card) { background:#fff; border:1px solid #e2eaf0; border-radius:18px; box-shadow:0 8px 24px rgba(21,46,67,.06); }
+:where(.student-stat,.student-panel,.student-hero-card,.family-panel,.family-invoice-card,.family-session-card,.marketing-panel,.finance-desk-panel,.finance-panel,.students-panel,.schedule-panel,.approval-panel,.r03-live-panel,.r03-program-panel,.pc-live-card) { padding:20px; }
+:where(.marketing-campaign-list,.marketing-review-list,.marketing-content-list,.marketing-lead-list,.students-table-wrap,.schedule-calendar-scroll,.r03-live-table-wrap,.r03-program-table-wrap) { overflow-x:auto; }
+:where(.students-table,.r03-live-table,.r03-program-table) { width:100%; min-width:680px; border-collapse:collapse; }
+:where(.students-table th,.students-table td,.r03-live-table th,.r03-live-table td,.r03-program-table th,.r03-program-table td) { padding:13px 12px; border-bottom:1px solid #edf1f4; text-align:right; vertical-align:middle; }
+:where(.marketing-form,.finance-form,.student-form,.academy-bootstrap-form) { display:grid; gap:14px; }
+:where(.marketing-form input,.marketing-form select,.marketing-form textarea,.finance-form input,.finance-form select,.finance-form textarea,.student-form input,.student-form select,.student-form textarea,.academy-bootstrap-form input,.academy-bootstrap-form select,.academy-bootstrap-form textarea,.family-portal input,.family-portal select,.student-portal input,.student-portal select) { width:100%; min-height:42px; padding:10px 12px; border:1px solid #cbd8e1; border-radius:10px; background:#fff; color:inherit; font:inherit; }
+:where(.marketing-form input:focus,.marketing-form select:focus,.marketing-form textarea:focus,.finance-form input:focus,.finance-form select:focus,.student-form input:focus,.academy-bootstrap-form input:focus) { outline:3px solid rgba(24,135,157,.18); border-color:#16879d; }
+:where(.marketing-primary,.button-primary,.pc-live-primary,.r03-live-refresh,.r03-program-refresh) { border:0; border-radius:10px; padding:10px 16px; background:#0d8295; color:#fff; cursor:pointer; font-weight:700; }
+:where(button:disabled,input:disabled,select:disabled,textarea:disabled) { opacity:.58; cursor:not-allowed; }
+:where(.student-note,.family-note,.marketing-banner,.finance-footer-note,.students-demo-note,.role-feedback-state) { padding:12px 14px; border-radius:12px; background:#eef7f8; color:#31515d; }
+:where(.family-portal-scrim,.student-portal-scrim) { display:none; }
+@media (max-width: 1050px) { :where(.student-stat-grid,.student-stats-grid,.marketing-kpis,.finance-stats-grid,.schedule-stats,.r03-live-metrics,.pc-live-metrics) { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width: 760px) {
+  :where(.family-portal,.student-portal) { display:block; }
+  :where(.family-portal-sidebar,.student-portal-sidebar) { position:fixed; inset:0 auto 0 0; width:min(290px,86vw); transform:translateX(-105%); transition:transform .2s ease; }
+  :where(.family-portal.sidebar-open .family-portal-sidebar,.student-portal.sidebar-open .student-portal-sidebar) { transform:translateX(0); }
+  :where(.family-portal.sidebar-open .family-portal-scrim,.student-portal.sidebar-open .student-portal-scrim) { display:block; position:fixed; inset:0; background:rgba(8,25,38,.48); z-index:9; }
+  :where(.family-portal-grid,.student-home-grid,.marketing-two-col,.finance-desk-two-col,.r03-live-two-col) { grid-template-columns:1fr; }
+  :where(.student-stat-grid,.student-stats-grid,.marketing-kpis,.finance-stats-grid,.schedule-stats,.r03-live-metrics,.pc-live-metrics) { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  :where(.family-portal-content,.student-content) { padding:20px 14px 34px; }
+}
+@media (max-width: 480px) { :where(.student-stat-grid,.student-stats-grid,.marketing-kpis,.finance-stats-grid,.schedule-stats,.r03-live-metrics,.pc-live-metrics) { grid-template-columns:1fr; } }
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior:auto!important; transition:none!important; } }

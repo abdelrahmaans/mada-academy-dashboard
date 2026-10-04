@@ -316,3 +316,7 @@ Current state: Finance evidence storage is in testing on the private Supabase `p
 اكتملت كل الأعمال الداخلية المطلوبة قبل النشر: أضيفت دورة E2E موسعة ونجحت **4/4**، وتشمل إنشاء فاتورة، تسجيل دفعة، منع تجاوز الرصيد، رفع/تنزيل إثبات، إضافة إلى R06/R08/R09. أضيف `backend/Dockerfile`، و`backend/.env.production.example` بدون أسرار، و`scripts/staging-smoke.sh`، و`PRE_PRODUCTION_RUNBOOK.md`.
 
 ما زال القرار/التشغيل الخارجي فقط: اختيار منصة API، إدخال secrets في secret manager، تشغيل PostgreSQL وprivate Supabase storage، تنفيذ backup/restore، ثم تشغيل staging smoke. لا توجد أسرار أو مفاتيح إنتاج في الريبو.
+
+## 2026-10-04 — UI / Flow / Architecture Review Pack
+
+تمت مراجعة R00–R09 على مستوى route/auth/role scope/flows/styling. الإصلاحات المنفذة: route guards صريحة في App، جلسة مطلوبة للـworkspace والأسطح التشغيلية، إزالة demo state من أغلفة LIVE، stylesheet مشترك للبوابات RTL/responsive، تصميم Academy Bootstrap، وE2E للـanonymous redirect والعزل والخروج. التحقق المحلي: typecheck و13/13 unit tests وbuild ناجحون؛ الجولة الأولى من E2E نجحت في 6/7، وتم جعل اختبار عزل parent يقبل الرفض الصريح أو العودة الآمنة إلى login. البنود المتبقية موثقة في `UI_FLOW_REVIEW_STATUS.md` ولا تشملها هذه الحزمة: Marketing API، production storage/secrets/staging، backup/restore، وpending states المالية.
