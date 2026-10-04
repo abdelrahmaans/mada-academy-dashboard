@@ -4,7 +4,8 @@ import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
-import { apiClient, ApiRequestError, type ExecutiveActivityItem, type ExecutiveDashboardReport, type ExecutiveMetrics } from "@/lib/apiClient";
+import { apiClient, type ExecutiveActivityItem, type ExecutiveDashboardReport, type ExecutiveMetrics } from "@/lib/apiClient";
+import { executiveFailureMessage } from "@/lib/liveSurfaceAcceptance";
 import "./ExecutiveDashboardLive.css";
 
 type PeriodOffset = 0 | -1 | -2;
@@ -23,14 +24,6 @@ function money(piastres: number) {
 
 function integer(value: number) {
   return new Intl.NumberFormat("ar-EG").format(value);
-}
-
-function failureMessage(reason: unknown) {
-  if (reason instanceof ApiRequestError && reason.code === "REPORT_SOURCE_UNAVAILABLE") {
-    const labels: Record<string, string> = { branches: "الفروع", students: "الطلاب", enrollments: "التسجيلات", sessions: "الجلسات", attendance: "الحضور", collections: "التحصيل", approvedExpenses: "المصروفات المعتمدة", pendingApprovals: "الموافقات" };
-    return `تعذر قراءة مصدر التقرير: ${labels[reason.source ?? ""] ?? reason.source ?? "غير معروف"}. لم نعرض بدائل تجريبية.`;
-  }
-  return reason instanceof Error ? reason.message : "تعذر تحميل التقرير التنفيذي من الخادم.";
 }
 
 function Kpi({ icon, title, value, caption, tone }: { icon: React.ReactNode; title: string; value: string; caption: string; tone: "blue" | "teal" | "violet" | "amber" }) {
@@ -80,7 +73,7 @@ export default function ExecutiveDashboardLive() {
       })
       .catch(reason => {
         if (cancelled) return;
-        const message = failureMessage(reason);
+        const message = executiveFailureMessage(reason);
         setError(message);
         toast.error(message);
       })
@@ -96,7 +89,7 @@ export default function ExecutiveDashboardLive() {
       .then(result => { if (!cancelled) setActivity(result.items); })
       .catch(reason => {
         if (cancelled) return;
-        const message = failureMessage(reason);
+        const message = executiveFailureMessage(reason);
         setActivityError(message);
         toast.error(`تعذر تحميل سجل التدقيق: ${message}`);
       })

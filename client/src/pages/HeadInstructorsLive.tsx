@@ -6,6 +6,7 @@ import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient, type EvaluationStatusSummary, type GroupRecord, type NotificationRecord, type SchedulingInstructor, type SessionRecord } from "@/lib/apiClient";
+import { mergeR03LiveResults } from "@/lib/liveSurfaceAcceptance";
 import "./HeadInstructorsLive.css";
 
 type LiveData = {
@@ -74,23 +75,9 @@ export default function HeadInstructorsLive() {
         apiClient.evaluationStatusSummary(),
         apiClient.listNotifications(true),
       ]);
-      const coreFailures = [groupsResult, instructorsResult, sessionsResult].filter(result => result.status === "rejected");
-      if (coreFailures.length > 0) throw new Error("تعذر تحميل بيانات المجموعات أو المدربين أو الجلسات الأساسية.");
-      const warnings: string[] = [];
-      const evaluations = evaluationsResult.status === "fulfilled"
-        ? evaluationsResult.value
-        : { branchId: me.branchId, counts: { DRAFT: 0, SUBMITTED: 0, CHANGES_REQUESTED: 0, PUBLISHED: 0 } };
-      if (evaluationsResult.status === "rejected") warnings.push("ملخص التقييمات غير متاح مؤقتًا.");
-      const notifications = notificationsResult.status === "fulfilled" ? notificationsResult.value : { items: [], total: 0 };
-      if (notificationsResult.status === "rejected") warnings.push("التنبيهات غير متاحة مؤقتًا.");
-      setData({
-        groups: groupsResult.status === "fulfilled" ? groupsResult.value.items : [],
-        instructors: instructorsResult.status === "fulfilled" ? instructorsResult.value.items : [],
-        sessions: sessionsResult.status === "fulfilled" ? sessionsResult.value.items : [],
-        evaluations,
-        notifications: notifications.items,
-      });
-      setWarning(warnings.length > 0 ? warnings.join(" ") : null);
+      const merged = mergeR03LiveResults(groupsResult, instructorsResult, sessionsResult, evaluationsResult, notificationsResult, me.branchId);
+      setData(merged.data);
+      setWarning(merged.warnings.length > 0 ? merged.warnings.join(" ") : null);
     } catch (cause) {
       setData(null);
       setError(cause instanceof Error ? cause.message : "تعذر تحميل بيانات الفرع من الخادم.");
