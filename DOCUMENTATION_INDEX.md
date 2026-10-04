@@ -1,7 +1,9 @@
 # Mada Academy — Documentation Index
 
 **Last reviewed:** 4 October 2026  
-**Repository truth:** `main` after PR #42 (`ecf23be`)
+**Repository truth:** `main` after PR #44 (`8b76844`)
+
+> For a complete handoff to a new Agent, read [AGENT_HANDOFF.md](AGENT_HANDOFF.md) first. It contains the architecture, role map, current baseline, commands, security rules, and exact ZIP inclusion/exclusion rules.
 
 ## How to read the documentation
 
