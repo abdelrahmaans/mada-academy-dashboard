@@ -35,7 +35,7 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 
 ## CI and verified baseline
 
-The current merged baseline includes PR #41 (UI/flow hardening) and PR #42 (optional analytics and evidence filename fix). Local frontend validation is green: Vitest **13/13**, `pnpm check`, `pnpm build`, `git diff --check`, and browser E2E **7/7** using Chromium, including invoice creation, payment, over-collection rejection, evidence upload/download, role isolation, anonymous redirect, and logout. Backend CI and integration evidence are recorded in `BACKEND_STATUS.md`; no real deployment secrets are stored in Git.
+The current merged baseline includes PR #41 (UI/flow hardening) and PR #42 (optional analytics and evidence filename fix). Local frontend validation is green: Vitest **13/13**, `pnpm check`, `pnpm build`, `git diff --check`, and browser E2E **7/7** using Chromium, including invoice creation, payment, over-collection rejection, evidence upload/download, role isolation, anonymous redirect, and logout. Backend CI and integration evidence are recorded in the GitHub checks and backend integration-test suite; no real deployment secrets are stored in Git.
 
 ## UI / Flow / Architecture review — 4 October 2026
 
