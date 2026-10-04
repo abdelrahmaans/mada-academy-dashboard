@@ -105,4 +105,26 @@ public sealed class PasswordLoginSecurityApiTests
         using var finalResponse = lastResponse ?? throw new InvalidOperationException("The login rate-limit loop produced no response.");
         Assert.Equal(HttpStatusCode.TooManyRequests, finalResponse.StatusCode);
     }
+
+    [Fact]
+    public async Task Refresh_RateLimitsSensitiveRequestsPerClientIp()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var client = factory.CreateClient();
+
+        for (var attempt = 1; attempt <= 30; attempt++)
+        {
+            using var response = await client.PostAsJsonAsync("/api/v1/auth/refresh", new
+            {
+                refreshToken = "invalid-refresh-token"
+            });
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
+
+        using var limited = await client.PostAsJsonAsync("/api/v1/auth/refresh", new
+        {
+            refreshToken = "invalid-refresh-token"
+        });
+        Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
+    }
 }

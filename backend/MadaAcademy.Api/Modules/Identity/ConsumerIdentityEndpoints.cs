@@ -4,6 +4,7 @@ using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace MadaAcademy.Api.Modules.Identity;
 
@@ -13,7 +14,7 @@ public static class ConsumerIdentityEndpoints
     {
         var staff = endpoints.MapGroup("/api/v1").RequireAuthorization("staff");
         staff.MapGet("/students/{studentId:guid}/consumer-links", ListLinksAsync);
-        staff.MapGet("/students/{studentId:guid}/consumer-accounts", SearchConsumerAccountsAsync);
+        staff.MapGet("/students/{studentId:guid}/consumer-accounts", SearchConsumerAccountsAsync).RequireRateLimiting("consumer-lookup");
         staff.MapPost("/students/{studentId:guid}/student-account", LinkStudentAccountAsync);
         staff.MapDelete("/students/{studentId:guid}/student-account", UnlinkStudentAccountAsync);
         staff.MapPost("/students/{studentId:guid}/guardians", LinkGuardianAsync);

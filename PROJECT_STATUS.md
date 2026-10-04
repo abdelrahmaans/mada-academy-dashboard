@@ -35,7 +35,7 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 
 ## CI and verified baseline
 
-The current merged baseline includes PR #41 (UI/flow hardening), PR #42 (optional analytics and evidence filename fix), and PR #46 (CI/security/legacy cleanup). Local frontend validation is green: Vitest **15/15** on main, `pnpm check`, `pnpm build`, `git diff --check`, and browser E2E **7/7** using Chromium. Backend CI and integration evidence are recorded in the GitHub checks and backend integration-test suite; no real deployment secrets are stored in Git.
+The current merged baseline includes PR #41 (UI/flow hardening), PR #42 (optional analytics and evidence filename fix), and PR #46 (CI/security/legacy cleanup). Local frontend validation is green: Vitest **18/18**, `pnpm check`, `pnpm build`, `git diff --check`, and browser E2E **7/7** using Chromium. Backend CI and integration evidence are recorded in the GitHub checks and backend integration-test suite; no real deployment secrets are stored in Git.
 
 ## LIVE acceptance evidence — 4 October 2026
 
@@ -46,7 +46,7 @@ The auditable R01/R03/R04 endpoint, role/scope, failure, empty-state, and previe
 تمت مراجعة R00–R09. أُضيفت route guards صريحة حسب الدور، حماية للـworkspace والأسطح التشغيلية، فصل LIVE/DEMO في الأغلفة الحية، stylesheet مشترك RTL/responsive، تصميم Academy Bootstrap، وE2E للـanonymous redirect والعزل والخروج.
 
 - `pnpm check`: PASS
-- `pnpm test`: PASS — 15/15 on main; this branch adds 3 acceptance tests
+- `pnpm test`: PASS — 18/18 in the current frontend suite
 - `pnpm build`: PASS
 - الجولة الأولى من E2E: 6/7، وتم تعديل assertion العزل لقبول الرفض الصريح أو العودة الآمنة إلى login.
 - Marketing ما زال Preview/local ويحتاج API قبل اعتباره LIVE.
@@ -54,7 +54,7 @@ The auditable R01/R03/R04 endpoint, role/scope, failure, empty-state, and previe
 
 التفاصيل الكاملة في [UI_FLOW_REVIEW_STATUS.md](UI_FLOW_REVIEW_STATUS.md).
 
-Follow-up fixes prepared after PR #41: analytics is now loaded only when both optional environment values exist, so local builds no longer emit placeholder URL warnings; expense evidence downloads now preserve and use the uploaded/API filename. Full local validation remains green: 13/13 unit tests, build, and 7/7 browser E2E.
+Follow-up fixes prepared after PR #41: analytics is now loaded only when both optional environment values exist, so local builds no longer emit placeholder URL warnings; expense evidence downloads now preserve and use the uploaded/API filename. Full local validation remains green: 18/18 unit tests, build, and 7/7 browser E2E.
 
 ## OTP status
 
@@ -62,6 +62,14 @@ Follow-up fixes prepared after PR #41: analytics is now loaded only when both op
 - Non-Development currently uses `UnconfiguredSmsMessageSender` and fails closed; there is no live SMS. **Do not set production to Development** and do not use a universal fixed OTP.
 - User permits a temporary no-cost solution. A restricted staff-assisted pilot is proposed in [OTP_MVP_TEMPORARY_PLAN.md](OTP_MVP_TEMPORARY_PLAN.md), but is not implemented or enabled.
 - Password recovery is not implemented.
+
+## Authentication and proxy security boundaries
+
+- Password login has persisted lockout and an in-memory per-instance IP limiter; OTP, invitation, and consumer phone lookup routes require separate IP-based limits.
+- The API must call forwarded-header middleware before rate limiting, and only trusts `X-Forwarded-For`/`X-Forwarded-Proto` from IPs listed in `MADA_TRUSTED_PROXIES`.
+- `MADA_TRUSTED_PROXIES` is intentionally unset by default; arbitrary forwarded headers must never be trusted.
+- Multi-instance/distributed limiter behavior is not yet production evidence. A shared limiter or documented single-instance constraint is required before horizontal scaling.
+- Five failed password attempts can lock a known account for the configured window. This is an explicit availability/security trade-off and requires monitoring and recovery procedures before production.
 
 ## Next milestone and open issues
 
@@ -73,3 +81,12 @@ Open implementation blockers and product debt:
 2. Invoice cancellation/correction/refund and expanded financial workflows remain outside the current slice and must not be implied as supported.
 3. Production SMS provider and password recovery are later identity work; interim OTP mode remains opt-in, limited, audited, and never a hard-coded/shared code.
 4. Run [CONSUMER_STAGING_SMOKE_TEST.md](CONSUMER_STAGING_SMOKE_TEST.md) against a controlled non-production API when deployment is authorized; local E2E is already automated in `e2e/critical-flows.spec.ts`.
+5. `deploy-pages.yml` publishes a static frontend to GitHub Pages. It is intentionally not a production API deployment; LIVE screens require `VITE_API_URL` to point to an accessible HTTPS API, otherwise the published site is only a preview shell or shows its explicit unavailable/empty states.
+6. Large-page decomposition remains incremental. The current open refactor PRs cover Head Instructors, Schedule, Students, Platform Console, Approvals, and Instructor Desk; they are not part of `main` until reviewed and merged.
+7. `client/src/components/Map.tsx` and `ManusDialog.tsx` have no operational imports outside their own files in the current source inventory. They remain pending deletion in a separate cleanup PR to avoid mixing legacy removal with behavior/security changes.
+
+## Frontend coverage and architecture debt
+
+- The frontend unit suite currently has 5 test files covering 18 tests; it does not yet provide broad page-level mutation or authorization coverage.
+- Finance mutation and consumer scope behavior remain primarily covered by backend integration tests and the critical browser flow; dedicated frontend tests are still a follow-up.
+- PostgreSQL coverage is separate from the InMemory E2E path. CI backend integration coverage is required for persistence-specific regressions; local sandbox runs without the .NET SDK cannot reproduce those tests.
