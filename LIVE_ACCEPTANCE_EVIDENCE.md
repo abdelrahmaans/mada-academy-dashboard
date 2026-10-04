@@ -39,6 +39,8 @@ Automated evidence: `mergeR03LiveResults` and `liveSurfaceAcceptance.test.ts` co
 | Non-live analytics | No mastery/checkpoint analytics are presented as operational values            | Broader analytics remain outside the current live contract                                                  |
 | Failure/retry      | Sessions, attendance, and evaluations have separate loading/error/retry states | A failed read does not render demo data                                                                     |
 
+Browser evidence: `critical-flows.spec.ts` covers the R04 completed-session disabled state and the attendance loading → error → retry flow. The retry action re-fetches the selected session without changing the scope or inserting fixture students.
+
 ## Verification commands
 
 ```bash

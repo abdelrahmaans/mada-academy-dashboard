@@ -88,6 +88,7 @@ export default function InstructorDeskLive() {
   const [attendanceDraft, setAttendanceDraft] = useState<
     Record<string, AttendanceDraft>
   >({});
+  const [attendanceRetryKey, setAttendanceRetryKey] = useState(0);
   const [evaluations, setEvaluations] = useState<SessionEvaluationRecord[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState("");
   const [score, setScore] = useState<number | "">("");
@@ -196,7 +197,7 @@ export default function InstructorDeskLive() {
     return () => {
       cancelled = true;
     };
-  }, [selectedSessionId]);
+  }, [selectedSessionId, attendanceRetryKey]);
 
   useEffect(() => {
     if (!selectedSessionId || view !== "evaluations") return;
@@ -533,6 +534,9 @@ export default function InstructorDeskLive() {
                 <section className="r04-live-alert" role="alert">
                   <strong>تعذر تحميل أو حفظ بيانات الحضور</strong>
                   <p>{attendanceError} لم يتم عرض قائمة طلاب تجريبية.</p>
+                  <button type="button" onClick={() => setAttendanceRetryKey(value => value + 1)}>
+                    إعادة المحاولة
+                  </button>
                 </section>
               )}
               {!attendanceLoading &&

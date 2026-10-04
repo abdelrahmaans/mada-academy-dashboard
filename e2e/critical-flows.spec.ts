@@ -96,6 +96,34 @@ test.describe("critical local MVP journeys", () => {
     await expect(page.getByText("Lina Omar", { exact: true })).toBeVisible();
     await expect(page.getByText("Youssef Ahmed", { exact: true })).toHaveCount(0);
   });
+
+  test("R04 disables attendance mutations for a completed session", async ({ page }) => {
+    await login(page, "staff", "+201000000010");
+    await expect(page).toHaveURL(/\/instructor-desk$/);
+    await expect(page.getByRole("heading", { name: "جلساتي وسير العمل", exact: true })).toBeVisible();
+
+    await page.getByRole("button", { name: /الحضور/ }).click();
+    const sessionSelect = page.locator("select").first();
+    await expect(sessionSelect).toBeVisible();
+    await sessionSelect.selectOption("50000000-0000-0000-0000-000000000003");
+    await expect(page.getByRole("button", { name: "حفظ الحضور", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "إتمام الجلسة", exact: true })).toBeDisabled();
+    await expect(page.getByLabel("حضور Youssef Ahmed")).toBeDisabled();
+  });
+
+  test("R04 preserves the live boundary when attendance loading fails", async ({ page }) => {
+    await page.route("**/attendance", async route => {
+      await new Promise(resolve => setTimeout(resolve, 750));
+      await route.abort();
+    });
+    await login(page, "staff", "+201000000010");
+    await expect(page).toHaveURL(/\/instructor-desk$/);
+    await page.getByRole("button", { name: /الحضور/ }).click();
+    await expect(page.getByText("جارٍ تحميل كشف الطلاب من الخادم…", { exact: true })).toBeVisible();
+    await expect(page.getByRole("alert")).toContainText("تعذر تحميل أو حفظ بيانات الحضور");
+    await expect(page.getByRole("alert")).toContainText("لم يتم عرض قائمة طلاب تجريبية");
+    await expect(page.getByRole("button", { name: "إعادة المحاولة", exact: true })).toBeVisible();
+  });
 });
 
 
