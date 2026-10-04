@@ -50,6 +50,8 @@ At PR #38, all four GitHub checks passed, including frontend TypeScript/unit/bui
 
 التفاصيل الكاملة في [UI_FLOW_REVIEW_STATUS.md](UI_FLOW_REVIEW_STATUS.md).
 
+Follow-up fixes prepared after PR #41: analytics is now loaded only when both optional environment values exist, so local builds no longer emit placeholder URL warnings; expense evidence downloads now preserve and use the uploaded/API filename. Full local validation remains green: 13/13 unit tests, build, and 7/7 browser E2E.
+
 ## OTP status
 
 - `DevelopmentSmsMessageSender` is registered only in ASP.NET Development and generates a random code for development/test use.
