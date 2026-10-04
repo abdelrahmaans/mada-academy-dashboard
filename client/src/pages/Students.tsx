@@ -34,17 +34,27 @@ import {
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { ErrorState, LoadingState } from "@/components/FeedbackStates";
-import { apiClient, type ConsumerAccountLookupRecord, type ConsumerInvitationDelivery, type ConsumerLinksResponse, type StudentRecord } from "@/lib/apiClient";
+import {
+  apiClient,
+  type ConsumerAccountLookupRecord,
+  type ConsumerInvitationDelivery,
+  type ConsumerLinksResponse,
+  type StudentRecord,
+} from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  AddStudentDialog,
+  StudentsTableSection,
+} from "@/components/StudentsViews";
 
-type StudentStatus = "active" | "on_hold" | "inactive" | "graduated";
-type StudentSource =
+export type StudentStatus = "active" | "on_hold" | "inactive" | "graduated";
+export type StudentSource =
   | "walk_in"
   | "landing_page"
   | "referral"
   | "social_media"
   | "event";
-type Student = {
+export type Student = {
   id: string;
   name: string;
   birthDate: string;
@@ -212,8 +222,20 @@ const LIVE_BRANCH_LABELS: Record<string, string> = {
   "cccccccc-cccc-cccc-cccc-cccccccccccc": "مصر الجديدة",
 };
 function mapLiveStudent(record: StudentRecord): Student {
-  const status: StudentStatus = record.status === "ACTIVE" ? "active" : record.status === "SUSPENDED" ? "on_hold" : record.status === "GRADUATED" ? "graduated" : "inactive";
-  const initials = record.fullName.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join("");
+  const status: StudentStatus =
+    record.status === "ACTIVE"
+      ? "active"
+      : record.status === "SUSPENDED"
+        ? "on_hold"
+        : record.status === "GRADUATED"
+          ? "graduated"
+          : "inactive";
+  const initials = record.fullName
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map(part => part[0])
+    .join("");
   return {
     id: record.id,
     name: record.fullName,
@@ -222,8 +244,13 @@ function mapLiveStudent(record: StudentRecord): Student {
     parentName: "غير متاح من عقد الطلاب الحالي",
     parentPhone: "—",
     relation: "ولي أمر",
-    branch: LIVE_BRANCH_LABELS[record.branchId] ?? `فرع ${record.branchId.slice(0, 8)}`,
-    course: record.activeEnrollmentCount > 0 ? "يوجد تسجيل نشط" : "لم يتم التسجيل في كورس",
+    branch:
+      LIVE_BRANCH_LABELS[record.branchId] ??
+      `فرع ${record.branchId.slice(0, 8)}`,
+    course:
+      record.activeEnrollmentCount > 0
+        ? "يوجد تسجيل نشط"
+        : "لم يتم التسجيل في كورس",
     source: "walk_in",
     status,
     joined: "من قاعدة البيانات",
@@ -232,7 +259,7 @@ function mapLiveStudent(record: StudentRecord): Student {
   };
 }
 
-type StudentJourneySummary = {
+export type StudentJourneySummary = {
   attendance: string;
   attendanceNote: string;
   nextSession: string;
@@ -321,8 +348,12 @@ function BrandMark() {
 function StudentPage() {
   const [, setLocation] = useLocation();
   const { logout } = useAuth();
-  const [students, setStudents] = useState<Student[]>(apiClient.hasSession() ? [] : initialStudents);
-  const [dataMode, setDataMode] = useState<"demo" | "live">(apiClient.hasSession() ? "live" : "demo");
+  const [students, setStudents] = useState<Student[]>(
+    apiClient.hasSession() ? [] : initialStudents
+  );
+  const [dataMode, setDataMode] = useState<"demo" | "live">(
+    apiClient.hasSession() ? "live" : "demo"
+  );
   const [dataLoading, setDataLoading] = useState(apiClient.hasSession());
   const [dataError, setDataError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -334,15 +365,19 @@ function StudentPage() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [detailsStudent, setDetailsStudent] = useState<Student | null>(null);
-  const [consumerLinks, setConsumerLinks] = useState<ConsumerLinksResponse | null>(null);
+  const [consumerLinks, setConsumerLinks] =
+    useState<ConsumerLinksResponse | null>(null);
   const [linksLoading, setLinksLoading] = useState(false);
   const [linksError, setLinksError] = useState<string | null>(null);
   const [linkPhone, setLinkPhone] = useState("");
-  const [lookupResults, setLookupResults] = useState<ConsumerAccountLookupRecord[] | null>(null);
+  const [lookupResults, setLookupResults] = useState<
+    ConsumerAccountLookupRecord[] | null
+  >(null);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [invitationLoading, setInvitationLoading] = useState(false);
-  const [invitationResult, setInvitationResult] = useState<ConsumerInvitationDelivery | null>(null);
+  const [invitationResult, setInvitationResult] =
+    useState<ConsumerInvitationDelivery | null>(null);
   const [linkingAccountId, setLinkingAccountId] = useState<string | null>(null);
   const [linkKind, setLinkKind] = useState<"guardian" | "student">("guardian");
   const [linkRelationship, setLinkRelationship] = useState("ولي أمر");
@@ -359,7 +394,8 @@ function StudentPage() {
     if (!apiClient.hasSession()) return;
     let cancelled = false;
     setDataLoading(true);
-    apiClient.listStudents()
+    apiClient
+      .listStudents()
       .then(response => {
         if (cancelled) return;
         setStudents(response.items.map(mapLiveStudent));
@@ -371,24 +407,47 @@ function StudentPage() {
         if (cancelled) return;
         setDataMode("live");
         setStudents([]);
-        setDataError(error instanceof Error ? error.message : "تعذر الاتصال ببيانات الطلاب");
+        setDataError(
+          error instanceof Error ? error.message : "تعذر الاتصال ببيانات الطلاب"
+        );
       })
       .finally(() => {
         if (!cancelled) setDataLoading(false);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    setLookupResults(null); setLookupError(null); setLinkPhone("");
-    if (dataMode !== "live" || !detailsStudent) { setConsumerLinks(null); setLinksError(null); return; }
+    setLookupResults(null);
+    setLookupError(null);
+    setLinkPhone("");
+    if (dataMode !== "live" || !detailsStudent) {
+      setConsumerLinks(null);
+      setLinksError(null);
+      return;
+    }
     let cancelled = false;
-    setLinksLoading(true); setLinksError(null);
-    apiClient.studentConsumerLinks(detailsStudent.id)
-      .then(result => { if (!cancelled) setConsumerLinks(result); })
-      .catch(error => { if (!cancelled) setLinksError(error instanceof Error ? error.message : "تعذر تحميل روابط الحسابات"); })
-      .finally(() => { if (!cancelled) setLinksLoading(false); });
-    return () => { cancelled = true; };
+    setLinksLoading(true);
+    setLinksError(null);
+    apiClient
+      .studentConsumerLinks(detailsStudent.id)
+      .then(result => {
+        if (!cancelled) setConsumerLinks(result);
+      })
+      .catch(error => {
+        if (!cancelled)
+          setLinksError(
+            error instanceof Error ? error.message : "تعذر تحميل روابط الحسابات"
+          );
+      })
+      .finally(() => {
+        if (!cancelled) setLinksLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [dataMode, detailsStudent]);
 
   const filteredStudents = useMemo(() => {
@@ -415,7 +474,13 @@ function StudentPage() {
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE
   );
-  const branchOptions = dataMode === "live" ? ["كل الفروع", ...Array.from(new Set(students.map(student => student.branch)))] : branches;
+  const branchOptions =
+    dataMode === "live"
+      ? [
+          "كل الفروع",
+          ...Array.from(new Set(students.map(student => student.branch))),
+        ]
+      : branches;
   const pausedCount = students.filter(
     student => student.status === "on_hold"
   ).length;
@@ -443,7 +508,10 @@ function StudentPage() {
   const submitStudent = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (dataMode === "live") {
-      toast("إضافة الطالب تحتاج endpoint التسجيل", { description: "تم ربط القراءة الحية أولًا؛ لن يتم إيهامك بأن الإضافة حُفظت." });
+      toast("إضافة الطالب تحتاج endpoint التسجيل", {
+        description:
+          "تم ربط القراءة الحية أولًا؛ لن يتم إيهامك بأن الإضافة حُفظت.",
+      });
       return;
     }
     if (
@@ -499,12 +567,21 @@ function StudentPage() {
   const searchConsumerAccounts = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!detailsStudent || !linkPhone.trim()) return;
-    setLookupLoading(true); setLookupError(null); setLookupResults(null); setInvitationResult(null);
+    setLookupLoading(true);
+    setLookupError(null);
+    setLookupResults(null);
+    setInvitationResult(null);
     try {
-      const result = await apiClient.searchConsumerAccounts(detailsStudent.id, linkPhone.trim(), linkKind === "student" ? "student" : "parent");
+      const result = await apiClient.searchConsumerAccounts(
+        detailsStudent.id,
+        linkPhone.trim(),
+        linkKind === "student" ? "student" : "parent"
+      );
       setLookupResults(result.items);
     } catch (error) {
-      setLookupError(error instanceof Error ? error.message : "تعذر البحث عن الحساب");
+      setLookupError(
+        error instanceof Error ? error.message : "تعذر البحث عن الحساب"
+      );
     } finally {
       setLookupLoading(false);
     }
@@ -512,17 +589,28 @@ function StudentPage() {
 
   const inviteConsumerAccount = async () => {
     if (!detailsStudent || !linkPhone.trim()) return;
-    setInvitationLoading(true); setLookupError(null); setInvitationResult(null);
+    setInvitationLoading(true);
+    setLookupError(null);
+    setInvitationResult(null);
     try {
-      const result = await apiClient.createConsumerInvitation(detailsStudent.id, {
-        phone: linkPhone.trim(),
-        accountType: linkKind === "student" ? "student" : "parent",
-        relationship: linkKind === "guardian" ? linkRelationship : undefined,
-      });
+      const result = await apiClient.createConsumerInvitation(
+        detailsStudent.id,
+        {
+          phone: linkPhone.trim(),
+          accountType: linkKind === "student" ? "student" : "parent",
+          relationship: linkKind === "guardian" ? linkRelationship : undefined,
+        }
+      );
       setInvitationResult(result);
-      toast.success("تم إنشاء دعوة الحساب", { description: result.developmentCode ? "رمز الاختبار ظاهر أسفل البحث." : "ستصل الرسالة إذا كان إرسال SMS مفعّلًا في بيئة التشغيل." });
+      toast.success("تم إنشاء دعوة الحساب", {
+        description: result.developmentCode
+          ? "رمز الاختبار ظاهر أسفل البحث."
+          : "ستصل الرسالة إذا كان إرسال SMS مفعّلًا في بيئة التشغيل.",
+      });
     } catch (error) {
-      setLookupError(error instanceof Error ? error.message : "تعذر إرسال دعوة الحساب");
+      setLookupError(
+        error instanceof Error ? error.message : "تعذر إرسال دعوة الحساب"
+      );
     } finally {
       setInvitationLoading(false);
     }
@@ -532,11 +620,21 @@ function StudentPage() {
     if (!detailsStudent) return;
     setLinkingAccountId(account.id);
     try {
-      if (account.accountType === "student") await apiClient.linkStudentAccount(detailsStudent.id, account.id);
-      else await apiClient.linkGuardian(detailsStudent.id, { userAccountId: account.id, relationship: linkRelationship });
+      if (account.accountType === "student")
+        await apiClient.linkStudentAccount(detailsStudent.id, account.id);
+      else
+        await apiClient.linkGuardian(detailsStudent.id, {
+          userAccountId: account.id,
+          relationship: linkRelationship,
+        });
       setConsumerLinks(await apiClient.studentConsumerLinks(detailsStudent.id));
-      setLookupResults(null); setLinkPhone("");
-      toast.success(account.accountType === "student" ? "تم ربط حساب الطالب" : "تم ربط حساب ولي الأمر");
+      setLookupResults(null);
+      setLinkPhone("");
+      toast.success(
+        account.accountType === "student"
+          ? "تم ربط حساب الطالب"
+          : "تم ربط حساب ولي الأمر"
+      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "تعذر ربط الحساب");
     } finally {
@@ -544,10 +642,20 @@ function StudentPage() {
     }
   };
 
-  const unlinkConsumerAccount = async (kind: "guardian" | "student", accountId: string) => {
-    if (!detailsStudent || !window.confirm("هل تريد إزالة هذا الربط؟ سيفقد الحساب وصوله إلى بيانات الطالب عبر بوابته.")) return;
+  const unlinkConsumerAccount = async (
+    kind: "guardian" | "student",
+    accountId: string
+  ) => {
+    if (
+      !detailsStudent ||
+      !window.confirm(
+        "هل تريد إزالة هذا الربط؟ سيفقد الحساب وصوله إلى بيانات الطالب عبر بوابته."
+      )
+    )
+      return;
     try {
-      if (kind === "student") await apiClient.unlinkStudentAccount(detailsStudent.id);
+      if (kind === "student")
+        await apiClient.unlinkStudentAccount(detailsStudent.id);
       else await apiClient.unlinkGuardian(detailsStudent.id, accountId);
       setConsumerLinks(await apiClient.studentConsumerLinks(detailsStudent.id));
       toast.success("تم إلغاء ربط الحساب");
@@ -652,7 +760,9 @@ function StudentPage() {
           </button>
           <button
             className="nav-link"
-            onClick={() => { void logout().then(() => setLocation("/login")); }}
+            onClick={() => {
+              void logout().then(() => setLocation("/login"));
+            }}
           >
             <LogOut size={19} />
             <span>تسجيل الخروج</span>
@@ -786,7 +896,9 @@ function StudentPage() {
             </div>
           </section>
 
-          {dataLoading && <LoadingState label="جارٍ تحميل الطلاب من الـAPI…" compact />}
+          {dataLoading && (
+            <LoadingState label="جارٍ تحميل الطلاب من الـAPI…" compact />
+          )}
           {dataError && (
             <ErrorState
               compact
@@ -795,7 +907,10 @@ function StudentPage() {
             />
           )}
           {!dataLoading && !dataError && dataMode === "live" && (
-            <div className="role-feedback-state role-feedback-success role-feedback-compact" role="status">
+            <div
+              className="role-feedback-state role-feedback-success role-feedback-compact"
+              role="status"
+            >
               البيانات LIVE من PostgreSQL · القراءة مقيدة بنطاق الحساب الحالي
             </div>
           )}
@@ -858,252 +973,27 @@ function StudentPage() {
             </article>
           </section>
 
-          <section className="panel students-panel">
-            <div className="students-panel-heading">
-              <div className="panel-title-group">
-                <span className="panel-icon panel-icon-teal">
-                  <Users size={18} />
-                </span>
-                <div>
-                  <h2>قائمة الطلاب</h2>
-                  <p>{filteredStudents.length} سجل معروض من {dataMode === "live" ? "الـAPI الحقيقي" : "بيانات العينة"}</p>
-                </div>
-              </div>
-              <button
-                className="students-more"
-                aria-label="المزيد"
-                onClick={() => toast("خيارات القائمة قيد التجهيز")}
-              >
-                <MoreHorizontal size={20} />
-              </button>
-            </div>
-            <div className="student-toolbar">
-              <div
-                className="student-filter-tabs"
-                role="group"
-                aria-label="فلترة حسب الحالة"
-              >
-                {[
-                  { key: "all", label: "الكل", count: students.length },
-                  {
-                    key: "active",
-                    label: "نشط",
-                    count: students.filter(
-                      student => student.status === "active"
-                    ).length,
-                  },
-                  { key: "on_hold", label: "موقوف مؤقتًا", count: pausedCount },
-                  {
-                    key: "graduated",
-                    label: "متخرج",
-                    count: students.filter(
-                      student => student.status === "graduated"
-                    ).length,
-                  },
-                ].map(item => (
-                  <button
-                    key={item.key}
-                    className={
-                      statusFilter === item.key
-                        ? "filter-tab active"
-                        : "filter-tab"
-                    }
-                    onClick={() => {
-                      setStatusFilter(item.key as StudentStatus | "all");
-                      setPage(1);
-                    }}
-                  >
-                    {item.label}
-                    <span>{String(item.count).padStart(2, "0")}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="student-toolbar-actions">
-                <label className="table-search">
-                  <Search size={16} />
-                  <input
-                    placeholder="ابحث بالاسم أو رقم الطالب..."
-                    value={query}
-                    onChange={event => {
-                      setQuery(event.target.value);
-                      setPage(1);
-                    }}
-                  />
-                  <kbd>/</kbd>
-                </label>
-                <label className="branch-filter">
-                  <MapPin size={14} />
-                  <select
-                    value={branchFilter}
-                    onChange={event => {
-                      setBranchFilter(event.target.value);
-                      setPage(1);
-                    }}
-                    aria-label="اختيار الفرع"
-                  >
-                    {branchOptions.map(branch => (
-                      <option key={branch}>{branch}</option>
-                    ))}
-                  </select>
-                  <ChevronDown size={13} />
-                </label>
-                <button
-                  className="filter-button"
-                  onClick={() =>
-                    toast("استخدم البحث والحالة والفرع لتصفية القائمة")
-                  }
-                >
-                  <Filter size={15} />
-                  <span>تصفية</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="students-table-wrap">
-              <table className="students-table">
-                <thead>
-                  <tr>
-                    <th>الطالب</th>
-                    <th>الكورس الحالي</th>
-                    <th>ولي الأمر</th>
-                    <th>العمر</th>
-                    <th>الفرع</th>
-                    <th>الحالة</th>
-                    <th>تاريخ التسجيل</th>
-                    <th aria-label="التفاصيل" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleStudents.map(student => {
-                    const birthTime = new Date(student.birthDate).getTime();
-                    const age = Number.isNaN(birthTime)
-                      ? null
-                      : Math.max(1, Math.floor((Date.now() - birthTime) / 31557600000));
-                    return (
-                      <tr key={student.id}>
-                        <td data-label="الطالب">
-                          <button
-                            className="student-identity"
-                            onClick={() => setDetailsStudent(student)}
-                          >
-                            <span
-                              className={`student-avatar avatar-${student.color}`}
-                            >
-                              {student.initials}
-                            </span>
-                            <span>
-                              <strong>{student.name}</strong>
-                              <small>{student.id}</small>
-                            </span>
-                          </button>
-                        </td>
-                        <td data-label="الكورس الحالي">
-                          <span className="student-course">
-                            <BookOpen size={14} />
-                            {student.course}
-                          </span>
-                        </td>
-                        <td data-label="ولي الأمر">
-                          <span className="guardian-cell">
-                            <strong>{student.parentName}</strong>
-                            <small>
-                              {student.relation} ·{" "}
-                              <b dir="ltr">{student.parentPhone}</b>
-                            </small>
-                          </span>
-                        </td>
-                        <td data-label="العمر">
-                          <span className="student-age">{age === null ? "—" : `${age} سنة`}</span>
-                        </td>
-                        <td data-label="الفرع">
-                          <span className="student-branch">
-                            <MapPin size={13} />
-                            {student.branch}
-                          </span>
-                        </td>
-                        <td data-label="الحالة">
-                          <span
-                            className={`student-status status-${student.status}`}
-                          >
-                            <i />
-                            {statusLabels[student.status]}
-                          </span>
-                        </td>
-                        <td data-label="تاريخ التسجيل">
-                          <span className="joined-date">{student.joined}</span>
-                        </td>
-                        <td data-label="التفاصيل">
-                          <button
-                            className="student-row-more"
-                            aria-label={`عرض ملف ${student.name}`}
-                            onClick={() => setDetailsStudent(student)}
-                          >
-                            <ChevronLeft size={17} />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {visibleStudents.length === 0 && (
-                    <tr>
-                      <td colSpan={8}>
-                        <div className="students-empty">
-                          <span className="empty-search-icon">
-                            <Search size={20} />
-                          </span>
-                          <strong>ملقيناش نتائج مطابقة</strong>
-                          <small>
-                            جرّب تغير البحث أو الفلاتر عشان تظهر سجلات تانية.
-                          </small>
-                          <button className="text-link" onClick={clearFilters}>
-                            مسح الفلاتر <X size={13} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <div className="students-table-footer">
-              <span>
-                عرض{" "}
-                <b>
-                  {visibleStudents.length ? (page - 1) * PAGE_SIZE + 1 : 0}–
-                  {Math.min(page * PAGE_SIZE, filteredStudents.length)}
-                </b>{" "}
-                من <b>{filteredStudents.length}</b> نتيجة{" "}
-                <small>· {dataMode === "live" ? "سجلات حقيقية" : "سجلات تجريبية"}</small>
-              </span>
-              <div className="pagination">
-                <button
-                  aria-label="الصفحة السابقة"
-                  disabled={page <= 1}
-                  onClick={() => setPage(current => current - 1)}
-                >
-                  <ChevronRight size={15} />
-                </button>
-                {Array.from({ length: pageCount }, (_, index) => index + 1).map(
-                  pageNumber => (
-                    <button
-                      key={pageNumber}
-                      className={pageNumber === page ? "current-page" : ""}
-                      onClick={() => setPage(pageNumber)}
-                    >
-                      {pageNumber}
-                    </button>
-                  )
-                )}
-                <button
-                  aria-label="الصفحة التالية"
-                  disabled={page >= pageCount}
-                  onClick={() => setPage(current => current + 1)}
-                >
-                  <ChevronLeft size={15} />
-                </button>
-              </div>
-            </div>
-          </section>
+          <StudentsTableSection
+            students={students}
+            filteredStudents={filteredStudents}
+            visibleStudents={visibleStudents}
+            dataMode={dataMode}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            pausedCount={pausedCount}
+            query={query}
+            setQuery={setQuery}
+            branchFilter={branchFilter}
+            setBranchFilter={setBranchFilter}
+            branchOptions={branchOptions}
+            setPage={setPage}
+            page={page}
+            pageCount={pageCount}
+            pageSize={PAGE_SIZE}
+            setDetailsStudent={setDetailsStudent}
+            clearFilters={clearFilters}
+            statusLabels={statusLabels}
+          />
           <div className="students-demo-note">
             <FileText size={14} />
             <span>
@@ -1114,157 +1004,39 @@ function StudentPage() {
           </div>
           <footer className="workspace-footer">
             <span>© مدى 2026</span>
-            <span>{dataMode === "live" ? "واجهة تشغيلية — بيانات الخادم" : "واجهة تجريبية — إصدار 0.1"}</span>
+            <span>
+              {dataMode === "live"
+                ? "واجهة تشغيلية — بيانات الخادم"
+                : "واجهة تجريبية — إصدار 0.1"}
+            </span>
           </footer>
         </div>
       </main>
 
       {addOpen && (
-        <div
-          className="dialog-backdrop"
-          role="presentation"
-          onMouseDown={event => {
-            if (event.target === event.currentTarget) {
-              setAddOpen(false);
-              resetForm();
-            }
+        <AddStudentDialog
+          studentName={studentName}
+          birthDate={birthDate}
+          gender={gender}
+          parentName={parentName}
+          parentPhone={parentPhone}
+          source={source}
+          newBranch={newBranch}
+          branches={branches}
+          sourceLabels={sourceLabels}
+          setStudentName={setStudentName}
+          setBirthDate={setBirthDate}
+          setGender={setGender}
+          setParentName={setParentName}
+          setParentPhone={setParentPhone}
+          setSource={setSource}
+          setNewBranch={setNewBranch}
+          onClose={() => {
+            setAddOpen(false);
+            resetForm();
           }}
-        >
-          <section
-            className="student-dialog students-form-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="add-student-title"
-          >
-            <div className="dialog-top">
-              <span className="dialog-mark">
-                <GraduationCap size={21} />
-              </span>
-              <button
-                className="icon-button"
-                aria-label="إغلاق"
-                onClick={() => {
-                  setAddOpen(false);
-                  resetForm();
-                }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <h2 id="add-student-title">إضافة طالب جديد</h2>
-            <p>أدخل بيانات الطالب وولي الأمر لبدء التسجيل في الفرع.</p>
-            <form onSubmit={submitStudent}>
-              <label className="form-field">
-                <span>
-                  اسم الطالب <b>*</b>
-                </span>
-                <input
-                  autoFocus
-                  value={studentName}
-                  onChange={event => setStudentName(event.target.value)}
-                  placeholder="الاسم بالكامل"
-                />
-              </label>
-              <div className="form-row">
-                <label className="form-field">
-                  <span>
-                    تاريخ الميلاد <b>*</b>
-                  </span>
-                  <input
-                    type="date"
-                    value={birthDate}
-                    onChange={event => setBirthDate(event.target.value)}
-                  />
-                </label>
-                <label className="form-field">
-                  <span>النوع</span>
-                  <select
-                    value={gender}
-                    onChange={event =>
-                      setGender(event.target.value as "male" | "female")
-                    }
-                  >
-                    <option value="male">ذكر</option>
-                    <option value="female">أنثى</option>
-                  </select>
-                </label>
-              </div>
-              <div className="form-row">
-                <label className="form-field">
-                  <span>
-                    اسم ولي الأمر <b>*</b>
-                  </span>
-                  <input
-                    value={parentName}
-                    onChange={event => setParentName(event.target.value)}
-                    placeholder="اسم ولي الأمر"
-                  />
-                </label>
-                <label className="form-field">
-                  <span>
-                    رقم الهاتف <b>*</b>
-                  </span>
-                  <input
-                    value={parentPhone}
-                    onChange={event => setParentPhone(event.target.value)}
-                    placeholder="01XXXXXXXXX"
-                    inputMode="tel"
-                    dir="ltr"
-                  />
-                </label>
-              </div>
-              <div className="form-row">
-                <label className="form-field">
-                  <span>الفرع</span>
-                  <select
-                    value={newBranch}
-                    onChange={event => setNewBranch(event.target.value)}
-                  >
-                    {branches.slice(1).map(branch => (
-                      <option key={branch}>{branch}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="form-field">
-                  <span>مصدر التسجيل</span>
-                  <select
-                    value={source}
-                    onChange={event =>
-                      setSource(event.target.value as StudentSource)
-                    }
-                  >
-                    {Object.entries(sourceLabels).map(([key, label]) => (
-                      <option key={key} value={key}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <div className="dialog-info">
-                <FileText size={15} />
-                <span>
-                  بيانات النموذج محلية للعرض فقط، ولن تُحفظ في قاعدة بيانات.
-                </span>
-              </div>
-              <div className="dialog-actions">
-                <button
-                  type="button"
-                  className="button button-secondary"
-                  onClick={() => {
-                    setAddOpen(false);
-                    resetForm();
-                  }}
-                >
-                  إلغاء
-                </button>
-                <button type="submit" className="button button-primary">
-                  <Plus size={16} /> إضافة الطالب
-                </button>
-              </div>
-            </form>
-          </section>
-        </div>
+          onSubmit={submitStudent}
+        />
       )}
 
       {detailsStudent && (
@@ -1343,99 +1115,313 @@ function StudentPage() {
                 <strong>{sourceLabels[detailsStudent.source]}</strong>
               </div>
             </div>
-            {dataMode === "live" && <section className="student-link-panel">
-              <div className="student-journey-heading"><div><strong>حسابات الطالب والأسرة</strong><span>إدارة الوصول إلى بوابتي الطالب وولي الأمر</span></div></div>
-              <div className="dialog-info"><ShieldCheck size={15} /><span>نسخة MVP بلا تكلفة SMS: في Development يظهر رمز عشوائي للاختبار فقط؛ لا يُقبل رمز ثابت في الإنتاج، ويظل الإرسال الحي مغلقًا حتى إعداد مزود رسائل.</span></div>
-              {linksLoading && <div className="dialog-info">جارٍ تحميل الروابط الحالية…</div>}
-              {linksError && <div className="dialog-info" role="alert">تعذر قراءة الروابط: {linksError}</div>}
-              {consumerLinks && <div className="detail-grid">
-                <div><small>حساب الطالب</small><strong>{consumerLinks.studentAccount ? `${consumerLinks.studentAccount.name ?? "حساب الطالب"} · ${consumerLinks.studentAccount.phone}` : "غير مرتبط"}</strong>{consumerLinks.studentAccount && <button type="button" className="button button-secondary" onClick={() => void unlinkConsumerAccount("student", consumerLinks.studentAccount!.id)}>إلغاء الربط</button>}</div>
-                <div><small>أولياء الأمور</small>{consumerLinks.guardians.length ? consumerLinks.guardians.map(guardian => <div key={guardian.id}><strong>{guardian.name ?? guardian.phone} · {guardian.relationship}</strong><button type="button" className="button button-secondary" onClick={() => void unlinkConsumerAccount("guardian", guardian.id)}>إلغاء الربط</button></div>) : <strong>لا يوجد حساب ولي أمر مرتبط</strong>}</div>
-              </div>}
-              <form onSubmit={searchConsumerAccounts}>
-                <div className="form-row">
-                  <label className="form-field"><span>نوع الربط</span><select value={linkKind} disabled={lookupLoading || invitationLoading} onChange={event => { setLinkKind(event.target.value as "guardian" | "student"); setLookupResults(null); setLookupError(null); setInvitationResult(null); }}><option value="guardian">حساب ولي أمر</option><option value="student">حساب الطالب نفسه</option></select></label>
-                  <label className="form-field"><span>رقم الهاتف</span><input type="tel" inputMode="tel" autoComplete="tel" value={linkPhone} disabled={lookupLoading || invitationLoading} onChange={event => { setLinkPhone(event.target.value); setLookupResults(null); setLookupError(null); setInvitationResult(null); }} placeholder="01012345678 أو +201012345678" dir="ltr" required /></label>
+            {dataMode === "live" && (
+              <section className="student-link-panel">
+                <div className="student-journey-heading">
+                  <div>
+                    <strong>حسابات الطالب والأسرة</strong>
+                    <span>إدارة الوصول إلى بوابتي الطالب وولي الأمر</span>
+                  </div>
                 </div>
-                {linkKind === "guardian" && <label className="form-field"><span>صلة القرابة</span><select value={linkRelationship} onChange={event => setLinkRelationship(event.target.value)}><option>ولي أمر</option><option>الأب</option><option>الأم</option><option>وصي</option></select></label>}
-                <div className="dialog-info"><FileText size={15} /><span>بحث دقيق داخل الحسابات النشطة من نفس الأكاديمية فقط. تظهر بيانات محدودة، ولا يتم كشف UUID أو بيانات حسابات أكاديميات أخرى.</span></div>
-                <button type="submit" className="button button-primary" disabled={lookupLoading || !linkPhone.trim()}><Search size={15} /> {lookupLoading ? "جارٍ البحث…" : "بحث عن الحساب"}</button>
-              </form>
-              {lookupError && <div className="dialog-info" role="alert">تعذر البحث أو إرسال الدعوة: {lookupError}</div>}
-              {lookupResults !== null && (lookupResults.length ? <div className="student-link-results" aria-live="polite">{lookupResults.map(account => <article key={account.id}><div><strong>{account.name || (account.accountType === "parent" ? "حساب ولي أمر" : "حساب طالب")}</strong><span dir="ltr">{account.maskedPhone}</span></div><button type="button" className="button button-secondary" disabled={linkingAccountId !== null || linksLoading} onClick={() => void linkConsumerAccount(account)}><UserPlus size={15} /> {linkingAccountId === account.id ? "جارٍ الربط…" : account.accountType === "parent" ? "ربط بولي الأمر" : "ربط بحساب الطالب"}</button></article>)}</div> : <div className="dialog-info" role="status"><span>لم يوجد حساب نشط مؤهل بهذا الرقم داخل الأكاديمية.</span><button type="button" className="button button-secondary" onClick={() => void inviteConsumerAccount()} disabled={invitationLoading || !linkPhone.trim()}><Send size={15} /> {invitationLoading ? "جارٍ تجهيز الدعوة…" : "إرسال دعوة تفعيل OTP"}</button></div>)}
-              {invitationResult && <div className="dialog-info" role="status"><span>حالة الدعوة: {invitationResult.delivery === "development://sms" ? "اختبار محلي فقط — لا توجد رسالة SMS فعلية" : "تم إرسال الرسالة"}{invitationResult.developmentCode && <> · رمز الاختبار: <b dir="ltr">{invitationResult.developmentCode}</b></>}{invitationResult.debugAcceptUrl && <> · <a href={invitationResult.debugAcceptUrl}>فتح صفحة قبول الدعوة التجريبية</a></>}</span></div>}
-            </section>}
-            {dataMode !== "live" && (() => {
-              const journey = getStudentJourney(detailsStudent);
-              return (
-                <>
-                  <div className="student-journey-heading">
+                <div className="dialog-info">
+                  <ShieldCheck size={15} />
+                  <span>
+                    نسخة MVP بلا تكلفة SMS: في Development يظهر رمز عشوائي
+                    للاختبار فقط؛ لا يُقبل رمز ثابت في الإنتاج، ويظل الإرسال
+                    الحي مغلقًا حتى إعداد مزود رسائل.
+                  </span>
+                </div>
+                {linksLoading && (
+                  <div className="dialog-info">جارٍ تحميل الروابط الحالية…</div>
+                )}
+                {linksError && (
+                  <div className="dialog-info" role="alert">
+                    تعذر قراءة الروابط: {linksError}
+                  </div>
+                )}
+                {consumerLinks && (
+                  <div className="detail-grid">
                     <div>
-                      <strong>رحلة الطالب</strong>
-                      <span>ملخص تشغيلي سريع مبني على بيانات العرض</span>
+                      <small>حساب الطالب</small>
+                      <strong>
+                        {consumerLinks.studentAccount
+                          ? `${consumerLinks.studentAccount.name ?? "حساب الطالب"} · ${consumerLinks.studentAccount.phone}`
+                          : "غير مرتبط"}
+                      </strong>
+                      {consumerLinks.studentAccount && (
+                        <button
+                          type="button"
+                          className="button button-secondary"
+                          onClick={() =>
+                            void unlinkConsumerAccount(
+                              "student",
+                              consumerLinks.studentAccount!.id
+                            )
+                          }
+                        >
+                          إلغاء الربط
+                        </button>
+                      )}
                     </div>
-                    <span className="journey-progress-label">
-                      {journey.progress}% مكتمل
+                    <div>
+                      <small>أولياء الأمور</small>
+                      {consumerLinks.guardians.length ? (
+                        consumerLinks.guardians.map(guardian => (
+                          <div key={guardian.id}>
+                            <strong>
+                              {guardian.name ?? guardian.phone} ·{" "}
+                              {guardian.relationship}
+                            </strong>
+                            <button
+                              type="button"
+                              className="button button-secondary"
+                              onClick={() =>
+                                void unlinkConsumerAccount(
+                                  "guardian",
+                                  guardian.id
+                                )
+                              }
+                            >
+                              إلغاء الربط
+                            </button>
+                          </div>
+                        ))
+                      ) : (
+                        <strong>لا يوجد حساب ولي أمر مرتبط</strong>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <form onSubmit={searchConsumerAccounts}>
+                  <div className="form-row">
+                    <label className="form-field">
+                      <span>نوع الربط</span>
+                      <select
+                        value={linkKind}
+                        disabled={lookupLoading || invitationLoading}
+                        onChange={event => {
+                          setLinkKind(
+                            event.target.value as "guardian" | "student"
+                          );
+                          setLookupResults(null);
+                          setLookupError(null);
+                          setInvitationResult(null);
+                        }}
+                      >
+                        <option value="guardian">حساب ولي أمر</option>
+                        <option value="student">حساب الطالب نفسه</option>
+                      </select>
+                    </label>
+                    <label className="form-field">
+                      <span>رقم الهاتف</span>
+                      <input
+                        type="tel"
+                        inputMode="tel"
+                        autoComplete="tel"
+                        value={linkPhone}
+                        disabled={lookupLoading || invitationLoading}
+                        onChange={event => {
+                          setLinkPhone(event.target.value);
+                          setLookupResults(null);
+                          setLookupError(null);
+                          setInvitationResult(null);
+                        }}
+                        placeholder="01012345678 أو +201012345678"
+                        dir="ltr"
+                        required
+                      />
+                    </label>
+                  </div>
+                  {linkKind === "guardian" && (
+                    <label className="form-field">
+                      <span>صلة القرابة</span>
+                      <select
+                        value={linkRelationship}
+                        onChange={event =>
+                          setLinkRelationship(event.target.value)
+                        }
+                      >
+                        <option>ولي أمر</option>
+                        <option>الأب</option>
+                        <option>الأم</option>
+                        <option>وصي</option>
+                      </select>
+                    </label>
+                  )}
+                  <div className="dialog-info">
+                    <FileText size={15} />
+                    <span>
+                      بحث دقيق داخل الحسابات النشطة من نفس الأكاديمية فقط. تظهر
+                      بيانات محدودة، ولا يتم كشف UUID أو بيانات حسابات أكاديميات
+                      أخرى.
                     </span>
                   </div>
-                  <div
-                    className="student-journey-progress"
-                    aria-label={`نسبة تقدم الطالب ${journey.progress}%`}
+                  <button
+                    type="submit"
+                    className="button button-primary"
+                    disabled={lookupLoading || !linkPhone.trim()}
                   >
-                    <span style={{ width: `${journey.progress}%` }} />
+                    <Search size={15} />{" "}
+                    {lookupLoading ? "جارٍ البحث…" : "بحث عن الحساب"}
+                  </button>
+                </form>
+                {lookupError && (
+                  <div className="dialog-info" role="alert">
+                    تعذر البحث أو إرسال الدعوة: {lookupError}
                   </div>
-                  <div className="student-journey-grid">
-                    <article>
-                      <span className="journey-icon journey-icon-teal">
-                        <CheckCircle2 size={15} />
+                )}
+                {lookupResults !== null &&
+                  (lookupResults.length ? (
+                    <div className="student-link-results" aria-live="polite">
+                      {lookupResults.map(account => (
+                        <article key={account.id}>
+                          <div>
+                            <strong>
+                              {account.name ||
+                                (account.accountType === "parent"
+                                  ? "حساب ولي أمر"
+                                  : "حساب طالب")}
+                            </strong>
+                            <span dir="ltr">{account.maskedPhone}</span>
+                          </div>
+                          <button
+                            type="button"
+                            className="button button-secondary"
+                            disabled={linkingAccountId !== null || linksLoading}
+                            onClick={() => void linkConsumerAccount(account)}
+                          >
+                            <UserPlus size={15} />{" "}
+                            {linkingAccountId === account.id
+                              ? "جارٍ الربط…"
+                              : account.accountType === "parent"
+                                ? "ربط بولي الأمر"
+                                : "ربط بحساب الطالب"}
+                          </button>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="dialog-info" role="status">
+                      <span>
+                        لم يوجد حساب نشط مؤهل بهذا الرقم داخل الأكاديمية.
                       </span>
-                      <div>
-                        <small>انتظام الحضور</small>
-                        <strong>{journey.attendance}</strong>
-                        <span>{journey.attendanceNote}</span>
-                      </div>
-                    </article>
-                    <article>
-                      <span className="journey-icon journey-icon-blue">
-                        <CalendarDays size={15} />
-                      </span>
-                      <div>
-                        <small>الجلسة القادمة</small>
-                        <strong>{journey.nextSession}</strong>
-                        <span>{journey.nextSessionNote}</span>
-                      </div>
-                    </article>
-                    <article>
-                      <span className="journey-icon journey-icon-amber">
-                        <Wallet size={15} />
-                      </span>
-                      <div>
-                        <small>حالة التحصيل</small>
-                        <strong>{journey.payment}</strong>
-                        <span>{journey.paymentNote}</span>
-                      </div>
-                    </article>
+                      <button
+                        type="button"
+                        className="button button-secondary"
+                        onClick={() => void inviteConsumerAccount()}
+                        disabled={invitationLoading || !linkPhone.trim()}
+                      >
+                        <Send size={15} />{" "}
+                        {invitationLoading
+                          ? "جارٍ تجهيز الدعوة…"
+                          : "إرسال دعوة تفعيل OTP"}
+                      </button>
+                    </div>
+                  ))}
+                {invitationResult && (
+                  <div className="dialog-info" role="status">
+                    <span>
+                      حالة الدعوة:{" "}
+                      {invitationResult.delivery === "development://sms"
+                        ? "اختبار محلي فقط — لا توجد رسالة SMS فعلية"
+                        : "تم إرسال الرسالة"}
+                      {invitationResult.developmentCode && (
+                        <>
+                          {" "}
+                          · رمز الاختبار:{" "}
+                          <b dir="ltr">{invitationResult.developmentCode}</b>
+                        </>
+                      )}
+                      {invitationResult.debugAcceptUrl && (
+                        <>
+                          {" "}
+                          ·{" "}
+                          <a href={invitationResult.debugAcceptUrl}>
+                            فتح صفحة قبول الدعوة التجريبية
+                          </a>
+                        </>
+                      )}
+                    </span>
                   </div>
-                  <div className="student-journey-actions">
-                    <button
-                      className="button button-secondary"
-                      onClick={() => setLocation("/schedule")}
+                )}
+              </section>
+            )}
+            {dataMode !== "live" &&
+              (() => {
+                const journey = getStudentJourney(detailsStudent);
+                return (
+                  <>
+                    <div className="student-journey-heading">
+                      <div>
+                        <strong>رحلة الطالب</strong>
+                        <span>ملخص تشغيلي سريع مبني على بيانات العرض</span>
+                      </div>
+                      <span className="journey-progress-label">
+                        {journey.progress}% مكتمل
+                      </span>
+                    </div>
+                    <div
+                      className="student-journey-progress"
+                      aria-label={`نسبة تقدم الطالب ${journey.progress}%`}
                     >
-                      <CalendarDays size={15} /> عرض الجدول
-                    </button>
-                    <button
-                      className="button button-secondary"
-                      onClick={() => setLocation("/finance")}
-                    >
-                      <Wallet size={15} /> فتح التحصيل
-                    </button>
-                  </div>
-                </>
-              );
-            })()}
+                      <span style={{ width: `${journey.progress}%` }} />
+                    </div>
+                    <div className="student-journey-grid">
+                      <article>
+                        <span className="journey-icon journey-icon-teal">
+                          <CheckCircle2 size={15} />
+                        </span>
+                        <div>
+                          <small>انتظام الحضور</small>
+                          <strong>{journey.attendance}</strong>
+                          <span>{journey.attendanceNote}</span>
+                        </div>
+                      </article>
+                      <article>
+                        <span className="journey-icon journey-icon-blue">
+                          <CalendarDays size={15} />
+                        </span>
+                        <div>
+                          <small>الجلسة القادمة</small>
+                          <strong>{journey.nextSession}</strong>
+                          <span>{journey.nextSessionNote}</span>
+                        </div>
+                      </article>
+                      <article>
+                        <span className="journey-icon journey-icon-amber">
+                          <Wallet size={15} />
+                        </span>
+                        <div>
+                          <small>حالة التحصيل</small>
+                          <strong>{journey.payment}</strong>
+                          <span>{journey.paymentNote}</span>
+                        </div>
+                      </article>
+                    </div>
+                    <div className="student-journey-actions">
+                      <button
+                        className="button button-secondary"
+                        onClick={() => setLocation("/schedule")}
+                      >
+                        <CalendarDays size={15} /> عرض الجدول
+                      </button>
+                      <button
+                        className="button button-secondary"
+                        onClick={() => setLocation("/finance")}
+                      >
+                        <Wallet size={15} /> فتح التحصيل
+                      </button>
+                    </div>
+                  </>
+                );
+              })()}
             <div className="dialog-info">
               <FileText size={15} />
-              <span>{dataMode === "live" ? "البيانات الأساسية من قاعدة البيانات؛ معلومات الحضور والفواتير غير متاحة في عقد هذا الملف." : "تفاصيل توضيحية للعرض، غير مرتبطة بملف طالب حقيقي."}</span>
+              <span>
+                {dataMode === "live"
+                  ? "البيانات الأساسية من قاعدة البيانات؛ معلومات الحضور والفواتير غير متاحة في عقد هذا الملف."
+                  : "تفاصيل توضيحية للعرض، غير مرتبطة بملف طالب حقيقي."}
+              </span>
             </div>
             <div className="dialog-actions">
               <button
