@@ -4,10 +4,12 @@ import { useLocation } from "wouter";
 import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
+import R01AcademySidebar, { R01MobileMenuButton } from "@/components/R01AcademySidebar";
 import { apiClient, type AcademyBranch } from "@/lib/apiClient";
 
 export default function AcademyBranches() {
   const [, navigate] = useLocation();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [branches, setBranches] = useState<AcademyBranch[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -56,8 +58,9 @@ export default function AcademyBranches() {
   };
 
   return <RoleDashboardShell className="academy-branches-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية">
+    <R01AcademySidebar activePath="/academy/branches" mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
     <main className="academy-branches-page" dir="rtl">
-      <header className="academy-branches-topbar"><button onClick={() => navigate("/academy-owner")}><ArrowRight size={16} /> العودة إلى الأكاديمية</button><span><ShieldCheck size={15} /> R01 · إدارة الفروع</span></header>
+      <header className="academy-branches-topbar"><R01MobileMenuButton onOpen={() => setMobileNavOpen(true)} /><button onClick={() => navigate("/academy-owner")}><ArrowRight size={16} /> العودة إلى الأكاديمية</button><span><ShieldCheck size={15} /> R01 · إدارة الفروع</span></header>
       <div className="academy-branches-content">
         <PageHeader className="academy-branches-header" eyebrow={<span><i /> ACADEMY STRUCTURE · الفروع</span>} title="إدارة الفروع" description="أنشئ فروع الأكاديمية، حدّث بياناتها، وتابع المستخدمين والطلاب المرتبطين بكل فرع." actions={<button className="academy-branches-add" onClick={openAdd}><Plus size={16} /> إضافة فرع</button>} />
         <div className="academy-branches-scope"><ShieldCheck size={16} /><span><strong>نطاق الإدارة:</strong> فروع أكاديميتك فقط · المستخدمون ذوو الدور الفرعي يجب ربطهم بفرع نشط.</span></div>
