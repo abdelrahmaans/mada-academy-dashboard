@@ -6,6 +6,15 @@ describe("role navigation scopes", () => {
     expect(ROLE_DEFINITIONS.R03.scopeLevel).toBe("branch");
   });
 
+  it("limits R03 navigation to coaching supervision surfaces", () => {
+    expect(ROLE_DEFINITIONS.R03.navigation.map(item => item.path)).toEqual([
+      "/head-instructors",
+      "/academic-programs",
+      "/schedule",
+    ]);
+    expect(ROLE_DEFINITIONS.R03.navigation.map(item => item.path)).not.toContain("/finance-desk");
+  });
+
   it("keeps the media-manager role branch-scoped", () => {
     expect(ROLE_DEFINITIONS.R07.scopeLevel).toBe("branch");
   });

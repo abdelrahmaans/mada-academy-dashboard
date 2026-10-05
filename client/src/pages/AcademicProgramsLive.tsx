@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BookOpen, CalendarDays, RefreshCw, ShieldCheck, Target } from "lucide-react";
+import { BookOpen, CalendarDays, Menu, RefreshCw, ShieldCheck, Target } from "lucide-react";
 import { toast } from "sonner";
 import { LoadingState } from "@/components/FeedbackStates";
+import R03HeadInstructorsSidebar from "@/components/R03HeadInstructorsSidebar";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,6 +26,7 @@ export default function AcademicProgramsLive() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const load = useCallback(async (notifySuccess = false) => {
     if (!me?.branchId) {
@@ -79,9 +81,10 @@ export default function AcademicProgramsLive() {
   if (!me || me.role !== "R03_HEAD_INSTRUCTORS") return <main className="r03-program-live" dir="rtl"><section className="r03-program-error" role="alert"><strong>هذه الصفحة مخصصة لرئيس المدربين.</strong><p>بيانات البرامج لم تُحمّل.</p></section></main>;
 
   return (
-    <RoleDashboardShell className="r03-program-shell" roleCode="R03" roleLabel="رئيس المدربين" scopeLevel="branch" scopeLabel={`فرع واحد · ${branch}`} branchName={me.academy?.name} demo={false}>
+    <RoleDashboardShell className="app-shell r03-program-shell" showSessionLogout={false} roleCode="R03" roleLabel="رئيس المدربين" scopeLevel="branch" scopeLabel={`فرع واحد · ${branch}`} branchName={me.academy?.name} demo={false}>
+      <R03HeadInstructorsSidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} activePath="/academic-programs" />
       <main className="r03-program-live" dir="rtl">
-        <header className="r03-program-header"><div><span className="r03-program-kicker"><span /> البرامج الأكاديمية · LIVE</span><h1>برامج الفرع وجلساته</h1><p>المجموعات والجلسات الفعلية من قواعد بيانات الفرع؛ لا تتضمن أسعارًا أو عمليات مالية.</p></div><button type="button" className="r03-program-refresh" onClick={() => void load(true)} disabled={loading}><RefreshCw size={15} /> تحديث</button></header>
+        <header className="r03-program-header"><div><button type="button" className="r03-program-menu" aria-label="فتح قائمة رئيس المدربين" onClick={() => setMobileNavOpen(true)}><Menu size={19} /></button><span className="r03-program-kicker"><span /> البرامج الأكاديمية · LIVE</span><h1>برامج الفرع وجلساته</h1><p>المجموعات والجلسات الفعلية من قواعد بيانات الفرع؛ لا تتضمن أسعارًا أو عمليات مالية.</p></div><button type="button" className="r03-program-refresh" onClick={() => void load(true)} disabled={loading}><RefreshCw size={15} /> تحديث</button></header>
         <RoleScopeCard className="r03-program-scope" compact />
         <nav className="r03-program-tabs" aria-label="بيانات البرامج"><button type="button" className={view === "groups" ? "active" : ""} onClick={() => setView("groups")}><BookOpen size={15} /> مجموعات البرامج</button><button type="button" className={view === "sessions" ? "active" : ""} onClick={() => setView("sessions")}><CalendarDays size={15} /> الجلسات</button><button type="button" className={view === "progress" ? "active" : ""} onClick={() => setView("progress")}><Target size={15} /> تقدم الطلاب</button></nav>
         {loading && <LoadingState label="جارٍ تحميل مجموعات البرامج والجلسات…" compact />}

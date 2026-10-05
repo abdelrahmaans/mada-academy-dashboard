@@ -26,6 +26,8 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import R03HeadInstructorsSidebar from "@/components/R03HeadInstructorsSidebar";
+import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
 import {
   apiClient,
@@ -502,6 +504,7 @@ function BrandMark() {
 
 function SchedulePage() {
   const [, navigate] = useLocation();
+  const { me } = useAuth();
   const [sessions, setSessions] = useState<Session[]>(seededSessions);
   const [query, setQuery] = useState("");
   const [branch, setBranch] = useState("كل الفروع");
@@ -918,6 +921,7 @@ function SchedulePage() {
 
   return (
     <div className="app-shell" dir="rtl">
+      {me?.role === "R03_HEAD_INSTRUCTORS" ? <R03HeadInstructorsSidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} activePath="/schedule" /> : <>
       {mobileNavOpen && (
         <button
           className="mobile-scrim"
@@ -1013,6 +1017,8 @@ function SchedulePage() {
           مدى لإدارة الأكاديميات <span>نسخة تجريبية</span>
         </div>
       </aside>
+
+      </>}
 
       <main className="main-panel">
         <header className="topbar">

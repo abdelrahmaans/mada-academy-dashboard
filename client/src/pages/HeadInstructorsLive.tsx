@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, RefreshCw, ShieldCheck, Users } from "lucide-react";
+import { CheckCircle2, Menu, RefreshCw, ShieldCheck, Users } from "lucide-react";
 import EvaluationReviewQueue from "@/components/EvaluationReviewQueue";
 import HeadInstructorsLiveOverview, { type HeadInstructorsOverviewData } from "@/components/HeadInstructorsLiveOverview";
+import R03HeadInstructorsSidebar from "@/components/R03HeadInstructorsSidebar";
 import { LoadingState } from "@/components/FeedbackStates";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
@@ -20,6 +21,7 @@ export default function HeadInstructorsLive() {
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [markingId, setMarkingId] = useState<string | null>(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!me?.branchId) {
@@ -85,10 +87,11 @@ export default function HeadInstructorsLive() {
   }
 
   return (
-    <RoleDashboardShell className="r03-live-shell" roleCode="R03" roleLabel="رئيس المدربين" scopeLevel="branch" scopeLabel={`فرع واحد · ${branch}`} branchName={branch} tenantName={me.academy?.name} demo={false}>
+    <RoleDashboardShell className="app-shell r03-live-shell" showSessionLogout={false} roleCode="R03" roleLabel="رئيس المدربين" scopeLevel="branch" scopeLabel={`فرع واحد · ${branch}`} branchName={branch} tenantName={me.academy?.name} demo={false}>
+      <R03HeadInstructorsSidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} activePath="/head-instructors" />
       <main className="r03-live-page" dir="rtl">
         <header className="r03-live-header">
-          <div><span className="r03-live-eyebrow"><span /> لوحة أكاديمية · LIVE</span><h1>إشراف فريق المدربين</h1><p>بيانات فعلية من {branch} · الجلسات ضمن آخر 30 يومًا والقادم 60 يومًا.</p></div>
+          <div><button type="button" className="r03-live-menu" aria-label="فتح قائمة رئيس المدربين" onClick={() => setMobileNavOpen(true)}><Menu size={19} /></button><span className="r03-live-eyebrow"><span /> لوحة أكاديمية · LIVE</span><h1>إشراف فريق المدربين</h1><p>بيانات فعلية من {branch} · الجلسات ضمن آخر 30 يومًا والقادم 60 يومًا.</p></div>
           <button className="r03-live-refresh" type="button" onClick={() => void load()} disabled={loading}><RefreshCw size={15} className={loading ? "spinning" : ""} /> تحديث البيانات</button>
         </header>
         <RoleScopeCard className="r03-live-scope" compact />
