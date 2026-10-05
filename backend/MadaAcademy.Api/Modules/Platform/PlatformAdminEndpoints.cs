@@ -168,7 +168,7 @@ public static class PlatformAdminEndpoints
                 code = "R00_PLATFORM_ADMIN",
                 label = "مسؤول المنصة",
                 scope = "PLATFORM",
-                permissions = new[] { "platform.read", "academy.create", "academy.read", "academy.archive", "support.member.search", "support.sessions.revoke", "support.membership.disable", "audit.read" },
+                permissions = new[] { "platform.read", "academy.create", "academy.read", "support.member.search", "support.sessions.revoke", "support.membership.disable", "audit.read" },
                 assignmentMode = "CONTROLLED_OUT_OF_BAND",
                 canSelfAssign = false
             }

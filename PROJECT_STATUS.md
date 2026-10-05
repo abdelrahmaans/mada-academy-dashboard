@@ -1,8 +1,8 @@
 # Mada Academy — Project Status
 
 **As of:** 5 October 2026
-**Verified Git state:** `main` includes merged PRs #55, #56, #58, #61, #62, #63, #64, #67, #68, and #69 and is pushed to origin.
-**Latest delivery PR:** [PR #63 — extract Classes creation dialogs](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/63), merged successfully.
+**Verified Git state:** `main` includes merged PRs #55, #56, #58, #61, #62, #63, #64, #65, #67, #68, #69, #70, and #71 and is pushed to origin.
+**Latest delivery PR:** [PR #65 — extract FinanceDesk dialogs](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/65), merged successfully.
 **Stack:** React + Vite + TypeScript; ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions.
 
 ## Executive summary
@@ -13,7 +13,7 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 
 | Role | What is implemented | Important gaps / truth to preserve |
 |---|---|---|
-| **R00 Platform Admin** | Live platform support inventory is documented in [R00_PLATFORM_ADMIN_INVENTORY.md](R00_PLATFORM_ADMIN_INVENTORY.md): overview, academy list/bootstrap, status support, masked member search, membership/session support, roles, and tenant/platform audit reads. Backend policy, tenant-paired lookups, reason requirements, audit writes, and LIVE no-demo behavior are implemented and partially tested. | Full platform administration is not supported: archive/delete, billing, and detailed student/finance/consumer support are unavailable. Bootstrap has contract drift (password-based implementation vs passwordless contract); dedicated bootstrap/reactivation/protected-R00 tests remain open. |
+| **R00 Platform Admin** | Live platform support inventory is documented in [R00_PLATFORM_ADMIN_INVENTORY.md](R00_PLATFORM_ADMIN_INVENTORY.md): overview, academy list/bootstrap, status support, masked member search, membership/session support, roles, and tenant/platform audit reads. Backend policy, tenant-paired lookups, reason requirements, audit writes, explicit response-shape privacy assertions, and LIVE no-demo behavior are implemented and tested. Bootstrap contract is aligned with password-based owner onboarding, and unsupported archive permission advertisement was removed. | Full platform administration is not supported: archive/delete, billing, and detailed student/finance/consumer support remain unavailable. |
 | **R01 Academy Owner** | Academy bootstrap, tenant-level identity/member/role, branch and classroom foundations exist; LIVE route is guarded from the old demo page, academy roles preserve members/permissions when branch lookup fails, classroom/resource management preserves useful data on partial failures, the executive dashboard gives toast/error feedback for report and audit loading, and the global interceptor now covers 401, 403, and 5xx with automated tests. | Local acceptance evidence is documented; deployed staging acceptance remains open. |
 | **R02 Branch Manager** | Branch-scoped student/session/classroom and approval operations are available across implemented backend slices; `/branch-operations` now routes authenticated R02 users to the live dashboard instead of the legacy demo, and approvals/classes/schedule remain visible when optional endpoints are forbidden. | Some non-core branch panels remain outside the current P2 slice. |
 | **R03 Head Instructors** | Branch-scoped evaluation review queue; publish or request changes; dashboard avoids demo evaluation samples in LIVE evaluation surfaces, keeps core team/group/session data visible when optional endpoints fail, and preserves groups or sessions when one Academic Programs read fails. | Unsupported mastery/checkpoint analytics remain explicitly outside the LIVE contract. |
@@ -35,7 +35,7 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 
 ## CI and verified baseline
 
-The current merged baseline includes PRs #41, #42, #46, #55, #56, #58, #61, #62, #63, and #64. The merged refactors cover Head Instructors, Schedule, Platform Console, Marketing/legacy cleanup, Classes, and Team. Local frontend validation is green: Vitest **18/18**, `pnpm check`, `pnpm build`, `git diff --check`, and browser E2E **7/7** using Chromium. PR #61 also passed backend integration and Playwright CI after adding invitation, consumer-lookup, and OTP rate-limit coverage. Vercel checks on these PRs were externally rate-limited and were not repository failures; no real deployment secrets are stored in Git.
+The current merged baseline includes PRs #41, #42, #46, #55, #56, #58, #61, #62, #63, #64, #65, #67, #68, #69, #70, and #71. The merged refactors cover Head Instructors, Schedule, Platform Console, Marketing/legacy cleanup, Classes, Team, and Finance dialogs. Local frontend validation is green: Vitest **24/24**, `pnpm check`, `pnpm build`, `git diff --check`, and browser E2E **7/7** using Chromium. PR #65 also passed Frontend Checks and Playwright after the stale pnpm setup was corrected. Vercel `client-angular` checks remain externally rate-limited and are not repository failures; no real deployment secrets are stored in Git.
 
 ## LIVE acceptance evidence — 4 October 2026
 
@@ -46,7 +46,7 @@ The auditable R01/R03/R04 endpoint, role/scope, failure, empty-state, and previe
 تمت مراجعة R00–R09. أُضيفت route guards صريحة حسب الدور، حماية للـworkspace والأسطح التشغيلية، فصل LIVE/DEMO في الأغلفة الحية، stylesheet مشترك RTL/responsive، تصميم Academy Bootstrap، وE2E للـanonymous redirect والعزل والخروج.
 
 - `pnpm check`: PASS
-- `pnpm test`: PASS — 18/18 in the current frontend suite
+- `pnpm test`: PASS — 24/24 in the current frontend suite
 - `pnpm build`: PASS
 - الجولة الأولى من E2E: 6/7، وتم تعديل assertion العزل لقبول الرفض الصريح أو العودة الآمنة إلى login.
 - Marketing ما زال Preview/local ويحتاج API قبل اعتباره LIVE.
@@ -85,10 +85,10 @@ Open implementation blockers and product debt:
 6. The first decomposition wave is merged for Head Instructors (#55), Schedule (#56), Platform Console (#58), Marketing/legacy cleanup (#62), Classes (#63), and Team (#64). Students (#57), Approvals (#59), and Instructor Desk (#60) were closed because the proposed extraction did not materially reduce the page size; they require a smaller, higher-value split before reopening.
 7. `client/src/components/Map.tsx` and `ManusDialog.tsx` were confirmed unused and removed in merged PR #62.
 8. PR #69 (refresh-token rotation reuse test) is merged. Backend integration and Playwright passed; the known external Vercel `client-angular` rate-limit failure is not a repository failure.
-9. R00 action inventory is documented. Remaining R00 blockers are bootstrap contract alignment, explicit negative/edge-case tests, and removal or implementation of the unimplemented `academy.archive` permission.
+9. R00 action inventory is documented. Bootstrap contract alignment, explicit negative/edge-case tests, platform response-shape assertions, and removal of the unimplemented `academy.archive` permission are complete.
 
 ## Frontend coverage and architecture debt
 
-- The frontend unit suite currently has 5 test files covering **18 tests**; it does not yet provide broad page-level mutation or authorization coverage.
+- The frontend unit suite currently has 7 test files covering **24 tests**; it does not yet provide broad page-level mutation or authorization coverage.
 - Finance mutation and family/student consumer-scope behavior remain primarily covered by backend integration tests and the critical browser flow; dedicated frontend tests are the next implementation priority.
 - PostgreSQL coverage is separate from the InMemory E2E path. CI backend integration coverage is required for persistence-specific regressions; local sandbox runs without the .NET SDK cannot reproduce those tests.

@@ -177,7 +177,7 @@ public static class AcademyIdentityEndpoints
 
     private static string[] PermissionsFor(string role) => role switch
     {
-        "R00_PLATFORM_ADMIN" => ["platform.read", "academy.create", "academy.read", "academy.archive"],
+        "R00_PLATFORM_ADMIN" => ["platform.read", "academy.create", "academy.read"],
         "R01_ACADEMY_OWNER" => ["academy.read", "academy.update", "branch.read", "branch.create", "classrooms.manage", "staff.read", "staff.invite", "roles.read", "roles.manage", "finance.expenses.read", "finance.expenses.approve", "reports.read"],
         "R02_BRANCH_MANAGER" => ["branch.read", "students.read", "students.create", "sessions.read", "sessions.create", "attendance.read", "attendance.write", "finance.summary.read", "finance.expenses.read", "finance.expenses.approve"],
         "R03_HEAD_INSTRUCTORS" => ["branch.read", "sessions.read", "attendance.read", "attendance.write", "evaluations.write", "evaluations.review"],

@@ -1,8 +1,8 @@
 # خطة المرحلة القادمة — Mada Academy
 
 **تاريخ اللقطة:** 5 أكتوبر 2026
-**قاعدة العمل الحالية:** `main` بعد دمج PRs #55، #56، #58، #61، #62، #63، #64، #67، #68، و#69؛ آخر commit موثق هو `79ef04a`.
-**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وموجة التقسيم الأولى مغلقة. اختبارات frontend الحرجة، refresh-token reuse، فصل auth endpoints، وجرد R00 الأولي مغلقة؛ وتظل R00 contract/tests وdeployment/private storage/backup-restore/staging بوابات منفصلة.
+**قاعدة العمل الحالية:** `main` بعد دمج PRs #55، #56، #58، #61، #62، #63، #64، #65، #67، #68، #69، #70، و#71؛ آخر commit موثق هو `788073b`.
+**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وموجة التقسيم الأولى مغلقة. اختبارات frontend الحرجة، refresh-token reuse، فصل auth endpoints، وجرد R00 مع contract/tests مغلقة؛ وتظل private-storage/backup-restore/staging بوابات بيئية منفصلة.
 
 ## قرار التنفيذ الحالي
 
@@ -42,9 +42,9 @@
 2. اختبارات frontend لعزل family/student scope، partial failure، وغياب Demo fallback في LIVE.
 3. اختبار backend لإعادة استخدام refresh token بعد rotation، مع التحقق من reuse detection/revocation.
 4. نقل endpoints الـauth من `Program.cs` إلى module مستقل دون تغيير العقود أو سياسات rate limiting.
-5. [مغلق جزئيًا] جرد R00 Platform Admin وتصنيف كل action إلى `LIVE` أو `PREVIEW` أو `NOT AVAILABLE` مع authorization/audit checklist في [R00_PLATFORM_ADMIN_INVENTORY.md](R00_PLATFORM_ADMIN_INVENTORY.md).
-6. إغلاق R00 follow-ups: توحيد عقد Academy Bootstrap مع password-based implementation أو اعتماد مسار OTP صريح، إضافة اختبارات bootstrap/reactivation/protected-R00/R00 assignment، وإزالة `academy.archive` من advertised permissions حتى تتوفر capability حقيقية.
-7. بعد ذلك: CORS production enforcement، distributed limiter evidence، private storage smoke، backup/restore، وstaging acceptance.
+5. جرد R00 Platform Admin وتصنيف كل action إلى `LIVE` أو `PREVIEW` أو `NOT AVAILABLE` مع authorization/audit checklist في [R00_PLATFORM_ADMIN_INVENTORY.md](R00_PLATFORM_ADMIN_INVENTORY.md) **مغلق**.
+6. إغلاق R00 follow-ups: contract alignment، اختبارات bootstrap/reactivation/protected-R00/R00 assignment، response-shape privacy assertions، وإزالة `academy.archive` من advertised permissions **مغلق**.
+7. Production readiness: CORS production enforcement **مطبق ومختبر داخل الكود**؛ المتبقي distributed limiter evidence، private storage smoke، backup/restore، وstaging acceptance.
 
 ## الهدف
 
