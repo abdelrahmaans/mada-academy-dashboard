@@ -1,5 +1,6 @@
-import { BarChart3, Building2, GraduationCap, LayoutDashboard, Menu, ShieldCheck, Users, X } from "lucide-react";
+import { BarChart3, Building2, ChevronLeft, CircleHelp, GraduationCap, LayoutDashboard, LogOut, Menu, Settings, ShieldCheck, Users, X } from "lucide-react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/contexts/AuthContext";
 import "./R01AcademySidebar.css";
 
 type R01AcademySidebarProps = {
@@ -18,29 +19,28 @@ const links = [
 ] as const;
 
 export function R01MobileMenuButton({ onOpen }: { onOpen: () => void }) {
-  return <button type="button" className="r1-management-menu" aria-label="فتح القائمة" onClick={onOpen}><Menu size={19} /></button>;
+  return <button type="button" className="icon-button mobile-menu-button" aria-label="فتح القائمة" onClick={onOpen}><Menu size={21} /></button>;
 }
 
 export default function R01AcademySidebar({ activePath, mobileOpen, onClose }: R01AcademySidebarProps) {
+  const { logout } = useAuth();
   const [, navigate] = useLocation();
   const go = (path: string) => { onClose(); navigate(path); };
   return <>
-    {mobileOpen && <button type="button" className="r1-management-scrim" aria-label="إغلاق القائمة" onClick={onClose} />}
-    <aside className={`r1-management-sidebar ${mobileOpen ? "is-open" : ""}`} aria-label="تنقل مسؤول الأكاديمية">
-      <div className="r1-management-sidebar-head">
-        <button type="button" className="r1-management-brand" onClick={() => go("/executive-dashboard")}>
-          <span>مدى</span><div><strong>مسؤول الأكاديمية</strong><small>R01 · Tenant workspace</small></div>
-        </button>
-        <button type="button" className="r1-management-close" aria-label="إغلاق القائمة" onClick={onClose}><X size={18} /></button>
+    {mobileOpen && <button className="mobile-scrim" aria-label="إغلاق القائمة" onClick={onClose} />}
+    <aside className={`sidebar ${mobileOpen ? "sidebar-open" : ""}`}>
+      <div className="sidebar-top">
+        <button className="r01-academy-brand" onClick={() => go("/executive-dashboard")}><span className="brand-symbol"><GraduationCap size={30} /></span><span><strong>مدى</strong><small>مسؤول الأكاديمية · R01</small></span></button>
+        <button className="icon-button sidebar-close" aria-label="إغلاق القائمة" onClick={onClose}><X size={19} /></button>
       </div>
-      <div className="r1-management-tenant"><span><Building2 size={18} /></span><div><strong>الأكاديمية الحالية</strong><small>كل فروع الأكاديمية</small></div></div>
-      <nav className="r1-management-nav" aria-label="مساحات الأكاديمية">
-        <span className="r1-management-caption">إدارة الأكاديمية</span>
-        {links.map(({ path, label, icon: Icon }) => <button type="button" key={path} className={activePath === path ? "active" : ""} onClick={() => go(path)}><Icon size={17} /><span>{label}</span></button>)}
+      <div className="academy-switcher"><span className="academy-avatar"><Building2 size={20} /></span><span className="academy-meta"><strong>أكاديمية مدى</strong><small>كل فروع الأكاديمية · Tenant</small></span></div>
+      <div className="nav-caption">إدارة الأكاديمية</div>
+      <nav className="primary-nav">
+        {links.map(({ path, label, icon: Icon }) => <button type="button" key={path} className={`nav-link ${activePath === path ? "active" : ""}`} onClick={() => go(path)}><Icon size={19} /><span>{label}</span></button>)}
       </nav>
-      <div className="r1-management-spacer" />
-      <div className="r1-management-note"><ShieldCheck size={16} /><span>النطاق الحالي خاص بأكاديميتك فقط، والصلاحيات الفعلية من الـbackend.</span></div>
-      <small className="r1-management-version">Mada Academy · R01</small>
+      <div className="sidebar-spacer" />
+      <div className="sidebar-help"><span className="help-icon"><CircleHelp size={18} /></span><div><strong>تحتاج دعمًا؟</strong><span>مركز مساعدة الأكاديمية</span></div><ChevronLeft size={16} /></div>
+      <div className="sidebar-bottom"><button className="nav-link" onClick={() => go("/academy/roles")}><ShieldCheck size={19} /><span>إعدادات الصلاحيات</span></button><button className="nav-link" onClick={() => { void logout().then(() => navigate("/login")); }}><LogOut size={19} /><span>تسجيل الخروج</span></button></div>
     </aside>
   </>;
 }

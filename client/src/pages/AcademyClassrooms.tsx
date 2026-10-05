@@ -103,11 +103,11 @@ export default function AcademyClassrooms() {
   };
   const retryResources = () => { if (resourceRoom) void openResources(resourceRoom); };
 
-  return <RoleDashboardShell className="academy-classrooms-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية">
+  return <RoleDashboardShell className="app-shell academy-classrooms-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية">
     <R01AcademySidebar activePath="/academy/classrooms" mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
-    <main className="academy-classrooms-page" dir="rtl">
-      <header className="academy-classrooms-topbar"><R01MobileMenuButton onOpen={() => setMobileNavOpen(true)} /><button onClick={() => navigate("/academy-owner")}><ArrowRight size={16} /> العودة إلى الأكاديمية</button><span><Settings2 size={15} /> R01 · إدارة القاعات</span></header>
-      <div className="academy-classrooms-content">
+    <main className="main-panel academy-classrooms-page" dir="rtl">
+      <header className="topbar academy-classrooms-topbar"><div className="topbar-right"><R01MobileMenuButton onOpen={() => setMobileNavOpen(true)} /><button onClick={() => navigate("/academy-owner")}><ArrowRight size={16} /> العودة إلى الأكاديمية</button></div><span><Settings2 size={15} /> R01 · إدارة القاعات</span></header>
+      <div className="workspace academy-classrooms-content">
         <PageHeader className="academy-classrooms-header" eyebrow={<span><i /> ACADEMY OPERATIONS · القاعات</span>} title="إدارة القاعات الدراسية" description="عرّف القاعات داخل كل فرع، حدّد سعتها، وتابع جاهزيتها قبل جدولة الحصص." actions={<button className="academy-classrooms-add" onClick={openAdd} disabled={!branches.length}><Plus size={16} /> إضافة قاعة</button>} />
         <div className="academy-classrooms-toolbar"><label><MapPin size={15} /><span>الفرع</span><select value={branchFilter} onChange={event => setBranchFilter(event.target.value)}><option value="all">كل الفروع النشطة</option>{branches.map(branch => <option key={branch.id} value={branch.id}>{branch.name} · {branch.code}</option>)}</select></label><button onClick={() => navigate("/academy/branches")}><Building2 size={14} /> إدارة الفروع</button></div>
         {error && <div className="academy-classrooms-error">{error}<button onClick={() => void load()}>إعادة المحاولة</button></div>}
