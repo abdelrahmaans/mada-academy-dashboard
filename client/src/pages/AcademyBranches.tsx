@@ -57,11 +57,11 @@ export default function AcademyBranches() {
     finally { setSaving(false); }
   };
 
-  return <RoleDashboardShell className="app-shell academy-branches-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية">
+  return <RoleDashboardShell className="academy-owner-shell academy-branches-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية">
     <R01AcademySidebar activePath="/academy/branches" mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
-    <main className="main-panel academy-branches-page" dir="rtl">
-      <header className="topbar academy-branches-topbar"><div className="topbar-right"><R01MobileMenuButton onOpen={() => setMobileNavOpen(true)} /><button onClick={() => navigate("/academy-owner")}><ArrowRight size={16} /> العودة إلى الأكاديمية</button></div><span><ShieldCheck size={15} /> R01 · إدارة الفروع</span></header>
-      <div className="workspace academy-branches-content">
+    <main className="academy-owner-main academy-branches-page" dir="rtl">
+      <header className="academy-owner-topbar academy-branches-topbar"><div><R01MobileMenuButton onOpen={() => setMobileNavOpen(true)} /></div><span><ShieldCheck size={15} /> R01 · إدارة الفروع</span></header>
+      <div className="academy-owner-content academy-branches-content">
         <PageHeader className="academy-branches-header" eyebrow={<span><i /> ACADEMY STRUCTURE · الفروع</span>} title="إدارة الفروع" description="أنشئ فروع الأكاديمية، حدّث بياناتها، وتابع المستخدمين والطلاب المرتبطين بكل فرع." actions={<button className="academy-branches-add" onClick={openAdd}><Plus size={16} /> إضافة فرع</button>} />
         <div className="academy-branches-scope"><ShieldCheck size={16} /><span><strong>نطاق الإدارة:</strong> فروع أكاديميتك فقط · المستخدمون ذوو الدور الفرعي يجب ربطهم بفرع نشط.</span></div>
         {error && <div className="academy-branches-error">{error}<button onClick={() => void load()}>إعادة المحاولة</button></div>}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   ArrowRight,
@@ -30,6 +30,7 @@ import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import StatusBadge from "@/components/StatusBadge";
 import InstructorPerformanceComparison from "@/components/InstructorPerformanceComparison";
+import R01AcademySidebar, { R01MobileMenuButton } from "@/components/R01AcademySidebar";
 import {
   ACADEMY_BRANCHES,
   INSTRUCTOR_MONTHLY_PERFORMANCE,
@@ -172,9 +173,13 @@ const PRIORITY_LABELS: Record<TicketPriority, string> = {
 };
 
 export default function AcademyOwner() {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [view, setView] = useState<OwnerView>("overview");
+  const viewFromLocation = (): OwnerView => {
+    const value = new URLSearchParams(location.split("?")[1] ?? "").get("view");
+    return value === "branches" || value === "tickets" || value === "reports" ? value : "overview";
+  };
+  const [view, setView] = useState<OwnerView>(viewFromLocation);
   const [month, setMonth] = useState<string>(PERFORMANCE_MONTHS[0].value);
   const [branch, setBranch] = useState("all");
   const [instructorId, setInstructorId] = useState("all");
@@ -234,8 +239,10 @@ export default function AcademyOwner() {
 
   const goToView = (next: OwnerView) => {
     setView(next);
+    navigate(next === "overview" ? "/academy-owner" : `/academy-owner?view=${next}`);
     setMobileNavOpen(false);
   };
+  useEffect(() => { setView(viewFromLocation()); }, [location]);
   const updateTicketStatus = (status: TicketStatus) => {
     if (!selectedTicket) return;
     setTickets(current => current.map(ticket => ticket.id === selectedTicket.id ? { ...ticket, status, updated: "الآن" } : ticket));
@@ -264,29 +271,10 @@ export default function AcademyOwner() {
       tenantName="أكاديمية مدى"
       branchName={branchLabel}
     >
-      {mobileNavOpen && <button className="academy-owner-scrim" aria-label="إغلاق القائمة" onClick={() => setMobileNavOpen(false)} />}
-      <aside className={`academy-owner-sidebar ${mobileNavOpen ? "is-open" : ""}`}>
-        <div className="academy-owner-brand"><span className="academy-owner-mark">مدى</span><div><strong>مدى</strong><small>نظرة الأكاديمية</small></div><button className="academy-owner-close" aria-label="إغلاق القائمة" onClick={() => setMobileNavOpen(false)}><X size={18} /></button></div>
-        <div className="academy-owner-user"><span className="academy-owner-user-avatar">أم</span><span><strong>أحمد محمود</strong><small>رئيس الأكاديمية · معاينة</small></span></div>
-        <span className="academy-owner-nav-caption">نطاق الأكاديمية</span>
-        <nav className="academy-owner-nav" aria-label="تنقل رئيس الأكاديمية">
-          <OwnerNavButton active={view === "overview"} icon={<LayoutDashboard size={17} />} label="نظرة عامة" onClick={() => goToView("overview")} />
-          <OwnerNavButton active={view === "branches"} icon={<Building2 size={17} />} label="الفروع والأداء" count={BRANCH_ROLLUP.length} onClick={() => goToView("branches")} />
-          <OwnerNavButton active={view === "tickets"} icon={<Headphones size={17} />} label="مركز التذاكر" count={tickets.filter(ticket => ticket.status !== "resolved").length} onClick={() => goToView("tickets")} />
-          <OwnerNavButton active={view === "reports"} icon={<FileBarChart size={17} />} label="التقارير المجمعة" onClick={() => goToView("reports")} />
-          <button className="academy-owner-nav-button" onClick={() => navigate("/academy/branches")}><Building2 size={17} /><span>إدارة الفروع</span></button>
-          <button className="academy-owner-nav-button" onClick={() => navigate("/academy/classrooms")}><Settings2 size={17} /><span>القاعات الدراسية</span></button>
-          <button className="academy-owner-nav-button" onClick={() => navigate("/academy/roles")}><ShieldCheck size={17} /><span>المستخدمون والصلاحيات</span></button>
-          <button className="academy-owner-nav-button" onClick={() => navigate("/executive-dashboard")}><TrendingUp size={17} /><span>لوحة الإدارة التنفيذية</span></button>
-        </nav>
-        <div className="academy-owner-sidebar-spacer" />
-        <div className="academy-owner-scope-card"><MapPin size={15} /><span><small>نطاق العرض</small><strong>{branchLabel}</strong></span></div>
-        <button className="academy-owner-back" onClick={() => navigate("/executive-dashboard")}><ArrowRight size={15} /> العودة إلى لوحة الإدارة التنفيذية</button>
-        <div className="academy-owner-sidebar-footer">نسخة تجريبية · بيانات محلية</div>
-      </aside>
+      <R01AcademySidebar activePath={location} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
 
       <main className="academy-owner-main">
-        <header className="academy-owner-topbar"><button className="academy-owner-menu" aria-label="فتح القائمة" onClick={() => setMobileNavOpen(true)}><Menu size={19} /></button><span className="academy-owner-scope-pill"><Building2 size={15} /> أكاديمية مدى · {branchLabel}</span><span className="academy-owner-demo-pill"><i /> مسؤول الأكاديمية</span></header>
+        <header className="academy-owner-topbar"><R01MobileMenuButton onOpen={() => setMobileNavOpen(true)} /><span className="academy-owner-scope-pill"><Building2 size={15} /> أكاديمية مدى · {branchLabel}</span><span className="academy-owner-demo-pill"><i /> مسؤول الأكاديمية</span></header>
         <div className="academy-owner-content">
           <div className="academy-owner-breadcrumb"><span>مساحات الأدوار</span><ChevronLeft size={13} /><strong>{OWNER_VIEW_LABELS[view]}</strong></div>
           <PageHeader

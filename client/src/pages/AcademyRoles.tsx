@@ -87,11 +87,11 @@ export default function AcademyRoles() {
 
   const activeMembers = useMemo(() => members.filter(member => member.membershipStatus === "ACTIVE").length, [members]);
 
-  return <RoleDashboardShell className="app-shell academy-roles-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName={me?.academy?.name ?? "الأكاديمية"}>
+  return <RoleDashboardShell className="academy-owner-shell academy-roles-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName={me?.academy?.name ?? "الأكاديمية"}>
     <R01AcademySidebar activePath="/academy/roles" mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
-    <main className="main-panel academy-roles-page" dir="rtl">
-      <header className="topbar academy-roles-topbar"><div className="topbar-right"><R01MobileMenuButton onOpen={() => setMobileNavOpen(true)} /><button onClick={() => navigate("/academy-owner")}><ArrowRight size={16} /> العودة إلى الأكاديمية</button></div><span><ShieldCheck size={15} /> R01 · صلاحيات الأكاديمية</span></header>
-      <div className="workspace academy-roles-content"><PageHeader className="academy-roles-header" eyebrow={<span><i /> GOVERNANCE · صلاحيات ونطاق</span>} title="إدارة المستخدمين والصلاحيات" description="أضف مستخدمي الأكاديمية، حدّد دور كل شخص، وثبّت الفرع الذي يعمل داخله بدون تجاوز نطاق R00." actions={<button className="academy-roles-add-button" onClick={() => setShowAdd(true)}><UserPlus size={16} /> إضافة مستخدم</button>} />
+    <main className="academy-owner-main academy-roles-page" dir="rtl">
+      <header className="academy-owner-topbar academy-roles-topbar"><div><R01MobileMenuButton onOpen={() => setMobileNavOpen(true)} /></div><span><ShieldCheck size={15} /> R01 · صلاحيات الأكاديمية</span></header>
+      <div className="academy-owner-content academy-roles-content"><PageHeader className="academy-roles-header" eyebrow={<span><i /> GOVERNANCE · صلاحيات ونطاق</span>} title="إدارة المستخدمين والصلاحيات" description="أضف مستخدمي الأكاديمية، حدّد دور كل شخص، وثبّت الفرع الذي يعمل داخله بدون تجاوز نطاق R00." actions={<button className="academy-roles-add-button" onClick={() => setShowAdd(true)}><UserPlus size={16} /> إضافة مستخدم</button>} />
         <div className="academy-roles-scope"><ShieldCheck size={16} /><span><strong>نطاقك الحالي:</strong> {me?.academy?.name ?? "الأكاديمية"} · كل الفروع · لا يمكنك منح صلاحية مسؤول المنصة R00.</span></div>
         {error && <div className="academy-roles-error">{error}<button onClick={() => void load(true)}>إعادة المحاولة</button></div>}
         {warning && !error && <div className="academy-roles-error">{warning}<button onClick={() => void load(true)}>إعادة المحاولة</button></div>}
