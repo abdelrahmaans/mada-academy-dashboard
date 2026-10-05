@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Menu, RefreshCw, ShieldCheck, Users } from "lucide-react";
+import { CheckCircle2, RefreshCw, ShieldCheck, Users } from "lucide-react";
 import EvaluationReviewQueue from "@/components/EvaluationReviewQueue";
 import HeadInstructorsLiveOverview, { type HeadInstructorsOverviewData } from "@/components/HeadInstructorsLiveOverview";
 import R03HeadInstructorsSidebar from "@/components/R03HeadInstructorsSidebar";
 import { LoadingState } from "@/components/FeedbackStates";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
+import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient, type NotificationRecord } from "@/lib/apiClient";
 import { mergeR03LiveResults } from "@/lib/liveSurfaceAcceptance";
@@ -89,9 +90,11 @@ export default function HeadInstructorsLive() {
   return (
     <RoleDashboardShell className="app-shell r03-live-shell" showSessionLogout={false} roleCode="R03" roleLabel="رئيس المدربين" scopeLevel="branch" scopeLabel={`فرع واحد · ${branch}`} branchName={branch} tenantName={me.academy?.name} demo={false}>
       <R03HeadInstructorsSidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} activePath="/head-instructors" />
-      <main className="r03-live-page" dir="rtl">
+      <main className="main-panel" dir="rtl">
+        <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel={`فرع ${branch}`} roleLabel="رئيس المدربين" />
+        <div className="r03-live-page">
         <header className="r03-live-header">
-          <div><button type="button" className="r03-live-menu" aria-label="فتح قائمة رئيس المدربين" onClick={() => setMobileNavOpen(true)}><Menu size={19} /></button><span className="r03-live-eyebrow"><span /> لوحة أكاديمية · LIVE</span><h1>إشراف فريق المدربين</h1><p>بيانات فعلية من {branch} · الجلسات ضمن آخر 30 يومًا والقادم 60 يومًا.</p></div>
+          <div><span className="r03-live-eyebrow"><span /> لوحة أكاديمية · LIVE</span><h1>إشراف فريق المدربين</h1><p>بيانات فعلية من {branch} · الجلسات ضمن آخر 30 يومًا والقادم 60 يومًا.</p></div>
           <button className="r03-live-refresh" type="button" onClick={() => void load()} disabled={loading}><RefreshCw size={15} className={loading ? "spinning" : ""} /> تحديث البيانات</button>
         </header>
         <RoleScopeCard className="r03-live-scope" compact />
@@ -104,6 +107,7 @@ export default function HeadInstructorsLive() {
         {!loading && !error && warning && <section className="r03-live-error" role="status"><ShieldCheck size={20} /><div><strong>بعض الملحقات غير متاحة</strong><p>{warning} البيانات الأساسية ما زالت معروضة من الخادم.</p></div><button type="button" onClick={() => void load()}>إعادة المحاولة</button></section>}
         {!loading && !error && data && view === "overview" && <HeadInstructorsLiveOverview data={data} upcomingSessions={upcomingSessions} activeGroups={activeGroups} coachCount={coachCount} completedSessions={completedSessions} markingId={markingId} onMarkRead={notification => void markRead(notification)} />}
         {!loading && !error && data && view === "evaluations" && <EvaluationReviewQueue />}
+        </div>
       </main>
     </RoleDashboardShell>
   );
