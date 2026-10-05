@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Modules.Scheduling;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -210,8 +211,22 @@ public sealed class InMemoryApiTests
         var original = await TestData.LoginAsync(client, account);
         var rotation = await client.PostAsJsonAsync("/api/v1/auth/refresh", new { refreshToken = original.RefreshToken });
         Assert.Equal(HttpStatusCode.OK, rotation.StatusCode);
+        var rotated = await rotation.Content.ReadFromJsonAsync<TokenEnvelope>();
+        var rotatedTokens = rotated?.Data ?? throw new InvalidOperationException("Refresh response did not contain token data.");
+        Assert.NotEqual(original.RefreshToken, rotatedTokens.RefreshToken);
+
+        TestData.Authenticate(client, rotatedTokens);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/v1/me")).StatusCode);
+
         var replay = await client.PostAsJsonAsync("/api/v1/auth/refresh", new { refreshToken = original.RefreshToken });
         Assert.Equal(HttpStatusCode.Unauthorized, replay.StatusCode);
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+        var sessions = await db.RefreshSessions.Where(item => item.UserAccountId == account.UserId).ToListAsync();
+        Assert.Equal(2, sessions.Count);
+        Assert.Contains(sessions, item => item.TokenHash == JwtTokenService.HashRefreshToken(original.RefreshToken) && item.RevokedAt is not null);
+        Assert.Contains(sessions, item => item.TokenHash == JwtTokenService.HashRefreshToken(rotatedTokens.RefreshToken) && item.RevokedAt is null);
     }
 
     [Fact]
