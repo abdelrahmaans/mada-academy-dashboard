@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.RateLimiting;
 using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Modules.Identity;
