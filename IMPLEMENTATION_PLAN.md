@@ -276,14 +276,14 @@ Students (#57), Approvals (#59), and Instructor Desk (#60) were closed because t
 
 ## 9. CORS configuration review
 
-الكود يسمح بـAny Origin إذا لم تكن `MADA_CORS_ORIGINS` مضبوطة، وهذا يجب ألا يحدث في Production.
+في Development فقط يسمح الكود بـAny Origin إذا لم تكن `MADA_CORS_ORIGINS` مضبوطة؛ أما Production فيرفض startup عند غياب origins الصريحة أو استخدام `*`.
 
 ضمن هذه المرحلة:
 
-- مراجعة وتوثيق أن origins يجب أن تكون محددة في الإنتاج.
-- إضافة configuration test أو startup warning واضح.
-- منع `*` في production configuration.
-- التأكد من أن `AllowAnyHeader/AllowAnyMethod` لا تعني فتح origins.
+- [x] مراجعة وتوثيق أن origins يجب أن تكون محددة في الإنتاج.
+- [x] إضافة configuration test يفشل startup configuration عند غياب origins أو استخدام wildcard.
+- [x] منع `*` في production configuration.
+- [x] التأكد من أن `AllowAnyHeader/AllowAnyMethod` لا تعني فتح origins.
 - تم تنفيذ rate limiting وlockout وtrusted proxy handling في مسار auth مستقل؛ هذا القسم يركز فقط على origins ورفض wildcard في Production.
 
 ---

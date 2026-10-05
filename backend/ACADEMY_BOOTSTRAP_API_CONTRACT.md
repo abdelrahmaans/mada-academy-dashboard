@@ -22,7 +22,8 @@ Content-Type: application/json
   "owner": {
     "fullName": "أحمد محمود",
     "phone": "01012345678",
-    "email": "owner@mada.academy"
+    "email": "owner@mada.academy",
+    "password": "temporary-owner-password"
   }
 }
 ```
@@ -33,11 +34,11 @@ The endpoint creates the following records in one `SaveChanges` unit:
 
 - `Tenant` / academy
 - First active `Branch`
-- Active staff `UserAccount` for the owner
+- Active staff `UserAccount` for the owner with a server-side password hash
 - Active `Membership` with `R01_ACADEMY_OWNER` and `TENANT` scope
 - `AuditEvent` with `ACADEMY_BOOTSTRAPPED`
 
-The owner is ready for OTP login after creation. No password is created or stored.
+The owner is ready for password login after creation. The plaintext password is accepted only in the HTTPS request and is never persisted; only the server-side password hash is stored. Production clients must send this request over TLS and must not log or expose the password.
 
 ### Success: `201 Created`
 
@@ -69,6 +70,8 @@ The owner is ready for OTP login after creation. No password is created or store
   }
 }
 ```
+
+`owner.password` is required and must contain at least 8 characters. The response never includes the password or its hash.
 
 ### Error codes
 

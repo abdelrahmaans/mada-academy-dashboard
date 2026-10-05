@@ -195,6 +195,36 @@ public sealed class PlatformAdminApiTests
         Assert.Equal("R00_PLATFORM_ADMIN", role.GetProperty("code").GetString());
         Assert.False(role.GetProperty("canSelfAssign").GetBoolean());
         Assert.Equal("CONTROLLED_OUT_OF_BAND", role.GetProperty("assignmentMode").GetString());
+        var permissions = role.GetProperty("permissions").EnumerateArray().Select(item => item.GetString()).ToArray();
+        Assert.DoesNotContain("academy.archive", permissions);
+    }
+
+    [Fact]
+    public async Task PlatformOverviewAndActivityExposeOnlyPlatformMetadata()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var client = factory.CreateClient();
+        var platformAdmin = await TestData.CreateAccountAsync(factory, "R00_PLATFORM_ADMIN");
+        TestData.Authenticate(client, await TestData.LoginAsync(client, platformAdmin));
+
+        using var overviewResponse = await client.GetAsync("/api/v1/platform/overview");
+        Assert.Equal(HttpStatusCode.OK, overviewResponse.StatusCode);
+        using var overview = await overviewResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Platform overview response is empty.");
+        var overviewData = overview.RootElement.GetProperty("data");
+        foreach (var property in new[] { "academies", "activeAcademies", "trialAcademies", "attentionAcademies", "staffAccounts", "activeSessions", "auditEvents" })
+            Assert.True(overviewData.TryGetProperty(property, out var value) && value.ValueKind == JsonValueKind.Number, $"Missing numeric overview property: {property}");
+        Assert.False(overviewData.TryGetProperty("students", out _));
+        Assert.False(overviewData.TryGetProperty("invoices", out _));
+
+        using var activityResponse = await client.GetAsync("/api/v1/platform/activity");
+        Assert.Equal(HttpStatusCode.OK, activityResponse.StatusCode);
+        using var activity = await activityResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Platform activity response is empty.");
+        var activityData = activity.RootElement.GetProperty("data");
+        Assert.True(activityData.GetProperty("items").ValueKind == JsonValueKind.Array);
+        Assert.True(activityData.GetProperty("total").ValueKind == JsonValueKind.Number);
+        Assert.DoesNotContain("invoice", activity.RootElement.GetRawText(), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("amount", activity.RootElement.GetRawText(), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("student", activity.RootElement.GetRawText(), StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
