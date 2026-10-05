@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, Activity, Building2, CalendarDays, CheckCircle2, GraduationCap, RefreshCw, Users, Wallet } from "lucide-react";
+import { AlertCircle, Activity, BarChart3, Building2, CalendarDays, CheckCircle2, GraduationCap, LayoutDashboard, Menu, RefreshCw, ShieldCheck, Users, Wallet, X } from "lucide-react";
 import { toast } from "sonner";
+import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
@@ -48,6 +49,33 @@ function occurredAt(value: string) {
   return new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
+function ExecutiveLiveSidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => void }) {
+  const [, navigate] = useLocation();
+  const go = (path: string) => { onClose(); navigate(path); };
+  return <aside className={`r1-live-sidebar ${mobileOpen ? "is-open" : ""}`} aria-label="تنقل مسؤول الأكاديمية">
+    <div className="r1-live-sidebar-head">
+      <button type="button" className="r1-live-brand" onClick={() => go("/executive-dashboard")}>
+        <span>مدى</span><div><strong>الإدارة التنفيذية</strong><small>مسؤول الأكاديمية · R01</small></div>
+      </button>
+      <button type="button" className="r1-live-close" aria-label="إغلاق القائمة" onClick={onClose}><X size={18} /></button>
+    </div>
+    <div className="r1-live-tenant"><span><Building2 size={18} /></span><div><strong>الأكاديمية الحالية</strong><small>كل فروع الأكاديمية · Tenant</small></div></div>
+    <nav className="r1-live-nav" aria-label="مساحات الأكاديمية">
+      <span className="r1-live-nav-caption">لوحة الإدارة</span>
+      <button type="button" className="active" onClick={() => go("/executive-dashboard")}><LayoutDashboard size={17} /><span>اللوحة التنفيذية</span></button>
+      <span className="r1-live-nav-caption r1-live-nav-caption-spaced">إدارة الأكاديمية</span>
+      <button type="button" onClick={() => go("/academy-owner")}><Building2 size={17} /><span>إدارة الأكاديمية</span></button>
+      <button type="button" onClick={() => go("/academy/branches")}><Building2 size={17} /><span>إدارة الفروع</span></button>
+      <button type="button" onClick={() => go("/academy/classrooms")}><GraduationCap size={17} /><span>القاعات الدراسية</span></button>
+      <button type="button" onClick={() => go("/academy/roles")}><Users size={17} /><span>المستخدمون والصلاحيات</span></button>
+      <button type="button" onClick={() => go("/reports")}><BarChart3 size={17} /><span>التقارير</span></button>
+    </nav>
+    <div className="r1-live-sidebar-spacer" />
+    <div className="r1-live-sidebar-note"><ShieldCheck size={16} /><span>النطاق الحالي قراءة تجميعية على مستوى الأكاديمية فقط.</span></div>
+    <div className="r1-live-sidebar-footer"><Wallet size={15} /><span>المالية والتحصيل من مساحة الدور المختص</span></div>
+  </aside>;
+}
+
 export default function ExecutiveDashboardLive() {
   const [branchId, setBranchId] = useState("ALL");
   const [period, setPeriod] = useState<PeriodOffset>(0);
@@ -58,6 +86,7 @@ export default function ExecutiveDashboardLive() {
   const [activity, setActivity] = useState<ExecutiveActivityItem[]>([]);
   const [activityError, setActivityError] = useState<string | null>(null);
   const [activityLoading, setActivityLoading] = useState(true);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const range = useMemo(() => periodRange(period), [period]);
 
   useEffect(() => {
@@ -101,7 +130,11 @@ export default function ExecutiveDashboardLive() {
   const retry = () => setRetryKey(value => value + 1);
 
   return <RoleDashboardShell className="app-shell executive-dashboard-shell r1-live-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية الحالية" branchName={selectedBranchName}>
-    <main className="r1-live-page" dir="rtl">
+    {mobileNavOpen && <button type="button" className="r1-live-scrim" aria-label="إغلاق القائمة" onClick={() => setMobileNavOpen(false)} />}
+    <ExecutiveLiveSidebar mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+    <div className="r1-live-main">
+      <header className="r1-live-topbar"><button type="button" className="r1-live-menu" aria-label="فتح القائمة" onClick={() => setMobileNavOpen(true)}><Menu size={20} /></button><span className="r1-live-topbar-title"><ShieldCheck size={14} /> مساحة مسؤول الأكاديمية</span><span className="r1-live-topbar-scope">{selectedBranchName} · قراءة فقط</span></header>
+      <main className="r1-live-page" dir="rtl">
       <PageHeader className="welcome-row" eyebrow={<span className="eyebrow"><i className="eyebrow-dot" /> الإدارة التنفيذية · R01 · LIVE</span>} title="لوحة الإدارة التنفيذية" description="مؤشرات تشغيلية ومالية للقراءة فقط، محسوبة من بيانات الأكاديمية ضمن الفرع والفترة المختارين." />
       <RoleScopeCard className="executive-scope-card" />
       <section className="r1-live-controls" aria-label="تصفية التقرير التنفيذي">
@@ -128,6 +161,7 @@ export default function ExecutiveDashboardLive() {
         <small className="r1-live-audit-source">المصادر: AuditEvents + ApprovalRequests. لا يتم إرجاع metadata أو بيانات الاتصال.</small>
       </section>
       <p className="r1-live-scope-note">بيانات القراءة فقط داخل Tenant الحالي؛ لا تتيح هذه اللوحة إنشاء دفعات أو اعتماد مصروفات.</p>
-    </main>
+      </main>
+    </div>
   </RoleDashboardShell>;
 }
