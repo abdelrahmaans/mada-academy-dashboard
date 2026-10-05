@@ -5,7 +5,8 @@ import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
-import R01AcademySidebar, { R01MobileMenuButton } from "@/components/R01AcademySidebar";
+import R01AcademySidebar from "@/components/R01AcademySidebar";
+import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { apiClient, type ExecutiveActivityItem, type ExecutiveDashboardReport, type ExecutiveMetrics } from "@/lib/apiClient";
 import { executiveFailureMessage } from "@/lib/liveSurfaceAcceptance";
 import "./ExecutiveDashboardLive.css";
@@ -105,9 +106,9 @@ export default function ExecutiveDashboardLive() {
 
   return <RoleDashboardShell className="app-shell executive-dashboard-shell r1-live-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية الحالية" branchName={selectedBranchName}>
     <R01AcademySidebar activePath="/executive-dashboard" mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
-    <div className="r1-live-main">
-      <header className="r1-live-topbar"><R01MobileMenuButton onOpen={() => setMobileNavOpen(true)} /><span className="r1-live-topbar-title"><ShieldCheck size={14} /> مساحة مسؤول الأكاديمية</span><span className="r1-live-topbar-scope">{selectedBranchName} · قراءة فقط</span></header>
-      <main className="r1-live-page" dir="rtl">
+    <main className="main-panel">
+      <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel={selectedBranchName} />
+      <div className="workspace r1-live-page" dir="rtl">
       <PageHeader className="welcome-row" eyebrow={<span className="eyebrow"><i className="eyebrow-dot" /> الإدارة التنفيذية · R01 · LIVE</span>} title="لوحة الإدارة التنفيذية" description="مؤشرات تشغيلية ومالية للقراءة فقط، محسوبة من بيانات الأكاديمية ضمن الفرع والفترة المختارين." />
       <RoleScopeCard className="executive-scope-card" />
       <section className="r1-live-controls" aria-label="تصفية التقرير التنفيذي">
@@ -134,7 +135,7 @@ export default function ExecutiveDashboardLive() {
         <small className="r1-live-audit-source">المصادر: AuditEvents + ApprovalRequests. لا يتم إرجاع metadata أو بيانات الاتصال.</small>
       </section>
       <p className="r1-live-scope-note">بيانات القراءة فقط داخل Tenant الحالي؛ لا تتيح هذه اللوحة إنشاء دفعات أو اعتماد مصروفات.</p>
-      </main>
-    </div>
+      </div>
+    </main>
   </RoleDashboardShell>;
 }

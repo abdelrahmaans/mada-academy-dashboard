@@ -5,7 +5,8 @@ import PageHeader from "@/components/PageHeader";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import BranchManagerSidebar from "@/components/BranchManagerSidebar";
-import R01AcademySidebar, { R01MobileMenuButton } from "@/components/R01AcademySidebar";
+import R01AcademySidebar from "@/components/R01AcademySidebar";
+import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { apiClient, type AuthMe, type FinanceReport, type OperationalReport } from "@/lib/apiClient";
 import "./ReportsLive.css";
 
@@ -61,13 +62,11 @@ export default function ReportsLive({ me }: { me: AuthMe }) {
 
   const money = (piastres: number) => new Intl.NumberFormat("ar-EG", { style: "currency", currency: "EGP", maximumFractionDigits: 2 }).format(piastres / 100);
 
-  return <RoleDashboardShell className={`${isOwner ? "academy-owner-shell" : "app-shell"} reports-live-shell`} roleCode={roleCode} roleLabel={me.roleLabel || (isOwner ? "مسؤول الأكاديمية" : "مدير الفرع")} scopeLevel={isOwner ? "tenant" : "branch"} scopeLabel={scopeLabel} tenantName={me.academy?.name} branchName={isOwner ? undefined : branchName} demo={false}>
+  return <RoleDashboardShell className="app-shell reports-live-shell" roleCode={roleCode} roleLabel={me.roleLabel || (isOwner ? "مسؤول الأكاديمية" : "مدير الفرع")} scopeLevel={isOwner ? "tenant" : "branch"} scopeLabel={scopeLabel} tenantName={me.academy?.name} branchName={isOwner ? undefined : branchName} demo={false}>
     {isOwner ? <R01AcademySidebar activePath="/reports" mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} /> : <BranchManagerSidebar roleCode={me.role === "R06_ACCOUNTANT" ? "R06" : "R02"} open={mobileOpen} onClose={() => setMobileOpen(false)} />}
-    <main className={`${isOwner ? "academy-owner-main" : "main-panel"}`}>
-      <header className={`${isOwner ? "academy-owner-topbar" : "topbar"} r02-live-topbar`}>
-        <div className="topbar-right">{isOwner ? <R01MobileMenuButton onOpen={() => setMobileOpen(true)} /> : <button className="icon-button mobile-menu-button" aria-label="فتح قائمة مدير الفرع" onClick={() => setMobileOpen(true)}><Menu size={21} /></button>}<div className="r02-live-topbar-scope"><span>{me.academy?.name || "أكاديمية مدى"}</span><small>{scopeLabel} · تقرير مباشر</small></div></div>
-      </header>
-      <div className={`${isOwner ? "academy-owner-content" : "workspace"} reports-live-workspace`}>
+    <main className="main-panel">
+      {isOwner ? <RoleSurfaceTopbar onMenu={() => setMobileOpen(true)} scopeLabel={scopeLabel} /> : <header className="topbar r02-live-topbar"><div className="topbar-right"><button className="icon-button mobile-menu-button" aria-label="فتح قائمة مدير الفرع" onClick={() => setMobileOpen(true)}><Menu size={21} /></button><div className="r02-live-topbar-scope"><span>{me.academy?.name || "أكاديمية مدى"}</span><small>{scopeLabel} · تقرير مباشر</small></div></div></header>}
+      <div className="workspace reports-live-workspace">
         <PageHeader
           className="welcome-row"
           copyClassName="welcome-copy"

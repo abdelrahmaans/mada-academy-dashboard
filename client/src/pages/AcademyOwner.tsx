@@ -30,7 +30,8 @@ import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import StatusBadge from "@/components/StatusBadge";
 import InstructorPerformanceComparison from "@/components/InstructorPerformanceComparison";
-import R01AcademySidebar, { R01MobileMenuButton } from "@/components/R01AcademySidebar";
+import R01AcademySidebar from "@/components/R01AcademySidebar";
+import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import {
   ACADEMY_BRANCHES,
   INSTRUCTOR_MONTHLY_PERFORMANCE,
@@ -176,8 +177,10 @@ export default function AcademyOwner() {
   const [location, navigate] = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const viewFromLocation = (): OwnerView => {
-    const value = new URLSearchParams(location.split("?")[1] ?? "").get("view");
-    return value === "branches" || value === "tickets" || value === "reports" ? value : "overview";
+    if (location === "/academy-owner/branches") return "branches";
+    if (location === "/academy-owner/tickets") return "tickets";
+    if (location === "/academy-owner/reports") return "reports";
+    return "overview";
   };
   const [view, setView] = useState<OwnerView>(viewFromLocation);
   const [month, setMonth] = useState<string>(PERFORMANCE_MONTHS[0].value);
@@ -239,6 +242,7 @@ export default function AcademyOwner() {
 
   const goToView = (next: OwnerView) => {
     setView(next);
+    navigate(next === "overview" ? "/academy-owner" : `/academy-owner/${next}`);
     setMobileNavOpen(false);
   };
   useEffect(() => { setView(viewFromLocation()); }, [location]);
@@ -262,7 +266,7 @@ export default function AcademyOwner() {
 
   return (
     <RoleDashboardShell
-      className="academy-owner-shell"
+      className="app-shell"
       roleCode="R01"
       roleLabel="مسؤول الأكاديمية"
       scopeLevel="tenant"
@@ -270,11 +274,11 @@ export default function AcademyOwner() {
       tenantName="أكاديمية مدى"
       branchName={branchLabel}
     >
-      <R01AcademySidebar activePath={view === "overview" ? location : `/academy-owner?view=${view}`} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onOwnerView={next => goToView(next)} />
+      <R01AcademySidebar activePath={location} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
 
-      <main className="academy-owner-main">
-        <header className="academy-owner-topbar"><R01MobileMenuButton onOpen={() => setMobileNavOpen(true)} /><span className="academy-owner-scope-pill"><Building2 size={15} /> أكاديمية مدى · {branchLabel}</span><span className="academy-owner-demo-pill"><i /> مسؤول الأكاديمية</span></header>
-        <div className="academy-owner-content">
+      <main className="main-panel academy-owner-main">
+        <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel={branchLabel} />
+        <div className="workspace academy-owner-content">
           <div className="academy-owner-breadcrumb"><span>مساحات الأدوار</span><ChevronLeft size={13} /><strong>{OWNER_VIEW_LABELS[view]}</strong></div>
           <PageHeader
             className="academy-owner-welcome"
