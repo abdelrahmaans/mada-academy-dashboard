@@ -2,6 +2,7 @@ import { BarChart3, BookOpen, Building2, CalendarDays, CheckCircle2, ChevronDown
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import "./R01AcademySidebar.css";
+import "./AcademyManagement.css";
 
 type Props = { activePath: string; mobileOpen: boolean; onClose: () => void };
 
