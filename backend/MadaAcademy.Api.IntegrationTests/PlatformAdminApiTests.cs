@@ -249,7 +249,7 @@ public sealed class PlatformAdminApiTests
         Assert.Equal("ACTIVE", (await db.Tenants.SingleAsync(item => item.Id == owner.TenantId)).Status);
         var transitions = await db.AuditEvents.Where(item => item.TenantId == owner.TenantId && item.Action == "PLATFORM_TENANT_STATUS_CHANGED").ToListAsync();
         Assert.Equal(2, transitions.Count);
-        Assert.Contains(transitions, item => item.Reason == "Review completed" && item.MetadataJson.Contains("ACTIVE", StringComparison.Ordinal));
+        Assert.Contains(transitions, item => item.Reason == "Review completed" && item.MetadataJson?.Contains("ACTIVE", StringComparison.Ordinal) == true);
     }
 
     [Fact]
