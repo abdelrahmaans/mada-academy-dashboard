@@ -143,3 +143,77 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Shared dialog and access-denied foundations */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(15 23 42 / 52%);
+  overscroll-behavior: contain;
+}
+.dialog-card {
+  position: relative;
+  width: min(640px, 100%);
+  max-height: min(760px, calc(100vh - 40px));
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid #dbe7e8;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgb(15 42 52 / 24%);
+  color: #29444f;
+}
+.dialog-close {
+  position: absolute;
+  inset-block-start: 14px;
+  inset-inline-start: 14px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #dce8e9;
+  border-radius: 9px;
+  color: #6e858b;
+  background: #fff;
+  cursor: pointer;
+}
+.dialog-close:hover { color: #0d9488; border-color: #9bd6d0; background: #f3fbfa; }
+.dialog-close:focus-visible,
+.dialog-card button:focus-visible,
+.dialog-card input:focus-visible,
+.dialog-card textarea:focus-visible,
+.dialog-card select:focus-visible { outline: 3px solid rgb(13 148 136 / 24%); outline-offset: 2px; }
+.approval-dialog { display: grid; gap: 16px; }
+.approval-dialog .team-dialog-heading { padding-inline-start: 44px; }
+.approval-dialog .approval-type-icon { width: 40px; height: 40px; }
+.approval-dialog-actions { display: flex; justify-content: flex-end; gap: 9px; padding-top: 4px; }
+.approval-dialog-actions .button { min-height: 40px; }
+.approval-expense-rejection { display: grid; gap: 14px; }
+.approval-expense-rejection-notice,
+.dialog-info { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border-radius: 10px; color: #617981; background: #f5faf9; font-size: 12px; line-height: 1.65; }
+.approval-expense-rejection-notice svg,
+.dialog-info svg { flex: none; color: #0d9488; margin-top: 2px; }
+.approval-expense-rejection-notice span { display: grid; gap: 2px; }
+.approval-expense-rejection-notice small { color: #7b8f95; font-size: 11px; }
+.auth-locked-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 15% 10%, #e4f7f4, transparent 34%), #f5fafb; color: #29444f; }
+.auth-locked-page section { display: grid; justify-items: center; gap: 12px; width: min(480px, 100%); padding: 34px 28px; border: 1px solid #dbe9ea; border-radius: 20px; background: #fff; box-shadow: 0 18px 50px rgb(27 70 82 / 10%); text-align: center; }
+.auth-locked-page section > svg { padding: 12px; width: 54px; height: 54px; border-radius: 16px; color: #b45353; background: #fff0f0; }
+.auth-locked-page h1 { margin: 0; color: #29444f; font-size: clamp(22px, 4vw, 30px); }
+.auth-locked-page p { margin: 0; color: #71878d; font-size: 14px; line-height: 1.8; }
+.auth-locked-page-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; margin-top: 6px; }
+.auth-locked-page-actions button { min-height: 42px; padding: 0 16px; border: 1px solid #cfe5e4; border-radius: 10px; color: #0b776f; background: #f4fbfa; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+.auth-locked-page-actions button:first-child { border-color: #0d9488; color: #fff; background: #0d9488; }
+.auth-locked-page-actions button:focus-visible { outline: 3px solid rgb(13 148 136 / 24%); outline-offset: 2px; }
+@media (max-width: 560px) {
+  .dialog-overlay { padding: 10px; align-items: end; }
+  .dialog-card { max-height: calc(100vh - 20px); padding: 20px 16px; border-radius: 16px 16px 0 0; }
+  .approval-dialog-actions { flex-direction: column-reverse; }
+  .approval-dialog-actions .button { width: 100%; justify-content: center; }
+  .auth-locked-page section { padding: 28px 20px; }
+  .auth-locked-page-actions { width: 100%; flex-direction: column; }
+  .auth-locked-page-actions button { width: 100%; }
+}

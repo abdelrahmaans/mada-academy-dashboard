@@ -110,6 +110,7 @@ export default function DecisionDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="approval-dialog-title"
+        aria-describedby="approval-dialog-summary"
       >
         <button className="dialog-close" aria-label="إغلاق" onClick={onClose}>
           <X size={17} />
@@ -120,7 +121,7 @@ export default function DecisionDialog({
             {item.id}
           </span>
           <h2 id="approval-dialog-title">{item.title}</h2>
-          <p>{item.summary}</p>
+          <p id="approval-dialog-summary">{item.summary}</p>
         </div>
         <div className="approval-review-summary">
           <span>

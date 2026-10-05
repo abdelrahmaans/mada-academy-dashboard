@@ -158,7 +158,7 @@ export default function StudentPortal() {
       tenantName="أكاديمية مدى"
       demo={!liveMode}
     >
-      <div className="student-portal" dir="rtl">
+      <div className={`student-portal ${mobileOpen ? "sidebar-open" : ""}`} dir="rtl">
       {mobileOpen && (
         <button
           className="student-portal-scrim"
@@ -166,7 +166,7 @@ export default function StudentPortal() {
           onClick={() => setMobileOpen(false)}
         />
       )}
-      <aside className={`student-portal-sidebar ${mobileOpen ? "open" : ""}`}>
+      <aside id="student-portal-sidebar" className={`student-portal-sidebar ${mobileOpen ? "open" : ""}`}>
         <div className="student-brand">
           <span>مدى</span>
           <small>مساحة الطالب</small>
@@ -234,6 +234,8 @@ export default function StudentPortal() {
             className="student-menu"
             onClick={() => setMobileOpen(true)}
             aria-label="فتح القائمة"
+            aria-expanded={mobileOpen}
+            aria-controls="student-portal-sidebar"
           >
             <Menu size={20} />
           </button>

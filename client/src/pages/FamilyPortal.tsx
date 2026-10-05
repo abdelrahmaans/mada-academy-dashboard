@@ -185,7 +185,7 @@ export default function FamilyPortal() {
       tenantName="أكاديمية مدى"
       demo={!liveMode}
     >
-      <div className="family-portal" dir="rtl">
+      <div className={`family-portal ${mobileOpen ? "sidebar-open" : ""}`} dir="rtl">
       {mobileOpen && (
         <button
           className="family-portal-scrim"
@@ -193,7 +193,7 @@ export default function FamilyPortal() {
           onClick={() => setMobileOpen(false)}
         />
       )}
-      <aside className={`family-portal-sidebar ${mobileOpen ? "open" : ""}`}>
+      <aside id="family-portal-sidebar" className={`family-portal-sidebar ${mobileOpen ? "open" : ""}`}>
         <div className="family-portal-brand">
           <span>مدى</span>
           <small>بوابة الأسرة</small>
@@ -263,6 +263,8 @@ export default function FamilyPortal() {
             type="button"
             className="family-menu-button"
             aria-label="فتح القائمة"
+            aria-expanded={mobileOpen}
+            aria-controls="family-portal-sidebar"
             onClick={() => setMobileOpen(true)}
           >
             <Menu size={20} />
