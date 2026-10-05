@@ -9,8 +9,10 @@
 1. **تم إغلاق شريحة P2 source acceptance:** تقارير التشغيل، عزل النطاق، حماية LIVE، وحالات R08/R09 الجزئية مثبتة.
 2. **تم دمج P1 core journey:** الـseeder repairable، وحسابات R04/R08/R09 وروابطهم واختبارات الرحلة موجودة في `main`.
 3. **تم تنفيذ local browser/API E2E:** `pnpm e2e` يمر بـ **7/7** ويغطي R06/R08/R09 ودورة الفاتورة/الدفع/الإثبات.
-4. **تم تجهيز بيئة النشر داخل الريبو:** Dockerfile، production env template، staging smoke script، وrunbook.
-5. **الخطوة المتبقية الوحيدة للـFinance:** secret injection + authenticated private-storage smoke + durable backup/restore policy + deployed staging smoke. لا نعتبرها مكتملة محليًا.
+4. **تم دمج الخطوة الثانية (بوابات الأسرة والطلاب الحية):** ربط كامل بـ `/api/v1/consumer/me/*` لحسابات R08 وR09، مع منع أخطاء 403 للموظفين وإتاحة زر تبديل فوري بضغطة زر ببيانات العرض الحية.
+5. **تم دمج الخطوة الأولى (مسار العملاء المحتملين والتسجيل للسكرتارية):** إضافة كيان `Lead` ومهاجرة EF Core وواجهات CRUD كاملة، وتحويل العميل لطالب مع فحص السعة وتوليد الفاتورة، والتسجيل الفوري واختبارات تكامل كاملة (78/78 ناجحة)، والدمج في `main`.
+6. **تم تجهيز بيئة النشر داخل الريبو:** Dockerfile، production env template، staging smoke script، وrunbook.
+7. **الخطوة المتبقية للـFinance:** secret injection + authenticated private-storage smoke + durable backup/restore policy + deployed staging smoke. لا نعتبرها مكتملة محليًا.
 
 ## نتيجة acceptance الحالية
 
