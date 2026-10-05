@@ -7,25 +7,26 @@ type R01AcademySidebarProps = {
   activePath: string;
   mobileOpen: boolean;
   onClose: () => void;
+  onOwnerView?: (view: "branches" | "tickets" | "reports") => void;
 };
 
 const links = [
-  { path: "/academy-owner", label: "نظرة عامة", icon: LayoutDashboard },
-  { path: "/executive-dashboard", label: "لوحة الإدارة التنفيذية", icon: TrendingUp },
-  { path: "/academy-owner?view=branches", label: "الفروع والأداء", icon: Building2 },
-  { path: "/academy-owner?view=tickets", label: "مركز التذاكر", icon: CircleHelp },
-  { path: "/academy-owner?view=reports", label: "التقارير المجمعة", icon: BarChart3 },
-  { path: "/academy/branches", label: "إدارة الفروع", icon: Building2 },
-  { path: "/academy/classrooms", label: "القاعات الدراسية", icon: GraduationCap },
-  { path: "/academy/roles", label: "المستخدمون والصلاحيات", icon: Users },
-  { path: "/reports", label: "التقرير التشغيلي المباشر", icon: BarChart3 },
+  { path: "/academy-owner", label: "نظرة عامة", icon: LayoutDashboard, view: undefined },
+  { path: "/executive-dashboard", label: "لوحة الإدارة التنفيذية", icon: TrendingUp, view: undefined },
+  { path: "/academy-owner?view=branches", label: "الفروع والأداء", icon: Building2, view: "branches" },
+  { path: "/academy-owner?view=tickets", label: "مركز التذاكر", icon: CircleHelp, view: "tickets" },
+  { path: "/academy-owner?view=reports", label: "التقارير المجمعة", icon: BarChart3, view: "reports" },
+  { path: "/academy/branches", label: "إدارة الفروع", icon: Building2, view: undefined },
+  { path: "/academy/classrooms", label: "القاعات الدراسية", icon: GraduationCap, view: undefined },
+  { path: "/academy/roles", label: "المستخدمون والصلاحيات", icon: Users, view: undefined },
+  { path: "/reports", label: "التقرير التشغيلي المباشر", icon: BarChart3, view: undefined },
 ] as const;
 
 export function R01MobileMenuButton({ onOpen }: { onOpen: () => void }) {
   return <button type="button" className="academy-owner-menu" aria-label="فتح القائمة" onClick={onOpen}><span aria-hidden="true"><LayoutDashboard size={19} /></span></button>;
 }
 
-export default function R01AcademySidebar({ activePath, mobileOpen, onClose }: R01AcademySidebarProps) {
+export default function R01AcademySidebar({ activePath, mobileOpen, onClose, onOwnerView }: R01AcademySidebarProps) {
   const { logout } = useAuth();
   const [, navigate] = useLocation();
   const go = (path: string) => { onClose(); navigate(path); };
@@ -36,7 +37,7 @@ export default function R01AcademySidebar({ activePath, mobileOpen, onClose }: R
       <div className="academy-owner-user"><span className="academy-owner-user-avatar">أم</span><span><strong>أحمد محمود</strong><small>رئيس الأكاديمية · R01</small></span></div>
       <span className="academy-owner-nav-caption">نطاق الأكاديمية</span>
       <nav className="academy-owner-nav" aria-label="تنقل رئيس الأكاديمية">
-        {links.map(({ path, label, icon: Icon }) => <button type="button" key={path} className={activePath === path ? "active" : ""} onClick={() => go(path)}><Icon size={17} /><span>{label}</span></button>)}
+        {links.map(({ path, label, icon: Icon, view }) => <button type="button" key={path} className={activePath === path ? "active" : ""} onClick={() => { if (view && onOwnerView) { onClose(); onOwnerView(view); } else go(path); }}><Icon size={17} /><span>{label}</span></button>)}
       </nav>
       <div className="academy-owner-sidebar-spacer" />
       <div className="academy-owner-scope-card"><CircleHelp size={15} /><span><small>نطاق العرض</small><strong>كل فروع الأكاديمية</strong></span></div>

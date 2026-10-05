@@ -239,7 +239,6 @@ export default function AcademyOwner() {
 
   const goToView = (next: OwnerView) => {
     setView(next);
-    navigate(next === "overview" ? "/academy-owner" : `/academy-owner?view=${next}`);
     setMobileNavOpen(false);
   };
   useEffect(() => { setView(viewFromLocation()); }, [location]);
@@ -271,7 +270,7 @@ export default function AcademyOwner() {
       tenantName="أكاديمية مدى"
       branchName={branchLabel}
     >
-      <R01AcademySidebar activePath={location} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+      <R01AcademySidebar activePath={view === "overview" ? location : `/academy-owner?view=${view}`} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} onOwnerView={next => goToView(next)} />
 
       <main className="academy-owner-main">
         <header className="academy-owner-topbar"><R01MobileMenuButton onOpen={() => setMobileNavOpen(true)} /><span className="academy-owner-scope-pill"><Building2 size={15} /> أكاديمية مدى · {branchLabel}</span><span className="academy-owner-demo-pill"><i /> مسؤول الأكاديمية</span></header>
