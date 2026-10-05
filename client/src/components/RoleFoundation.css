@@ -242,3 +242,33 @@
   .auth-locked-page-actions { grid-template-columns: 1fr; }
   .auth-locked-page-actions button { width: 100%; }
 }
+
+/* Finance surface readability pass: keep the existing visual identity, remove tiny operational text */
+.finance-desk-shell .finance-desk-banner,
+.finance-desk-shell .finance-desk-context,
+.finance-desk-shell .finance-desk-scope,
+.finance-desk-shell .finance-desk-date { font-size: 11px; }
+.finance-desk-shell .finance-desk-kpi small,
+.finance-desk-shell .finance-desk-form label,
+.finance-desk-shell .finance-desk-search input,
+.finance-desk-shell .finance-desk-primary,
+.finance-desk-shell .finance-desk-secondary { font-size: 11px; }
+.finance-desk-shell .finance-desk-kpi>span:last-child,
+.finance-desk-shell .finance-invoice-person small,
+.finance-desk-shell .finance-invoice-meta small,
+.finance-desk-shell .finance-invoice-meta span,
+.finance-desk-shell .finance-invoice-money small,
+.finance-desk-shell .finance-desk-status,
+.finance-desk-shell .finance-expense-row>div small,
+.finance-desk-shell .finance-reason { font-size: 10px; }
+.finance-desk-shell .finance-invoice-person strong,
+.finance-desk-shell .finance-invoice-money strong,
+.finance-desk-shell .finance-expense-row>div strong,
+.finance-desk-shell .finance-expense-row>strong { font-size: 12px; }
+.finance-desk-shell .finance-desk-form input,
+.finance-desk-shell .finance-desk-form select,
+.finance-desk-shell .finance-branch-select select { font-size: 11px; }
+.finance-desk-shell .finance-desk-modal p,
+.finance-desk-shell .finance-desk-modal textarea { font-size: 11px; }
+.finance-desk-shell .finance-reject-link { font-size: 10px; }
+.finance-desk-shell .sidebar-bottom .nav-link:last-child { display: none; }

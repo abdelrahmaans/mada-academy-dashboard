@@ -1,9 +1,10 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Activity, ArrowLeft, BookOpen, CalendarDays, CheckCircle2, RefreshCw, Users } from "lucide-react";
+import { Activity, ArrowLeft, BookOpen, CalendarDays, CheckCircle2, Menu, RefreshCw, Users } from "lucide-react";
 import { useLocation } from "wouter";
 import PageHeader from "@/components/PageHeader";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
+import BranchManagerSidebar from "@/components/BranchManagerSidebar";
 import { apiClient, type AuthMe, type DashboardSummary } from "@/lib/apiClient";
 import "./HomeLive.css";
 
@@ -13,6 +14,7 @@ export default function HomeLive({ me }: { me: AuthMe }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const branchName = me.branches?.find(branch => branch.id === me.branchId)?.name ?? "الفرع المحدد";
 
   useEffect(() => {
@@ -35,7 +37,12 @@ export default function HomeLive({ me }: { me: AuthMe }) {
   const displayName = me.user?.displayName?.trim() || "مدير الفرع";
 
   return <RoleDashboardShell className="app-shell r02-home-live-shell" roleCode="R02" roleLabel={me.roleLabel || "مدير الفرع"} scopeLevel="branch" scopeLabel={branchName} tenantName={me.academy?.name} branchName={branchName} demo={false}>
+    <BranchManagerSidebar open={mobileOpen} onClose={() => setMobileOpen(false)} />
     <main className="main-panel">
+      <header className="topbar r02-live-topbar">
+        <button className="icon-button mobile-menu-button" aria-label="فتح قائمة مدير الفرع" onClick={() => setMobileOpen(true)}><Menu size={21} /></button>
+        <div className="r02-live-topbar-scope"><span>{me.academy?.name || "أكاديمية مدى"}</span><small>{branchName} · بيانات مباشرة</small></div>
+      </header>
       <div className="workspace r02-home-live">
         <PageHeader
           className="welcome-row"
