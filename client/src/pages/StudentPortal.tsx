@@ -27,6 +27,7 @@ import StudentProgressCard, {
 import { RoleScopeProvider } from "@/contexts/RoleScopeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient, type ConsumerSessionRecord } from "@/lib/apiClient";
+import { firstLinkedStudent, sessionsForStudent } from "@/lib/consumerScope";
 import { useLocation } from "wouter";
 import "@/components/RoleFoundation.css";
 
@@ -111,9 +112,9 @@ export default function StudentPortal() {
         const message = studentsResult.reason instanceof Error ? studentsResult.reason.message : "تعذر تحميل ملف الطالب.";
         setSessions([]); setHasStudentProfile(false); setDataError(message); toast.error(message); return;
       }
-      const student = studentsResult.value.items[0];
+      const student = firstLinkedStudent(studentsResult.value.items);
       const records = sessionsResult.status === "fulfilled" ? sessionsResult.value.items : [];
-      const ownRecords = student ? records.filter(item => item.studentId === student.id) : [];
+      const ownRecords = student ? sessionsForStudent(records, student.id) : [];
       setHasStudentProfile(Boolean(student));
       setStudentName(student?.name ?? me?.user?.displayName ?? "الطالب");
       setCourseName(ownRecords[0]?.courseName ?? "لا توجد مجموعة مسجلة");

@@ -60,6 +60,7 @@ import {
   type FinanceReport,
   type StudentRecord,
 } from "@/lib/apiClient";
+import { buildExpenseMutation, buildInvoiceMutation, buildPaymentMutation } from "@/lib/financeMutations";
 
 export type View = FinanceView;
 export type InvoiceStatus = "partial" | "overdue" | "paid" | "unpaid";
@@ -421,37 +422,20 @@ export default function FinanceDesk() {
   };
   const recordPayment = (event: FormEvent) => {
     event.preventDefault();
-    const amount = Number(paymentAmount);
     const invoice = invoices.find(item => item.id === paymentInvoice);
     const remaining = invoice ? invoice.total - invoice.collected : 0;
-    const reference = externalReference.trim();
-    if (!invoice || !amount || amount <= 0) {
+    if (!invoice) {
       toast.error("أدخل مبلغ تحصيل صحيح");
       return;
     }
-    if (amount > remaining) {
-      toast.error("المبلغ أكبر من الرصيد المتبقي", {
-        description: `المتاح للتحصيل ${money(remaining)} ج.م فقط.`,
-      });
+    const mutation = buildPaymentMutation({ amount: paymentAmount, remaining, method: paymentMethod, receivedOn, externalReference });
+    if (!mutation.ok) {
+      const messages = { INVALID_AMOUNT: "أدخل مبلغ تحصيل صحيح", OVER_COLLECTION: "المبلغ أكبر من الرصيد المتبقي", MISSING_DATE: "اختر تاريخ استلام التحصيل", MISSING_REFERENCE: "المرجع مطلوب لهذه الطريقة" } as const;
+      toast.error(messages[mutation.code], mutation.code === "OVER_COLLECTION" ? { description: `المتاح للتحصيل ${money(remaining)} ج.م فقط.` } : undefined);
       return;
     }
-    if (!receivedOn) {
-      toast.error("اختر تاريخ استلام التحصيل");
-      return;
-    }
-    if (
-      (paymentMethod === "INSTAPAY" || paymentMethod === "VODAFONE_CASH") &&
-      !reference
-    ) {
-      toast.error("المرجع مطلوب لهذه الطريقة");
-      return;
-    }
-    const input = {
-      amountPiastres: amount * 100,
-      method: paymentMethod,
-      receivedOn,
-      ...(reference ? { externalReference: reference } : {}),
-    };
+    const amount = Number(paymentAmount);
+    const input = mutation.input;
     if (liveMode) {
       void apiClient
         .createFinancePayment(invoice.id, input)
@@ -493,17 +477,15 @@ export default function FinanceDesk() {
   };
   const createExpense = (event: FormEvent) => {
     event.preventDefault();
-    const amount = Number(expenseAmount);
-    if (!expenseDescription.trim() || !amount || amount <= 0) {
+    const mutation = buildExpenseMutation(expenseDescription, expenseAmount);
+    if (!mutation) {
       toast.error("أدخل وصف المصروف والمبلغ");
       return;
     }
     if (liveMode) {
       void apiClient
         .createFinanceExpense({
-          description: expenseDescription,
-          category: "OPERATIONS",
-          amountPiastres: amount * 100,
+          ...mutation,
         })
         .then(expense => {
           setExpenses(current => [mapFinanceExpense(expense), ...current]);
@@ -524,7 +506,7 @@ export default function FinanceDesk() {
         description: expenseDescription,
         branch: expenseBranch,
         category: "تشغيل وصيانة",
-        amount,
+        amount: mutation.amountPiastres / 100,
         date: "اليوم",
         status: "pending",
         createdBy: "المحاسب",
@@ -606,14 +588,8 @@ export default function FinanceDesk() {
   };
   const createInvoice = (event: FormEvent) => {
     event.preventDefault();
-    const amount = Number(invoiceAmount);
-    if (
-      !invoiceStudentId ||
-      !invoiceDescription.trim() ||
-      !amount ||
-      amount <= 0 ||
-      !invoiceDueDate
-    ) {
+    const mutation = buildInvoiceMutation(invoiceStudentId, invoiceDescription, invoiceAmount, invoiceDueDate);
+    if (!mutation) {
       toast.error("أدخل الطالب والوصف والمبلغ وتاريخ الاستحقاق");
       return;
     }
@@ -623,14 +599,7 @@ export default function FinanceDesk() {
     }
     void apiClient
       .createFinanceInvoice({
-        studentId: invoiceStudentId,
-        dueDate: invoiceDueDate,
-        lines: [
-          {
-            description: invoiceDescription.trim(),
-            amountPiastres: amount * 100,
-          },
-        ],
+        ...mutation,
       })
       .then(invoice => {
         setInvoices(current => [mapFinanceInvoice(invoice), ...current]);

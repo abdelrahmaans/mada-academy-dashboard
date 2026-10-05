@@ -26,6 +26,7 @@ import ChildrenSwitcher, {
 import { RoleScopeProvider } from "@/contexts/RoleScopeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient, type ConsumerSessionRecord, type ConsumerStudentRecord, type FinanceInvoice } from "@/lib/apiClient";
+import { sessionsForStudent } from "@/lib/consumerScope";
 import "@/components/RoleFoundation.css";
 
 type PortalTab = "overview" | "attendance" | "evaluations" | "invoices";
@@ -75,7 +76,7 @@ const CHILDREN: ChildData[] = [
 ];
 
 function mapFamilyChild(student: ConsumerStudentRecord, records: ConsumerSessionRecord[], index: number): ChildData {
-  const ownSessions = records.filter(item => item.studentId === student.id);
+  const ownSessions = sessionsForStudent(records, student.id);
   const marked = ownSessions.filter(item => item.attendanceStatus !== "UNMARKED");
   const attended = marked.filter(item => item.attendanceStatus === "PRESENT" || item.attendanceStatus === "LATE").length;
   const completed = ownSessions.filter(item => item.status === "COMPLETED").length;
