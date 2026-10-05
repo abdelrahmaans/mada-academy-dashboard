@@ -39,6 +39,7 @@ import {
   ScheduleDetailsDialog,
   ScheduleFormDialog,
 } from "@/components/ScheduleViews";
+import SessionLogoutButton from "@/components/SessionLogoutButton";
 
 export type SessionStatus =
   | "scheduled"
@@ -1006,13 +1007,7 @@ function SchedulePage() {
             <Settings size={19} />
             <span>الإعدادات</span>
           </button>
-          <button
-            className="nav-link"
-            onClick={() => toast("تم تسجيل الخروج التجريبي")}
-          >
-            <LogOut size={19} />
-            <span>تسجيل الخروج</span>
-          </button>
+          <SessionLogoutButton className="nav-link" iconSize={19} />
         </div>
         <div className="sidebar-version">
           مدى لإدارة الأكاديميات <span>نسخة تجريبية</span>

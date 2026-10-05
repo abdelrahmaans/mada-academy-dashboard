@@ -1,10 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Activity, ArrowDownToLine, ArrowLeft, Building2, CircleAlert, Menu, RefreshCw, Wallet } from "lucide-react";
+import { Activity, ArrowDownToLine, ArrowLeft, Building2, CircleAlert, RefreshCw, Wallet } from "lucide-react";
 import { useLocation } from "wouter";
 import PageHeader from "@/components/PageHeader";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
-import BranchManagerSidebar from "@/components/BranchManagerSidebar";
 import { apiClient, type AuthMe, type FinanceReport, type OperationalReport } from "@/lib/apiClient";
 import "./ReportsLive.css";
 
@@ -16,7 +15,6 @@ export default function ReportsLive({ me }: { me: AuthMe }) {
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [exporting, setExporting] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
   const isOwner = me.role === "R01_ACADEMY_OWNER";
   const roleCode = isOwner ? "R01" : me.role === "R06_ACCOUNTANT" ? "R06" : "R02";
   const branchName = me.branches?.find(branch => branch.id === me.branchId)?.name ?? "الفرع المصرح به";
@@ -61,10 +59,8 @@ export default function ReportsLive({ me }: { me: AuthMe }) {
   const money = (piastres: number) => new Intl.NumberFormat("ar-EG", { style: "currency", currency: "EGP", maximumFractionDigits: 2 }).format(piastres / 100);
 
   return <RoleDashboardShell className="app-shell reports-live-shell" roleCode={roleCode} roleLabel={me.roleLabel || (isOwner ? "مسؤول الأكاديمية" : "مدير الفرع")} scopeLevel={isOwner ? "tenant" : "branch"} scopeLabel={scopeLabel} tenantName={me.academy?.name} branchName={isOwner ? undefined : branchName} demo={false}>
-    {!isOwner && <BranchManagerSidebar roleCode={me.role === "R06_ACCOUNTANT" ? "R06" : "R02"} open={mobileOpen} onClose={() => setMobileOpen(false)} />}
     <main className="main-panel">
       <header className="topbar r02-live-topbar">
-        {!isOwner && <button className="icon-button mobile-menu-button" aria-label="فتح قائمة مدير الفرع" onClick={() => setMobileOpen(true)}><Menu size={21} /></button>}
         <div className="r02-live-topbar-scope"><span>{me.academy?.name || "أكاديمية مدى"}</span><small>{scopeLabel} · تقرير مباشر</small></div>
       </header>
       <div className="workspace reports-live-workspace">

@@ -34,6 +34,8 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     homePath: "/platform-console",
     navigation: [
       { path: "/platform-console", label: "مركز المنصة", purpose: "tenants, plans, support" },
+      { path: "/platform/academies/new", label: "إنشاء أكاديمية", purpose: "bootstrap new academy tenant" },
+      { path: "/workspace", label: "متابعة الأدوار", purpose: "role directory and preview" },
     ],
   },
   R01: {
@@ -49,6 +51,8 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
       { path: "/academy/branches", label: "إدارة الفروع", purpose: "branch lifecycle and assignment" },
       { path: "/academy/classrooms", label: "القاعات الدراسية", purpose: "classrooms, capacity and readiness" },
       { path: "/academy/roles", label: "المستخدمون والصلاحيات", purpose: "members, roles, permissions" },
+      { path: "/students", label: "الطلاب", purpose: "all students" },
+      { path: "/team", label: "فريق العمل", purpose: "academy staff and instructors" },
       { path: "/reports", label: "التقارير", purpose: "scoped reports and export" },
     ],
   },
@@ -62,9 +66,12 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     navigation: [
       { path: "/", label: "ملخص التشغيل", purpose: "daily branch decisions" },
       { path: "/branch-operations", label: "تشغيل الفرع", purpose: "teams, schedule, conflicts" },
+      { path: "/students", label: "الطلاب", purpose: "branch students" },
       { path: "/classes", label: "الحصص والكورسات", purpose: "branch learning operations" },
+      { path: "/schedule", label: "الجدول الأسبوعي", purpose: "branch timetable" },
       { path: "/approvals", label: "الموافقات", purpose: "branch decisions" },
       { path: "/reports", label: "التقارير", purpose: "branch reports" },
+      { path: "/team", label: "فريق الفرع", purpose: "branch staff" },
     ],
   },
   R03: {
@@ -78,6 +85,8 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
       { path: "/head-instructors", label: "ملخص الفريق", purpose: "branch-scoped evaluation review and team overview" },
       { path: "/academic-programs", label: "البرامج الأكاديمية", purpose: "curriculum and progress review" },
       { path: "/schedule", label: "جدول الفريق", purpose: "sessions in supervision scope" },
+      { path: "/classes", label: "الحصص والكورسات", purpose: "branch learning operations" },
+      { path: "/approvals", label: "الموافقات", purpose: "instructor decisions" },
     ],
   },
   R04: {
@@ -89,6 +98,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     homePath: "/instructor-desk",
     navigation: [
       { path: "/instructor-desk", label: "مكتب المدرب", purpose: "today, attendance, evaluation" },
+      { path: "/schedule", label: "الجدول", purpose: "session calendar" },
     ],
   },
   R05: {
@@ -100,9 +110,10 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     homePath: "/secretary-desk",
     navigation: [
       { path: "/secretary-desk", label: "مكتب الخدمة", purpose: "lead to enrollment" },
-      { path: "/finance-desk", label: "التحصيل والفواتير", purpose: "branch-scoped collections and payments" },
       { path: "/students", label: "الطلاب", purpose: "branch operational records" },
       { path: "/schedule", label: "المجموعات والمواعيد", purpose: "enrollment availability" },
+      { path: "/finance-desk", label: "التحصيل والفواتير", purpose: "branch-scoped collections and payments" },
+      { path: "/approvals", label: "الموافقات", purpose: "branch discount requests" },
     ],
   },
   R06: {
@@ -115,6 +126,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     navigation: [
       { path: "/finance-desk", label: "المكتب المالي", purpose: "collections, expenses, reports" },
       { path: "/approvals", label: "الموافقات", purpose: "finance decisions" },
+      { path: "/reports", label: "التقارير", purpose: "scoped reports and export" },
     ],
   },
   R07: {

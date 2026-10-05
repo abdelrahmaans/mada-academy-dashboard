@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import { apiClient, type AcademyBranch } from "@/lib/apiClient";
+import "./AcademyBranches.css";
 
 export default function AcademyBranches() {
   const [, navigate] = useLocation();

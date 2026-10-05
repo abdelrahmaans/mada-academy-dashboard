@@ -1,0 +1,572 @@
+.academy-roles-page {
+  display: grid;
+  gap: 20px;
+  padding: 24px clamp(16px, 3vw, 36px) 48px;
+  color: #172b38;
+}
+
+.academy-roles-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e4ebed;
+}
+
+.academy-roles-topbar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #dce8ea;
+  border-radius: 9px;
+  background: #fff;
+  color: #2b5662;
+  padding: 8px 13px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.academy-roles-topbar button:hover {
+  background: #f0f7f6;
+  border-color: #0d9488;
+  color: #0d9488;
+}
+
+.academy-roles-topbar span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #51717b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.academy-roles-content {
+  display: grid;
+  gap: 20px;
+}
+
+.academy-roles-add-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 10px;
+  background: #0d9488;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.academy-roles-add-button:hover {
+  background: #0f766e;
+}
+
+.academy-roles-scope {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid #ccede5;
+  border-radius: 12px;
+  background: #f0faf7;
+  color: #136a59;
+  font-size: 12px;
+}
+
+.academy-roles-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  background: #fff5f5;
+  color: #b91c1c;
+  font-size: 12px;
+}
+
+.academy-roles-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 16px;
+  background: #fff;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.academy-roles-loading .spin {
+  animation: spin 1s linear infinite;
+}
+
+.academy-roles-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.academy-role-metric {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #e5ecee;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 4px 18px rgba(16, 46, 56, 0.04);
+}
+
+.academy-role-metric span {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #e6f6f3;
+  color: #0d9488;
+}
+
+.academy-role-metric div {
+  display: grid;
+  gap: 2px;
+}
+
+.academy-role-metric strong {
+  font-size: 24px;
+  line-height: 1.1;
+  color: #163640;
+}
+
+.academy-role-metric small {
+  font-size: 11px;
+  color: #718890;
+}
+
+.academy-roles-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 18px;
+}
+
+.academy-roles-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  border: 1px solid #e4ebed;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 4px 18px rgba(16, 46, 56, 0.04);
+}
+
+.academy-roles-panel-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #edf2f4;
+}
+
+.academy-roles-panel-title div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.academy-roles-panel-title span {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: #f0f7f6;
+  color: #0d9488;
+}
+
+.academy-roles-panel-title h2 {
+  margin: 0;
+  font-size: 16px;
+  color: #1a3942;
+}
+
+.academy-roles-panel-title small {
+  color: #8198a0;
+  font-size: 11px;
+}
+
+.academy-member-list {
+  display: grid;
+  gap: 8px;
+  max-height: 460px;
+  overflow-y: auto;
+}
+
+.academy-member {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #edf2f3;
+  border-radius: 13px;
+  background: #fbfdfd;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.academy-member:hover {
+  border-color: #cbdde0;
+  background: #f4faf9;
+}
+
+.academy-member.selected {
+  border-color: #5eead4;
+  background: #f0fdf9;
+  box-shadow: 0 0 0 1px #0d9488;
+}
+
+.academy-member-avatar {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: #e6f5f2;
+  color: #0d9488;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.academy-member-avatar.large {
+  width: 48px;
+  height: 48px;
+  font-size: 17px;
+  border-radius: 14px;
+}
+
+.academy-member-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.academy-member-copy strong {
+  font-size: 13px;
+  color: #1a3740;
+}
+
+.academy-member-copy small {
+  color: #7b929a;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.academy-member-status {
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.academy-member-status.active {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.academy-member-status.suspended {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.academy-member-role {
+  padding: 4px 9px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.academy-role-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.academy-role-detail-user {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 13px;
+  background: #f8fafb;
+}
+
+.academy-role-detail-user div {
+  display: grid;
+  gap: 3px;
+}
+
+.academy-role-detail-user strong {
+  font-size: 15px;
+  color: #163640;
+}
+
+.academy-role-detail-user small {
+  color: #6d868f;
+  font-size: 12px;
+}
+
+.academy-role-select {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #3b5a64;
+}
+
+.academy-role-select select {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #dce6e8;
+  border-radius: 10px;
+  background: #fff;
+  color: #1d3c45;
+  font: inherit;
+  font-size: 12px;
+}
+
+.academy-permission-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.academy-permission-heading strong {
+  font-size: 12px;
+  color: #274751;
+}
+
+.academy-permission-heading small {
+  font-size: 11px;
+  color: #7b949c;
+}
+
+.academy-permission-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.academy-permission-chips span {
+  padding: 4px 9px;
+  border: 1px solid #dce8ea;
+  border-radius: 7px;
+  background: #f8fafb;
+  color: #2b515c;
+  font-size: 10px;
+  direction: ltr;
+}
+
+.academy-member-status-button {
+  margin-top: auto;
+  padding: 10px 14px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fff5f5;
+  color: #b91c1c;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.academy-member-status-button:hover {
+  background: #fee2e2;
+}
+
+.academy-role-catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.academy-role-card {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid #e6edef;
+  border-radius: 14px;
+  background: #fcfdfd;
+  text-align: right;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.academy-role-card:hover {
+  border-color: #cbdfe2;
+  background: #f7fbfa;
+}
+
+.academy-role-card.selected {
+  border-color: #5eead4;
+  background: #f0fdf9;
+  box-shadow: 0 0 0 1px #0d9488;
+}
+
+.academy-role-card span {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.academy-role-card strong {
+  font-size: 14px;
+  color: #173842;
+}
+
+.academy-role-card small {
+  font-size: 10px;
+  color: #7b949c;
+}
+
+.academy-role-card p {
+  margin: 0;
+  color: #607982;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.academy-role-card b {
+  color: #0d9488;
+  font-size: 11px;
+}
+
+.academy-roles-empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 40px 20px;
+  color: #8ba0a8;
+  font-size: 12px;
+}
+
+/* Modal */
+.academy-add-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(14, 30, 40, 0.52);
+  backdrop-filter: blur(4px);
+}
+
+.academy-add-modal {
+  width: min(520px, 100%);
+  display: grid;
+  gap: 14px;
+  padding: 24px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.18);
+  color: #1a3640;
+}
+
+.academy-add-modal header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.academy-add-modal header div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.academy-add-modal header h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.academy-add-modal p {
+  margin: 0;
+  color: #6f868f;
+  font-size: 12px;
+}
+
+.academy-add-modal label {
+  display: grid;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #3b5b65;
+}
+
+.academy-add-modal input,
+.academy-add-modal select {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #dce5e7;
+  border-radius: 10px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+}
+
+.academy-add-modal footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.academy-add-modal footer button {
+  padding: 10px 18px;
+  border: 1px solid #dce5e7;
+  border-radius: 10px;
+  background: #fff;
+  color: #3b5b65;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.academy-add-modal footer button.primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: #0d9488;
+  color: #fff;
+}
+
+@media (max-width: 900px) {
+  .academy-roles-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .academy-roles-grid {
+    grid-template-columns: 1fr;
+  }
+}

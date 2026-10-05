@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import { apiClient, type AcademyBranch, type AcademyClassroom, type ClassroomResource } from "@/lib/apiClient";
+import "./AcademyClassrooms.css";
 
 const STATUS_LABELS: Record<string, string> = { AVAILABLE: "متاحة", MAINTENANCE: "صيانة", INACTIVE: "موقوفة" };
 const STATUS_TONES: Record<string, string> = { AVAILABLE: "available", MAINTENANCE: "maintenance", INACTIVE: "inactive" };

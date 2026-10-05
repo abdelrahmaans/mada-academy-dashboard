@@ -26,6 +26,7 @@ import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
+import SessionLogoutButton from "@/components/SessionLogoutButton";
 
 import {
   CAMPAIGNS,
@@ -251,13 +252,7 @@ export default function MarketingDesk() {
             <Settings size={19} />
             <span>الإعدادات</span>
           </button>
-          <button
-            className="nav-link"
-            onClick={() => toast("تم تسجيل الخروج التجريبي")}
-          >
-            <LogOut size={19} />
-            <span>تسجيل الخروج</span>
-          </button>
+          <SessionLogoutButton className="nav-link" iconSize={19} />
         </div>
       </aside>
       <main className="main-panel">

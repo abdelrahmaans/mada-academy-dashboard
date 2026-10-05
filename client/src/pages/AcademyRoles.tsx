@@ -6,6 +6,7 @@ import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient, type AcademyBranch, type AcademyMember, type AcademyRoleDefinition } from "@/lib/apiClient";
+import "./AcademyRoles.css";
 
 const roleLabel = (roles: AcademyRoleDefinition[], code: string) => roles.find(role => role.code === code)?.label ?? code;
 const isBranchRole = (roles: AcademyRoleDefinition[], code: string) => roles.find(role => role.code === code)?.scopeLevel === "BRANCH";
