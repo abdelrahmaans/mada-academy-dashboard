@@ -26,6 +26,7 @@ import {
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
+import BranchManagerSidebar from "@/components/BranchManagerSidebar";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import StatusBadge from "@/components/StatusBadge";
@@ -131,21 +132,8 @@ export default function BranchOperations() {
     toast.success("تمت إضافة الحصة للمراجعة", { description: "الحصة الجديدة بانتظار اعتماد مدير الفرع محليًا." });
   };
 
-  return <RoleDashboardShell className="app-shell r02-operations-shell" roleCode="R02" roleLabel="مدير الفرع" scopeLevel="branch" scopeLabel="فرع مدينة نصر" tenantName="أكاديمية مدى" branchName="فرع مدينة نصر">
-    {mobileNavOpen && <button className="mobile-scrim" aria-label="إغلاق القائمة" onClick={() => setMobileNavOpen(false)} />}
-    <aside className={`sidebar ${mobileNavOpen ? "sidebar-open" : ""}`}>
-      <div className="sidebar-top"><button className="r02-ops-brand" onClick={() => navigate("/")}><span>مدى</span><small>إدارة الفرع</small></button><button className="icon-button sidebar-close" aria-label="إغلاق القائمة" onClick={() => setMobileNavOpen(false)}><X size={19} /></button></div>
-      <div className="academy-switcher"><span className="academy-avatar"><GraduationCap size={20} /></span><span className="academy-meta"><strong>أكاديمية مدى</strong><small>فرع مدينة نصر</small></span></div>
-      <div className="nav-caption">مساحة التشغيل</div>
-      <nav className="primary-nav" aria-label="تنقل إدارة الفرع">
-        <button className="nav-link" onClick={() => navigate("/")}><LayoutDashboard size={19} /><span>الرئيسية</span></button>
-        <button className={`nav-link ${view === "departments" ? "active" : ""}`} onClick={() => selectView("departments")}><Building2 size={19} /><span>الأقسام والمدربين</span></button>
-        <button className={`nav-link ${view === "schedule" ? "active" : ""}`} onClick={() => selectView("schedule")}><CalendarDays size={19} /><span>الجدول الأسبوعي</span><span className="nav-count">{pendingSessions}</span></button>
-      </nav>
-      <div className="nav-caption nav-caption-spaced">مسارات أخرى</div>
-      <nav className="primary-nav"><button className="nav-link" onClick={() => navigate("/students")}><Users size={19} /><span>الطلاب</span></button><button className="nav-link" onClick={() => navigate("/approvals")}><CheckCircle2 size={19} /><span>الموافقات</span></button><button className="nav-link" onClick={() => navigate("/reports")}><Activity size={19} /><span>التقارير</span></button></nav>
-      <div className="sidebar-spacer" /><div className="sidebar-help"><span className="help-icon"><CircleHelp size={18} /></span><div><strong>محتاج مساعدة؟</strong><span>تصعيدات وتشغيل الفرع</span></div><ChevronLeft size={16} /></div><div className="sidebar-bottom"><button className="nav-link" onClick={() => toast("الإعدادات قيد التجهيز")}><Settings size={19} /><span>الإعدادات</span></button><button className="nav-link" onClick={() => toast("تم تسجيل الخروج التجريبي")}><LogOut size={19} /><span>تسجيل الخروج</span></button></div>
-    </aside>
+  return <RoleDashboardShell className="app-shell r02-operations-shell" showSessionLogout={false} roleCode="R02" roleLabel="مدير الفرع" scopeLevel="branch" scopeLabel="فرع مدينة نصر" tenantName="أكاديمية مدى" branchName="فرع مدينة نصر">
+    <BranchManagerSidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
     <main className="main-panel"><header className="topbar"><div className="topbar-right"><button className="icon-button mobile-menu-button" aria-label="فتح القائمة" onClick={() => setMobileNavOpen(true)}><Menu size={21} /></button><div className="branch-select assigned-branch"><span className="branch-icon"><MapPin size={17} /></span><span>فرع مدينة نصر</span></div></div><div className="r02-ops-scope-pill"><ShieldCheck size={15} /> صلاحية مدير الفرع · فرع واحد</div></header>
       <div className="workspace r02-ops-content"><div className="r02-preview-banner" role="note"><strong>PREVIEW / DEMO</strong> هذه الصفحة غير متصلة ببيانات الخادم؛ الأقسام والمدربون والجلسات والأفعال المعروضة محلية توضيحية ولا تُحفظ.</div><PageHeader className="welcome-row" copyClassName="welcome-copy" actionsClassName="welcome-actions" eyebrow={<span className="eyebrow"><i className="eyebrow-dot" /> تشغيل الفرع · R02</span>} title={VIEW_TITLES[view]} description={VIEW_DESCRIPTIONS[view]} actions={<span className="r02-ops-date"><Clock3 size={14} /> أسبوع التشغيل الحالي</span>} /><RoleScopeCard className="r02-ops-scope-card" /><div className="r02-ops-demo-note"><ShieldCheck size={14} /><strong>عرض محلي فقط:</strong> لا تستخدم الأرقام أو التغييرات هنا كحالة فعلية للفرع.</div>
         {view === "departments" && <DepartmentsView departments={departments} trainers={filteredTrainers} query={query} setQuery={setQuery} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} onToggle={toggleTrainerStatus} onDepartmentChange={changeDepartment} onSchedule={() => selectView("schedule")} />}

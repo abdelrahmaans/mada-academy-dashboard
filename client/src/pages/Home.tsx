@@ -35,6 +35,7 @@ import {
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
+import BranchManagerSidebar from "@/components/BranchManagerSidebar";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import SharedStatusBadge from "@/components/StatusBadge";
@@ -199,6 +200,7 @@ function HomePreview() {
   return (
     <RoleDashboardShell
       className="app-shell"
+      showSessionLogout={false}
       roleCode="R02"
       roleLabel="مدير الفرع"
       scopeLevel="branch"
@@ -206,135 +208,7 @@ function HomePreview() {
       tenantName="أكاديمية مدى"
       branchName={branch}
     >
-      {mobileNavOpen && (
-        <button
-          className="mobile-scrim"
-          aria-label="إغلاق القائمة"
-          onClick={() => setMobileNavOpen(false)}
-        />
-      )}
-
-      <aside className={`sidebar ${mobileNavOpen ? "sidebar-open" : ""}`}>
-        <div className="sidebar-top">
-          <BrandMark />
-          <button
-            className="icon-button sidebar-close"
-            aria-label="إغلاق القائمة"
-            onClick={() => setMobileNavOpen(false)}
-          >
-            <X size={19} />
-          </button>
-        </div>
-
-        <div className="academy-switcher">
-          <span className="academy-avatar">
-            <GraduationCap size={20} />
-          </span>
-          <span className="academy-meta">
-            <strong>أكاديمية مدى</strong>
-            <small>إدارة الأكاديمية</small>
-          </span>
-          <ChevronDown size={15} className="switcher-chevron" />
-        </div>
-
-        <div className="nav-caption">القائمة الرئيسية</div>
-        <nav className="primary-nav" aria-label="القائمة الرئيسية">
-          <button className="nav-link active" aria-current="page">
-            <LayoutDashboard size={19} />
-            <span>الرئيسية</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/students")}>
-            <Users size={19} />
-            <span>الطلاب</span>
-            <span className="nav-count">{studentCount}</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/schedule")}>
-            <CalendarDays size={19} />
-            <span>الجدول</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/classes")}>
-            <BookOpen size={19} />
-            <span>الحصص والكورسات</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/branch-operations")}>
-            <Settings size={19} />
-            <span>إدارة التشغيل</span>
-          </button>
-          <button
-            className="nav-link"
-            onClick={() => showComingSoon("المسابقات")}
-          >
-            <Sparkles size={19} />
-            <span>المسابقات</span>
-          </button>
-        </nav>
-
-        <div className="nav-caption nav-caption-spaced">الإدارة</div>
-        <nav className="primary-nav" aria-label="قائمة الإدارة">
-          <button className="nav-link" onClick={() => navigate("/finance")}>
-            <Wallet size={19} />
-            <span>المالية والتحصيل</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/team")}>
-            <Users size={19} />
-            <span>الفريق والأدوار</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/approvals")}>
-            <CheckCircle2 size={19} />
-            <span>الموافقات</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/reports")}>
-            <BarChart3 size={19} />
-            <span>التقارير والتحليلات</span>
-          </button>
-          <button
-            className="nav-link academy-owner-preview-nav"
-            onClick={() => navigate("/academy-owner")}
-          >
-            <GraduationCap size={19} />
-            <span>معاينة رئيس الأكاديمية</span>
-          </button>
-          <button
-            className="nav-link"
-            onClick={() => navigate("/platform-console")}
-          >
-            <Building2 size={19} />
-            <span>معاينة إدارة المنصة</span>
-            <span className="nav-count">R00</span>
-          </button>
-        </nav>
-
-        <div className="sidebar-spacer" />
-        <div className="sidebar-help">
-          <span className="help-icon">
-            <CircleHelp size={18} />
-          </span>
-          <div>
-            <strong>محتاج مساعدة؟</strong>
-            <span>مركز الدعم والإرشادات</span>
-          </div>
-          <ChevronLeft size={16} />
-        </div>
-        <div className="sidebar-bottom">
-          <button
-            className="nav-link"
-            onClick={() => showComingSoon("الإعدادات")}
-          >
-            <Settings size={19} />
-            <span>الإعدادات</span>
-          </button>
-          <button
-            className="nav-link"
-            onClick={() => toast("تم تسجيل الخروج التجريبي")}
-          >
-            <LogOut size={19} />
-            <span>تسجيل الخروج</span>
-          </button>
-        </div>
-        <div className="sidebar-version">
-          مدى لإدارة الأكاديميات <span>نسخة تجريبية</span>
-        </div>
-      </aside>
+      <BranchManagerSidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
 
       <main className="main-panel">
         <header className="topbar">

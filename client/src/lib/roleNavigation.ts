@@ -64,8 +64,11 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     homePath: "/",
     navigation: [
       { path: "/", label: "ملخص التشغيل", purpose: "daily branch decisions" },
-      { path: "/branch-operations", label: "تشغيل الفرع", purpose: "teams, schedule, conflicts" },
+      { path: "/students", label: "الطلاب", purpose: "branch student records" },
+      { path: "/schedule", label: "الجدول", purpose: "branch scheduling" },
       { path: "/classes", label: "الحصص والكورسات", purpose: "branch learning operations" },
+      { path: "/branch-operations", label: "تشغيل الفرع", purpose: "teams, schedule, conflicts" },
+      { path: "/team", label: "الفريق والأدوار", purpose: "branch team" },
       { path: "/approvals", label: "الموافقات", purpose: "branch decisions" },
       { path: "/reports", label: "التقارير", purpose: "branch reports" },
     ],
