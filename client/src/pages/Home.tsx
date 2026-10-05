@@ -29,7 +29,6 @@ import {
   TrendingUp,
   UserPlus,
   Users,
-  Wallet,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -263,21 +262,6 @@ function HomePreview() {
                     className="notification-item notification-action"
                     onClick={() => {
                       setNotificationsOpen(false);
-                      navigate("/finance");
-                    }}
-                  >
-                    <span className="notice-icon notice-amber">
-                      <Wallet size={16} />
-                    </span>
-                    <div>
-                      <strong>أقساط تحتاج متابعة</strong>
-                      <small>12 قسطًا مستحقًا في الفرع</small>
-                    </div>
-                  </button>
-                  <button
-                    className="notification-item notification-action"
-                    onClick={() => {
-                      setNotificationsOpen(false);
                       navigate("/students");
                     }}
                   >
@@ -402,31 +386,6 @@ function HomePreview() {
                 >
                   فتح الجدول <ChevronLeft size={12} />
                 </button>
-              </div>
-            </article>
-
-            <article className="stat-card">
-              <div className="stat-topline">
-                <span className="stat-icon icon-amber">
-                  <Wallet size={19} />
-                </span>
-                <span className="stat-trend trend-down">
-                  <ArrowDownLeft size={14} /> متابعة
-                </span>
-              </div>
-              <div className="stat-label">أقساط مستحقة</div>
-              <div className="stat-value-row">
-                <strong>12</strong>
-                <span className="stat-period">قسط</span>
-              </div>
-              <div className="stat-foot">
-                <button
-                  className="stat-link"
-                  onClick={() => navigate("/finance")}
-                >
-                  عرض التحصيل <ChevronLeft size={12} />
-                </button>
-                <b className="stat-money">12,850 ج.م</b>
               </div>
             </article>
 
@@ -681,19 +640,6 @@ function HomePreview() {
                 </button>
                 <button
                   className="followup-item"
-                  onClick={() => navigate("/finance")}
-                >
-                  <span className="followup-icon followup-amber">
-                    <Wallet size={17} />
-                  </span>
-                  <span className="followup-copy">
-                    <strong>أقساط مستحقة</strong>
-                    <small>مواعيدها خلال هذا الأسبوع</small>
-                  </span>
-                  <b className="followup-number amber-number">12</b>
-                </button>
-                <button
-                  className="followup-item"
                   onClick={() => navigate("/approvals")}
                 >
                   <span className="followup-icon followup-blue">
@@ -731,13 +677,6 @@ function HomePreview() {
                       <UserPlus size={17} />
                     </span>
                     <span>تسجيل طالب</span>
-                    <ChevronLeft size={15} />
-                  </button>
-                  <button onClick={() => navigate("/finance")}>
-                    <span className="quick-icon quick-amber">
-                      <Wallet size={17} />
-                    </span>
-                    <span>تسجيل تحصيل</span>
                     <ChevronLeft size={15} />
                   </button>
                   <button onClick={() => navigate("/schedule")}>
