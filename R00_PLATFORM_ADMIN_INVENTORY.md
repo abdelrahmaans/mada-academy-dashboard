@@ -24,7 +24,7 @@ The live UI is Arabic-first/RTL and explicitly labels the surface `LIVE`; it doe
 | Revoke user sessions | `POST /api/v1/platform/academies/{tenantId}/users/{userId}/sessions/revoke` | **LIVE** | `platform-admin` | Requires a membership in the selected tenant before revoking that user's staff sessions | Requires reason; writes `PLATFORM_USER_SESSIONS_REVOKED`; target isolation and preservation of actor session are covered. |
 | Academy activity | `GET /api/v1/platform/academies/{tenantId}/activity` | **LIVE** | `platform-admin` | Audit events filtered to the selected tenant | Read-only; tenant activity and actor identity are returned. Covered as part of member support flow. |
 | Platform activity | `GET /api/v1/platform/activity` | **LIVE** | `platform-admin` | Last 100 platform-wide audit events | Read-only; no mutation. Needs an explicit integration assertion that non-R00 tenant activity is visible only as audit metadata, not business records. |
-| Role assignment / R00 self-assignment | No R00 route | **NOT AVAILABLE** | R01 role APIs reject non-assignable roles; R00 is controlled out of band | No tenant owner can grant R00; R00 support cannot assign itself or another R00 | Explicitly represented by role metadata and protected-member branch. Dedicated negative test should be added. |
+| Role assignment / R00 self-assignment | No R00 route | **NOT AVAILABLE** | R01 role APIs reject non-assignable roles; R00 is controlled out of band | No tenant owner can grant R00; R00 support cannot assign itself or another R00 | Explicitly represented by role metadata and protected-member branch; negative coverage is now in `PlatformAdminApiTests`. |
 | Academy archive/delete | No route | **NOT AVAILABLE** | No endpoint or persistence workflow | Must not be implied by `academy.archive` permission text | Remove or rename the advertised permission until an archive contract, state model, audit, and tests exist. |
 | Billing/plan changes | No route | **NOT AVAILABLE** | No endpoint | `plan` is displayed as metadata only; no billing mutation exists | No UI action is exposed. Do not describe plan changes as supported. |
 | Student, parent, attendance, evaluation, finance, storage, or backup support | No R00 route | **NOT AVAILABLE** | No R00-specific read/write contract | Must remain outside platform support scope | The live console explicitly states that detailed financial and student records are not in scope. |
@@ -38,7 +38,7 @@ The live UI is Arabic-first/RTL and explicitly labels the surface `LIVE`; it doe
 - [x] Tenant roles receive `403` and cannot mutate platform state.
 - [x] R00 is required by the backend policy; frontend route guards are not the security boundary.
 - [x] R01 role management cannot assign `R00_PLATFORM_ADMIN`.
-- [ ] Add explicit integration coverage for protected R00 membership mutation and R00 assignment rejection.
+- [x] Explicit integration coverage for protected R00 membership mutation and R00 assignment rejection.
 
 ### Isolation and privacy
 
@@ -53,7 +53,7 @@ The live UI is Arabic-first/RTL and explicitly labels the surface `LIVE`; it doe
 - [x] Status changes require a non-empty reason of at least four characters.
 - [x] Tenant status, member status, and session revocation write action, actor, target, tenant, reason, and metadata.
 - [x] Academy bootstrap writes `ACADEMY_BOOTSTRAPPED`.
-- [ ] Add dedicated bootstrap and reactivation audit assertions.
+- [x] Dedicated bootstrap and reactivation audit assertions.
 
 ### LIVE/DEMO truth
 
@@ -66,5 +66,5 @@ The live UI is Arabic-first/RTL and explicitly labels the surface `LIVE`; it doe
 
 1. Correct `ACADEMY_BOOTSTRAP_API_CONTRACT.md` to match the implemented password-based owner onboarding, or deliberately redesign bootstrap around OTP before calling the action contract-complete. Do not silently choose between these authentication models.
 2. Remove `academy.archive` from the R00 permission advertisement until an archive workflow exists, or create a separate contract/implementation/test change for it.
-3. Add the missing integration tests listed above before declaring the R00 surface acceptance-complete.
+3. Add explicit platform overview/activity response-shape assertions before declaring the R00 surface acceptance-complete.
 4. Keep production CORS, distributed rate-limit evidence, private storage, backup/restore, and staging acceptance as separate production gates.
