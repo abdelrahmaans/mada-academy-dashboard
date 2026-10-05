@@ -20,9 +20,9 @@ export default function PageHeader({
   actionsClassName,
 }: PageHeaderProps) {
   return (
-    <section className={["role-page-header", className].filter(Boolean).join(" ")}>
+    <section className={["role-page-header", "welcome-row", className].filter(Boolean).join(" ")}>
       <div
-        className={["role-page-header-copy", copyClassName]
+        className={["role-page-header-copy", "welcome-copy", copyClassName]
           .filter(Boolean)
           .join(" ")}
       >
@@ -32,7 +32,7 @@ export default function PageHeader({
       </div>
       {actions && (
         <div
-          className={["role-page-header-actions", actionsClassName]
+          className={["role-page-header-actions", "welcome-actions", actionsClassName]
             .filter(Boolean)
             .join(" ")}
         >
