@@ -792,5 +792,5 @@ export default function Home() {
     return <main className="r02-home-auth-state r02-home-auth-error" dir="rtl" role="alert">هذه اللوحة متاحة لمدير الفرع فقط. استخدم مساحة الدور المرتبط بحسابك.</main>;
   }
   if (error) return <main className="r02-home-auth-state r02-home-auth-error" dir="rtl" role="alert">انتهت الجلسة أو تعذر التحقق منها. سجّل الدخول مجددًا لعرض بيانات حقيقية؛ لن نعرض بيانات تجريبية بدلًا منها.</main>;
-  return <HomePreview />;
+  return <main className="r02-home-auth-state r02-home-auth-error" dir="rtl" role="alert">سجّل الدخول لفتح مساحة مدير الفرع.</main>;
 }
