@@ -265,3 +265,44 @@
 - كل loading/empty/error حالة مفهومة داخل الصفحة وليست toast فقط.
 - dialogs قابلة للاستخدام بلوحة المفاتيح، والتبويبات والأزرار الأيقونية معلنة لقارئات الشاشة.
 - لا يقل النص التشغيلي الأساسي عن الحد القابل للقراءة على الهاتف، والجداول لا تبدو كمحتوى مقطوع دون إشارة تمرير.
+
+
+## 9. حالة التنفيذ بعد آخر تحديث
+
+**آخر commit مرفوع:** `7c351ec style: compact role scope context`  
+**حالة الريبو:** `main` مطابق لـ`origin/main` والـworking tree نظيف.
+
+### تم إغلاقه منذ إصدار التقرير الأول
+
+- **R01:** إزالة redirect من `AcademyOwner` وإصلاح العودة إلى لوحة الإدارة التنفيذية.
+- **R02:** إزالة إعادة التوجيه من `BranchOperations` إلى `HomeLive` حتى يصبح مسار إدارة التشغيل قابلًا للوصول.
+- **R06:** إضافة تنقل role-aware في `BranchManagerSidebar`، وإصلاح عودة التقارير إلى `/finance-desk`، وإخفاء روابط R02 من شاشة الموافقات للمحاسب.
+- **R09:** تطبيع role fallback داخل `ProtectedRoute` حتى تعود حالة الرفض إلى `/student-portal`.
+- **كل الأدوار:** ربط `PageHeader` بالـshared header layout وتحسين بطاقة الهيدر.
+- **كل الأدوار:** تصغير `RoleScopeCard` وتحويله إلى شريط context مختصر لا ينافس عنوان الصفحة.
+
+### خطة المرور التنفيذية على كل رول
+
+سيتم تنفيذ المراجعة على شكل موجات، وكل رول لا يُعتبر مكتملًا إلا بعد اجتياز نفس العقد:
+
+1. **R00 — أدمن المنصة:** توحيد LIVE/DEMO header وsidebar، مراجعة preview links، حالات loading/empty، وصحة إجراءات tenant/support.
+2. **R01 — مسؤول الأكاديمية:** تطبيق shell موحد، إضافة CSS للـbranches/roles/classrooms، تصحيح `demo` وdialogs وvalidation.
+3. **R02 — مدير الفرع:** توحيد shell في Home/Students/Classes/Schedule/BranchOperations، إزالة الروابط غير المسموحة، وتحويل logout إلى سلوك حقيقي.
+4. **R03 — رئيس المدربين:** shell وrole label صحيحان، تنظيف Schedule من هوية R02، وفصل LIVE عن DEMO.
+5. **R04 — المدرب:** توحيد LIVE/DEMO، إزالة رابط R03 غير المسموح، وتحسين substitution dialog والتبويبات.
+6. **R05 — السكرتارية:** shell موحد، هوية R05 صحيحة في Students/Schedule، وحالات loading/empty للجدول والمتابعات.
+7. **R06 — الحسابات:** تثبيت shell المالي في Finance/Reports/Approvals، مراجعة loading والـapproval flow والجداول mobile.
+8. **R07 — التسويق:** إصلاح mobile drawer، scope الفروع، وضوح PREVIEW، وربط أو إزالة الحقول التي لا تُحفظ.
+9. **R08 — ولي الأمر:** تثبيت consumer shell وRTL drawer، توحيد آخر 8 جلسات، وتحسين invoice review state.
+10. **R09 — الطالب:** توحيد shell أو توثيق ConsumerShell، إصلاح tabs/ARIA وempty state وmobile readability.
+
+### معيار قبول موحّد لكل رول
+
+- `homePath` يفتح الصفحة الصحيحة دون bounce أو Access Denied غير متوقع.
+- كل رابط ظاهر في الـsidebar مسموح للدور أو موسوم بوضوح كـPreview منفصل.
+- shell/header/sidebar/topbar/scope/logout موحد داخل صفحات الدور.
+- LIVE لا يعرض seeded DEMO أو disclaimer متناقضًا.
+- loading/error/empty states واضحة داخل الصفحة.
+- الأزرار والـdialogs والتبويبات قابلة للاستخدام بالكيبورد ومعلنة لـARIA.
+- العرض يعمل على 320–390px وdesktop بدون قص أو overflow مضلل.
+- `pnpm check` و`pnpm test` و`pnpm build` و`git diff --check` ناجحة قبل كل موجة دمج.
