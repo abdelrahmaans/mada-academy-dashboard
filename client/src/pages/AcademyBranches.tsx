@@ -58,7 +58,7 @@ export default function AcademyBranches() {
     finally { setSaving(false); }
   };
 
-  return <RoleDashboardShell className="app-shell academy-branches-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية">
+  return <RoleDashboardShell className="app-shell academy-branches-shell" showSessionLogout={false} roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية">
     <R01AcademySidebar activePath="/academy/branches" mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
     <main className="main-panel academy-branches-page" dir="rtl">
       <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel="كل فروع الأكاديمية" />

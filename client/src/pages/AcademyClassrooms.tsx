@@ -104,7 +104,7 @@ export default function AcademyClassrooms() {
   };
   const retryResources = () => { if (resourceRoom) void openResources(resourceRoom); };
 
-  return <RoleDashboardShell className="app-shell academy-classrooms-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية">
+  return <RoleDashboardShell className="app-shell academy-classrooms-shell" showSessionLogout={false} roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية">
     <R01AcademySidebar activePath="/academy/classrooms" mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
     <main className="main-panel academy-classrooms-page" dir="rtl">
       <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel="كل فروع الأكاديمية" />

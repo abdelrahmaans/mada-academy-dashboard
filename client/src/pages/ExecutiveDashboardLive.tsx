@@ -104,7 +104,7 @@ export default function ExecutiveDashboardLive() {
   const selectedBranchName = branchId === "ALL" ? "كل الفروع" : report?.availableBranches.find(branch => branch.id === branchId)?.name ?? "الفرع المحدد";
   const retry = () => setRetryKey(value => value + 1);
 
-  return <RoleDashboardShell className="app-shell executive-dashboard-shell r1-live-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية الحالية" branchName={selectedBranchName}>
+  return <RoleDashboardShell className="app-shell executive-dashboard-shell r1-live-shell" showSessionLogout={false} roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية الحالية" branchName={selectedBranchName}>
     <R01AcademySidebar activePath="/executive-dashboard" mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
     <main className="main-panel">
       <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel={selectedBranchName} />

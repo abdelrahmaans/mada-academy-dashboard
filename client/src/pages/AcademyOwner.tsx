@@ -267,6 +267,7 @@ export default function AcademyOwner() {
   return (
     <RoleDashboardShell
       className="app-shell"
+      showSessionLogout={false}
       roleCode="R01"
       roleLabel="مسؤول الأكاديمية"
       scopeLevel="tenant"
