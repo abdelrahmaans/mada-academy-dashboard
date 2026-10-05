@@ -88,6 +88,53 @@ public static class DemoDataSeeder
         db.Add(new GuardianStudentLink { Id = Guid.Parse("92000000-0000-0000-0000-000000000001"), TenantId = tenantId, StudentId = students[0].Id, UserAccountId = users[10].Id, CreatedByUserId = users[1].Id, Relationship = "ولي الأمر", Status = "ACTIVE" });
         db.Add(new SessionEvaluation { Id = Guid.Parse("93000000-0000-0000-0000-000000000001"), SessionId = session3.Id, StudentId = students[0].Id, InstructorId = users[9].Id, Score = 88, Notes = "تقدم واضح في التطبيق العملي", Status = "PUBLISHED", SubmittedAt = new DateTimeOffset(2026, 9, 26, 12, 0, 0, TimeSpan.Zero), ReviewedByUserId = users[3].Id, ReviewedAt = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero), PublishedAt = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero) });
         db.Add(new StateTransitionEvent { Id = Guid.Parse("94000000-0000-0000-0000-000000000001"), AggregateType = "SESSION_EVALUATION", AggregateId = "93000000-0000-0000-0000-000000000001", FromState = "SUBMITTED", ToState = "PUBLISHED", ActorUserId = users[3].Id });
+        if (!await db.Leads.AnyAsync(item => item.TenantId == tenantId, cancellationToken))
+        {
+            db.Leads.AddRange(
+                new Lead
+                {
+                    Id = Guid.Parse("95000000-0000-0000-0000-000000000001"),
+                    TenantId = tenantId,
+                    BranchId = mainBranchId,
+                    ChildName = "سليم أحمد كمال",
+                    ParentName = "أحمد كمال",
+                    Phone = "+201012345671",
+                    Channel = "WALK_IN",
+                    Notes = "مهتم بروبوتكس مستوى 1، يفضل موعد السبت صباحًا.",
+                    Status = "NEW",
+                    CourseOfferingId = offering.Id,
+                    CreatedByUserId = users[4].Id
+                },
+                new Lead
+                {
+                    Id = Guid.Parse("95000000-0000-0000-0000-000000000002"),
+                    TenantId = tenantId,
+                    BranchId = mainBranchId,
+                    ChildName = "حبيبة تامر فؤاد",
+                    ParentName = "تامر فؤاد",
+                    Phone = "+201012345672",
+                    Channel = "WHATSAPP",
+                    Notes = "تم التواصل هاتفياً وطلب إرسال تفاصيل الرسوم.",
+                    Status = "CONTACTED",
+                    CourseOfferingId = offering.Id,
+                    CreatedByUserId = users[4].Id
+                },
+                new Lead
+                {
+                    Id = Guid.Parse("95000000-0000-0000-0000-000000000003"),
+                    TenantId = tenantId,
+                    BranchId = mainBranchId,
+                    ChildName = "حمزة وائل عزمي",
+                    ParentName = "وائل عزمي",
+                    Phone = "+201012345673",
+                    Channel = "PHONE",
+                    Notes = "أبدى اهتماماً كبيراً وطلب تأكيد حجز المقعد.",
+                    Status = "INTERESTED",
+                    CourseOfferingId = offering.Id,
+                    CreatedByUserId = users[4].Id
+                }
+            );
+        }
         await db.SaveChangesAsync(cancellationToken);
         await EnsureCoreSliceAsync(db, tenantId, cancellationToken);
         await EnsureFinanceSliceAsync(db, tenantId, cancellationToken);

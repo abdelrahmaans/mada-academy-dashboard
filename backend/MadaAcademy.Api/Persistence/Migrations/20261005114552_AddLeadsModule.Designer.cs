@@ -3,6 +3,7 @@ using System;
 using MadaAcademy.Api.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MadaAcademy.Api.Persistence.Migrations
 {
     [DbContext(typeof(MadaDbContext))]
-    partial class MadaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261005114552_AddLeadsModule")]
+    partial class AddLeadsModule
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

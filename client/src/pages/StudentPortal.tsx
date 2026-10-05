@@ -77,19 +77,21 @@ function completedSessionsText(items: PortalSession[]) {
 export default function StudentPortal() {
   const { me, logout } = useAuth();
   const [, navigate] = useLocation();
+  const isStudentAccount = me?.role === "R09_STUDENT" || me?.accountType === "student";
+
   const [tab, setTab] = useState<StudentTab>("home");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [progress, setProgress] = useState(72);
   const [achievementState, setAchievementState] = useState(INITIAL_ACHIEVEMENTS);
-  const [studentName, setStudentName] = useState(apiClient.hasSession() ? me?.user?.displayName ?? "جارٍ التحميل…" : "ياسين محمد علي");
-  const [courseName, setCourseName] = useState(apiClient.hasSession() ? "جارٍ التحميل…" : "روبوتكس مستوى 2");
-  const [sessions, setSessions] = useState<PortalSession[]>(apiClient.hasSession() ? [] : DEMO_SESSIONS);
-  const [liveMode, setLiveMode] = useState(apiClient.hasSession());
-  const [dataLoading, setDataLoading] = useState(apiClient.hasSession());
+  const [studentName, setStudentName] = useState(isStudentAccount ? me?.user?.displayName ?? "جارٍ التحميل…" : "لينا عمر");
+  const [courseName, setCourseName] = useState(isStudentAccount ? "جارٍ التحميل…" : "روبوتكس مستوى 2");
+  const [sessions, setSessions] = useState<PortalSession[]>(isStudentAccount ? [] : DEMO_SESSIONS);
+  const [liveMode, setLiveMode] = useState(isStudentAccount);
+  const [dataLoading, setDataLoading] = useState(isStudentAccount);
   const [dataError, setDataError] = useState<string | null>(null);
   const [dataWarning, setDataWarning] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
-  const [hasStudentProfile, setHasStudentProfile] = useState(!apiClient.hasSession());
+  const [hasStudentProfile, setHasStudentProfile] = useState(!isStudentAccount);
   const nav = [
     { id: "home" as const, label: "رحلتي", icon: Home },
     { id: "sessions" as const, label: "جلساتي", icon: CalendarDays },
@@ -100,7 +102,15 @@ export default function StudentPortal() {
     setMobileOpen(false);
   };
   useEffect(() => {
-    if (!apiClient.hasSession()) return;
+    if (!isStudentAccount) {
+      setLiveMode(false);
+      setDataLoading(false);
+      setSessions(DEMO_SESSIONS);
+      setHasStudentProfile(true);
+      setStudentName("لينا عمر");
+      setCourseName("روبوتكس مستوى 2");
+      return;
+    }
     let cancelled = false;
     setLiveMode(true); setDataLoading(true); setSessions([]); setDataError(null); setDataWarning(null);
     const studentsRequest = apiClient.consumerStudents();
@@ -129,7 +139,7 @@ export default function StudentPortal() {
       if (!cancelled && retryKey > 0 && results.every(result => result.status === "fulfilled")) toast.success("تم تحديث بيانات الطالب");
     });
     return () => { cancelled = true; };
-  }, [me?.user?.displayName, retryKey]);
+  }, [me?.user?.displayName, retryKey, isStudentAccount]);
   const retry = () => setRetryKey(value => value + 1);
   const completedSessions = sessions.filter(item => item.status === "مكتملة").length;
   const attendanceRecords = sessions.filter(item => item.attendanceStatus && item.attendanceStatus !== "UNMARKED");
@@ -277,6 +287,28 @@ export default function StudentPortal() {
           {dataError && <div className="student-note" role="alert">تعذر تحميل بيانات الطالب: {dataError} <button type="button" onClick={retry}>إعادة المحاولة</button></div>}
           {dataWarning && !dataError && <div className="student-note" role="status">تم تحميل ملف الطالب، لكن الجلسات غير متاحة مؤقتًا: {dataWarning} <button type="button" onClick={retry}>إعادة المحاولة</button></div>}
           {!dataLoading && !dataError && liveMode && !hasStudentProfile && <div className="student-note" role="status">لا يوجد ملف طالب مرتبط بهذا الحساب حتى الآن. تواصل مع الأكاديمية لربط الملف الصحيح.</div>}
+
+          {!isStudentAccount && (
+            <div className="student-note" style={{ background: "rgba(99, 102, 241, 0.08)", borderColor: "rgba(99, 102, 241, 0.25)", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "10px" }} role="note">
+              <span><strong>معاينة مساحة الطالب:</strong> أنت الآن في وضع العرض التوضيحي. لتجربة حساب الطالب الحي المباشر ومتابعة الجلسات الفعلية:</span>
+              <button
+                type="button"
+                className="button button-primary"
+                style={{ padding: "6px 14px", fontSize: "0.84rem" }}
+                onClick={async () => {
+                  try {
+                    await apiClient.login("+201000000012", "Mada@2026", "student");
+                    window.location.reload();
+                  } catch {
+                    toast.error("تعذر الدخول بحساب الطالب");
+                  }
+                }}
+              >
+                الدخول كطالب (Lina Omar)
+              </button>
+            </div>
+          )}
+
           {hasStudentProfile && !dataLoading && !dataError && <>
           {tab === "home" && (
             <HomeTab

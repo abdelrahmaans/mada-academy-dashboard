@@ -553,9 +553,93 @@ export const apiClient = {
     if (!response.ok) throw new ApiRequestError("تعذر تنزيل إثبات المصروف", response.status);
     return response.blob();
   },
+  listLeads: () => request<LeadsResponse>("/leads"),
+  createLead: (input: CreateLeadInput) => request<LeadRecord>("/leads", { method: "POST", body: JSON.stringify(input) }),
+  updateLeadStatus: (id: string, status: string) => request<LeadRecord>(`/leads/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  convertLead: (id: string, input: ConvertLeadInput) => request<ConvertLeadResult>(`/leads/${id}/convert`, { method: "POST", body: JSON.stringify(input) }),
+  registerStudent: (input: DirectStudentInput) => request<ConvertLeadResult>("/students", { method: "POST", body: JSON.stringify(input) }),
+  listSchedulingGroups: () => request<{ items: SchedulingGroupRecord[]; total: number }>("/scheduling/groups"),
   logout: async () => {
     const refreshToken = localStorage.getItem(REFRESH_KEY);
     if (refreshToken && accessToken) await request<void>("/auth/logout", { method: "POST", body: JSON.stringify({ refreshToken }) }, false).catch(() => undefined);
     clearTokens();
   },
 };
+
+export type SchedulingGroupRecord = {
+  id: string;
+  courseTemplateId: string;
+  courseName: string;
+  track: string;
+  branchId: string;
+  branchName: string;
+  instructorId: string;
+  instructorName: string;
+  classroomId: string;
+  classroomName: string;
+  startDate: string;
+  endDate: string;
+  weeklyScheduleJson: string;
+  status: string;
+  maxStudents: number;
+  enrolledStudents: number;
+};
+
+export type LeadRecord = {
+  id: string;
+  branchId: string;
+  childName: string;
+  parentName: string;
+  phone: string;
+  channel: string;
+  notes: string | null;
+  status: "NEW" | "CONTACTED" | "INTERESTED" | "REGISTERED" | "ARCHIVED";
+  courseOfferingId: string | null;
+  courseName: string | null;
+  convertedStudentId: string | null;
+  createdAt: string;
+};
+
+export type LeadsResponse = {
+  items: LeadRecord[];
+  total: number;
+  overdue: number;
+  active: number;
+};
+
+export type CreateLeadInput = {
+  childName: string;
+  parentName: string;
+  phone: string;
+  channel?: string;
+  notes?: string;
+  courseOfferingId?: string;
+  branchId?: string;
+};
+
+export type ConvertLeadInput = {
+  courseOfferingId?: string;
+  dateOfBirth?: string;
+  discountPercent?: number;
+  createInvoice?: boolean;
+};
+
+export type DirectStudentInput = {
+  fullName: string;
+  phone?: string;
+  branchId?: string;
+  courseOfferingId?: string;
+  dateOfBirth?: string;
+  discountPercent?: number;
+  createInvoice?: boolean;
+};
+
+export type ConvertLeadResult = {
+  studentId: string;
+  leadId?: string;
+  enrollmentId?: string;
+  invoiceId?: string;
+  invoiceNumber?: string;
+  studentName: string;
+};
+
