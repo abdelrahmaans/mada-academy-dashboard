@@ -27,6 +27,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { FinanceDeskDialogs } from "@/components/FinanceDeskDialogs";
 import {
   Collections,
   Expenses,
@@ -1005,93 +1006,27 @@ export default function FinanceDesk() {
             )}
         </div>
       </main>
-      {invoiceDialogOpen && (!liveMode || workspaceState === "ready") && (
-        <div className="finance-desk-modal-backdrop">
-          <form className="finance-desk-modal" onSubmit={createInvoice}>
-            <button
-              type="button"
-              className="finance-modal-close"
-              onClick={() => setInvoiceDialogOpen(false)}
-            >
-              <X size={16} />
-            </button>
-            <span className="finance-modal-icon">
-              <FileText size={19} />
-            </span>
-            <h2>إنشاء فاتورة</h2>
-            <p>الفاتورة الجديدة ستظهر مباشرة في سجل التحصيل وFamily Portal.</p>
-            <label>
-              الطالب
-              <select
-                value={invoiceStudentId}
-                onChange={event => setInvoiceStudentId(event.target.value)}
-              >
-                {students.map(student => (
-                  <option key={student.id} value={student.id}>
-                    {student.fullName}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              وصف البند
-              <input
-                value={invoiceDescription}
-                onChange={event => setInvoiceDescription(event.target.value)}
-                placeholder="مثال: رسوم شهر أكتوبر"
-              />
-            </label>
-            <label>
-              المبلغ (ج.م)
-              <input
-                value={invoiceAmount}
-                onChange={event => setInvoiceAmount(event.target.value)}
-                type="number"
-                min="1"
-                placeholder="مثال: 2500"
-              />
-            </label>
-            <label>
-              تاريخ الاستحقاق
-              <input
-                value={invoiceDueDate}
-                onChange={event => setInvoiceDueDate(event.target.value)}
-                type="date"
-              />
-            </label>
-            <button className="finance-desk-primary" type="submit">
-              <Plus size={15} /> إنشاء الفاتورة
-            </button>
-          </form>
-        </div>
-      )}
-      {rejecting && (!liveMode || workspaceState === "ready") && (
-        <div className="finance-desk-modal-backdrop">
-          <form className="finance-desk-modal" onSubmit={rejectExpense}>
-            <button
-              type="button"
-              className="finance-modal-close"
-              onClick={() => setRejecting(null)}
-            >
-              <X size={16} />
-            </button>
-            <span className="finance-modal-icon">
-              <AlertCircle size={19} />
-            </span>
-            <h2>رفض المصروف</h2>
-            <p>سبب الرفض إلزامي وسيظهر في سجل المصروف.</p>
-            <textarea
-              value={rejectReason}
-              onChange={event => setRejectReason(event.target.value)}
-              placeholder="اكتب سببًا واضحًا للرفض..."
-              rows={4}
-            />
-            <button className="finance-desk-primary" type="submit">
-              <Check size={15} /> حفظ الرفض
-            </button>
-          </form>
-        </div>
-      )}
+      <FinanceDeskDialogs
+        invoiceDialogOpen={invoiceDialogOpen}
+        setInvoiceDialogOpen={setInvoiceDialogOpen}
+        invoiceStudentId={invoiceStudentId}
+        setInvoiceStudentId={setInvoiceStudentId}
+        students={students}
+        invoiceDescription={invoiceDescription}
+        setInvoiceDescription={setInvoiceDescription}
+        invoiceAmount={invoiceAmount}
+        setInvoiceAmount={setInvoiceAmount}
+        invoiceDueDate={invoiceDueDate}
+        setInvoiceDueDate={setInvoiceDueDate}
+        createInvoice={createInvoice}
+        rejecting={rejecting}
+        setRejecting={setRejecting}
+        rejectReason={rejectReason}
+        setRejectReason={setRejectReason}
+        rejectExpense={rejectExpense}
+        liveMode={liveMode}
+        workspaceState={workspaceState}
+      />
     </RoleDashboardShell>
   );
 }
