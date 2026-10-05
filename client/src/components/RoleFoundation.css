@@ -133,6 +133,112 @@
   pointer-events: none;
 }
 
+/* Compact role context: useful information without competing with the page header. */
+.role-scope-card {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 46px;
+  padding: 7px 11px;
+  overflow: hidden;
+  border: 1px solid #dce9e9;
+  border-radius: 11px;
+  background: linear-gradient(110deg, #f8fcfb, #fff);
+  color: #34545b;
+  box-shadow: 0 4px 13px rgb(27 83 88 / 5%);
+}
+.role-scope-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid #cce7e1;
+  border-radius: 8px;
+  color: #19786f;
+  background: #eaf7f4;
+}
+.role-scope-copy {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  min-width: 0;
+}
+.role-scope-kicker {
+  color: #789096;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.role-scope-copy strong {
+  color: #284b53;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.role-scope-copy > span:last-child {
+  overflow: hidden;
+  color: #6d8489;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.role-scope-boundary,
+.role-scope-demo {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 4px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.role-scope-boundary {
+  color: #39736c;
+  background: #edf8f5;
+}
+.role-scope-demo {
+  color: #8b6b26;
+  background: #fff6d9;
+}
+.role-scope-card-compact {
+  min-height: 38px;
+  padding: 5px 9px;
+  border-radius: 10px;
+  box-shadow: none;
+}
+.role-scope-card-compact .role-scope-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+}
+.role-scope-card-compact .role-scope-kicker {
+  display: none;
+}
+.role-scope-card-compact .role-scope-copy {
+  gap: 0 7px;
+}
+.role-scope-card-compact .role-scope-copy strong {
+  font-size: 10px;
+}
+.role-scope-card-compact .role-scope-copy > span:last-child {
+  font-size: 9px;
+}
+
+@media (max-width: 560px) {
+  .role-scope-card {
+    width: 100%;
+  }
+  .role-scope-boundary {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .role-dashboard-shell *,
   .family-portal *,
