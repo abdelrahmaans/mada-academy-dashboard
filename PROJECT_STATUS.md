@@ -1,7 +1,7 @@
 # Mada Academy — Project Status
 
-**As of:** 4 October 2026
-**Verified Git state:** `main` includes merged PRs #55, #56, #58, #61, #62, #63, and #64 and is pushed to origin.
+**As of:** 5 October 2026
+**Verified Git state:** `main` includes merged PRs #55, #56, #58, #61, #62, #63, #64, #67, #68, and #69 and is pushed to origin.
 **Latest delivery PR:** [PR #63 — extract Classes creation dialogs](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/63), merged successfully.
 **Stack:** React + Vite + TypeScript; ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions.
 
@@ -13,7 +13,7 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 
 | Role | What is implemented | Important gaps / truth to preserve |
 |---|---|---|
-| **R00 Platform Admin** | Platform shell/navigation exists; live console preserves available overview/academy/role data when one read endpoint fails and gives toast feedback for refresh and load/support failures. | Full platform administration and support workflows are not demonstrated as complete live APIs. |
+| **R00 Platform Admin** | Live platform support inventory is documented in [R00_PLATFORM_ADMIN_INVENTORY.md](R00_PLATFORM_ADMIN_INVENTORY.md): overview, academy list/bootstrap, status support, masked member search, membership/session support, roles, and tenant/platform audit reads. Backend policy, tenant-paired lookups, reason requirements, audit writes, and LIVE no-demo behavior are implemented and partially tested. | Full platform administration is not supported: archive/delete, billing, and detailed student/finance/consumer support are unavailable. Bootstrap has contract drift (password-based implementation vs passwordless contract); dedicated bootstrap/reactivation/protected-R00 tests remain open. |
 | **R01 Academy Owner** | Academy bootstrap, tenant-level identity/member/role, branch and classroom foundations exist; LIVE route is guarded from the old demo page, academy roles preserve members/permissions when branch lookup fails, classroom/resource management preserves useful data on partial failures, the executive dashboard gives toast/error feedback for report and audit loading, and the global interceptor now covers 401, 403, and 5xx with automated tests. | Local acceptance evidence is documented; deployed staging acceptance remains open. |
 | **R02 Branch Manager** | Branch-scoped student/session/classroom and approval operations are available across implemented backend slices; `/branch-operations` now routes authenticated R02 users to the live dashboard instead of the legacy demo, and approvals/classes/schedule remain visible when optional endpoints are forbidden. | Some non-core branch panels remain outside the current P2 slice. |
 | **R03 Head Instructors** | Branch-scoped evaluation review queue; publish or request changes; dashboard avoids demo evaluation samples in LIVE evaluation surfaces, keeps core team/group/session data visible when optional endpoints fail, and preserves groups or sessions when one Academic Programs read fails. | Unsupported mastery/checkpoint analytics remain explicitly outside the LIVE contract. |
@@ -73,7 +73,7 @@ Follow-up fixes prepared after PR #41: analytics is now loaded only when both op
 
 ## Next milestone and open issues
 
-The P1/P2 consumer acceptance, Finance local acceptance, and the first page-decomposition wave are complete. The next implementation phase is focused quality and auth architecture work: frontend tests for finance mutations and family/student scope, a backend refresh-token-reuse test, moving auth endpoints out of `Program.cs` into a module, and a full R00 Platform Admin action inventory. Production-readiness evidence remains a separate gate: deploy the API using [backend/Dockerfile](backend/Dockerfile), configure the server-only Supabase key, run authenticated private-bucket upload/download smoke using [scripts/staging-smoke.sh](scripts/staging-smoke.sh), define durable object backup/restore, and run deployed API/frontend staging acceptance.
+The P1/P2 consumer acceptance, Finance local acceptance, first page-decomposition wave, frontend scope/finance tests, refresh-token reuse test, auth module extraction, and the initial R00 action inventory are complete. The next implementation phase closes the R00 contract/test follow-ups, then proceeds to production-readiness evidence: deploy the API using [backend/Dockerfile](backend/Dockerfile), configure the server-only Supabase key, run authenticated private-bucket upload/download smoke using [scripts/staging-smoke.sh](scripts/staging-smoke.sh), define durable object backup/restore, and run deployed API/frontend staging acceptance.
 
 Open implementation blockers and product debt:
 
@@ -84,6 +84,8 @@ Open implementation blockers and product debt:
 5. `deploy-pages.yml` publishes a static frontend to GitHub Pages. It is intentionally not a production API deployment; LIVE screens require `VITE_API_URL` to point to an accessible HTTPS API, otherwise the published site is only a preview shell or shows its explicit unavailable/empty states.
 6. The first decomposition wave is merged for Head Instructors (#55), Schedule (#56), Platform Console (#58), Marketing/legacy cleanup (#62), Classes (#63), and Team (#64). Students (#57), Approvals (#59), and Instructor Desk (#60) were closed because the proposed extraction did not materially reduce the page size; they require a smaller, higher-value split before reopening.
 7. `client/src/components/Map.tsx` and `ManusDialog.tsx` were confirmed unused and removed in merged PR #62.
+8. PR #69 (refresh-token rotation reuse test) is merged. Backend integration and Playwright passed; the known external Vercel `client-angular` rate-limit failure is not a repository failure.
+9. R00 action inventory is documented. Remaining R00 blockers are bootstrap contract alignment, explicit negative/edge-case tests, and removal or implementation of the unimplemented `academy.archive` permission.
 
 ## Frontend coverage and architecture debt
 

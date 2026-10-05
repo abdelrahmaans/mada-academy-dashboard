@@ -196,4 +196,97 @@ public sealed class PlatformAdminApiTests
         Assert.False(role.GetProperty("canSelfAssign").GetBoolean());
         Assert.Equal("CONTROLLED_OUT_OF_BAND", role.GetProperty("assignmentMode").GetString());
     }
+
+    [Fact]
+    public async Task PlatformAdmin_CanBootstrapAcademyAndBootstrapIsAudited()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var client = factory.CreateClient();
+        var platformAdmin = await TestData.CreateAccountAsync(factory, "R00_PLATFORM_ADMIN");
+        TestData.Authenticate(client, await TestData.LoginAsync(client, platformAdmin));
+
+        using var response = await client.PostAsJsonAsync("/api/v1/platform/academies", new
+        {
+            name = "أكاديمية الاختبار",
+            slug = "bootstrap-test-academy",
+            planCode = "GROWTH",
+            primaryBranch = new { name = "الفرع الرئيسي", code = "MAIN" },
+            owner = new { fullName = "مالك الاختبار", phone = "01099999999", email = "bootstrap-owner@test.local", password = "OwnerPassword2026!" }
+        });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        using var document = await response.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Bootstrap response is empty.");
+        var academyId = document.RootElement.GetProperty("data").GetProperty("academy").GetProperty("id").GetGuid();
+        var ownerId = document.RootElement.GetProperty("data").GetProperty("owner").GetProperty("id").GetGuid();
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+        Assert.True(await db.Branches.AnyAsync(item => item.TenantId == academyId && item.Code == "MAIN"));
+        Assert.True(await db.Memberships.AnyAsync(item => item.TenantId == academyId && item.UserAccountId == ownerId && item.RoleCode == "R01_ACADEMY_OWNER"));
+        var audit = await db.AuditEvents.SingleAsync(item => item.Action == "ACADEMY_BOOTSTRAPPED" && item.TenantId == academyId);
+        Assert.Equal(platformAdmin.UserId, audit.ActorUserId);
+    }
+
+    [Fact]
+    public async Task PlatformAdmin_CanReactivatePausedAcademyAndBothTransitionsAreAudited()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var client = factory.CreateClient();
+        var platformAdmin = await TestData.CreateAccountAsync(factory, "R00_PLATFORM_ADMIN");
+        var owner = await TestData.CreateAccountAsync(factory, "R01_ACADEMY_OWNER");
+        TestData.Authenticate(client, await TestData.LoginAsync(client, platformAdmin));
+
+        Assert.Equal(HttpStatusCode.OK, (await client.PatchAsJsonAsync(
+            $"/api/v1/platform/academies/{owner.TenantId}/status",
+            new { status = "PAUSED", reason = "Pause for review" })).StatusCode);
+        var response = await client.PatchAsJsonAsync(
+            $"/api/v1/platform/academies/{owner.TenantId}/status",
+            new { status = "ACTIVE", reason = "Review completed" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+        Assert.Equal("ACTIVE", (await db.Tenants.SingleAsync(item => item.Id == owner.TenantId)).Status);
+        var transitions = await db.AuditEvents.Where(item => item.TenantId == owner.TenantId && item.Action == "PLATFORM_TENANT_STATUS_CHANGED").ToListAsync();
+        Assert.Equal(2, transitions.Count);
+        Assert.Contains(transitions, item => item.Reason == "Review completed" && item.MetadataJson?.Contains("ACTIVE", StringComparison.Ordinal) == true);
+    }
+
+    [Fact]
+    public async Task PlatformAdmin_CannotMutateR00Membership_AndOwnerCannotAssignR00()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var platformClient = factory.CreateClient();
+        using var ownerClient = factory.CreateClient();
+        var platformAdmin = await TestData.CreateAccountAsync(factory, "R00_PLATFORM_ADMIN");
+        var owner = await TestData.CreateAccountAsync(factory, "R01_ACADEMY_OWNER");
+        TestData.Authenticate(platformClient, await TestData.LoginAsync(platformClient, platformAdmin));
+        TestData.Authenticate(ownerClient, await TestData.LoginAsync(ownerClient, owner));
+
+        Guid platformMembershipId;
+        using (var seedScope = factory.Services.CreateScope())
+        {
+            var db = seedScope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            platformMembershipId = await db.Memberships.Where(item => item.UserAccountId == platformAdmin.UserId && item.RoleCode == "R00_PLATFORM_ADMIN").Select(item => item.Id).SingleAsync();
+        }
+
+        var protectedResponse = await platformClient.PatchAsJsonAsync(
+            $"/api/v1/platform/academies/{platformAdmin.TenantId}/members/{platformMembershipId}/status",
+            new { status = "REVOKED", reason = "Attempted support change" });
+        Assert.Equal(HttpStatusCode.Conflict, protectedResponse.StatusCode);
+
+        var assignResponse = await ownerClient.PostAsJsonAsync("/api/v1/academy/members", new
+        {
+            fullName = "محاولة تعيين",
+            email = "r00-attempt@test.local",
+            phone = "01088888888",
+            password = "MemberPassword2026!",
+            roleCode = "R00_PLATFORM_ADMIN"
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, assignResponse.StatusCode);
+
+        using var verifyScope = factory.Services.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<MadaDbContext>();
+        Assert.Empty(await verifyDb.AuditEvents.Where(item => item.Action == "PLATFORM_MEMBER_STATUS_CHANGED" && item.TargetId == platformMembershipId.ToString()).ToListAsync());
+    }
 }

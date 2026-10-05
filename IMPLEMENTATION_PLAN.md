@@ -53,18 +53,17 @@
 
 ### 2.2 R00 Platform Admin
 
-الموجود حاليًا هو shell وoverview وقراءات محدودة، وليس full platform administration/support مثبتًا بالكامل كـLIVE API.
+تم تنفيذ جرد R00 في [R00_PLATFORM_ADMIN_INVENTORY.md](R00_PLATFORM_ADMIN_INVENTORY.md). الموجود حاليًا هو live platform support محدود ومحدد النطاق، وليس full platform administration.
 
 الإجراءات:
 
-- جرد كل action في Platform Console وتصنيفه:
-  - `LIVE`
-  - `PREVIEW`
-  - `NOT AVAILABLE`
-- إزالة أو وسم أي زر يوحي بعملية غير محفوظة أو غير مدعومة.
-- الحفاظ على البيانات المتاحة عند فشل endpoint اختياري مع warning واضح.
-- عدم إضافة mutations جديدة قبل وجود contract وصلاحيات واختبارات.
-- إضافة acceptance checklist لمسارات R00 الحالية.
+- [x] جرد كل action في Platform Console وتصنيفه إلى `LIVE` أو `PREVIEW` أو `NOT AVAILABLE`.
+- [x] إزالة أو عدم عرض أزرار توحي بعمليات غير محفوظة أو غير مدعومة.
+- [x] الحفاظ على البيانات المتاحة عند فشل endpoint اختياري مع warning واضح.
+- [x] توثيق authorization، tenant isolation، masking، والتدقيق في acceptance checklist.
+- [ ] إصلاح drift في عقد Academy Bootstrap: العقد يقول إن كلمة مرور المالك لا تُحفظ، بينما التنفيذ والواجهة يستخدمان كلمة مرور.
+- [ ] إضافة اختبارات bootstrap، reactivation، حماية عضوية R00، ورفض R00 assignment قبل إعلان R00 acceptance-complete.
+- [ ] إزالة `academy.archive` من advertised permissions حتى يتوفر workflow حقيقي أو فتح change مستقل له.
 
 ### 2.3 Finance
 
