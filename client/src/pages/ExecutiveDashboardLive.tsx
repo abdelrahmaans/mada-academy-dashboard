@@ -100,7 +100,7 @@ export default function ExecutiveDashboardLive() {
   const selectedBranchName = branchId === "ALL" ? "كل الفروع" : report?.availableBranches.find(branch => branch.id === branchId)?.name ?? "الفرع المحدد";
   const retry = () => setRetryKey(value => value + 1);
 
-  return <RoleDashboardShell className="app-shell executive-dashboard-shell r1-live-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية الحالية" branchName={selectedBranchName}>
+  return <RoleDashboardShell className="app-shell executive-dashboard-shell r1-live-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية الحالية" branchName={selectedBranchName} demo={false}>
     <main className="r1-live-page" dir="rtl">
       <PageHeader className="welcome-row" eyebrow={<span className="eyebrow"><i className="eyebrow-dot" /> الإدارة التنفيذية · R01 · LIVE</span>} title="لوحة الإدارة التنفيذية" description="مؤشرات تشغيلية ومالية للقراءة فقط، محسوبة من بيانات الأكاديمية ضمن الفرع والفترة المختارين." />
       <RoleScopeCard className="executive-scope-card" />

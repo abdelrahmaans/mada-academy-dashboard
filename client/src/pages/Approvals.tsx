@@ -253,8 +253,9 @@ function expenseFromApi(record: FinanceExpense): ApprovalItem {
 export default function Approvals() {
   const [, navigate] = useLocation();
   const { logout, me } = useAuth();
-  const [requests, setRequests] = useState(INITIAL_REQUESTS);
   const [liveMode, setLiveMode] = useState(() => apiClient.hasSession());
+  const [loading, setLoading] = useState(() => apiClient.hasSession());
+  const [requests, setRequests] = useState<ApprovalItem[]>(() => apiClient.hasSession() ? [] : INITIAL_REQUESTS);
   const [loadError, setLoadError] = useState<string | null>(null);
   const branch = liveMode
     ? me?.branches?.find(item => item.id === me.branchId)?.name ?? me?.branches?.[0]?.name ?? "الفرع المصرح"
@@ -270,15 +271,20 @@ export default function Approvals() {
   const [selected, setSelected] = useState<ApprovalItem | null>(null);
   const [decisionNote, setDecisionNote] = useState("");
   const [expenseRejectionMode, setExpenseRejectionMode] = useState(false);
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<NotificationItem[]>(() => apiClient.hasSession() ? [] : INITIAL_NOTIFICATIONS);
   const canApproveSelected =
     selected?.kind === "substitute" ? Boolean(selected.proposedInstructorId) : selected?.kind !== "discount" || (selected.discountValue ?? 0) <= BRANCH_MANAGER_DISCOUNT_LIMIT;
 
   useEffect(() => {
-    if (!apiClient.hasSession()) { setLiveMode(false); return; }
+    if (!apiClient.hasSession()) {
+      setLiveMode(false);
+      setLoading(false);
+      setRequests(INITIAL_REQUESTS);
+      setNotifications(INITIAL_NOTIFICATIONS);
+      return;
+    }
     setLiveMode(true);
-    setRequests([]);
-    setNotifications([]);
+    setLoading(true);
     setLoadError(null);
     Promise.allSettled([
       apiClient.listApprovals(),
@@ -311,6 +317,8 @@ export default function Approvals() {
       if (optionalFailure?.status === "rejected") {
         setLoadError("تم تحميل الموافقات التشغيلية؛ بعض الملحقات غير متاحة لصلاحيات الحساب الحالية.");
       }
+    }).finally(() => {
+      setLoading(false);
     });
   }, [me?.role]);
 
@@ -697,10 +705,10 @@ export default function Approvals() {
               onClick={() => toast("إعدادات الحساب قيد التجهيز")}
             >
               <span className="profile-copy">
-                <strong>أحمد محمود</strong>
-                <small>مدير الفرع</small>
+                <strong>{me?.user?.displayName?.trim() || "أحمد محمود"}</strong>
+                <small>{me?.roleLabel || (liveMode ? "مدير الفرع" : "مدير الفرع")}</small>
               </span>
-              <span className="profile-avatar">أم</span>
+              <span className="profile-avatar">{me?.user?.displayName ? me.user.displayName.trim().slice(0, 2) : "أم"}</span>
               <ChevronDown size={14} />
             </button>
           </div>
@@ -725,7 +733,7 @@ export default function Approvals() {
                 <ArrowDownToLine size={17} /> تصدير القائمة
               </button>
               <span className="approval-pending-pill">
-                <i /> {pending.length} طلبات معلّقة
+                <i /> {loading ? "..." : `${pending.length} طلبات معلّقة`}
               </span>
             </div>
           </section>
@@ -766,7 +774,7 @@ export default function Approvals() {
               </span>
               <span className="finance-stat-label">بانتظار قرارك</span>
               <div>
-                <strong>{pending.length}</strong>
+                <strong>{loading ? "..." : pending.length}</strong>
                 <small>{liveMode ? "طلب ضمن نطاقك" : "طلب داخل الفرع"}</small>
               </div>
               <small>ابدأ بالأقدم أو الأكثر تأثيرًا</small>
@@ -777,7 +785,7 @@ export default function Approvals() {
               </span>
               <span className="finance-stat-label">{liveMode ? "طلبات جلسة" : "طلبات الخصم"}</span>
               <div>
-                <strong>{liveMode ? pendingSessionRequests : pendingDiscounts}</strong>
+                <strong>{loading ? "..." : (liveMode ? pendingSessionRequests : pendingDiscounts)}</strong>
                 <small>تحتاج مراجعة</small>
               </div>
               <small>{liveMode ? "إضافية أو تعويضية" : "خصم إخوة أو حملة توضيحية"}</small>
@@ -917,10 +925,16 @@ export default function Approvals() {
                 </select>
               </label>
               <span className="approval-filter-summary">
-                {visibleRequests.length} نتيجة · {pending.length} معلّق
+                {loading ? "جارٍ التحميل…" : `${visibleRequests.length} نتيجة · ${pending.length} معلّق`}
               </span>
             </div>
-            {visibleRequests.length ? (
+            {loading ? (
+              <div className="team-empty approval-empty" style={{ minHeight: "220px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.75rem" }}>
+                <div style={{ width: 28, height: 28, border: "3px solid rgba(13, 148, 136, 0.2)", borderTopColor: "#0d9488", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                <strong style={{ color: "var(--foreground, #1e293b)" }}>جارٍ تحميل طلبات الاعتماد من الخادم…</strong>
+                <span style={{ color: "var(--muted-foreground, #64748b)", fontSize: "0.875rem" }}>يرجى الانتظار لحظات لمزامنة أحدث الطلبات التشغيلية</span>
+              </div>
+            ) : visibleRequests.length ? (
               <div className="approval-list">
                 {visibleRequests.map(item => (
                   <ApprovalCard
@@ -947,7 +961,7 @@ export default function Approvals() {
               </div>
             )}
             <div className="team-table-footer">
-              <span>{liveMode ? "طلبات الخادم" : "قائمة توضيحية"} · {visibleRequests.length} من {branchRequests.length} طلب</span>
+              <span>{loading ? "جارٍ التحديث…" : (liveMode ? "طلبات الخادم" : "قائمة توضيحية")} · {visibleRequests.length} من {branchRequests.length} طلب</span>
               <span>النطاق: {branch}</span>
             </div>
           </section>
@@ -966,12 +980,12 @@ export default function Approvals() {
                 </div>
               </div>
               <span className="team-table-total">
-                {reviewedRequests.length} قرار
+                {loading ? "..." : `${reviewedRequests.length} قرار`}
               </span>
             </div>
             <AuditTimeline
               events={auditEvents}
-              emptyLabel={liveMode ? "لا توجد قرارات محفوظة في هذا النطاق بعد." : "لا توجد قرارات مسجلة في بيانات العرض بعد."}
+              emptyLabel={loading ? "جارٍ تحميل سجل القرارات…" : (liveMode ? "لا توجد قرارات محفوظة في هذا النطاق بعد." : "لا توجد قرارات مسجلة في بيانات العرض بعد.")}
             />
           </section>
           <div className="finance-footer-note">

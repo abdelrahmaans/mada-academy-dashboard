@@ -401,10 +401,11 @@ function BrandMark() {
 
 function ClassesPage() {
   const [, setLocation] = useLocation();
-  const { logout } = useAuth();
-  const [courses, setCourses] = useState(seedCourses);
-  const [offerings, setOfferings] = useState(seedOfferings);
+  const { logout, me } = useAuth();
   const [liveMode, setLiveMode] = useState(() => apiClient.hasSession());
+  const [loading, setLoading] = useState(() => apiClient.hasSession());
+  const [courses, setCourses] = useState(() => apiClient.hasSession() ? [] : seedCourses);
+  const [offerings, setOfferings] = useState(() => apiClient.hasSession() ? [] : seedOfferings);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>("courses");
   const [search, setSearch] = useState("");
@@ -454,11 +455,13 @@ function ClassesPage() {
   useEffect(() => {
     if (!apiClient.hasSession()) {
       setLiveMode(false);
+      setLoading(false);
+      setCourses(seedCourses);
+      setOfferings(seedOfferings);
       return;
     }
     setLiveMode(true);
-    setCourses([]);
-    setOfferings([]);
+    setLoading(true);
     setLoadError(null);
     Promise.allSettled([
       apiClient.courseTemplates(),
@@ -539,7 +542,9 @@ function ClassesPage() {
           );
         }
       }
-    );
+    ).finally(() => {
+      setLoading(false);
+    });
   }, []);
 
   const filteredCourses = useMemo(
@@ -1040,10 +1045,10 @@ function ClassesPage() {
               onClick={() => toast("إعدادات الحساب قيد التجهيز")}
             >
               <span className="profile-copy">
-                <strong>أحمد محمود</strong>
-                <small>مدير الفرع</small>
+                <strong>{me?.user?.displayName?.trim() || "أحمد محمود"}</strong>
+                <small>{me?.roleLabel || (liveMode ? "مدير الفرع" : "مدير الفرع")}</small>
               </span>
-              <span className="profile-avatar">أم</span>
+              <span className="profile-avatar">{me?.user?.displayName ? me.user.displayName.trim().slice(0, 2) : "أم"}</span>
               <ChevronDown size={14} />
             </button>
           </div>
@@ -1113,7 +1118,7 @@ function ClassesPage() {
               </span>
               <span className="course-stat-label">قوالب كورسات نشطة</span>
               <div>
-                <strong>{String(activeCourses).padStart(2, "0")}</strong>
+                <strong>{loading ? "..." : String(activeCourses).padStart(2, "0")}</strong>
                 <span>من {courses.length} كورسات</span>
               </div>
               <small>
@@ -1126,7 +1131,7 @@ function ClassesPage() {
               </span>
               <span className="course-stat-label">مجموعات جارية أو قادمة</span>
               <div>
-                <strong>{String(activeGroups).padStart(2, "0")}</strong>
+                <strong>{loading ? "..." : String(activeGroups).padStart(2, "0")}</strong>
                 <span>مجموعة</span>
               </div>
               <small className="course-neutral">في الفروع المسجلة</small>
@@ -1139,7 +1144,7 @@ function ClassesPage() {
                 {liveMode ? "طلاب في المجموعات" : "طلاب في مجموعات العينة"}
               </span>
               <div>
-                <strong>{String(enrolledTotal).padStart(2, "0")}</strong>
+                <strong>{loading ? "..." : String(enrolledTotal).padStart(2, "0")}</strong>
                 <span>طالب</span>
               </div>
               <small className="course-neutral">

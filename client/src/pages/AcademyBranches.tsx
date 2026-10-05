@@ -56,9 +56,9 @@ export default function AcademyBranches() {
     finally { setSaving(false); }
   };
 
-  return <RoleDashboardShell className="academy-branches-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية">
+  return <RoleDashboardShell className="academy-branches-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية" demo={false}>
     <main className="academy-branches-page" dir="rtl">
-      <header className="academy-branches-topbar"><button onClick={() => navigate("/academy-owner")}><ArrowRight size={16} /> العودة إلى الأكاديمية</button><span><ShieldCheck size={15} /> R01 · إدارة الفروع</span></header>
+      <header className="academy-branches-topbar"><button onClick={() => navigate("/executive-dashboard")}><ArrowRight size={16} /> العودة إلى اللوحة التنفيذية</button><span><ShieldCheck size={15} /> R01 · إدارة الفروع</span></header>
       <div className="academy-branches-content">
         <PageHeader className="academy-branches-header" eyebrow={<span><i /> ACADEMY STRUCTURE · الفروع</span>} title="إدارة الفروع" description="أنشئ فروع الأكاديمية، حدّث بياناتها، وتابع المستخدمين والطلاب المرتبطين بكل فرع." actions={<button className="academy-branches-add" onClick={openAdd}><Plus size={16} /> إضافة فرع</button>} />
         <div className="academy-branches-scope"><ShieldCheck size={16} /><span><strong>نطاق الإدارة:</strong> فروع أكاديميتك فقط · المستخدمون ذوو الدور الفرعي يجب ربطهم بفرع نشط.</span></div>
