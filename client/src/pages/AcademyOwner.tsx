@@ -24,8 +24,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { Redirect, useLocation } from "wouter";
-import { apiClient } from "@/lib/apiClient";
+import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
@@ -173,7 +172,6 @@ const PRIORITY_LABELS: Record<TicketPriority, string> = {
 };
 
 export default function AcademyOwner() {
-  if (apiClient.hasSession()) return <Redirect to="/executive-dashboard" />;
   const [, navigate] = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [view, setView] = useState<OwnerView>("overview");
@@ -283,7 +281,7 @@ export default function AcademyOwner() {
         </nav>
         <div className="academy-owner-sidebar-spacer" />
         <div className="academy-owner-scope-card"><MapPin size={15} /><span><small>نطاق العرض</small><strong>{branchLabel}</strong></span></div>
-        <button className="academy-owner-back" onClick={() => navigate("/")}><ArrowRight size={15} /> العودة إلى لوحة مدير الفرع</button>
+        <button className="academy-owner-back" onClick={() => navigate("/executive-dashboard")}><ArrowRight size={15} /> العودة إلى لوحة الإدارة التنفيذية</button>
         <div className="academy-owner-sidebar-footer">نسخة تجريبية · بيانات محلية</div>
       </aside>
 

@@ -259,6 +259,7 @@ export default function Approvals() {
   const branch = liveMode
     ? me?.branches?.find(item => item.id === me.branchId)?.name ?? me?.branches?.[0]?.name ?? "الفرع المصرح"
     : "مدينة نصر";
+  const isAccountant = me?.role === "R06_ACCOUNTANT";
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState<QueueTab>("all");
@@ -576,20 +577,20 @@ export default function Approvals() {
         </div>
         <div className="nav-caption">القائمة الرئيسية</div>
         <nav className="primary-nav" aria-label="القائمة الرئيسية">
-          <button className="nav-link" onClick={() => navigate("/")}>
+          <button className="nav-link" onClick={() => navigate(isAccountant ? "/finance-desk" : "/")}>
             <LayoutDashboard size={19} />
             <span>الرئيسية</span>
           </button>
-          <button className="nav-link" onClick={() => navigate("/students")}>
+          <button className="nav-link" hidden={isAccountant} onClick={() => navigate("/students")}>
             <Users size={19} />
             <span>الطلاب</span>
             <span className="nav-count">248</span>
           </button>
-          <button className="nav-link" onClick={() => navigate("/schedule")}>
+          <button className="nav-link" hidden={isAccountant} onClick={() => navigate("/schedule")}>
             <CalendarDays size={19} />
             <span>الجدول</span>
           </button>
-          <button className="nav-link" onClick={() => navigate("/classes")}>
+          <button className="nav-link" hidden={isAccountant} onClick={() => navigate("/classes")}>
             <BookOpen size={19} />
             <span>الحصص والكورسات</span>
           </button>
@@ -607,7 +608,7 @@ export default function Approvals() {
             <Wallet size={19} />
             <span>المالية والتحصيل</span>
           </button>
-          <button className="nav-link" onClick={() => navigate("/team")}>
+          <button className="nav-link" hidden={isAccountant} onClick={() => navigate("/team")}>
             <Users size={19} />
             <span>الفريق والأدوار</span>
           </button>

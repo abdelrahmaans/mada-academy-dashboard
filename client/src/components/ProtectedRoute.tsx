@@ -17,7 +17,8 @@ export default function ProtectedRoute({ children, roles, permission }: { childr
   if (loading) return <div className="route-loading">جارٍ التحقق من الجلسة…</div>;
   if (!me) return null;
   if (!isRouteAllowed(me, roles, permission)) {
-    const roleDefinition = ROLE_DEFINITIONS[me.role as keyof typeof ROLE_DEFINITIONS];
+    const normalizedRole = me.role.match(/^R\d+/)?.[0] ?? me.role;
+    const roleDefinition = ROLE_DEFINITIONS[normalizedRole as keyof typeof ROLE_DEFINITIONS];
     const homePath = roleDefinition?.homePath ?? "/workspace";
     const roleLabel = roleDefinition?.label ?? me.roleLabel ?? "حسابك";
     const signOut = async () => {

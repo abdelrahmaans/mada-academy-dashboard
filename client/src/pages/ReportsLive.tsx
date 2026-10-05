@@ -61,7 +61,7 @@ export default function ReportsLive({ me }: { me: AuthMe }) {
   const money = (piastres: number) => new Intl.NumberFormat("ar-EG", { style: "currency", currency: "EGP", maximumFractionDigits: 2 }).format(piastres / 100);
 
   return <RoleDashboardShell className="app-shell reports-live-shell" roleCode={roleCode} roleLabel={me.roleLabel || (isOwner ? "مسؤول الأكاديمية" : "مدير الفرع")} scopeLevel={isOwner ? "tenant" : "branch"} scopeLabel={scopeLabel} tenantName={me.academy?.name} branchName={isOwner ? undefined : branchName} demo={false}>
-    {!isOwner && <BranchManagerSidebar open={mobileOpen} onClose={() => setMobileOpen(false)} />}
+    {!isOwner && <BranchManagerSidebar roleCode={me.role === "R06_ACCOUNTANT" ? "R06" : "R02"} open={mobileOpen} onClose={() => setMobileOpen(false)} />}
     <main className="main-panel">
       <header className="topbar r02-live-topbar">
         {!isOwner && <button className="icon-button mobile-menu-button" aria-label="فتح قائمة مدير الفرع" onClick={() => setMobileOpen(true)}><Menu size={21} /></button>}
@@ -102,7 +102,7 @@ export default function ReportsLive({ me }: { me: AuthMe }) {
             <div className="reports-live-table-heading"><div><h2>{isOwner ? "تفصيل الفروع" : "حركة الفرع"}</h2><p>{scopeLabel} · البيانات مجمعة من الفواتير والمدفوعات والمصروفات المعتمدة</p></div><span>{report.branches.length} {isOwner ? "فروع" : "فرع"}</span></div>
             {report.branches.length === 0 ? <div className="reports-live-empty">لا توجد حركات مالية مسجلة ضمن هذا النطاق حتى الآن.</div> : <div className="reports-live-table-wrap"><table><thead><tr><th>الفرع</th><th>عدد الفواتير</th><th>التحصيل</th><th>مصروفات معتمدة</th><th>الصافي</th></tr></thead><tbody>{report.branches.map(branch => <tr key={branch.branchId}><td><strong>{branch.branchName}</strong></td><td>{new Intl.NumberFormat("ar-EG").format(branch.invoiceCount)}</td><td>{money(branch.collectedPiastres)}</td><td>{money(branch.approvedExpensesPiastres)}</td><td><strong>{money(branch.netPiastres)}</strong></td></tr>)}</tbody></table></div>}
           </section>
-          <section className="reports-live-actions" aria-label="روابط تشغيلية"><button onClick={() => navigate(isOwner ? "/executive-dashboard" : "/")}><Activity size={17} /><span>العودة إلى لوحة الدور</span><ArrowLeft size={15} /></button><button onClick={() => navigate("/approvals")}><Wallet size={17} /><span>مراجعة طلبات المصروفات</span><ArrowLeft size={15} /></button></section>
+          <section className="reports-live-actions" aria-label="روابط تشغيلية"><button onClick={() => navigate(isOwner ? "/executive-dashboard" : me.role === "R06_ACCOUNTANT" ? "/finance-desk" : "/")}><Activity size={17} /><span>العودة إلى لوحة الدور</span><ArrowLeft size={15} /></button><button onClick={() => navigate("/approvals")}><Wallet size={17} /><span>مراجعة طلبات المصروفات</span><ArrowLeft size={15} /></button></section>
         </>}
       </div>
     </main>
