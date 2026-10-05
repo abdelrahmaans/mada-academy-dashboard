@@ -68,12 +68,12 @@ Follow-up fixes prepared after PR #41: analytics is now loaded only when both op
 - Password login has persisted lockout and an in-memory per-instance IP limiter; OTP, invitation, and consumer phone lookup routes require separate IP-based limits.
 - The API must call forwarded-header middleware before rate limiting, and only trusts `X-Forwarded-For`/`X-Forwarded-Proto` from IPs listed in `MADA_TRUSTED_PROXIES`.
 - `MADA_TRUSTED_PROXIES` is intentionally unset by default; arbitrary forwarded headers must never be trusted.
-- Multi-instance/distributed limiter behavior is not yet production evidence. A shared limiter or documented single-instance constraint is required before horizontal scaling.
+- The current in-memory limiter now has an explicit single-instance production guard (`MADA_RATE_LIMIT_MODE=single-instance`, `MADA_RATE_LIMIT_EXPECTED_INSTANCES=1`); startup rejects unsupported distributed mode or more than one expected production instance. This is an operational constraint, not distributed evidence. Shared-limiter implementation and two-instance/load evidence remain open before horizontal scaling.
 - Five failed password attempts can lock a known account for the configured window. This is an explicit availability/security trade-off and requires monitoring and recovery procedures before production.
 
 ## Next milestone and open issues
 
-The P1/P2 consumer acceptance, Finance local acceptance, first page-decomposition wave, frontend scope/finance tests, refresh-token reuse test, auth module extraction, and the initial R00 action inventory are complete. The next implementation phase closes the R00 contract/test follow-ups, then proceeds to production-readiness evidence: deploy the API using [backend/Dockerfile](backend/Dockerfile), configure the server-only Supabase key, run authenticated private-bucket upload/download smoke using [scripts/staging-smoke.sh](scripts/staging-smoke.sh), define durable object backup/restore, and run deployed API/frontend staging acceptance.
+The P1/P2 consumer acceptance, Finance local acceptance, first page-decomposition wave, frontend scope/finance tests, refresh-token reuse test, auth module extraction, R00 follow-ups, and the single-instance limiter guard are complete. Production-readiness evidence remains open: a shared limiter with two-instance/load evidence before horizontal scaling, private-bucket upload/download smoke, durable object backup/restore, and deployed API/frontend staging acceptance.
 
 Open implementation blockers and product debt:
 

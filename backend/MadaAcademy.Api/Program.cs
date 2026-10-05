@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 var builder = WebApplication.CreateBuilder(args);
 var jwtOptions = JwtOptions.Load(builder.Configuration, builder.Environment);
 var authSecurityOptions = AuthSecurityOptions.Load(builder.Configuration);
+var rateLimitTopology = RateLimitTopologyOptions.Load(builder.Configuration, builder.Environment);
 var trustedProxyAddresses = LoadTrustedProxyAddresses(builder.Configuration);
 
 builder.Services.AddProblemDetails();
@@ -71,6 +72,7 @@ else if (string.Equals(storageMode, "local", StringComparison.OrdinalIgnoreCase)
 else builder.Services.AddSingleton<IPrivateObjectStorage, UnavailablePrivateObjectStorage>();
 builder.Services.AddMadaAuthentication(jwtOptions);
 builder.Services.AddSingleton(authSecurityOptions);
+builder.Services.AddSingleton(rateLimitTopology);
 if (builder.Environment.IsDevelopment()) builder.Services.AddSingleton<ISmsMessageSender, DevelopmentSmsMessageSender>();
 else builder.Services.AddSingleton<ISmsMessageSender, UnconfiguredSmsMessageSender>();
 builder.Services.AddScoped<ConflictService>();
