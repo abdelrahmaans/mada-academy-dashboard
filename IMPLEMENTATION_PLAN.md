@@ -300,7 +300,8 @@ Students (#57), Approvals (#59), and Instructor Desk (#60) were closed because t
 
 تبقى قبل الإطلاق العام:
 
-- اختبار distributed behavior أو استخدام limiter مشترك عند تشغيل أكثر من instance؛ limiter الحالي in-memory لكل instance.
+- [x] توثيق single-instance constraint وإضافة startup guard يرفض إعلان أكثر من instance مع الـin-memory limiter.
+- [ ] اختبار distributed behavior أو استخدام limiter مشترك عند تشغيل أكثر من instance؛ لا يجوز التوسع الأفقي قبل إغلاق هذا البند.
 - مراجعة تشغيلية لقيم proxy الموثوقة، ومراقبة/استجابة lockout حتى لا يتحول إلى DoS على حساب معروف.
 
 لا يتم اعتبار النظام Production-ready قبل إغلاق بوابات التشغيل الموزع وCORS/storage/staging.

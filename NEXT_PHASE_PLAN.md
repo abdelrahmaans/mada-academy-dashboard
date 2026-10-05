@@ -44,7 +44,7 @@
 4. نقل endpoints الـauth من `Program.cs` إلى module مستقل دون تغيير العقود أو سياسات rate limiting.
 5. جرد R00 Platform Admin وتصنيف كل action إلى `LIVE` أو `PREVIEW` أو `NOT AVAILABLE` مع authorization/audit checklist في [R00_PLATFORM_ADMIN_INVENTORY.md](R00_PLATFORM_ADMIN_INVENTORY.md) **مغلق**.
 6. إغلاق R00 follow-ups: contract alignment، اختبارات bootstrap/reactivation/protected-R00/R00 assignment، response-shape privacy assertions، وإزالة `academy.archive` من advertised permissions **مغلق**.
-7. Production readiness: CORS production enforcement **مطبق ومختبر داخل الكود**؛ المتبقي distributed limiter evidence، private storage smoke، backup/restore، وstaging acceptance.
+7. Production readiness: CORS production enforcement **مطبق ومختبر داخل الكود**، وتم تنفيذ single-instance startup guard موثق في [DISTRIBUTED_RATE_LIMIT_DECISION.md](DISTRIBUTED_RATE_LIMIT_DECISION.md)؛ المتبقي shared-limiter/two-instance evidence قبل التوسع الأفقي، ثم private storage smoke، backup/restore، وstaging acceptance.
 
 ## الهدف
 

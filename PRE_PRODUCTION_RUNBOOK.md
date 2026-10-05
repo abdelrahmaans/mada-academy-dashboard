@@ -27,6 +27,17 @@ Start from [backend/.env.production.example](backend/.env.production.example) an
 
 The frontend receives only `VITE_API_URL`. It must never receive the Supabase service-role key.
 
+## 2.1 Rate-limit topology gate
+
+The current rate limiter is in-memory and supports one API instance only. Configure the API host with:
+
+```text
+MADA_RATE_LIMIT_MODE=single-instance
+MADA_RATE_LIMIT_EXPECTED_INSTANCES=1
+```
+
+The API fails during startup if production declares distributed mode or more than one expected instance. Do not horizontally scale until the evidence and future requirements in [DISTRIBUTED_RATE_LIMIT_DECISION.md](DISTRIBUTED_RATE_LIMIT_DECISION.md) are complete.
+
 ## 3. Storage and database gate
 
 Before real evidence is accepted:
