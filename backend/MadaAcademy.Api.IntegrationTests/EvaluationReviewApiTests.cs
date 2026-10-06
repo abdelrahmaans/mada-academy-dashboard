@@ -11,7 +11,7 @@ namespace MadaAcademy.Api.IntegrationTests;
 public sealed class EvaluationReviewApiTests
 {
     [Fact]
-    public async Task EvaluationReview_OnlyR03PublishesAndConsumersSeePublishedResults()
+    public async Task AssignedR03PublishesAndConsumersSeePublishedResults()
     {
         using var factory = new TestApiFactory(useInMemory: true);
         using var managerClient = factory.CreateClient();
@@ -140,6 +140,68 @@ public sealed class EvaluationReviewApiTests
             Assert.Contains(transitions, item => item.ToState == "CHANGES_REQUESTED" && item.ActorUserId == reviewer.UserId && item.Reason == "أضف خطوة تالية محددة.");
             Assert.Contains(transitions, item => item.ToState == "PUBLISHED" && item.ActorUserId == reviewer.UserId);
         }
+    }
+
+    [Fact]
+    public async Task AssignedR04CanReviewOnlyEvaluationsInExplicitlyAssignedGroups()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        var manager = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
+        var firstInstructor = await TestData.CreateAccountAsync(factory, "R04_INSTRUCTOR", manager.TenantId, manager.BranchId);
+        var secondInstructor = await TestData.CreateAccountAsync(factory, "R04_INSTRUCTOR", manager.TenantId, manager.BranchId);
+        var reviewer = await TestData.CreateAccountAsync(factory, "R04_INSTRUCTOR", manager.TenantId, manager.BranchId);
+        var unassignedInstructor = await TestData.CreateAccountAsync(factory, "R04_INSTRUCTOR", manager.TenantId, manager.BranchId);
+        var (assignedSessionId, assignedStudentId) = await SeedSessionAsync(factory, manager.TenantId, manager.BranchId, firstInstructor.UserId, "Assigned Evaluation Child", "Assigned Robotics", true);
+        var (unassignedSessionId, _) = await SeedSessionAsync(factory, manager.TenantId, manager.BranchId, secondInstructor.UserId, "Hidden Evaluation Child", "Unassigned Robotics", true);
+        Guid assignedOfferingId;
+        Guid unassignedEvaluationId;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            assignedOfferingId = await db.AcademySessions.Where(item => item.Id == assignedSessionId).Select(item => item.CourseOfferingId!.Value).SingleAsync();
+            unassignedEvaluationId = await db.SessionEvaluations.Where(item => item.SessionId == unassignedSessionId).Select(item => item.Id).SingleAsync();
+            db.GroupSupervisionAssignments.Add(new GroupSupervisionAssignment
+            {
+                TenantId = manager.TenantId,
+                BranchId = manager.BranchId,
+                SupervisorUserId = reviewer.UserId,
+                CourseOfferingId = assignedOfferingId,
+                CanReadAttendance = false,
+                CanReviewEvaluations = true,
+                CreatedByUserId = manager.UserId
+            });
+            await db.SaveChangesAsync();
+        }
+
+        using var reviewerClient = factory.CreateClient();
+        TestData.Authenticate(reviewerClient, await TestData.LoginAsync(reviewerClient, reviewer));
+        using var groupsResponse = await reviewerClient.GetAsync("/api/v1/supervision/my-groups");
+        Assert.Equal(HttpStatusCode.OK, groupsResponse.StatusCode);
+        using var groupsJson = await groupsResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("My groups response missing.");
+        Assert.Equal(1, groupsJson.RootElement.GetProperty("data").GetProperty("total").GetInt32());
+        Assert.Equal(assignedOfferingId, groupsJson.RootElement.GetProperty("data").GetProperty("items")[0].GetProperty("groupId").GetGuid());
+
+        using var sessionsResponse = await reviewerClient.GetAsync("/api/v1/sessions");
+        Assert.Equal(0, (await sessionsResponse.Content.ReadFromJsonAsync<JsonDocument>())!.RootElement.GetProperty("data").GetProperty("total").GetInt32());
+        using var queueResponse = await reviewerClient.GetAsync("/api/v1/scheduling/evaluation-reviews");
+        Assert.Equal(HttpStatusCode.OK, queueResponse.StatusCode);
+        using var queueJson = await queueResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Review queue response missing.");
+        var queueItems = queueJson.RootElement.GetProperty("data").GetProperty("items");
+        Assert.Single(queueItems.EnumerateArray());
+        Assert.Equal(assignedStudentId, queueItems[0].GetProperty("studentId").GetGuid());
+        var assignedEvaluationId = queueItems[0].GetProperty("id").GetGuid();
+
+        using var summaryResponse = await reviewerClient.GetAsync("/api/v1/scheduling/evaluation-status-summary");
+        Assert.Equal(HttpStatusCode.OK, summaryResponse.StatusCode);
+        using var summaryJson = await summaryResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Review summary missing.");
+        Assert.Equal(1, summaryJson.RootElement.GetProperty("data").GetProperty("counts").GetProperty("SUBMITTED").GetInt32());
+        Assert.Equal(HttpStatusCode.NotFound, (await reviewerClient.PostAsJsonAsync($"/api/v1/scheduling/evaluation-reviews/{unassignedEvaluationId}/decision", new { decision = "PUBLISH" })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await reviewerClient.PostAsJsonAsync($"/api/v1/scheduling/evaluation-reviews/{assignedEvaluationId}/decision", new { decision = "PUBLISH" })).StatusCode);
+
+        using var unassignedClient = factory.CreateClient();
+        TestData.Authenticate(unassignedClient, await TestData.LoginAsync(unassignedClient, unassignedInstructor));
+        Assert.Equal(HttpStatusCode.Forbidden, (await unassignedClient.GetAsync("/api/v1/scheduling/evaluation-reviews")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await unassignedClient.GetAsync("/api/v1/scheduling/evaluation-status-summary")).StatusCode);
     }
 
     private static async Task<(Guid SessionId, Guid StudentId)> SeedSessionAsync(TestApiFactory factory, Guid tenantId, Guid branchId, Guid instructorId, string studentName, string courseName, bool seedSubmittedEvaluation)
