@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
+using MadaAcademy.Api.Storage;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -14,7 +15,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace MadaAcademy.Api.IntegrationTests;
 
-public sealed class TestApiFactory(bool useInMemory, bool unconfigureSms = false, string? connectionString = null, Guid? publicLeadTenantId = null, Guid? publicLeadBranchId = null) : WebApplicationFactory<Program>
+public sealed class TestApiFactory(bool useInMemory, bool unconfigureSms = false, string? connectionString = null, Guid? publicLeadTenantId = null, Guid? publicLeadBranchId = null, bool unavailableStorage = false) : WebApplicationFactory<Program>
 {
     private readonly string _databaseName = $"mada-tests-{Guid.NewGuid():N}";
     private readonly string? _connectionString = connectionString;
@@ -37,7 +38,7 @@ public sealed class TestApiFactory(bool useInMemory, bool unconfigureSms = false
                     ["MADA_DATABASE_MODE"] = "postgres"
                 }));
         }
-        if (!useInMemory && !unconfigureSms) return;
+        if (!useInMemory && !unconfigureSms && !unavailableStorage) return;
 
         builder.ConfigureTestServices(services =>
         {
@@ -52,6 +53,11 @@ public sealed class TestApiFactory(bool useInMemory, bool unconfigureSms = false
             {
                 services.RemoveAll<ISmsMessageSender>();
                 services.AddSingleton<ISmsMessageSender, UnconfiguredSmsMessageSender>();
+            }
+            if (unavailableStorage)
+            {
+                services.RemoveAll<IPrivateObjectStorage>();
+                services.AddSingleton<IPrivateObjectStorage, UnavailablePrivateObjectStorage>();
             }
         });
     }
