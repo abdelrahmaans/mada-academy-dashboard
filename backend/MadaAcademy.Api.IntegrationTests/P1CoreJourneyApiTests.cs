@@ -26,7 +26,7 @@ public sealed class P1CoreJourneyApiTests
             var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
             await DemoDataSeeder.SeedAsync(db);
             var offeringId = await db.AcademySessions.Where(item => item.Id == MainSessionId).Select(item => item.CourseOfferingId!.Value).SingleAsync();
-            db.GroupSupervisionAssignments.Add(new GroupSupervisionAssignment { TenantId = TenantId, BranchId = MainBranchId, SupervisorUserId = Guid.Parse("10000000-0000-0000-0000-000000000004"), CourseOfferingId = offeringId, CreatedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000003") });
+            db.GroupSupervisionAssignments.Add(new GroupSupervisionAssignment { TenantId = TenantId, BranchId = MainBranchId, SupervisorUserId = Guid.Parse("10000000-0000-0000-0000-000000000004"), CourseOfferingId = offeringId, CanReadEvaluations = true, CanDecideEvaluations = true, CreatedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000003") });
             await db.SaveChangesAsync();
         }
 

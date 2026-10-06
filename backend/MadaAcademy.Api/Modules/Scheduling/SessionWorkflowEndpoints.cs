@@ -381,7 +381,8 @@ public static class SessionWorkflowEndpoints
 
     private static async Task<IResult> ListEvaluationReviewsAsync(ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
     {
-        if (!CanReviewEvaluations(user) || !Scope(user, out var tenantId, out var branchScope) || !branchScope.HasValue) return Forbidden("EVALUATION_REVIEW_FORBIDDEN");
+        if (!CanAccessEvaluationReviews(user) || !Scope(user, out var tenantId, out var branchScope) || !branchScope.HasValue) return Forbidden("EVALUATION_REVIEW_FORBIDDEN");
+        if (user.IsInRole("R04_INSTRUCTOR") && !await HasEvaluationQueueAccessAsync(user, db, tenantId, branchScope.Value, cancellationToken)) return Forbidden("EVALUATION_REVIEW_FORBIDDEN");
         var items = await (from evaluation in db.SessionEvaluations.AsNoTracking()
                            join session in db.AcademySessions.AsNoTracking() on evaluation.SessionId equals session.Id
                            join student in db.Students.AsNoTracking() on evaluation.StudentId equals student.Id
@@ -393,17 +394,19 @@ public static class SessionWorkflowEndpoints
                                  && offering.TenantId == tenantId && offering.BranchId == branchScope.Value && template.TenantId == tenantId
                                  && db.StudentEnrollments.Any(enrollment => enrollment.StudentId == evaluation.StudentId && enrollment.CourseOfferingId == offering.Id && enrollment.Status == "ACTIVE")
                                  && db.Memberships.Any(membership => membership.UserAccountId == evaluation.InstructorId && membership.TenantId == tenantId && membership.BranchId == branchScope.Value && membership.Status == "ACTIVE" && (membership.RoleCode == "R03_HEAD_INSTRUCTORS" || membership.RoleCode == "R04_INSTRUCTOR"))
-                                 && (!user.IsInRole("R03_HEAD_INSTRUCTORS") || (Actor(user).HasValue && db.GroupSupervisionAssignments.Any(assignment => assignment.TenantId == tenantId && assignment.BranchId == branchScope.Value && assignment.CourseOfferingId == offering.Id && assignment.SupervisorUserId == Actor(user)!.Value && assignment.Status == "ACTIVE" && assignment.CanReviewEvaluations && (!assignment.StartsAt.HasValue || assignment.StartsAt <= DateTimeOffset.UtcNow) && (!assignment.EndsAt.HasValue || assignment.EndsAt > DateTimeOffset.UtcNow))))
+                                 && Actor(user).HasValue
+                                 && db.GroupSupervisionAssignments.Any(assignment => assignment.TenantId == tenantId && assignment.BranchId == branchScope.Value && assignment.CourseOfferingId == offering.Id && assignment.SupervisorUserId == Actor(user)!.Value && assignment.Status == "ACTIVE" && (assignment.CanReadEvaluations || assignment.CanDecideEvaluations) && (!assignment.StartsAt.HasValue || assignment.StartsAt <= DateTimeOffset.UtcNow) && (!assignment.EndsAt.HasValue || assignment.EndsAt > DateTimeOffset.UtcNow))
                            orderby evaluation.SubmittedAt
-                           select new { evaluation.Id, evaluation.SessionId, evaluation.StudentId, studentName = student.FullName, courseName = template.Name, instructorName = instructor.DisplayName, evaluation.Score, evaluation.Notes, evaluation.SubmittedAt, sessionDate = session.StartAt })
+                           select new { evaluation.Id, evaluation.SessionId, evaluation.StudentId, studentName = student.FullName, courseName = template.Name, instructorName = instructor.DisplayName, evaluation.Score, evaluation.Notes, evaluation.SubmittedAt, sessionDate = session.StartAt, canDecide = db.GroupSupervisionAssignments.Any(assignment => assignment.TenantId == tenantId && assignment.BranchId == branchScope.Value && assignment.CourseOfferingId == offering.Id && assignment.SupervisorUserId == Actor(user)!.Value && assignment.Status == "ACTIVE" && assignment.CanDecideEvaluations && (!assignment.StartsAt.HasValue || assignment.StartsAt <= DateTimeOffset.UtcNow) && (!assignment.EndsAt.HasValue || assignment.EndsAt > DateTimeOffset.UtcNow)) })
             .ToListAsync(cancellationToken);
         return Results.Ok(new { data = new { items, total = items.Count } });
     }
 
     private static async Task<IResult> ListEvaluationStatusSummaryAsync(ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
     {
-        if (!CanReviewEvaluations(user) || !Scope(user, out var tenantId, out var branchScope) || !branchScope.HasValue)
+        if (!CanAccessEvaluationReviews(user) || !Scope(user, out var tenantId, out var branchScope) || !branchScope.HasValue)
             return Forbidden("EVALUATION_REVIEW_FORBIDDEN");
+        if (user.IsInRole("R04_INSTRUCTOR") && !await HasEvaluationQueueAccessAsync(user, db, tenantId, branchScope.Value, cancellationToken)) return Forbidden("EVALUATION_REVIEW_FORBIDDEN");
 
         var grouped = await (from evaluation in db.SessionEvaluations.AsNoTracking()
                              join session in db.AcademySessions.AsNoTracking() on evaluation.SessionId equals session.Id
@@ -414,7 +417,8 @@ public static class SessionWorkflowEndpoints
                                    && db.CourseOfferings.Any(offering => offering.Id == session.CourseOfferingId.Value && offering.TenantId == tenantId && offering.BranchId == branchScope.Value)
                                    && db.StudentEnrollments.Any(enrollment => enrollment.StudentId == evaluation.StudentId && enrollment.CourseOfferingId == session.CourseOfferingId.Value && enrollment.Status == "ACTIVE")
                                    && db.Memberships.Any(membership => membership.UserAccountId == evaluation.InstructorId && membership.TenantId == tenantId && membership.BranchId == branchScope.Value && membership.Status == "ACTIVE" && (membership.RoleCode == "R03_HEAD_INSTRUCTORS" || membership.RoleCode == "R04_INSTRUCTOR"))
-                                   && (!user.IsInRole("R03_HEAD_INSTRUCTORS") || (Actor(user).HasValue && db.GroupSupervisionAssignments.Any(assignment => assignment.TenantId == tenantId && assignment.BranchId == branchScope.Value && assignment.CourseOfferingId == session.CourseOfferingId.Value && assignment.SupervisorUserId == Actor(user)!.Value && assignment.Status == "ACTIVE" && assignment.CanReviewEvaluations && (!assignment.StartsAt.HasValue || assignment.StartsAt <= DateTimeOffset.UtcNow) && (!assignment.EndsAt.HasValue || assignment.EndsAt > DateTimeOffset.UtcNow))))
+                                   && Actor(user).HasValue
+                                   && db.GroupSupervisionAssignments.Any(assignment => assignment.TenantId == tenantId && assignment.BranchId == branchScope.Value && assignment.CourseOfferingId == session.CourseOfferingId.Value && assignment.SupervisorUserId == Actor(user)!.Value && assignment.Status == "ACTIVE" && (assignment.CanReadEvaluations || assignment.CanDecideEvaluations) && (!assignment.StartsAt.HasValue || assignment.StartsAt <= DateTimeOffset.UtcNow) && (!assignment.EndsAt.HasValue || assignment.EndsAt > DateTimeOffset.UtcNow))
                              group evaluation by evaluation.Status into statusGroup
                              select new { status = statusGroup.Key, count = statusGroup.Count() })
             .ToListAsync(cancellationToken);
@@ -432,7 +436,7 @@ public static class SessionWorkflowEndpoints
 
     private static async Task<IResult> DecideEvaluationReviewAsync(Guid evaluationId, EvaluationReviewDecision request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
     {
-        if (!CanReviewEvaluations(user) || !Scope(user, out var tenantId, out var branchScope) || !branchScope.HasValue) return Forbidden("EVALUATION_REVIEW_FORBIDDEN");
+        if (!CanAccessEvaluationReviews(user) || !Scope(user, out var tenantId, out var branchScope) || !branchScope.HasValue) return Forbidden("EVALUATION_REVIEW_FORBIDDEN");
         var actorId = Actor(user); if (!actorId.HasValue) return Forbidden("ACTOR_REQUIRED");
         var decision = request.Decision?.Trim().ToUpperInvariant();
         if (decision is not ("PUBLISH" or "REQUEST_CHANGES")) return Validation("decision", "Decision must be PUBLISH or REQUEST_CHANGES.");
@@ -448,14 +452,14 @@ public static class SessionWorkflowEndpoints
             && await db.CourseOfferings.AnyAsync(offering => offering.Id == session.CourseOfferingId.Value && offering.TenantId == tenantId && offering.BranchId == branchScope.Value, cancellationToken)
             && await db.StudentEnrollments.AnyAsync(enrollment => enrollment.StudentId == evaluation.StudentId && enrollment.CourseOfferingId == session.CourseOfferingId.Value && enrollment.Status == "ACTIVE", cancellationToken)
             && await db.Memberships.AnyAsync(membership => membership.UserAccountId == evaluation.InstructorId && membership.TenantId == tenantId && membership.BranchId == branchScope.Value && membership.Status == "ACTIVE" && (membership.RoleCode == "R03_HEAD_INSTRUCTORS" || membership.RoleCode == "R04_INSTRUCTOR"), cancellationToken);
-        var hasAssignmentReviewAccess = !user.IsInRole("R03_HEAD_INSTRUCTORS") || (actorId.HasValue && await db.GroupSupervisionAssignments.AnyAsync(assignment => assignment.TenantId == tenantId && assignment.BranchId == branchScope.Value && assignment.CourseOfferingId == session.CourseOfferingId.Value && assignment.SupervisorUserId == actorId.Value && assignment.Status == "ACTIVE" && assignment.CanReviewEvaluations && (!assignment.StartsAt.HasValue || assignment.StartsAt <= DateTimeOffset.UtcNow) && (!assignment.EndsAt.HasValue || assignment.EndsAt > DateTimeOffset.UtcNow), cancellationToken));
-        if (!targetIsScoped || !hasAssignmentReviewAccess) return NotFound("EVALUATION_REVIEW_NOT_FOUND");
+        var hasAssignmentDecisionAccess = actorId.HasValue && await db.GroupSupervisionAssignments.AnyAsync(assignment => assignment.TenantId == tenantId && assignment.BranchId == branchScope.Value && assignment.CourseOfferingId == session.CourseOfferingId.Value && assignment.SupervisorUserId == actorId.Value && assignment.Status == "ACTIVE" && assignment.CanDecideEvaluations && (!assignment.StartsAt.HasValue || assignment.StartsAt <= DateTimeOffset.UtcNow) && (!assignment.EndsAt.HasValue || assignment.EndsAt > DateTimeOffset.UtcNow), cancellationToken);
+        if (!targetIsScoped || !hasAssignmentDecisionAccess) return NotFound("EVALUATION_REVIEW_NOT_FOUND");
         var now = DateTimeOffset.UtcNow;
         evaluation.Status = decision == "PUBLISH" ? "PUBLISHED" : "CHANGES_REQUESTED";
         evaluation.ReviewedByUserId = actorId.Value; evaluation.ReviewedAt = now; evaluation.ReviewNote = decision == "REQUEST_CHANGES" ? reviewNote : null;
         evaluation.PublishedAt = decision == "PUBLISH" ? now : null;
         db.StateTransitions.Add(new StateTransitionEvent { AggregateType = "SESSION_EVALUATION", AggregateId = evaluation.Id.ToString(), FromState = "SUBMITTED", ToState = evaluation.Status, ActorUserId = actorId.Value, Reason = reviewNote });
-        await NotifyStaffAsync(db, session.TenantId, session.BranchId, evaluation.InstructorId, decision == "PUBLISH" ? "EVALUATION_PUBLISHED" : "EVALUATION_CHANGES_REQUESTED", decision == "PUBLISH" ? "تم نشر التقييم" : "التقييم يحتاج تعديلًا", decision == "PUBLISH" ? "اعتمد رئيس المدربين التقييم وأصبح متاحًا للطالب والأسرة." : reviewNote!, "SESSION", session.Id.ToString(), cancellationToken);
+        await NotifyStaffAsync(db, session.TenantId, session.BranchId, evaluation.InstructorId, decision == "PUBLISH" ? "EVALUATION_PUBLISHED" : "EVALUATION_CHANGES_REQUESTED", decision == "PUBLISH" ? "تم نشر التقييم" : "التقييم يحتاج تعديلًا", decision == "PUBLISH" ? "اعتمد المراجع المصرح له التقييم وأصبح متاحًا للطالب والأسرة." : reviewNote!, "SESSION", session.Id.ToString(), cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         return Results.Ok(new { data = new { evaluationId, sessionId = session.Id, status = evaluation.Status, reviewedAt = evaluation.ReviewedAt, publishedAt = evaluation.PublishedAt } });
     }
@@ -483,7 +487,14 @@ public static class SessionWorkflowEndpoints
     private static bool Scope(ClaimsPrincipal user, out Guid tenantId, out Guid? branchId) { var ok = Guid.TryParse(user.FindFirstValue("tenantId"), out tenantId); branchId = Guid.TryParse(user.FindFirstValue("branchId"), out var parsed) ? parsed : null; return ok; }
     private static Guid? Actor(ClaimsPrincipal user) => Guid.TryParse(user.FindFirstValue("sub"), out var id) ? id : null;
     private static bool IsInstructor(ClaimsPrincipal user) => user.IsInRole("R04_INSTRUCTOR") || user.IsInRole("R03_HEAD_INSTRUCTORS");
-    private static bool CanReviewEvaluations(ClaimsPrincipal user) => user.IsInRole("R03_HEAD_INSTRUCTORS");
+    private static bool CanAccessEvaluationReviews(ClaimsPrincipal user) => user.IsInRole("R03_HEAD_INSTRUCTORS") || user.IsInRole("R04_INSTRUCTOR");
+    private static async Task<bool> HasEvaluationQueueAccessAsync(ClaimsPrincipal user, MadaDbContext db, Guid tenantId, Guid branchId, CancellationToken token)
+    {
+        var actorId = Actor(user);
+        if (!actorId.HasValue) return false;
+        var now = DateTimeOffset.UtcNow;
+        return await db.GroupSupervisionAssignments.AnyAsync(item => item.TenantId == tenantId && item.BranchId == branchId && item.SupervisorUserId == actorId.Value && item.Status == "ACTIVE" && (item.CanReadEvaluations || item.CanDecideEvaluations) && (!item.StartsAt.HasValue || item.StartsAt <= now) && (!item.EndsAt.HasValue || item.EndsAt > now), token);
+    }
     private static bool CanManageScheduling(ClaimsPrincipal user) => user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER");
     private static bool CanReadScheduling(ClaimsPrincipal user) => CanManageScheduling(user) || user.IsInRole("R03_HEAD_INSTRUCTORS");
     private static bool CanDecide(ClaimsPrincipal user) => user.IsInRole("R00_PLATFORM_ADMIN") || user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R03_HEAD_INSTRUCTORS");

@@ -157,7 +157,8 @@ export type SupervisionAssignment = {
   supervisorUserId: string;
   supervisorName: string | null;
   canReadAttendance: boolean;
-  canReviewEvaluations: boolean;
+  canReadEvaluations: boolean;
+  canDecideEvaluations: boolean;
   startsAt: string | null;
   endsAt: string | null;
   isCurrentlyEffective: boolean;
@@ -175,7 +176,7 @@ export type BranchSupervisionGroup = {
   assignments: SupervisionAssignment[];
 };
 export type BranchSupervisionGroupsResponse = { items: BranchSupervisionGroup[]; total: number; branchId: string };
-export type MySupervisionGroup = { assignmentId: string; groupId: string; courseName: string; startDate: string; endDate: string; status: string; canReadAttendance: boolean; canReviewEvaluations: boolean };
+export type MySupervisionGroup = { assignmentId: string; groupId: string; courseName: string; startDate: string; endDate: string; status: string; canReadAttendance: boolean; canReadEvaluations: boolean; canDecideEvaluations: boolean };
 export type MySupervisionGroupsResponse = { items: MySupervisionGroup[]; total: number; branchId: string };
 
 export type StudentRecord = {
@@ -202,6 +203,7 @@ export type SessionRecord = {
   startAt: string;
   endAt: string;
   instructorId: string;
+  substituteInstructorId?: string | null;
   classroomId: string;
   type: string;
   status: string;
@@ -262,7 +264,7 @@ export type SessionEvaluationListResponse = { sessionId: string; items: SessionE
 export type EvaluationStatusSummary = { branchId: string; counts: Record<SessionEvaluationStatus, number> };
 export type EvaluationReviewRecord = {
   id: string; sessionId: string; studentId: string; studentName: string; courseName: string;
-  instructorName: string | null; score: number | null; notes: string | null; submittedAt: string | null; sessionDate: string;
+  instructorName: string | null; score: number | null; notes: string | null; submittedAt: string | null; sessionDate: string; canDecide: boolean;
 };
 export type EvaluationReviewQueueResponse = { items: EvaluationReviewRecord[]; total: number };
 export type ConsumerStudentRecord = { id: string; name: string; branchId: string; branchName: string | null; relationship: string };
@@ -456,7 +458,7 @@ export const apiClient = {
   listGroups: () => request<GroupsResponse>("/scheduling/groups"),
   branchSupervisionGroups: () => request<BranchSupervisionGroupsResponse>("/supervision/branch-groups"),
   mySupervisionGroups: () => request<MySupervisionGroupsResponse>("/supervision/my-groups"),
-  grantGroupSupervision: (input: { supervisorUserId: string; courseOfferingId: string; canReadAttendance: boolean; canReviewEvaluations: boolean; startsAt?: string; endsAt?: string }) =>
+  grantGroupSupervision: (input: { supervisorUserId: string; courseOfferingId: string; canReadAttendance: boolean; canReadEvaluations: boolean; canDecideEvaluations: boolean; startsAt?: string; endsAt?: string }) =>
     request<{ assignmentId: string }>("/supervision/assignments", { method: "POST", body: JSON.stringify(input) }),
   revokeGroupSupervision: (assignmentId: string) => request<void>(`/supervision/assignments/${assignmentId}`, { method: "DELETE" }),
   checkSchedulingConflict: (input: { branchId: string; instructorId: string; classroomId: string; startAt: string; endAt: string; studentIds?: string[]; kits?: Array<{ kitId: string; quantity: number }> }) =>
