@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -45,7 +46,8 @@ public static class GroupSupervisionEndpoints
                                        supervisorUserId = item.SupervisorUserId,
                                        supervisorName = account.DisplayName,
                                        item.CanReadAttendance,
-                                       item.CanReviewEvaluations,
+                                       item.CanReadEvaluations,
+                                       item.CanDecideEvaluations,
                                        item.StartsAt,
                                        item.EndsAt,
                                        isCurrentlyEffective = (!item.StartsAt.HasValue || item.StartsAt <= now) && (!item.EndsAt.HasValue || item.EndsAt > now)
@@ -62,7 +64,7 @@ public static class GroupSupervisionEndpoints
     {
         if (!IsBranchManager(user) || !TryScope(user, out var tenantId, out var branchId)) return Forbidden("SUPERVISION_MANAGEMENT_FORBIDDEN");
         if (request.CourseOfferingId == Guid.Empty || request.SupervisorUserId == Guid.Empty) return Validation("assignment", "A group and supervisor are required.");
-        if (!request.CanReadAttendance && !request.CanReviewEvaluations) return Validation("permissions", "Select at least one supervision permission.");
+        if (!request.CanReadAttendance && !request.CanReadEvaluations && !request.CanDecideEvaluations) return Validation("permissions", "Select at least one supervision permission.");
         var now = DateTimeOffset.UtcNow;
         if (request.EndsAt.HasValue && request.EndsAt <= now) return Validation("endsAt", "The end time must be in the future.");
         if (request.EndsAt.HasValue && request.StartsAt.HasValue && request.EndsAt <= request.StartsAt) return Validation("endsAt", "The end time must be after the start time.");
@@ -81,7 +83,8 @@ public static class GroupSupervisionEndpoints
 
         var assignment = existing ?? new GroupSupervisionAssignment { TenantId = tenantId, BranchId = branchId, CourseOfferingId = group.Id, SupervisorUserId = request.SupervisorUserId, CreatedByUserId = ActorId(user) ?? Guid.Empty };
         assignment.CanReadAttendance = request.CanReadAttendance;
-        assignment.CanReviewEvaluations = request.CanReviewEvaluations;
+        assignment.CanReadEvaluations = request.CanReadEvaluations;
+        assignment.CanDecideEvaluations = request.CanDecideEvaluations;
         assignment.StartsAt = request.StartsAt;
         assignment.EndsAt = request.EndsAt;
         assignment.Status = "ACTIVE";
@@ -89,9 +92,9 @@ public static class GroupSupervisionEndpoints
         assignment.RevokedByUserId = null;
         assignment.CreatedByUserId = ActorId(user) ?? assignment.CreatedByUserId;
         if (existing is null) db.GroupSupervisionAssignments.Add(assignment);
-        db.AuditEvents.Add(new AuditEvent { ActorUserId = ActorId(user), TenantId = tenantId, BranchId = branchId, Action = "SUPERVISION_ASSIGNMENT_GRANTED", TargetType = "GROUP_SUPERVISION_ASSIGNMENT", TargetId = assignment.Id.ToString(), Reason = "Branch manager assigned group supervision access.", MetadataJson = $"{{\"groupId\":\"{group.Id}\",\"supervisorUserId\":\"{request.SupervisorUserId}\"}}" });
+        db.AuditEvents.Add(new AuditEvent { ActorUserId = ActorId(user), TenantId = tenantId, BranchId = branchId, Action = "SUPERVISION_ASSIGNMENT_GRANTED", TargetType = "GROUP_SUPERVISION_ASSIGNMENT", TargetId = assignment.Id.ToString(), Reason = "Branch manager assigned group supervision access.", MetadataJson = JsonSerializer.Serialize(new { groupId = group.Id, supervisorUserId = request.SupervisorUserId, canReadAttendance = request.CanReadAttendance, canReadEvaluations = request.CanReadEvaluations, canDecideEvaluations = request.CanDecideEvaluations }) });
         await db.SaveChangesAsync(cancellationToken);
-        return Results.Ok(new { data = new { assignmentId = assignment.Id, groupId = assignment.CourseOfferingId, supervisorUserId = assignment.SupervisorUserId, assignment.Status, assignment.CanReadAttendance, assignment.CanReviewEvaluations, assignment.StartsAt, assignment.EndsAt } });
+        return Results.Ok(new { data = new { assignmentId = assignment.Id, groupId = assignment.CourseOfferingId, supervisorUserId = assignment.SupervisorUserId, assignment.Status, assignment.CanReadAttendance, assignment.CanReadEvaluations, assignment.CanDecideEvaluations, assignment.StartsAt, assignment.EndsAt } });
     }
 
     private static async Task<IResult> RevokeAssignmentAsync(Guid assignmentId, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
@@ -115,7 +118,7 @@ public static class GroupSupervisionEndpoints
                            join offering in db.CourseOfferings.AsNoTracking() on assignment.CourseOfferingId equals offering.Id
                            join template in db.CourseTemplates.AsNoTracking() on offering.CourseTemplateId equals template.Id
                            where assignment.TenantId == tenantId && assignment.BranchId == branchId && assignment.SupervisorUserId == ActorId(user) && assignment.Status == "ACTIVE" && offering.TenantId == tenantId && offering.BranchId == branchId && template.TenantId == tenantId && (!assignment.StartsAt.HasValue || assignment.StartsAt <= now) && (!assignment.EndsAt.HasValue || assignment.EndsAt > now)
-                           select new { assignmentId = assignment.Id, groupId = offering.Id, courseName = template.Name, offering.StartDate, offering.EndDate, offering.Status, assignment.CanReadAttendance, assignment.CanReviewEvaluations }).ToListAsync(cancellationToken);
+                           select new { assignmentId = assignment.Id, groupId = offering.Id, courseName = template.Name, offering.StartDate, offering.EndDate, offering.Status, assignment.CanReadAttendance, assignment.CanReadEvaluations, assignment.CanDecideEvaluations }).ToListAsync(cancellationToken);
         return Results.Ok(new { data = new { items, total = items.Count, branchId } });
     }
 
@@ -133,4 +136,4 @@ public static class GroupSupervisionEndpoints
     private static IResult Validation(string field, string message) => Results.ValidationProblem(new Dictionary<string, string[]> { [field] = [message] });
 }
 
-public sealed record CreateSupervisionAssignmentRequest(Guid SupervisorUserId, Guid CourseOfferingId, bool CanReadAttendance = false, bool CanReviewEvaluations = false, DateTimeOffset? StartsAt = null, DateTimeOffset? EndsAt = null);
+public sealed record CreateSupervisionAssignmentRequest(Guid SupervisorUserId, Guid CourseOfferingId, bool CanReadAttendance = false, bool CanReadEvaluations = false, bool CanDecideEvaluations = false, DateTimeOffset? StartsAt = null, DateTimeOffset? EndsAt = null);

@@ -43,7 +43,7 @@ export default function EvaluationReviewQueue() {
 
   return <section className="evaluation-review-queue" aria-live="polite">
     <header className="evaluation-review-header">
-      <div><span className="academic-panel-kicker">مراجعة أكاديمية · LIVE</span><h2>التقييمات بانتظار الاعتماد</h2><p>تظهر هنا التقييمات الواقعة ضمن مجموعاتك المصرح لك بمراجعتها فقط. لن تصل الدرجة أو الملاحظة للأسرة والطالب إلا بعد النشر.</p></div>
+      <div><span className="academic-panel-kicker">متابعة أكاديمية · LIVE</span><h2>التقييمات المرسلة للمراجعة</h2><p>تظهر هنا التقييمات ضمن المجموعات المصرح بها. القراءة لا تمنح صلاحية القرار؛ وأدوات النشر أو الإرجاع تظهر فقط بتكليف مستقل. لن تصل الدرجة أو الملاحظة للأسرة والطالب إلا بعد النشر.</p></div>
       <span className="evaluation-review-count"><FileCheck2 size={17} /> {items.length} بانتظار المراجعة</span>
     </header>
     {loading && <LoadingState label="جارٍ تحميل التقييمات المرسلة للمراجعة…" compact />}
@@ -52,8 +52,10 @@ export default function EvaluationReviewQueue() {
     {!loading && !error && items.length > 0 && <div className="evaluation-review-list">{items.map(item => <article className="evaluation-review-card" key={item.id}>
       <div className="evaluation-review-card-head"><div><span className="evaluation-review-student"><Star size={15} /> {item.studentName}</span><strong>{item.courseName}</strong><small><Clock3 size={13} /> {new Date(item.sessionDate).toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long" })} · المدرب: {item.instructorName || "غير محدد"}</small></div><span className="evaluation-review-score">{item.score ?? "—"}<small>/ 100</small></span></div>
       <div className="evaluation-review-note"><MessageSquareText size={15} /><p>{item.notes || "لا توجد ملاحظة للمدرب."}</p></div>
-      <label className="evaluation-review-feedback"><span>ملاحظة المراجعة للمدرب عند طلب التعديل</span><textarea rows={2} maxLength={1000} value={notes[item.id] ?? ""} onChange={event => setNotes(current => ({ ...current, [item.id]: event.target.value }))} placeholder="وضح التعديل الأكاديمي المطلوب..." /></label>
-      <div className="evaluation-review-actions"><button type="button" className="evaluation-review-return" disabled={processingId === item.id} onClick={() => void decide(item, "REQUEST_CHANGES")}><RotateCcw size={15} /> إعادة للمدرب</button><button type="button" className="evaluation-review-publish" disabled={processingId === item.id} onClick={() => void decide(item, "PUBLISH")}><Check size={15} /> اعتماد ونشر للأسرة</button></div>
+      {item.canDecide ? <>
+        <label className="evaluation-review-feedback"><span>ملاحظة المراجعة للمدرب عند طلب التعديل</span><textarea rows={2} maxLength={1000} value={notes[item.id] ?? ""} onChange={event => setNotes(current => ({ ...current, [item.id]: event.target.value }))} placeholder="وضح التعديل الأكاديمي المطلوب..." /></label>
+        <div className="evaluation-review-actions"><button type="button" className="evaluation-review-return" disabled={processingId === item.id} onClick={() => void decide(item, "REQUEST_CHANGES")}><RotateCcw size={15} /> إعادة للمدرب</button><button type="button" className="evaluation-review-publish" disabled={processingId === item.id} onClick={() => void decide(item, "PUBLISH")}><Check size={15} /> اعتماد ونشر للأسرة</button></div>
+      </> : <p className="evaluation-review-readonly" role="note">صلاحية قراءة فقط: لا يمكنك نشر التقييم أو إرجاعه للمدرب.</p>}
     </article>)}</div>}
   </section>;
 }

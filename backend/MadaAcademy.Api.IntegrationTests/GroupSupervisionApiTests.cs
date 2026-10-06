@@ -48,10 +48,20 @@ public sealed class GroupSupervisionApiTests
         Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
         var implicitGrant = await managerClient.PostAsJsonAsync("/api/v1/supervision/assignments", new { supervisorUserId = supervisor.UserId, courseOfferingId = groupId });
         Assert.Equal(HttpStatusCode.BadRequest, implicitGrant.StatusCode);
-        var grant = await managerClient.PostAsJsonAsync("/api/v1/supervision/assignments", new { supervisorUserId = supervisor.UserId, courseOfferingId = groupId, canReadAttendance = false, canReviewEvaluations = true });
+        var grant = await managerClient.PostAsJsonAsync("/api/v1/supervision/assignments", new { supervisorUserId = supervisor.UserId, courseOfferingId = groupId, canReadAttendance = false, canReadEvaluations = true, canDecideEvaluations = false });
         Assert.Equal(HttpStatusCode.OK, grant.StatusCode);
         var grantJson = await grant.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Grant response missing.");
         var assignmentId = grantJson.RootElement.GetProperty("data").GetProperty("assignmentId").GetGuid();
+        Assert.True(grantJson.RootElement.GetProperty("data").GetProperty("canReadEvaluations").GetBoolean());
+        Assert.False(grantJson.RootElement.GetProperty("data").GetProperty("canDecideEvaluations").GetBoolean());
+        using (var auditScope = factory.Services.CreateScope())
+        {
+            var db = auditScope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            var audit = await db.AuditEvents.SingleAsync(item => item.Action == "SUPERVISION_ASSIGNMENT_GRANTED" && item.TargetId == assignmentId.ToString());
+            using var metadata = JsonDocument.Parse(audit.MetadataJson ?? "{}");
+            Assert.True(metadata.RootElement.GetProperty("canReadEvaluations").GetBoolean());
+            Assert.False(metadata.RootElement.GetProperty("canDecideEvaluations").GetBoolean());
+        }
 
         using var supervisorClient = factory.CreateClient();
         TestData.Authenticate(supervisorClient, await TestData.LoginAsync(supervisorClient, supervisor));
@@ -78,6 +88,12 @@ public sealed class GroupSupervisionApiTests
         Assert.Equal(HttpStatusCode.OK, afterRevoke.StatusCode);
         var afterRevokeJson = await afterRevoke.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Groups response missing after revoke.");
         Assert.Equal(0, afterRevokeJson.RootElement.GetProperty("data").GetProperty("total").GetInt32());
+
+        var decisionGrant = await managerClient.PostAsJsonAsync("/api/v1/supervision/assignments", new { supervisorUserId = supervisor.UserId, courseOfferingId = groupId, canReadAttendance = false, canReadEvaluations = false, canDecideEvaluations = true });
+        Assert.Equal(HttpStatusCode.OK, decisionGrant.StatusCode);
+        using var decisionGrantJson = await decisionGrant.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Decision grant response missing.");
+        Assert.False(decisionGrantJson.RootElement.GetProperty("data").GetProperty("canReadEvaluations").GetBoolean());
+        Assert.True(decisionGrantJson.RootElement.GetProperty("data").GetProperty("canDecideEvaluations").GetBoolean());
     }
 
     [Fact]
@@ -122,7 +138,7 @@ public sealed class GroupSupervisionApiTests
 
         using var managerClient = factory.CreateClient();
         TestData.Authenticate(managerClient, await TestData.LoginAsync(managerClient, manager));
-        var grant = await managerClient.PostAsJsonAsync("/api/v1/supervision/assignments", new { supervisorUserId = supervisor.UserId, courseOfferingId = supervisedGroupId, canReadAttendance = true, canReviewEvaluations = false });
+        var grant = await managerClient.PostAsJsonAsync("/api/v1/supervision/assignments", new { supervisorUserId = supervisor.UserId, courseOfferingId = supervisedGroupId, canReadAttendance = true, canReadEvaluations = false, canDecideEvaluations = false });
         Assert.Equal(HttpStatusCode.OK, grant.StatusCode);
         using var grantJson = await grant.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Grant response missing.");
         var assignmentId = grantJson.RootElement.GetProperty("data").GetProperty("assignmentId").GetGuid();
@@ -136,7 +152,8 @@ public sealed class GroupSupervisionApiTests
         Assert.Single(assignedGroups.EnumerateArray());
         Assert.Equal(supervisedGroupId, assignedGroups[0].GetProperty("groupId").GetGuid());
         Assert.True(assignedGroups[0].GetProperty("canReadAttendance").GetBoolean());
-        Assert.False(assignedGroups[0].GetProperty("canReviewEvaluations").GetBoolean());
+        Assert.False(assignedGroups[0].GetProperty("canReadEvaluations").GetBoolean());
+        Assert.False(assignedGroups[0].GetProperty("canDecideEvaluations").GetBoolean());
 
         using var sessions = await supervisorClient.GetAsync("/api/v1/sessions");
         Assert.Equal(HttpStatusCode.OK, sessions.StatusCode);
@@ -198,10 +215,10 @@ public sealed class GroupSupervisionApiTests
         using var branchGroupsJson = await branchGroups.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Branch groups response missing.");
         Assert.False(branchGroupsJson.RootElement.GetProperty("data").GetProperty("items")[0].GetProperty("assignments")[0].GetProperty("isCurrentlyEffective").GetBoolean());
 
-        var invalid = await managerClient.PostAsJsonAsync("/api/v1/supervision/assignments", new { supervisorUserId = supervisor.UserId, courseOfferingId = groupId, canReadAttendance = true, canReviewEvaluations = false, endsAt = now.AddMinutes(-1) });
+        var invalid = await managerClient.PostAsJsonAsync("/api/v1/supervision/assignments", new { supervisorUserId = supervisor.UserId, courseOfferingId = groupId, canReadAttendance = true, canReadEvaluations = false, canDecideEvaluations = false, endsAt = now.AddMinutes(-1) });
         Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
 
-        var renewal = await managerClient.PostAsJsonAsync("/api/v1/supervision/assignments", new { supervisorUserId = supervisor.UserId, courseOfferingId = groupId, canReadAttendance = true, canReviewEvaluations = false, endsAt = now.AddHours(1) });
+        var renewal = await managerClient.PostAsJsonAsync("/api/v1/supervision/assignments", new { supervisorUserId = supervisor.UserId, courseOfferingId = groupId, canReadAttendance = true, canReadEvaluations = false, canDecideEvaluations = false, endsAt = now.AddHours(1) });
         Assert.Equal(HttpStatusCode.OK, renewal.StatusCode);
         using var supervisorClient = factory.CreateClient();
         TestData.Authenticate(supervisorClient, await TestData.LoginAsync(supervisorClient, supervisor));
