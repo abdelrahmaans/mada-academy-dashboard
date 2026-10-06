@@ -160,6 +160,7 @@ export type SupervisionAssignment = {
   canReviewEvaluations: boolean;
   startsAt: string | null;
   endsAt: string | null;
+  isCurrentlyEffective: boolean;
 };
 export type BranchSupervisionGroup = {
   id: string;

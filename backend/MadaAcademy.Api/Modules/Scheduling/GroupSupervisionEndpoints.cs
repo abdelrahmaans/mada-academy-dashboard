@@ -20,6 +20,7 @@ public static class GroupSupervisionEndpoints
     private static async Task<IResult> ListBranchGroupsAsync(ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
     {
         if (!IsBranchManager(user) || !TryScope(user, out var tenantId, out var branchId)) return Forbidden("SUPERVISION_MANAGEMENT_FORBIDDEN");
+        var now = DateTimeOffset.UtcNow;
         var items = await (from offering in db.CourseOfferings.AsNoTracking()
                            join template in db.CourseTemplates.AsNoTracking() on offering.CourseTemplateId equals template.Id
                            join instructor in db.UserAccounts.AsNoTracking() on offering.InstructorId equals instructor.Id
@@ -46,7 +47,8 @@ public static class GroupSupervisionEndpoints
                                        item.CanReadAttendance,
                                        item.CanReviewEvaluations,
                                        item.StartsAt,
-                                       item.EndsAt
+                                       item.EndsAt,
+                                       isCurrentlyEffective = (!item.StartsAt.HasValue || item.StartsAt <= now) && (!item.EndsAt.HasValue || item.EndsAt > now)
                                    }).ToList()
                            }).ToListAsync(cancellationToken);
         return Results.Ok(new { data = new { items, total = items.Count, branchId } });
@@ -61,14 +63,21 @@ public static class GroupSupervisionEndpoints
         if (!IsBranchManager(user) || !TryScope(user, out var tenantId, out var branchId)) return Forbidden("SUPERVISION_MANAGEMENT_FORBIDDEN");
         if (request.CourseOfferingId == Guid.Empty || request.SupervisorUserId == Guid.Empty) return Validation("assignment", "A group and supervisor are required.");
         if (!request.CanReadAttendance && !request.CanReviewEvaluations) return Validation("permissions", "Select at least one supervision permission.");
+        var now = DateTimeOffset.UtcNow;
+        if (request.EndsAt.HasValue && request.EndsAt <= now) return Validation("endsAt", "The end time must be in the future.");
         if (request.EndsAt.HasValue && request.StartsAt.HasValue && request.EndsAt <= request.StartsAt) return Validation("endsAt", "The end time must be after the start time.");
 
         var group = await db.CourseOfferings.AsNoTracking().SingleOrDefaultAsync(item => item.Id == request.CourseOfferingId && item.TenantId == tenantId && item.BranchId == branchId && item.Status != "ARCHIVED", cancellationToken);
         if (group is null) return NotFound("GROUP_NOT_FOUND");
         var supervisor = await db.Memberships.AsNoTracking().SingleOrDefaultAsync(item => item.UserAccountId == request.SupervisorUserId && item.TenantId == tenantId && item.BranchId == branchId && item.Status == "ACTIVE" && (item.RoleCode == "R03_HEAD_INSTRUCTORS" || item.RoleCode == "R04_INSTRUCTOR"), cancellationToken);
         if (supervisor is null) return Forbidden("SUPERVISOR_SCOPE_DENIED");
-        var existing = await db.GroupSupervisionAssignments.SingleOrDefaultAsync(item => item.CourseOfferingId == group.Id && item.SupervisorUserId == request.SupervisorUserId, cancellationToken);
-        if (existing is not null && existing.Status == "ACTIVE") return Results.Conflict(new { error = new { code = "SUPERVISION_ASSIGNMENT_EXISTS", message = "This supervisor is already assigned to the group." } });
+        var existing = await db.GroupSupervisionAssignments
+            .Where(item => item.TenantId == tenantId && item.BranchId == branchId && item.CourseOfferingId == group.Id && item.SupervisorUserId == request.SupervisorUserId)
+            .OrderByDescending(item => item.Status == "ACTIVE")
+            .ThenByDescending(item => item.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+        var existingIsEffective = existing is not null && existing.Status == "ACTIVE" && (!existing.EndsAt.HasValue || existing.EndsAt > now);
+        if (existingIsEffective) return Results.Conflict(new { error = new { code = "SUPERVISION_ASSIGNMENT_EXISTS", message = "This supervisor is already assigned to the group." } });
 
         var assignment = existing ?? new GroupSupervisionAssignment { TenantId = tenantId, BranchId = branchId, CourseOfferingId = group.Id, SupervisorUserId = request.SupervisorUserId, CreatedByUserId = ActorId(user) ?? Guid.Empty };
         assignment.CanReadAttendance = request.CanReadAttendance;
@@ -78,6 +87,7 @@ public static class GroupSupervisionEndpoints
         assignment.Status = "ACTIVE";
         assignment.RevokedAt = null;
         assignment.RevokedByUserId = null;
+        assignment.CreatedByUserId = ActorId(user) ?? assignment.CreatedByUserId;
         if (existing is null) db.GroupSupervisionAssignments.Add(assignment);
         db.AuditEvents.Add(new AuditEvent { ActorUserId = ActorId(user), TenantId = tenantId, BranchId = branchId, Action = "SUPERVISION_ASSIGNMENT_GRANTED", TargetType = "GROUP_SUPERVISION_ASSIGNMENT", TargetId = assignment.Id.ToString(), Reason = "Branch manager assigned group supervision access.", MetadataJson = $"{{\"groupId\":\"{group.Id}\",\"supervisorUserId\":\"{request.SupervisorUserId}\"}}" });
         await db.SaveChangesAsync(cancellationToken);
