@@ -33,7 +33,7 @@ public sealed class EvaluationReviewApiTests
         {
             var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
             var offeringId = await db.AcademySessions.Where(item => item.Id == sessionId).Select(item => item.CourseOfferingId!.Value).SingleAsync();
-            db.GroupSupervisionAssignments.Add(new GroupSupervisionAssignment { TenantId = manager.TenantId, BranchId = manager.BranchId, SupervisorUserId = reviewer.UserId, CourseOfferingId = offeringId, CreatedByUserId = manager.UserId });
+            db.GroupSupervisionAssignments.Add(new GroupSupervisionAssignment { TenantId = manager.TenantId, BranchId = manager.BranchId, SupervisorUserId = reviewer.UserId, CourseOfferingId = offeringId, CanReadEvaluations = true, CanDecideEvaluations = true, CreatedByUserId = manager.UserId });
             await db.SaveChangesAsync();
         }
 
@@ -143,7 +143,7 @@ public sealed class EvaluationReviewApiTests
     }
 
     [Fact]
-    public async Task AssignedR04CanReviewOnlyEvaluationsInExplicitlyAssignedGroups()
+    public async Task AssignedR04DecisionAccessIsLimitedToExplicitlyAssignedGroups()
     {
         using var factory = new TestApiFactory(useInMemory: true);
         var manager = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
@@ -167,7 +167,8 @@ public sealed class EvaluationReviewApiTests
                 SupervisorUserId = reviewer.UserId,
                 CourseOfferingId = assignedOfferingId,
                 CanReadAttendance = false,
-                CanReviewEvaluations = true,
+                CanReadEvaluations = false,
+                CanDecideEvaluations = true,
                 CreatedByUserId = manager.UserId
             });
             await db.SaveChangesAsync();
@@ -191,6 +192,7 @@ public sealed class EvaluationReviewApiTests
         var queueItems = queueJson.RootElement.GetProperty("data").GetProperty("items");
         Assert.Single(queueItems.EnumerateArray());
         Assert.Equal(assignedStudentId, queueItems[0].GetProperty("studentId").GetGuid());
+        Assert.True(queueItems[0].GetProperty("canDecide").GetBoolean());
         var assignedEvaluationId = queueItems[0].GetProperty("id").GetGuid();
 
         using var summaryResponse = await reviewerClient.GetAsync("/api/v1/scheduling/evaluation-status-summary");
@@ -204,6 +206,49 @@ public sealed class EvaluationReviewApiTests
         TestData.Authenticate(unassignedClient, await TestData.LoginAsync(unassignedClient, unassignedInstructor));
         Assert.Equal(HttpStatusCode.Forbidden, (await unassignedClient.GetAsync("/api/v1/scheduling/evaluation-reviews")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await unassignedClient.GetAsync("/api/v1/scheduling/evaluation-status-summary")).StatusCode);
+    }
+
+    [Fact]
+    public async Task AssignedR04ReadOnlyEvaluationAccessCannotDecide()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        var manager = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
+        var instructor = await TestData.CreateAccountAsync(factory, "R04_INSTRUCTOR", manager.TenantId, manager.BranchId);
+        var reader = await TestData.CreateAccountAsync(factory, "R04_INSTRUCTOR", manager.TenantId, manager.BranchId);
+        var (sessionId, studentId) = await SeedSessionAsync(factory, manager.TenantId, manager.BranchId, instructor.UserId, "Read Only Student", "Read Only Robotics", true);
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            var offeringId = await db.AcademySessions.Where(item => item.Id == sessionId).Select(item => item.CourseOfferingId!.Value).SingleAsync();
+            db.GroupSupervisionAssignments.Add(new GroupSupervisionAssignment
+            {
+                TenantId = manager.TenantId,
+                BranchId = manager.BranchId,
+                SupervisorUserId = reader.UserId,
+                CourseOfferingId = offeringId,
+                CanReadAttendance = false,
+                CanReadEvaluations = true,
+                CanDecideEvaluations = false,
+                CreatedByUserId = manager.UserId
+            });
+            await db.SaveChangesAsync();
+        }
+
+        using var readerClient = factory.CreateClient();
+        TestData.Authenticate(readerClient, await TestData.LoginAsync(readerClient, reader));
+        using var queueResponse = await readerClient.GetAsync("/api/v1/scheduling/evaluation-reviews");
+        Assert.Equal(HttpStatusCode.OK, queueResponse.StatusCode);
+        using var queueJson = await queueResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Read-only review queue response missing.");
+        var queueItems = queueJson.RootElement.GetProperty("data").GetProperty("items");
+        Assert.Single(queueItems.EnumerateArray());
+        Assert.Equal(studentId, queueItems[0].GetProperty("studentId").GetGuid());
+        Assert.False(queueItems[0].GetProperty("canDecide").GetBoolean());
+        using var summaryResponse = await readerClient.GetAsync("/api/v1/scheduling/evaluation-status-summary");
+        Assert.Equal(HttpStatusCode.OK, summaryResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await readerClient.PostAsJsonAsync($"/api/v1/scheduling/evaluation-reviews/{queueItems[0].GetProperty("id").GetGuid()}/decision", new { decision = "PUBLISH" })).StatusCode);
+        using var dbScope = factory.Services.CreateScope();
+        var dbCheck = dbScope.ServiceProvider.GetRequiredService<MadaDbContext>();
+        Assert.Equal("SUBMITTED", await dbCheck.SessionEvaluations.Where(item => item.SessionId == sessionId && item.StudentId == studentId).Select(item => item.Status).SingleAsync());
     }
 
     private static async Task<(Guid SessionId, Guid StudentId)> SeedSessionAsync(TestApiFactory factory, Guid tenantId, Guid branchId, Guid instructorId, string studentName, string courseName, bool seedSubmittedEvaluation)

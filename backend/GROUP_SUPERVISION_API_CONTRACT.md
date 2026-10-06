@@ -14,7 +14,7 @@ POST   /api/v1/supervision/assignments
 DELETE /api/v1/supervision/assignments/{assignmentId}
 ```
 
-All three endpoints require `R02_BRANCH_MANAGER` with a tenant and branch scope. Group and supervisor membership are validated against that same scope. Grants and revocations are recorded in the audit log.
+All three endpoints require `R02_BRANCH_MANAGER` with a tenant and branch scope. Group and supervisor membership are validated against that same scope. Grants and revocations are recorded in the audit log; grant metadata includes the selected capability values.
 
 `POST /assignments` accepts:
 
@@ -23,15 +23,18 @@ All three endpoints require `R02_BRANCH_MANAGER` with a tenant and branch scope.
   "supervisorUserId": "uuid",
   "courseOfferingId": "uuid",
   "canReadAttendance": true,
-  "canReviewEvaluations": false,
+  "canReadEvaluations": true,
+  "canDecideEvaluations": false,
   "startsAt": null,
   "endsAt": null
 }
 ```
 
-At least one of `canReadAttendance` and `canReviewEvaluations` must be true. `endsAt`, when provided, must be in the future and later than `startsAt`.
+At least one of `canReadAttendance`, `canReadEvaluations`, and `canDecideEvaluations` must be true. These are independently grantable: `canReadEvaluations` is read-only, while `canDecideEvaluations` grants the visibility needed for the evaluation decision queue plus permission to publish or return; it does not grant attendance access. `endsAt`, when provided, must be in the future and later than `startsAt`.
 
-Both capability flags default to `false` at the API boundary. A manager must explicitly select each permission; an omitted permission is never inferred or granted.
+All capability flags default to `false` at the API boundary. A manager must explicitly select each permission; an omitted permission is never inferred or granted.
+
+The schema migration preserves the former `CanReviewEvaluations` grant as `CanReadEvaluations` only. `CanDecideEvaluations` is added as `false`, so existing assignments do not retain publishing/return authority implicitly; a branch manager must explicitly grant that decision capability.
 
 ## Supervisor read endpoint
 
@@ -39,7 +42,7 @@ Both capability flags default to `false` at the API boundary. A manager must exp
 GET /api/v1/supervision/my-groups
 ```
 
-This endpoint is available to `R03_HEAD_INSTRUCTORS` and `R04_INSTRUCTOR`. It returns only currently effective assignments belonging to the caller, with group identity and the two granted capabilities. It does not expose the branch's full group list or the manager endpoint.
+This endpoint is available to `R03_HEAD_INSTRUCTORS` and `R04_INSTRUCTOR`. It returns only currently effective assignments belonging to the caller, with group identity and the granted attendance-read, evaluation-read, and evaluation-decision capabilities. It does not expose the branch's full group list or the manager endpoint.
 
 ## Capability enforcement
 
@@ -51,10 +54,10 @@ R04's ordinary instructor workflow remains limited to sessions assigned to them 
 
 ### Evaluation review
 
-When `canReviewEvaluations` is true, an assigned R03 or R04 may read the submitted-evaluation queue and status summary, and may publish or return submitted evaluations **only for that assigned group**. This is a decision permission, not view-only access. R04 receives no branch-wide review permission from their role alone. The same assignment, tenant, branch, group, active-status, and time-window checks are re-applied when a review decision is submitted.
+When `canReadEvaluations` is true, an assigned R03 or R04 may read submitted evaluation scores/notes and status summary **only for that assigned group**; read-only assignments cannot make either decision. `canDecideEvaluations` is a separate grant that provides the evaluation queue visibility needed to publish results to consumers or return a submission to the instructor. Queue items include a per-item `canDecide` flag for UI affordances, but the API independently rechecks the decision permission, assignment, tenant, branch, group, active status, and time window when a decision is submitted. R04 receives no branch-wide review permission from their role alone.
 
 Evaluation scores and notes remain hidden from parent/student portals until an authorized reviewer publishes them.
 
 ## Authorization tests
 
-The integration suite covers manager grant/revoke, R04 assigned-group read-only attendance, denied attendance writes and session completion, review permission limited to explicitly assigned groups, and denial for an unassigned R04.
+The integration suite covers manager grant/revoke, R04 assigned-group read-only attendance, denied attendance writes and session completion, read-only evaluation access with denied decisions, decision access limited to explicitly assigned groups, and denial for an unassigned R04.

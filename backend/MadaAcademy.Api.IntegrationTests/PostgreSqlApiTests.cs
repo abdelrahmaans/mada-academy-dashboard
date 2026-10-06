@@ -246,7 +246,7 @@ public sealed class PostgreSqlApiTests(PostgreSqlFixture fixture)
             db.CourseOfferings.Add(new CourseOffering { Id = offeringId, TenantId = manager.TenantId, BranchId = manager.BranchId, CourseTemplateId = templateId, InstructorId = instructor.UserId, ClassroomId = classroomId, StartDate = DateOnly.FromDateTime(DateTime.UtcNow), EndDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)), MaxStudents = 12 });
             db.StudentEnrollments.Add(new StudentEnrollment { StudentId = studentId, CourseOfferingId = offeringId, FinalPricePiastres = 0, Status = "ACTIVE" });
             db.AcademySessions.Add(new AcademySession { Id = sessionId, TenantId = manager.TenantId, BranchId = manager.BranchId, CourseOfferingId = offeringId, SessionNumber = 1, StartAt = DateTimeOffset.UtcNow.AddDays(-1), EndAt = DateTimeOffset.UtcNow.AddHours(-23), InstructorId = instructor.UserId, ClassroomId = classroomId, Status = "COMPLETED" });
-            db.GroupSupervisionAssignments.Add(new GroupSupervisionAssignment { TenantId = manager.TenantId, BranchId = manager.BranchId, SupervisorUserId = reviewer.UserId, CourseOfferingId = offeringId, CreatedByUserId = manager.UserId });
+            db.GroupSupervisionAssignments.Add(new GroupSupervisionAssignment { TenantId = manager.TenantId, BranchId = manager.BranchId, SupervisorUserId = reviewer.UserId, CourseOfferingId = offeringId, CanReadEvaluations = true, CanDecideEvaluations = true, CreatedByUserId = manager.UserId });
             await db.SaveChangesAsync();
         }
 

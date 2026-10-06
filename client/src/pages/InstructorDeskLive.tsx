@@ -136,7 +136,7 @@ export default function InstructorDeskLive() {
       if (supervisionResult.status === "fulfilled") {
         setSupervisionGroups(supervisionResult.value.items);
         setSupervisionError(null);
-        if (!supervisionResult.value.items.some(item => item.canReviewEvaluations)) {
+        if (!supervisionResult.value.items.some(item => item.canReadEvaluations || item.canDecideEvaluations)) {
           setView(current => current === "review" ? "sessions" : current);
         }
       } else {
@@ -173,7 +173,7 @@ export default function InstructorDeskLive() {
   const selectedSession =
     sessions.find(item => item.id === selectedSessionId) ?? null;
   const isOwnSession = Boolean(selectedSession && me && (selectedSession.instructorId === me.id || selectedSession.substituteInstructorId === me.id));
-  const canReviewAssignedEvaluations = supervisionGroups.some(item => item.canReviewEvaluations);
+  const canReadAssignedEvaluations = supervisionGroups.some(item => item.canReadEvaluations || item.canDecideEvaluations);
 
   useEffect(() => {
     if (!selectedSessionId) {
@@ -460,7 +460,7 @@ export default function InstructorDeskLive() {
           >
             <Users size={15} /> مجموعات أتابعها <b>{supervisionGroups.length}</b>
           </button>
-          {canReviewAssignedEvaluations && (
+          {canReadAssignedEvaluations && (
             <button
               type="button"
               className={view === "review" ? "active" : ""}
@@ -571,7 +571,8 @@ export default function InstructorDeskLive() {
                         <small>{formatDate(group.startDate)} – {formatDate(group.endDate)} · {group.status === "ACTIVE" ? "نشط" : group.status === "UPCOMING" ? "قادم" : group.status}</small>
                         <div className="r04-live-supervision-permissions">
                           {group.canReadAttendance && <span>قراءة الحضور</span>}
-                          {group.canReviewEvaluations && <span>مراجعة التقييمات</span>}
+                          {group.canReadEvaluations && <span>قراءة التقييمات</span>}
+                          {group.canDecideEvaluations && <span>قرار نشر/إرجاع</span>}
                         </div>
                       </div>
                       {group.canReadAttendance && (
@@ -595,7 +596,7 @@ export default function InstructorDeskLive() {
             )}
           </section>
         )}
-        {!loading && !error && view === "review" && canReviewAssignedEvaluations && (
+        {!loading && !error && view === "review" && canReadAssignedEvaluations && (
           <EvaluationReviewQueue />
         )}
         {!loading &&
