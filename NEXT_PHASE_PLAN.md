@@ -1,8 +1,8 @@
 # خطة المرحلة القادمة — Mada Academy
 
-**تاريخ اللقطة:** 5 أكتوبر 2026
-**قاعدة العمل الحالية:** `main` بعد إصلاحات UI/UX ومسارات الأدوار؛ آخر commit موثق هو `7c351ec`، والـworking tree مطابق لـ`origin/main`.
-**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وموجة التقسيم الأولى مغلقة. اختبارات frontend الحرجة، refresh-token reuse، فصل auth endpoints، وجرد R00 مع contract/tests مغلقة؛ وتظل private-storage/backup-restore/staging بوابات بيئية منفصلة.
+**تاريخ اللقطة:** 6 أكتوبر 2026
+**قاعدة العمل الحالية:** `main` عند `e75b616`؛ فرع `fix/r04-assigned-group-supervision` مبني عليه عبر PR #76.
+**الحالة:** PR #76 الخاص بإشراف مجموعات R04 **مفتوح وغير مدموج**؛ لذلك لا يُسجَّل هنا كدمج مكتمل. P1/P2 consumer acceptance وFinance code/local acceptance وموجة التقسيم الأولى مغلقة؛ وتظل private-storage/backup-restore/staging بوابات بيئية منفصلة.
 
 ## قرار التنفيذ الحالي
 
@@ -10,7 +10,17 @@
 2. **تم دمج P1 core journey:** الـseeder repairable، وحسابات R04/R08/R09 وروابطهم واختبارات الرحلة موجودة في `main`.
 3. **تم تنفيذ local browser/API E2E:** `pnpm e2e` يمر بـ **7/7** ويغطي R06/R08/R09 ودورة الفاتورة/الدفع/الإثبات.
 4. **تم تجهيز بيئة النشر داخل الريبو:** Dockerfile، production env template، staging smoke script، وrunbook.
-5. **الخطوة المتبقية الوحيدة للـFinance:** secret injection + authenticated private-storage smoke + durable backup/restore policy + deployed staging smoke. لا نعتبرها مكتملة محليًا.
+5. **المتبقي ضمن مسار Finance:** secret injection + authenticated private-storage smoke + durable backup/restore policy + deployed staging smoke. لا نعتبرها مكتملة محليًا.
+
+## تحديث 6 أكتوبر 2026 — إشراف المجموعات R04
+
+- **PR #76:** مفتوح إلى `main`، ولم يُدمج بعد. عند بدء هذا التحديث كان الـhead هو `9611ea7`؛ البنود التالية تسجل مراجعة ذلك الـhead والتحسينات المحلية، ويجب مراجعة checks على آخر head بعد تحديث الفرع.
+- **النموذج:** المشرف ليس دورًا عامًا جديدًا؛ مدير الفرع يمنح تكليفًا محدودًا لكل مجموعة إلى R03 أو R04، مع tenant/branch isolation، حالة فعالة، ونافذة زمنية اختيارية.
+- **الصلاحيات الحالية:** `canReadAttendance` تمنح قراءة الجلسات والحضور فقط؛ لا تمنح تعديل الحضور أو إتمام الجلسة. `canReviewEvaluations` تمنح قراءة طابور التقييمات **واتخاذ قرار النشر أو الإرجاع للمدرب**؛ لذلك فهي ليست صلاحية قراءة فقط.
+- **تقوية وصول أقل صلاحية في متابعة PR #76:** أصبحت capabilities مرفوضة افتراضيًا ويجب اختيارها صراحةً؛ أُغلق تجاوز قراءة تفاصيل الجلسة/الحضور لدى R03 غير المعيّن بصلاحية القراءة؛ حُصر الوصول على المدرب/البديل الفعلي، ومدير الفرع داخل فرعه، أو تكليف إشراف فعّال بالقراءة. كُشف ذلك باختبارات R03/R04، مع إبقاء كتابة مدير الفرع والمدرب المباشر.
+- **التحقق المحلي بعد التعديلات:** `pnpm check` ناجح؛ Vitest **27/27**؛ `pnpm build` ناجح؛ Playwright E2E **11/11**؛ اختبارات الإشراف/مراجعة التقييم **5/5**؛ واختبارات backend غير المعتمدة على PostgreSQL **80/80**.
+- **لقطة GitHub للـhead السابق قبل بدء هذا التحديث:** اختبارات backend PostgreSQL/build، وfrontend، وPlaywright كانت ناجحة. فشل status context `Vercel – client-angular`، بينما نجحا `Vercel – mada-academy-dashboard` و`Vercel – mada-software`. يجب فحص الحالة على أحدث head؛ ولا يُعتبر فشل Vercel نجاحًا ضمنيًا.
+- **قرار منتج معلّق قبل توسيع الإشراف:** هل تظل مراجعة التقييمات متضمنةً قرار النشر/الإرجاع، أم تُفصل إلى صلاحية مشاهدة طابور وصلاحية مستقلة لاتخاذ القرار؟ لا تُوسّع صلاحية المشرف قبل حسم ذلك.
 
 ## نتيجة acceptance الحالية
 
@@ -33,11 +43,12 @@
 - StudentPortal: تم فصل ملف الطالب عن الجلسات باستخدام `Promise.allSettled`؛ فشل الجلسات يحافظ على ملف الطالب ويعرض warning وtoast وRetry، وفشل الملف الأساسي يعرض error وRetry، مع منع Demo fallback في LIVE.
 - Consumer final acceptance: اكتملت مراجعة R08/R09 وتوثقت في `CONSUMER_FINAL_ACCEPTANCE.md`; تم التأكد من عزل Demo، حالات empty/error/loading، Toast وRetry، وفصل البيانات الأساسية عن الفواتير/الجلسات الاختيارية.
 - **الفجوة التالية المثبتة:** production evidence/storage and staging acceptance؛ الـlocal API preflight والـbrowser E2E أُنجزا بالفعل.
-- التحقق المحلي: Finance/Invoice correction **11/11**، InMemory backend **54/54**، browser/API E2E **7/7**، Vitest **18/18**، `pnpm check`، `pnpm build`، و`git diff --check` ناجحة.
+- التحقق المحلي التاريخي (لقطة 5 أكتوبر): Finance/Invoice correction **11/11**، InMemory backend **54/54**، browser/API E2E **7/7**، Vitest **18/18**، `pnpm check`، `pnpm build`، و`git diff --check` ناجحة. لقطة R04 الأحدث موثقة أعلاه.
 - التحقق عبر GitHub: PR #41 وPR #42 مرّا بـ **4/4 checks ناجحة** لكل PR.
 
 ## الخطة التالية بعد موجة التقسيم
 
+0. **R04 group supervision (نشط على PR #76):** دفع تحسينات أقل صلاحية بعد مراجعتها، إعادة التحقق من CI وحل فشل `Vercel – client-angular` أو توثيق سببه؛ ثم إبقاء الدمج قرارًا منفصلًا. قبل أي توسيع إضافي، حسم فصل قراءة التقييمات عن قرار نشرها/إرجاعها.
 1. اختبارات frontend لـFinance mutations، بما في ذلك loading/disabled، over-collection، evidence، وحفظ الأخطاء.
 2. اختبارات frontend لعزل family/student scope، partial failure، وغياب Demo fallback في LIVE.
 3. اختبار backend لإعادة استخدام refresh token بعد rotation، مع التحقق من reuse detection/revocation.

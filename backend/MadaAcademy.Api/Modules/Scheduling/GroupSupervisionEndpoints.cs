@@ -133,4 +133,4 @@ public static class GroupSupervisionEndpoints
     private static IResult Validation(string field, string message) => Results.ValidationProblem(new Dictionary<string, string[]> { [field] = [message] });
 }
 
-public sealed record CreateSupervisionAssignmentRequest(Guid SupervisorUserId, Guid CourseOfferingId, bool CanReadAttendance = true, bool CanReviewEvaluations = true, DateTimeOffset? StartsAt = null, DateTimeOffset? EndsAt = null);
+public sealed record CreateSupervisionAssignmentRequest(Guid SupervisorUserId, Guid CourseOfferingId, bool CanReadAttendance = false, bool CanReviewEvaluations = false, DateTimeOffset? StartsAt = null, DateTimeOffset? EndsAt = null);
