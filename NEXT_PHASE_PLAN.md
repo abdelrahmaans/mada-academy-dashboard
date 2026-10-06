@@ -34,11 +34,12 @@
 - Consumer final acceptance: اكتملت مراجعة R08/R09 وتوثقت في `CONSUMER_FINAL_ACCEPTANCE.md`; تم التأكد من عزل Demo، حالات empty/error/loading، Toast وRetry، وفصل البيانات الأساسية عن الفواتير/الجلسات الاختيارية.
 - **الفجوة التالية المثبتة:** production evidence/storage and staging acceptance؛ الـlocal API preflight والـbrowser E2E أُنجزا بالفعل.
 - التحقق المحلي: Finance/Invoice correction **11/11**، InMemory backend **54/54**، browser/API E2E **7/7**، Vitest **18/18**، `pnpm check`، `pnpm build`، و`git diff --check` ناجحة.
+- **Finance frontend follow-up (6 أكتوبر، فرع `fix/finance-payment-single-flight`):** Vitest **52/52** (بينها 4 اختبارات لحالات الانتظار/التعطيل)، `pnpm check`، `pnpm build`، Playwright **11/11**، و`git diff --check` ناجحة؛ لم يتغير backend.
 - التحقق عبر GitHub: PR #41 وPR #42 مرّا بـ **4/4 checks ناجحة** لكل PR.
 
 ## الخطة التالية بعد موجة التقسيم
 
-1. اختبارات frontend لـFinance mutations، بما في ذلك loading/disabled، over-collection، evidence، وحفظ الأخطاء.
+1. **اختبارات frontend لـFinance mutations — مكتملة محليًا على `fix/finance-payment-single-flight`:** تغطي دقة المبالغ/over-collection، pending وsingle-flight، disabled states للفواتير والمدفوعات والمصروفات والقرارات، رفع الإثبات، وتحرير الحالة بعد الفشل مع إبقاء المدخلات.
 2. اختبارات frontend لعزل family/student scope، partial failure، وغياب Demo fallback في LIVE.
 3. اختبار backend لإعادة استخدام refresh token بعد rotation، مع التحقق من reuse detection/revocation.
 4. نقل endpoints الـauth من `Program.cs` إلى module مستقل دون تغيير العقود أو سياسات rate limiting.

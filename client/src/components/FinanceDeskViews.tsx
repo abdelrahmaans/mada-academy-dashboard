@@ -215,6 +215,8 @@ export function Collections({
   setPaymentInvoice,
   amount,
   setAmount,
+  submitting,
+  evidenceUploadingIds,
   onSubmit,
   onCreateInvoice,
   onUploadEvidence,
@@ -234,6 +236,8 @@ export function Collections({
   setPaymentInvoice: (v: string) => void;
   amount: string;
   setAmount: (v: string) => void;
+  submitting: boolean;
+  evidenceUploadingIds: ReadonlySet<string>;
   onSubmit: (e: FormEvent) => void;
   onCreateInvoice: () => void;
   onUploadEvidence: (paymentId: string, file: File) => void;
@@ -307,40 +311,52 @@ export function Collections({
                   <span className={`finance-desk-status ${status}`}>
                     {STATUS_LABEL[status]}
                   </span>
-                  {invoice.payments.map(payment => (
-                    <span key={payment.id}>
-                      <small className="finance-reason">العملية مسجلة</small>
-                      {payment.evidenceStatus === "ATTACHED" ? (
-                        <button
-                          type="button"
-                          className="finance-evidence-action"
-                          onClick={() =>
-                            onDownloadEvidence(
-                              payment.id,
-                              payment.evidenceFileName ??
-                                `payment-${payment.id}-evidence`
-                            )
-                          }
-                        >
-                          إثبات مرفق · تنزيل
-                        </button>
-                      ) : (
-                        <label className="finance-evidence-action">
-                          رفع إثبات الدفع
-                          <input
-                            type="file"
-                            accept="application/pdf,image/jpeg,image/png"
-                            hidden
-                            onChange={event => {
-                              const file = event.target.files?.[0];
-                              if (file) onUploadEvidence(payment.id, file);
-                              event.currentTarget.value = "";
-                            }}
-                          />
-                        </label>
-                      )}
-                    </span>
-                  ))}
+                  {invoice.payments.map(payment => {
+                    const isUploadingEvidence = evidenceUploadingIds.has(
+                      `payment:${payment.id}`
+                    );
+                    return (
+                      <span key={payment.id}>
+                        <small className="finance-reason">العملية مسجلة</small>
+                        {payment.evidenceStatus === "ATTACHED" ? (
+                          <button
+                            type="button"
+                            className="finance-evidence-action"
+                            onClick={() =>
+                              onDownloadEvidence(
+                                payment.id,
+                                payment.evidenceFileName ??
+                                  `payment-${payment.id}-evidence`
+                              )
+                            }
+                          >
+                            إثبات مرفق · تنزيل
+                          </button>
+                        ) : (
+                          <label
+                            className="finance-evidence-action"
+                            aria-disabled={isUploadingEvidence}
+                          >
+                            {isUploadingEvidence
+                              ? "جارٍ رفع إثبات الدفع…"
+                              : "رفع إثبات الدفع"}
+                            <input
+                              type="file"
+                              accept="application/pdf,image/jpeg,image/png"
+                              hidden
+                              disabled={isUploadingEvidence}
+                              aria-busy={isUploadingEvidence}
+                              onChange={event => {
+                                const file = event.target.files?.[0];
+                                if (file) onUploadEvidence(payment.id, file);
+                                event.currentTarget.value = "";
+                              }}
+                            />
+                          </label>
+                        )}
+                      </span>
+                    );
+                  })}
                 </article>
               );
             })
@@ -362,6 +378,7 @@ export function Collections({
             الفاتورة
             <select
               value={paymentInvoice}
+              disabled={submitting}
               onChange={event => setPaymentInvoice(event.target.value)}
             >
               {invoices
@@ -377,9 +394,11 @@ export function Collections({
             المبلغ (ج.م)
             <input
               value={amount}
+              disabled={submitting}
               onChange={event => setAmount(event.target.value)}
               type="number"
               min="1"
+              step="0.01"
               placeholder="مثال: 1200"
             />
           </label>
@@ -387,6 +406,7 @@ export function Collections({
             طريقة الدفع
             <select
               value={paymentMethod}
+              disabled={submitting}
               onChange={event =>
                 setPaymentMethod(event.target.value as PaymentMethod)
               }
@@ -405,6 +425,7 @@ export function Collections({
             <input
               type="date"
               value={receivedOn}
+              disabled={submitting}
               onChange={event => setReceivedOn(event.target.value)}
             />
           </label>
@@ -414,14 +435,21 @@ export function Collections({
               المرجع الخارجي
               <input
                 value={externalReference}
+                disabled={submitting}
                 onChange={event => setExternalReference(event.target.value)}
                 placeholder="رقم العملية أو المرجع"
                 required
               />
             </label>
           )}
-          <button className="finance-desk-primary" type="submit">
-            <Check size={14} /> تسجيل التحصيل
+          <button
+            className="finance-desk-primary"
+            type="submit"
+            disabled={submitting}
+            aria-busy={submitting}
+          >
+            <Check size={14} />{" "}
+            {submitting ? "جارٍ تسجيل التحصيل…" : "تسجيل التحصيل"}
           </button>
           <p>
             <AlertCircle size={13} /> سيتم حفظ الطريقة والتاريخ في سجل العملية.
@@ -447,6 +475,9 @@ export function Expenses({
   onUploadEvidence,
   onDownloadEvidence,
   liveMode,
+  submitting,
+  decisionSubmitting,
+  evidenceUploadingIds,
 }: {
   expenses: Expense[];
   query: string;
@@ -463,6 +494,9 @@ export function Expenses({
   onUploadEvidence: (id: string, file: File) => void;
   onDownloadEvidence: (id: string, fileName: string) => void;
   liveMode: boolean;
+  submitting: boolean;
+  decisionSubmitting: { expenseId: string; action: "approve" | "reject" } | null;
+  evidenceUploadingIds: ReadonlySet<string>;
 }) {
   return (
     <div className="finance-desk-two-col">
@@ -487,72 +521,102 @@ export function Expenses({
               لا توجد مصروفات مطابقة للبحث أو الفرع المحدد.
             </p>
           ) : (
-            expenses.map(expense => (
-              <article className="finance-expense-row" key={expense.id}>
-                <span className={`finance-expense-icon ${expense.status}`}>
-                  <FileText size={15} />
-                </span>
-                <div>
-                  <strong>{expense.description}</strong>
-                  <small>
-                    {expense.id} · {expense.category} · {expense.branch} ·{" "}
-                    {expense.date}
-                  </small>
-                </div>
-                <strong>{money(expense.amount)} ج.م</strong>
-                <span className={`finance-desk-status ${expense.status}`}>
-                  {EXPENSE_LABEL[expense.status]}
-                </span>
-                {expense.status === "pending" && (
-                  <>
+            expenses.map(expense => {
+              const isDecisionPending =
+                decisionSubmitting?.expenseId === expense.id;
+              const isUploadingEvidence = evidenceUploadingIds.has(
+                `expense:${expense.id}`
+              );
+              return (
+                <article className="finance-expense-row" key={expense.id}>
+                  <span className={`finance-expense-icon ${expense.status}`}>
+                    <FileText size={15} />
+                  </span>
+                  <div>
+                    <strong>{expense.description}</strong>
+                    <small>
+                      {expense.id} · {expense.category} · {expense.branch} ·{" "}
+                      {expense.date}
+                    </small>
+                  </div>
+                  <strong>{money(expense.amount)} ج.م</strong>
+                  <span className={`finance-desk-status ${expense.status}`}>
+                    {EXPENSE_LABEL[expense.status]}
+                  </span>
+                  {expense.status === "pending" && (
+                    <>
+                      <button
+                        className="finance-reject-link"
+                        onClick={() => onApprove(expense.id)}
+                        disabled={decisionSubmitting !== null}
+                        aria-busy={
+                          isDecisionPending &&
+                          decisionSubmitting?.action === "approve"
+                        }
+                      >
+                        {isDecisionPending &&
+                        decisionSubmitting?.action === "approve"
+                          ? "جارٍ الاعتماد…"
+                          : "اعتماد"}
+                      </button>
+                      <button
+                        className="finance-reject-link"
+                        onClick={() => onReject(expense.id)}
+                        disabled={decisionSubmitting !== null}
+                        aria-busy={
+                          isDecisionPending &&
+                          decisionSubmitting?.action === "reject"
+                        }
+                      >
+                        {isDecisionPending &&
+                        decisionSubmitting?.action === "reject"
+                          ? "جارٍ الرفض…"
+                          : "رفض بسبب"}
+                      </button>
+                    </>
+                  )}
+                  {expense.reason && (
+                    <small className="finance-reason">{expense.reason}</small>
+                  )}
+                  {expense.evidenceStatus === "ATTACHED" ? (
                     <button
-                      className="finance-reject-link"
-                      onClick={() => onApprove(expense.id)}
+                      type="button"
+                      className="finance-evidence-action"
+                      onClick={() =>
+                        onDownloadEvidence(
+                          expense.id,
+                          expense.evidenceFileName ??
+                            `expense-${expense.id}-evidence`
+                        )
+                      }
                     >
-                      اعتماد
+                      إثبات مرفق · تنزيل
                     </button>
-                    <button
-                      className="finance-reject-link"
-                      onClick={() => onReject(expense.id)}
+                  ) : (
+                    <label
+                      className="finance-evidence-action"
+                      aria-disabled={isUploadingEvidence}
                     >
-                      رفض بسبب
-                    </button>
-                  </>
-                )}
-                {expense.reason && (
-                  <small className="finance-reason">{expense.reason}</small>
-                )}
-                {expense.evidenceStatus === "ATTACHED" ? (
-                  <button
-                    type="button"
-                    className="finance-evidence-action"
-                    onClick={() =>
-                      onDownloadEvidence(
-                        expense.id,
-                        expense.evidenceFileName ??
-                          `expense-${expense.id}-evidence`
-                      )
-                    }
-                  >
-                    إثبات مرفق · تنزيل
-                  </button>
-                ) : (
-                  <label className="finance-evidence-action">
-                    رفع الإثبات
-                    <input
-                      type="file"
-                      accept="application/pdf,image/jpeg,image/png"
-                      hidden
-                      onChange={event => {
-                        const file = event.target.files?.[0];
-                        if (file) onUploadEvidence(expense.id, file);
-                        event.currentTarget.value = "";
-                      }}
-                    />
-                  </label>
-                )}
-              </article>
-            ))
+                      {isUploadingEvidence
+                        ? "جارٍ رفع الإثبات…"
+                        : "رفع الإثبات"}
+                      <input
+                        type="file"
+                        accept="application/pdf,image/jpeg,image/png"
+                        hidden
+                        disabled={isUploadingEvidence}
+                        aria-busy={isUploadingEvidence}
+                        onChange={event => {
+                          const file = event.target.files?.[0];
+                          if (file) onUploadEvidence(expense.id, file);
+                          event.currentTarget.value = "";
+                        }}
+                      />
+                    </label>
+                  )}
+                </article>
+              );
+            })
           )}
         </div>
       </section>
@@ -567,6 +631,7 @@ export function Expenses({
             وصف المصروف
             <input
               value={description}
+              disabled={submitting}
               onChange={event => setDescription(event.target.value)}
               placeholder="مثال: صيانة معمل"
             />
@@ -575,7 +640,7 @@ export function Expenses({
             الفرع
             <select
               value={branch}
-              disabled={liveMode}
+              disabled={liveMode || submitting}
               onChange={event => setBranch(event.target.value)}
             >
               <option>مدينة نصر</option>
@@ -585,7 +650,7 @@ export function Expenses({
           </label>
           <label>
             التصنيف
-            <select disabled={liveMode}>
+            <select disabled={liveMode || submitting}>
               <option>تشغيل وصيانة</option>
               <option>مواد ومستلزمات</option>
               <option>أجور مدربين</option>
@@ -596,14 +661,22 @@ export function Expenses({
             المبلغ (ج.م)
             <input
               value={amount}
+              disabled={submitting}
               onChange={event => setAmount(event.target.value)}
               type="number"
               min="1"
+              step="0.01"
               placeholder="مثال: 1500"
             />
           </label>
-          <button className="finance-desk-primary" type="submit">
-            <Plus size={14} /> رفع للمراجعة
+          <button
+            className="finance-desk-primary"
+            type="submit"
+            disabled={submitting}
+            aria-busy={submitting}
+          >
+            <Plus size={14} />{" "}
+            {submitting ? "جارٍ رفع المصروف…" : "رفع للمراجعة"}
           </button>
           <p>
             <ShieldCheck size={13} /> المصروف لا يدخل التقرير قبل الاعتماد.
