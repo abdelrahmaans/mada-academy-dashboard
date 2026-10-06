@@ -12,18 +12,20 @@ import {
   Users,
 } from "lucide-react";
 import { LoadingState } from "@/components/FeedbackStates";
+import EvaluationReviewQueue from "@/components/EvaluationReviewQueue";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   apiClient,
   type AttendanceItem,
+  type MySupervisionGroup,
   type SessionEvaluationRecord,
   type SessionRecord,
 } from "@/lib/apiClient";
 import "./InstructorDeskLive.css";
 
-type View = "sessions" | "attendance" | "evaluations";
+type View = "sessions" | "attendance" | "evaluations" | "supervision" | "review";
 type AttendanceStatus = "PRESENT" | "LATE" | "ABSENT" | "EXCUSED" | "UNMARKED";
 type AttendanceDraft = { status: AttendanceStatus; lateMinutes: number | null };
 
@@ -83,6 +85,8 @@ export default function InstructorDeskLive() {
   const { me, loading: authLoading } = useAuth();
   const [view, setView] = useState<View>("sessions");
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
+  const [supervisionGroups, setSupervisionGroups] = useState<MySupervisionGroup[]>([]);
+  const [supervisionError, setSupervisionError] = useState<string | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState("");
   const [attendanceRows, setAttendanceRows] = useState<AttendanceItem[]>([]);
   const [attendanceDraft, setAttendanceDraft] = useState<
@@ -125,7 +129,22 @@ export default function InstructorDeskLive() {
       const to = new Date(
         now.getTime() + 60 * 24 * 60 * 60 * 1000
       ).toISOString();
-      const response = await apiClient.listSessions({ from, to });
+      const [sessionsResult, supervisionResult] = await Promise.allSettled([
+        apiClient.listSessions({ from, to }),
+        apiClient.mySupervisionGroups(),
+      ]);
+      if (supervisionResult.status === "fulfilled") {
+        setSupervisionGroups(supervisionResult.value.items);
+        setSupervisionError(null);
+        if (!supervisionResult.value.items.some(item => item.canReviewEvaluations)) {
+          setView(current => current === "review" ? "sessions" : current);
+        }
+      } else {
+        setSupervisionGroups([]);
+        setSupervisionError(supervisionResult.reason instanceof Error ? supervisionResult.reason.message : "تعذر تحميل تكليفات متابعة الجروبات.");
+      }
+      if (sessionsResult.status === "rejected") throw sessionsResult.reason;
+      const response = sessionsResult.value;
       setSessions(response.items);
       setSelectedSessionId(current =>
         response.items.some(item => item.id === current)
@@ -135,6 +154,8 @@ export default function InstructorDeskLive() {
     } catch (cause) {
       setSessions([]);
       setSelectedSessionId("");
+      setSupervisionGroups([]);
+      setSupervisionError(null);
       setError(
         cause instanceof Error
           ? cause.message
@@ -151,6 +172,8 @@ export default function InstructorDeskLive() {
 
   const selectedSession =
     sessions.find(item => item.id === selectedSessionId) ?? null;
+  const isOwnSession = Boolean(selectedSession && me && (selectedSession.instructorId === me.id || selectedSession.substituteInstructorId === me.id));
+  const canReviewAssignedEvaluations = supervisionGroups.some(item => item.canReviewEvaluations);
 
   useEffect(() => {
     if (!selectedSessionId) {
@@ -200,7 +223,12 @@ export default function InstructorDeskLive() {
   }, [selectedSessionId, attendanceRetryKey]);
 
   useEffect(() => {
-    if (!selectedSessionId || view !== "evaluations") return;
+    if (!selectedSessionId || view !== "evaluations" || !isOwnSession) {
+      setEvaluations([]);
+      setEvaluationError(null);
+      setEvaluationLoading(false);
+      return;
+    }
     let cancelled = false;
     setEvaluationLoading(true);
     setEvaluationError(null);
@@ -225,7 +253,7 @@ export default function InstructorDeskLive() {
     return () => {
       cancelled = true;
     };
-  }, [selectedSessionId, view]);
+  }, [selectedSessionId, view, isOwnSession]);
 
   const selectedEvaluation = evaluations.find(
     item => item.studentId === selectedStudentId
@@ -388,8 +416,8 @@ export default function InstructorDeskLive() {
             </span>
             <h1>جلساتي وسير العمل</h1>
             <p>
-              الجلسات والطلاب والتقييمات الفعلية المسندة إلى حسابك؛ لا تتضمن
-              بيانات مالية.
+              حصصك، إضافةً إلى جروبات المتابعة التي فوّضك مدير الفرع بها؛ تظل
+              الكتابة مقتصرة على حصصك المسندة مباشرةً.
             </p>
           </div>
           <button
@@ -420,10 +448,27 @@ export default function InstructorDeskLive() {
           <button
             type="button"
             className={view === "evaluations" ? "active" : ""}
+            disabled={!isOwnSession}
             onClick={() => setView("evaluations")}
           >
             <Star size={15} /> التقييمات <b>{evaluations.length}</b>
           </button>
+          <button
+            type="button"
+            className={view === "supervision" ? "active" : ""}
+            onClick={() => setView("supervision")}
+          >
+            <Users size={15} /> مجموعات أتابعها <b>{supervisionGroups.length}</b>
+          </button>
+          {canReviewAssignedEvaluations && (
+            <button
+              type="button"
+              className={view === "review" ? "active" : ""}
+              onClick={() => setView("review")}
+            >
+              <ShieldCheck size={15} /> مراجعة التقييمات
+            </button>
+          )}
         </nav>
         {loading && (
           <LoadingState label="جارٍ تحميل الجلسات المسندة…" compact />
@@ -437,7 +482,7 @@ export default function InstructorDeskLive() {
             </button>
           </section>
         )}
-        {!loading && !error && sessions.length === 0 && (
+        {!loading && !error && sessions.length === 0 && (view === "sessions" || view === "attendance" || view === "evaluations") && (
           <section className="r04-live-panel">
             <div className="r04-live-empty">
               <CalendarDays size={24} />
@@ -452,7 +497,7 @@ export default function InstructorDeskLive() {
           <section className="r04-live-panel">
             <div className="r04-live-panel-head">
               <div>
-                <h2>الجلسات المسندة</h2>
+                <h2>حصصي وجلسات المتابعة</h2>
                 <p>{sessions.length} جلسة ضمن آخر 30 يومًا والقادم 60 يومًا.</p>
               </div>
             </div>
@@ -479,6 +524,9 @@ export default function InstructorDeskLive() {
                       {formatDate(session.startAt)} ·{" "}
                       {formatTime(session.startAt)}–{formatTime(session.endAt)}
                     </small>
+                    {session.instructorId !== me.id && session.substituteInstructorId !== me.id && (
+                      <small className="r04-live-supervision-label">متابعة مفوضة · قراءة فقط</small>
+                    )}
                   </span>
                   <span
                     className={`r04-live-status ${session.status === "COMPLETED" ? "completed" : ""}`}
@@ -489,6 +537,66 @@ export default function InstructorDeskLive() {
               ))}
             </div>
           </section>
+        )}
+        {!loading && !error && view === "supervision" && (
+          <section className="r04-live-panel">
+            <div className="r04-live-panel-head">
+              <div>
+                <h2>الجروبات المفوض بمتابعتها</h2>
+                <p>تكليفات نشطة من مدير الفرع، داخل نطاق فرعك فقط.</p>
+              </div>
+            </div>
+            {supervisionError && (
+              <section className="r04-live-alert" role="alert">
+                <strong>تعذر تحميل تكليفات الإشراف</strong>
+                <p>{supervisionError}</p>
+                <button type="button" onClick={() => void loadSessions()}>إعادة المحاولة</button>
+              </section>
+            )}
+            {!supervisionError && supervisionGroups.length === 0 && (
+              <div className="r04-live-empty">
+                <Users size={22} />
+                <strong>لا توجد جروبات مفوض إليك بمتابعتها حاليًا.</strong>
+                <span>يظهر هنا فقط ما عيّنه مدير الفرع لحسابك.</span>
+              </div>
+            )}
+            {!supervisionError && supervisionGroups.length > 0 && (
+              <div className="r04-live-supervision-list">
+                {supervisionGroups.map(group => {
+                  const groupSessions = sessions.filter(item => item.courseOfferingId === group.groupId);
+                  return (
+                    <article className="r04-live-supervision-card" key={group.assignmentId}>
+                      <div className="r04-live-supervision-main">
+                        <strong>{group.courseName}</strong>
+                        <small>{formatDate(group.startDate)} – {formatDate(group.endDate)} · {group.status === "ACTIVE" ? "نشط" : group.status === "UPCOMING" ? "قادم" : group.status}</small>
+                        <div className="r04-live-supervision-permissions">
+                          {group.canReadAttendance && <span>قراءة الحضور</span>}
+                          {group.canReviewEvaluations && <span>مراجعة التقييمات</span>}
+                        </div>
+                      </div>
+                      {group.canReadAttendance && (
+                        <button
+                          type="button"
+                          className="r04-live-primary"
+                          disabled={groupSessions.length === 0}
+                          onClick={() => {
+                            if (!groupSessions[0]) return;
+                            setSelectedSessionId(groupSessions[0].id);
+                            setView("attendance");
+                          }}
+                        >
+                          <CalendarCheck size={14} /> عرض الحضور ({groupSessions.length})
+                        </button>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
+        {!loading && !error && view === "review" && canReviewAssignedEvaluations && (
+          <EvaluationReviewQueue />
         )}
         {!loading &&
           !error &&
@@ -508,6 +616,7 @@ export default function InstructorDeskLive() {
                     {formatTime(selectedSession.startAt)}–
                     {formatTime(selectedSession.endAt)}
                   </p>
+                  {!isOwnSession && <p className="r04-live-supervision-label">جروب متابعة مفوض · عرض دون تعديل</p>}
                 </div>
                 <label className="r04-live-select">
                   <span>اختيار الجلسة</span>
@@ -594,6 +703,7 @@ export default function InstructorDeskLive() {
                                     aria-label={`حضور ${student.studentName}`}
                                     value={mark.status}
                                     disabled={
+                                      !isOwnSession ||
                                       selectedSession.status === "COMPLETED" ||
                                       selectedSession.status === "CANCELLED"
                                     }
@@ -619,6 +729,7 @@ export default function InstructorDeskLive() {
                                       min="1"
                                       value={mark.lateMinutes ?? 1}
                                       disabled={
+                                        !isOwnSession ||
                                         selectedSession.status ===
                                           "COMPLETED" ||
                                         selectedSession.status === "CANCELLED"
@@ -647,45 +758,52 @@ export default function InstructorDeskLive() {
                         </tbody>
                       </table>
                     </div>
-                    <div className="r04-live-actions">
-                      <button
-                        type="button"
-                        className="r04-live-primary"
-                        onClick={() => void saveAttendance()}
-                        disabled={
-                          savingAttendance ||
-                          counts.unmarked > 0 ||
-                          selectedSession.status === "COMPLETED" ||
-                          selectedSession.status === "CANCELLED"
-                        }
-                      >
-                        <Save size={14} />{" "}
-                        {savingAttendance ? "جارٍ الحفظ…" : "حفظ الحضور"}
-                      </button>
-                      <button
-                        type="button"
-                        className="r04-live-complete"
-                        onClick={() => void completeSession()}
-                        disabled={!completionAllowed || completing}
-                      >
-                        {completing ? "جارٍ الإتمام…" : "إتمام الجلسة"}
-                      </button>
-                    </div>
-                    <p className="r04-live-helper">
-                      يتاح إتمام الجلسة بعد وقت انتهائها وبعد حفظ حالة كل طالب.
-                      عند الإتمام يُقفل كشف الحضور.
-                    </p>
-                    {completionError && (
-                      <p className="r04-live-inline-error" role="alert">
-                        {completionError}
-                      </p>
+                    {isOwnSession ? (
+                      <>
+                        <div className="r04-live-actions">
+                          <button
+                            type="button"
+                            className="r04-live-primary"
+                            onClick={() => void saveAttendance()}
+                            disabled={
+                              savingAttendance ||
+                              counts.unmarked > 0 ||
+                              selectedSession.status === "COMPLETED" ||
+                              selectedSession.status === "CANCELLED"
+                            }
+                          >
+                            <Save size={14} />{" "}
+                            {savingAttendance ? "جارٍ الحفظ…" : "حفظ الحضور"}
+                          </button>
+                          <button
+                            type="button"
+                            className="r04-live-complete"
+                            onClick={() => void completeSession()}
+                            disabled={!completionAllowed || completing}
+                          >
+                            {completing ? "جارٍ الإتمام…" : "إتمام الجلسة"}
+                          </button>
+                        </div>
+                        <p className="r04-live-helper">
+                          يتاح إتمام الجلسة بعد وقت انتهائها وبعد حفظ حالة كل طالب.
+                          عند الإتمام يُقفل كشف الحضور.
+                        </p>
+                        {completionError && (
+                          <p className="r04-live-inline-error" role="alert">
+                            {completionError}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="r04-live-supervision-note">تكليفك لهذا الجروب يتيح قراءة الحضور فقط؛ لا يمكنك تعديل الحضور أو إتمام جلسات مدرب آخر.</p>
                     )}
                   </>
                 )}
               {!attendanceLoading &&
                 !attendanceError &&
                 attendanceRows.length > 0 &&
-                view === "evaluations" && (
+                view === "evaluations" &&
+                isOwnSession && (
                   <>
                     {evaluationLoading && (
                       <LoadingState
@@ -827,8 +945,8 @@ export default function InstructorDeskLive() {
             </section>
           )}
         <p className="r04-live-footnote">
-          <ShieldCheck size={15} /> النطاق يأتي من الخادم: الجلسات المسندة إلى
-          حسابك فقط. لا تُعرض بيانات معاينة أو أسعار في هذا العرض.
+          <ShieldCheck size={15} /> النطاق يأتي من الخادم: حصصك والجروبات المفوضة
+          لحسابك فقط؛ صلاحيات الكتابة والاعتماد تخضع للتكليف والصلاحيات الخلفية.
         </p>
       </main>
     </RoleDashboardShell>

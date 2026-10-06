@@ -109,18 +109,18 @@ public static class GroupSupervisionEndpoints
 
     private static async Task<IResult> ListMyGroupsAsync(ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
     {
-        if (!IsHeadInstructor(user) || !TryScope(user, out var tenantId, out var branchId)) return Forbidden("SUPERVISION_READ_FORBIDDEN");
+        if (!CanReadMyGroups(user) || !TryScope(user, out var tenantId, out var branchId)) return Forbidden("SUPERVISION_READ_FORBIDDEN");
         var now = DateTimeOffset.UtcNow;
         var items = await (from assignment in db.GroupSupervisionAssignments.AsNoTracking()
                            join offering in db.CourseOfferings.AsNoTracking() on assignment.CourseOfferingId equals offering.Id
                            join template in db.CourseTemplates.AsNoTracking() on offering.CourseTemplateId equals template.Id
-                           where assignment.TenantId == tenantId && assignment.BranchId == branchId && assignment.SupervisorUserId == ActorId(user) && assignment.Status == "ACTIVE" && (!assignment.StartsAt.HasValue || assignment.StartsAt <= now) && (!assignment.EndsAt.HasValue || assignment.EndsAt > now)
+                           where assignment.TenantId == tenantId && assignment.BranchId == branchId && assignment.SupervisorUserId == ActorId(user) && assignment.Status == "ACTIVE" && offering.TenantId == tenantId && offering.BranchId == branchId && template.TenantId == tenantId && (!assignment.StartsAt.HasValue || assignment.StartsAt <= now) && (!assignment.EndsAt.HasValue || assignment.EndsAt > now)
                            select new { assignmentId = assignment.Id, groupId = offering.Id, courseName = template.Name, offering.StartDate, offering.EndDate, offering.Status, assignment.CanReadAttendance, assignment.CanReviewEvaluations }).ToListAsync(cancellationToken);
         return Results.Ok(new { data = new { items, total = items.Count, branchId } });
     }
 
     private static bool IsBranchManager(ClaimsPrincipal user) => user.IsInRole("R02_BRANCH_MANAGER");
-    private static bool IsHeadInstructor(ClaimsPrincipal user) => user.IsInRole("R03_HEAD_INSTRUCTORS");
+    private static bool CanReadMyGroups(ClaimsPrincipal user) => user.IsInRole("R03_HEAD_INSTRUCTORS") || user.IsInRole("R04_INSTRUCTOR");
     private static bool TryScope(ClaimsPrincipal user, out Guid tenantId, out Guid branchId)
     {
         var tenantOk = Guid.TryParse(user.FindFirstValue("tenantId"), out tenantId);

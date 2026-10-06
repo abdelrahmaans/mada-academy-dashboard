@@ -43,12 +43,12 @@ export default function EvaluationReviewQueue() {
 
   return <section className="evaluation-review-queue" aria-live="polite">
     <header className="evaluation-review-header">
-      <div><span className="academic-panel-kicker">مراجعة أكاديمية · LIVE</span><h2>التقييمات بانتظار الاعتماد</h2><p>تظهر هنا التقييمات التي أرسلها المدرب للمراجعة. لن تصل الدرجة أو الملاحظة للأسرة والطالب إلا بعد النشر.</p></div>
+      <div><span className="academic-panel-kicker">مراجعة أكاديمية · LIVE</span><h2>التقييمات بانتظار الاعتماد</h2><p>تظهر هنا التقييمات الواقعة ضمن مجموعاتك المصرح لك بمراجعتها فقط. لن تصل الدرجة أو الملاحظة للأسرة والطالب إلا بعد النشر.</p></div>
       <span className="evaluation-review-count"><FileCheck2 size={17} /> {items.length} بانتظار المراجعة</span>
     </header>
     {loading && <LoadingState label="جارٍ تحميل التقييمات المرسلة للمراجعة…" compact />}
     {!loading && error && <ErrorState compact title="تعذر تحميل المراجعات الحية" description={`${error} · لم يتم عرض بيانات تجريبية بدلًا من بيانات الخادم.`} />}
-    {!loading && !error && items.length === 0 && <div className="evaluation-review-empty"><ShieldCheck size={22} /><strong>لا توجد تقييمات بانتظار الاعتماد</strong><span>سيظهر هنا كل تقييم يرسله أحد مدربي الفرع.</span></div>}
+    {!loading && !error && items.length === 0 && <div className="evaluation-review-empty"><ShieldCheck size={22} /><strong>لا توجد تقييمات بانتظار الاعتماد</strong><span>سيظهر هنا ما أُرسل من تقييمات في المجموعات المصرح لك بمراجعتها.</span></div>}
     {!loading && !error && items.length > 0 && <div className="evaluation-review-list">{items.map(item => <article className="evaluation-review-card" key={item.id}>
       <div className="evaluation-review-card-head"><div><span className="evaluation-review-student"><Star size={15} /> {item.studentName}</span><strong>{item.courseName}</strong><small><Clock3 size={13} /> {new Date(item.sessionDate).toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long" })} · المدرب: {item.instructorName || "غير محدد"}</small></div><span className="evaluation-review-score">{item.score ?? "—"}<small>/ 100</small></span></div>
       <div className="evaluation-review-note"><MessageSquareText size={15} /><p>{item.notes || "لا توجد ملاحظة للمدرب."}</p></div>

@@ -202,6 +202,7 @@ export type SessionRecord = {
   startAt: string;
   endAt: string;
   instructorId: string;
+  substituteInstructorId?: string | null;
   classroomId: string;
   type: string;
   status: string;
