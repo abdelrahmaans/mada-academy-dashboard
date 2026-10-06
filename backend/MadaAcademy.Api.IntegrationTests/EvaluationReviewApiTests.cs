@@ -183,6 +183,8 @@ public sealed class EvaluationReviewApiTests
 
         using var sessionsResponse = await reviewerClient.GetAsync("/api/v1/sessions");
         Assert.Equal(0, (await sessionsResponse.Content.ReadFromJsonAsync<JsonDocument>())!.RootElement.GetProperty("data").GetProperty("total").GetInt32());
+        Assert.Equal(HttpStatusCode.NotFound, (await reviewerClient.GetAsync($"/api/v1/sessions/{assignedSessionId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await reviewerClient.GetAsync($"/api/v1/sessions/{assignedSessionId}/attendance")).StatusCode);
         using var queueResponse = await reviewerClient.GetAsync("/api/v1/scheduling/evaluation-reviews");
         Assert.Equal(HttpStatusCode.OK, queueResponse.StatusCode);
         using var queueJson = await queueResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Review queue response missing.");

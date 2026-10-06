@@ -31,6 +31,8 @@ All three endpoints require `R02_BRANCH_MANAGER` with a tenant and branch scope.
 
 At least one of `canReadAttendance` and `canReviewEvaluations` must be true. `endsAt`, when provided, must be in the future and later than `startsAt`.
 
+Both capability flags default to `false` at the API boundary. A manager must explicitly select each permission; an omitted permission is never inferred or granted.
+
 ## Supervisor read endpoint
 
 ```http
@@ -49,7 +51,7 @@ R04's ordinary instructor workflow remains limited to sessions assigned to them 
 
 ### Evaluation review
 
-When `canReviewEvaluations` is true, an assigned R03 or R04 may read the submitted-evaluation queue and status summary, and may publish or return submitted evaluations **only for that assigned group**. R04 receives no branch-wide review permission from their role alone. The same assignment, tenant, branch, group, active-status, and time-window checks are re-applied when a review decision is submitted.
+When `canReviewEvaluations` is true, an assigned R03 or R04 may read the submitted-evaluation queue and status summary, and may publish or return submitted evaluations **only for that assigned group**. This is a decision permission, not view-only access. R04 receives no branch-wide review permission from their role alone. The same assignment, tenant, branch, group, active-status, and time-window checks are re-applied when a review decision is submitted.
 
 Evaluation scores and notes remain hidden from parent/student portals until an authorized reviewer publishes them.
 
