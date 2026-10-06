@@ -14,12 +14,12 @@
 
 ## تحديث 6 أكتوبر 2026 — إشراف المجموعات R04
 
-- **PR #76:** عند لقطة التحقق بتاريخ 6 أكتوبر، ما زال مفتوحًا إلى `main` وغير مدموج؛ الـhead الذي اكتملت عليه الفحوص هو `0659919`.
+- **PR #76:** ما زال مفتوحًا إلى `main` وغير مدموج؛ commit الكود الحالي `d7e3a7a` اكتملت عليه فحوص GitHub الأساسية.
 - **النموذج:** المشرف ليس دورًا عامًا جديدًا؛ مدير الفرع يمنح تكليفًا محدودًا لكل مجموعة إلى R03 أو R04، مع tenant/branch isolation، حالة فعالة، ونافذة زمنية اختيارية.
 - **الصلاحيات الحالية:** `canReadAttendance` تمنح قراءة الجلسات والحضور فقط؛ لا تمنح تعديل الحضور أو إتمام الجلسة. `canReadEvaluations` تمنح قراءة طابور التقييمات وحالتها فقط دون قرار. `canDecideEvaluations` تكليف مستقل للنشر أو الإرجاع، ويتيح عناصر الطابور اللازمة للقرار دون منح قراءة الحضور؛ المستهلك لا يرى النتيجة قبل النشر.
 - **تقوية الوصول والتدقيق في متابعة PR #76:** كل الصلاحيات مرفوضة افتراضيًا؛ حُصر وصول الإشراف في المجموعات والتكليف الفعّال والنطاق tenant/branch، وتُرفض قرارات التقييم دون `canDecideEvaluations`. يحتفظ migration بالمنح القديمة كقراءة فقط ويضيف القرار مرفوضًا افتراضيًا. يسجل audit flags الممنوحة، مع اختبارات R03/R04 وكتابة مدير الفرع والمدرب المباشر.
 - **التحقق المحلي بعد فصل صلاحيات التقييم:** `pnpm check` ناجح؛ Vitest **27/27**؛ `pnpm build` ناجح؛ Playwright E2E **11/11**؛ اختبارات backend القابلة للتشغيل محليًا **81/81**، ومنها اختبارات الإشراف/مراجعة التقييم؛ أُنتج SQL migration بنجاح. PostgreSQL-only tests لم تُشغّل محليًا لغياب `DATABASE_URL` disposable.
-- **لقطة GitHub التاريخية على `0659919` (6 أكتوبر 2026):** كانت اختبارات backend PostgreSQL/build، وfrontend، وPlaywright ناجحة؛ نجحت `Vercel Preview Comments` و`Vercel – mada-academy-dashboard` و`Vercel – mada-software`، وفشل `Vercel – client-angular`. يلزم إعادة checks على head التحديث الحالي وفهم فشل هذا preview أو توثيق استقلاله قبل اعتبار مسار الفحص مكتملًا.
+- **لقطة GitHub على code head `d7e3a7a` (6 أكتوبر 2026):** نجحت اختبارات PostgreSQL/backend build، وfrontend، وPlaywright؛ نجحت أيضًا previews الخاصة بـ`mada-academy-dashboard` و`mada-software` و`Vercel Preview Comments`. فشل `Vercel – client-angular` مجددًا؛ وصف GitHub يطلب `npx vercel inspect dpl_CKeA9CBW1Dgq29qc73CVawrWmKWv --logs`، لكن صفحة النشر العامة لا تعرض السجلات، لذلك لم يتحدد السبب أو تثبت استقلالية المشروع. لا تدمج قبل مراجعة سجلات Vercel المخوّلة أو تأكيد صاحب المشروع أن هذا الفحص غير مطلوب لهذا الريبو.
 - **قرار المنتج — محسوم:** فصل صلاحية قراءة التقييمات عن صلاحية القرار؛ لا يترتب على القراءة نشر أو إرجاع، والقرار لا يُمنح إلا بتكليف مستقل.
 
 ## نتيجة acceptance الحالية
@@ -48,7 +48,7 @@
 
 ## الخطة التالية بعد موجة التقسيم
 
-0. **R04 group supervision (نشط على PR #76):** فصل القراءة عن القرار مطبق محليًا ومختبر؛ ادفع التحديث إلى PR #76، ثم راجع checks الجديدة، وعالج فشل `Vercel – client-angular` أو وثّق استقلاله، وبعدها قيّم الدمج بصورة منفصلة.
+0. **R04 group supervision (نشط على PR #76):** فصل القراءة عن القرار مطبق ومدفوع. فحوص GitHub على code head `d7e3a7a` ناجحة، عدا `Vercel – client-angular`؛ يلزم الوصول إلى سجلات Vercel أو تأكيد أن preview غير مطلوب قبل تقييم الدمج بصورة منفصلة. لم يحدث دمج أو نشر إنتاجي.
 1. اختبارات frontend لـFinance mutations، بما في ذلك loading/disabled، over-collection، evidence، وحفظ الأخطاء.
 2. اختبارات frontend لعزل family/student scope، partial failure، وغياب Demo fallback في LIVE.
 3. اختبار backend لإعادة استخدام refresh token بعد rotation، مع التحقق من reuse detection/revocation.
