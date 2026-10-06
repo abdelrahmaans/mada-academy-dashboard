@@ -29,6 +29,13 @@ public sealed class EvaluationReviewApiTests
         }
         var otherInstructor = await TestData.CreateAccountAsync(factory, "R04_INSTRUCTOR", manager.TenantId, otherBranchId);
         var (otherSessionId, otherStudentId) = await SeedSessionAsync(factory, manager.TenantId, otherBranchId, otherInstructor.UserId, "Hidden Branch Child", "Other Robotics", true);
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            var offeringId = await db.AcademySessions.Where(item => item.Id == sessionId).Select(item => item.CourseOfferingId!.Value).SingleAsync();
+            db.GroupSupervisionAssignments.Add(new GroupSupervisionAssignment { TenantId = manager.TenantId, BranchId = manager.BranchId, SupervisorUserId = reviewer.UserId, CourseOfferingId = offeringId, CreatedByUserId = manager.UserId });
+            await db.SaveChangesAsync();
+        }
 
         TestData.Authenticate(managerClient, await TestData.LoginAsync(managerClient, manager));
         Assert.Equal(HttpStatusCode.OK, (await managerClient.PostAsJsonAsync($"/api/v1/students/{studentId}/guardians", new { userAccountId = parent.UserId, relationship = "Guardian" })).StatusCode);

@@ -26,7 +26,6 @@ import {
   UserCog,
   UserPlus,
   Users,
-  Wallet,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -363,10 +362,6 @@ export default function Team() {
         </nav>
         <div className="nav-caption nav-caption-spaced">الإدارة</div>
         <nav className="primary-nav" aria-label="قائمة الإدارة">
-          <button className="nav-link" onClick={() => navigate("/finance")}>
-            <Wallet size={19} />
-            <span>المالية والتحصيل</span>
-          </button>
           <button className="nav-link active" aria-current="page">
             <UserCog size={19} />
             <span>الفريق والأدوار</span>

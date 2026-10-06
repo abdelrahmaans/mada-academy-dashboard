@@ -36,7 +36,7 @@ export default function HomeLive({ me }: { me: AuthMe }) {
 
   const displayName = me.user?.displayName?.trim() || "مدير الفرع";
 
-  return <RoleDashboardShell className="app-shell r02-home-live-shell" roleCode="R02" roleLabel={me.roleLabel || "مدير الفرع"} scopeLevel="branch" scopeLabel={branchName} tenantName={me.academy?.name} branchName={branchName} demo={false}>
+  return <RoleDashboardShell className="app-shell r02-home-live-shell" showSessionLogout={false} roleCode="R02" roleLabel={me.roleLabel || "مدير الفرع"} scopeLevel="branch" scopeLabel={branchName} tenantName={me.academy?.name} branchName={branchName} demo={false}>
     <BranchManagerSidebar open={mobileOpen} onClose={() => setMobileOpen(false)} />
     <main className="main-panel">
       <header className="topbar r02-live-topbar">

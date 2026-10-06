@@ -152,6 +152,31 @@ export type GroupRecord = {
   startDate: string; endDate: string; weeklyScheduleJson: string; status: string; maxStudents: number; enrolledStudents: number;
 };
 export type GroupsResponse = { items: GroupRecord[]; total: number };
+export type SupervisionAssignment = {
+  assignmentId: string;
+  supervisorUserId: string;
+  supervisorName: string | null;
+  canReadAttendance: boolean;
+  canReviewEvaluations: boolean;
+  startsAt: string | null;
+  endsAt: string | null;
+  isCurrentlyEffective: boolean;
+};
+export type BranchSupervisionGroup = {
+  id: string;
+  courseName: string;
+  instructorId: string;
+  instructorName: string | null;
+  startDate: string;
+  endDate: string;
+  status: string;
+  enrolledStudents: number;
+  maxStudents: number;
+  assignments: SupervisionAssignment[];
+};
+export type BranchSupervisionGroupsResponse = { items: BranchSupervisionGroup[]; total: number; branchId: string };
+export type MySupervisionGroup = { assignmentId: string; groupId: string; courseName: string; startDate: string; endDate: string; status: string; canReadAttendance: boolean; canReviewEvaluations: boolean };
+export type MySupervisionGroupsResponse = { items: MySupervisionGroup[]; total: number; branchId: string };
 
 export type StudentRecord = {
   id: string;
@@ -429,6 +454,11 @@ export const apiClient = {
   courseTemplates: () => request<CourseTemplatesResponse>("/scheduling/course-templates"),
   createCourseTemplate: (input: Omit<CourseTemplateRecord, "id" | "status">) => request<CourseTemplateRecord>("/scheduling/course-templates", { method: "POST", body: JSON.stringify(input) }),
   listGroups: () => request<GroupsResponse>("/scheduling/groups"),
+  branchSupervisionGroups: () => request<BranchSupervisionGroupsResponse>("/supervision/branch-groups"),
+  mySupervisionGroups: () => request<MySupervisionGroupsResponse>("/supervision/my-groups"),
+  grantGroupSupervision: (input: { supervisorUserId: string; courseOfferingId: string; canReadAttendance: boolean; canReviewEvaluations: boolean; startsAt?: string; endsAt?: string }) =>
+    request<{ assignmentId: string }>("/supervision/assignments", { method: "POST", body: JSON.stringify(input) }),
+  revokeGroupSupervision: (assignmentId: string) => request<void>(`/supervision/assignments/${assignmentId}`, { method: "DELETE" }),
   checkSchedulingConflict: (input: { branchId: string; instructorId: string; classroomId: string; startAt: string; endAt: string; studentIds?: string[]; kits?: Array<{ kitId: string; quantity: number }> }) =>
     request<{ hasConflict: boolean; conflicts: { instructorSessions: string[]; classroomSessions: string[]; students: string[]; kits: string[]; branchHours: boolean } }>("/scheduling/check-conflict", { method: "POST", body: JSON.stringify({ ...input, studentIds: input.studentIds ?? [], kits: input.kits ?? [] }) }),
   createGroup: (input: CreateGroupInput) => request<CreateGroupResponse>("/scheduling/groups", { method: "POST", body: JSON.stringify(input) }),

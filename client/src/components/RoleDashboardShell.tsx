@@ -23,6 +23,7 @@ type RoleDashboardShellProps = Omit<HTMLAttributes<HTMLDivElement>, "role"> & {
   tenantName?: string;
   branchName?: string;
   demo?: boolean;
+  showSessionLogout?: boolean;
 };
 
 export default function RoleDashboardShell({
@@ -36,6 +37,7 @@ export default function RoleDashboardShell({
   tenantName,
   branchName,
   demo = true,
+  showSessionLogout = true,
   ...props
 }: RoleDashboardShellProps) {
   const classes = ["role-dashboard-shell", className].filter(Boolean).join(" ");
@@ -65,7 +67,7 @@ export default function RoleDashboardShell({
         data-scope-level={scopeLevel}
       >
         <>
-          <SessionLogoutButton />
+          {showSessionLogout && <SessionLogoutButton />}
           {children}
         </>
       </div>

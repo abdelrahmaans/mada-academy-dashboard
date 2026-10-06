@@ -614,10 +614,6 @@ function StudentPage() {
         </nav>
         <div className="nav-caption nav-caption-spaced">الإدارة</div>
         <nav className="primary-nav" aria-label="قائمة الإدارة">
-          <button className="nav-link" onClick={() => setLocation("/finance")}>
-            <Wallet size={19} />
-            <span>المالية والتحصيل</span>
-          </button>
           <button className="nav-link" onClick={() => setLocation("/team")}>
             <Users size={19} />
             <span>الفريق والأدوار</span>
