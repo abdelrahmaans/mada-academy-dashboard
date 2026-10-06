@@ -16,7 +16,7 @@ type LiveView = "overview" | "evaluations";
 
 export default function HeadInstructorsLive() {
   const { me, loading: authLoading } = useAuth();
-  const [view, setView] = useState<LiveView>("overview");
+  const [view, setView] = useState<LiveView>(() => window.location.hash === "#evaluations" ? "evaluations" : "overview");
   const [data, setData] = useState<HeadInstructorsOverviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,6 +59,13 @@ export default function HeadInstructorsLive() {
   useEffect(() => {
     if (!authLoading) void load();
   }, [authLoading, load]);
+
+  useEffect(() => {
+    const syncHashView = () => setView(window.location.hash === "#evaluations" ? "evaluations" : "overview");
+    window.addEventListener("hashchange", syncHashView);
+    syncHashView();
+    return () => window.removeEventListener("hashchange", syncHashView);
+  }, []);
 
   const branch = me?.branches?.find(item => item.id === me.branchId)?.name ?? "الفرع المسند";
   const upcomingSessions = useMemo(() => {
