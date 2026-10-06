@@ -56,7 +56,7 @@ if value["data"]["status"] != "ATTACHED":
   curl --fail --silent --show-error -D "$downloaded_headers" -o "$downloaded_file" \
     "$evidence_url" -H "authorization: Bearer $staff_token"
   cmp --silent "$EVIDENCE_FILE" "$downloaded_file" || { printf 'Downloaded evidence differs from uploaded file\n' >&2; exit 1; }
-  downloaded_type="$(awk 'BEGIN { IGNORECASE=1 } /^content-type:/ { sub(/^[^:]*:[[:space:]]*/, ""); sub(/[[:space:]]*\r?$/, ""); print; exit }' "$downloaded_headers")"
+  downloaded_type="$(awk 'tolower($1) == "content-type:" { sub(/^[^:]*:[[:space:]]*/, ""); sub(/[[:space:]]*\r$/, ""); print; exit }' "$downloaded_headers")"
   case "$downloaded_type" in
     application/pdf|image/jpeg|image/png) ;;
     *) printf 'Unexpected evidence Content-Type: %s\n' "$downloaded_type" >&2; exit 1 ;;
