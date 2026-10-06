@@ -79,6 +79,7 @@ public static class SessionWorkflowEndpoints
                            join classroom in db.Classrooms.AsNoTracking() on offering.ClassroomId equals classroom.Id
                            join instructor in db.UserAccounts.AsNoTracking() on offering.InstructorId equals instructor.Id
                            where offering.TenantId == tenantId && (!branchScope.HasValue || offering.BranchId == branchScope.Value)
+                               && (!user.IsInRole("R03_HEAD_INSTRUCTORS") || (Actor(user).HasValue && db.GroupSupervisionAssignments.Any(assignment => assignment.TenantId == tenantId && assignment.BranchId == offering.BranchId && assignment.CourseOfferingId == offering.Id && assignment.SupervisorUserId == Actor(user)!.Value && assignment.Status == "ACTIVE" && (!assignment.StartsAt.HasValue || assignment.StartsAt <= DateTimeOffset.UtcNow) && (!assignment.EndsAt.HasValue || assignment.EndsAt > DateTimeOffset.UtcNow))))
                            orderby offering.StartDate descending
                            select new
                            {
@@ -392,6 +393,7 @@ public static class SessionWorkflowEndpoints
                                  && offering.TenantId == tenantId && offering.BranchId == branchScope.Value && template.TenantId == tenantId
                                  && db.StudentEnrollments.Any(enrollment => enrollment.StudentId == evaluation.StudentId && enrollment.CourseOfferingId == offering.Id && enrollment.Status == "ACTIVE")
                                  && db.Memberships.Any(membership => membership.UserAccountId == evaluation.InstructorId && membership.TenantId == tenantId && membership.BranchId == branchScope.Value && membership.Status == "ACTIVE" && (membership.RoleCode == "R03_HEAD_INSTRUCTORS" || membership.RoleCode == "R04_INSTRUCTOR"))
+                                 && (!user.IsInRole("R03_HEAD_INSTRUCTORS") || (Actor(user).HasValue && db.GroupSupervisionAssignments.Any(assignment => assignment.TenantId == tenantId && assignment.BranchId == branchScope.Value && assignment.CourseOfferingId == offering.Id && assignment.SupervisorUserId == Actor(user)!.Value && assignment.Status == "ACTIVE" && assignment.CanReviewEvaluations && (!assignment.StartsAt.HasValue || assignment.StartsAt <= DateTimeOffset.UtcNow) && (!assignment.EndsAt.HasValue || assignment.EndsAt > DateTimeOffset.UtcNow))))
                            orderby evaluation.SubmittedAt
                            select new { evaluation.Id, evaluation.SessionId, evaluation.StudentId, studentName = student.FullName, courseName = template.Name, instructorName = instructor.DisplayName, evaluation.Score, evaluation.Notes, evaluation.SubmittedAt, sessionDate = session.StartAt })
             .ToListAsync(cancellationToken);
@@ -412,6 +414,7 @@ public static class SessionWorkflowEndpoints
                                    && db.CourseOfferings.Any(offering => offering.Id == session.CourseOfferingId.Value && offering.TenantId == tenantId && offering.BranchId == branchScope.Value)
                                    && db.StudentEnrollments.Any(enrollment => enrollment.StudentId == evaluation.StudentId && enrollment.CourseOfferingId == session.CourseOfferingId.Value && enrollment.Status == "ACTIVE")
                                    && db.Memberships.Any(membership => membership.UserAccountId == evaluation.InstructorId && membership.TenantId == tenantId && membership.BranchId == branchScope.Value && membership.Status == "ACTIVE" && (membership.RoleCode == "R03_HEAD_INSTRUCTORS" || membership.RoleCode == "R04_INSTRUCTOR"))
+                                   && (!user.IsInRole("R03_HEAD_INSTRUCTORS") || (Actor(user).HasValue && db.GroupSupervisionAssignments.Any(assignment => assignment.TenantId == tenantId && assignment.BranchId == branchScope.Value && assignment.CourseOfferingId == session.CourseOfferingId.Value && assignment.SupervisorUserId == Actor(user)!.Value && assignment.Status == "ACTIVE" && assignment.CanReviewEvaluations && (!assignment.StartsAt.HasValue || assignment.StartsAt <= DateTimeOffset.UtcNow) && (!assignment.EndsAt.HasValue || assignment.EndsAt > DateTimeOffset.UtcNow))))
                              group evaluation by evaluation.Status into statusGroup
                              select new { status = statusGroup.Key, count = statusGroup.Count() })
             .ToListAsync(cancellationToken);
@@ -445,7 +448,8 @@ public static class SessionWorkflowEndpoints
             && await db.CourseOfferings.AnyAsync(offering => offering.Id == session.CourseOfferingId.Value && offering.TenantId == tenantId && offering.BranchId == branchScope.Value, cancellationToken)
             && await db.StudentEnrollments.AnyAsync(enrollment => enrollment.StudentId == evaluation.StudentId && enrollment.CourseOfferingId == session.CourseOfferingId.Value && enrollment.Status == "ACTIVE", cancellationToken)
             && await db.Memberships.AnyAsync(membership => membership.UserAccountId == evaluation.InstructorId && membership.TenantId == tenantId && membership.BranchId == branchScope.Value && membership.Status == "ACTIVE" && (membership.RoleCode == "R03_HEAD_INSTRUCTORS" || membership.RoleCode == "R04_INSTRUCTOR"), cancellationToken);
-        if (!targetIsScoped) return NotFound("EVALUATION_REVIEW_NOT_FOUND");
+        var hasAssignmentReviewAccess = !user.IsInRole("R03_HEAD_INSTRUCTORS") || (actorId.HasValue && await db.GroupSupervisionAssignments.AnyAsync(assignment => assignment.TenantId == tenantId && assignment.BranchId == branchScope.Value && assignment.CourseOfferingId == session.CourseOfferingId.Value && assignment.SupervisorUserId == actorId.Value && assignment.Status == "ACTIVE" && assignment.CanReviewEvaluations && (!assignment.StartsAt.HasValue || assignment.StartsAt <= DateTimeOffset.UtcNow) && (!assignment.EndsAt.HasValue || assignment.EndsAt > DateTimeOffset.UtcNow), cancellationToken));
+        if (!targetIsScoped || !hasAssignmentReviewAccess) return NotFound("EVALUATION_REVIEW_NOT_FOUND");
         var now = DateTimeOffset.UtcNow;
         evaluation.Status = decision == "PUBLISH" ? "PUBLISHED" : "CHANGES_REQUESTED";
         evaluation.ReviewedByUserId = actorId.Value; evaluation.ReviewedAt = now; evaluation.ReviewNote = decision == "REQUEST_CHANGES" ? reviewNote : null;

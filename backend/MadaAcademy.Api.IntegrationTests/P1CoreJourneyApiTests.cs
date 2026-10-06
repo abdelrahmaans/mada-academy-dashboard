@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using MadaAcademy.Api.Persistence;
+using MadaAcademy.Api.Persistence.Entities;
 using MadaAcademy.Api.Persistence.Seeding;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,6 +25,9 @@ public sealed class P1CoreJourneyApiTests
         {
             var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
             await DemoDataSeeder.SeedAsync(db);
+            var offeringId = await db.AcademySessions.Where(item => item.Id == MainSessionId).Select(item => item.CourseOfferingId!.Value).SingleAsync();
+            db.GroupSupervisionAssignments.Add(new GroupSupervisionAssignment { TenantId = TenantId, BranchId = MainBranchId, SupervisorUserId = Guid.Parse("10000000-0000-0000-0000-000000000004"), CourseOfferingId = offeringId, CreatedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000003") });
+            await db.SaveChangesAsync();
         }
 
         var instructor = SeededAccount("10000000-0000-0000-0000-000000000010", "R04_INSTRUCTOR", "+201000000010", MainBranchId);

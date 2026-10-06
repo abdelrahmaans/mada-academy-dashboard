@@ -59,6 +59,8 @@ public static class OperationalEndpoints
 
             if (user.IsInRole("R04_INSTRUCTOR") && Guid.TryParse(user.FindFirstValue("sub"), out var instructorId))
                 query = query.Where(session => session.InstructorId == instructorId || session.SubstituteInstructorId == instructorId);
+            if (user.IsInRole("R03_HEAD_INSTRUCTORS") && Guid.TryParse(user.FindFirstValue("sub"), out var supervisorId))
+                query = query.Where(session => session.CourseOfferingId.HasValue && db.GroupSupervisionAssignments.Any(assignment => assignment.TenantId == scope.TenantId && assignment.BranchId == session.BranchId && assignment.CourseOfferingId == session.CourseOfferingId.Value && assignment.SupervisorUserId == supervisorId && assignment.Status == "ACTIVE" && assignment.CanReadAttendance && (!assignment.StartsAt.HasValue || assignment.StartsAt <= DateTimeOffset.UtcNow) && (!assignment.EndsAt.HasValue || assignment.EndsAt > DateTimeOffset.UtcNow)));
             if (from.HasValue) query = query.Where(session => session.EndAt >= from.Value);
             if (to.HasValue) query = query.Where(session => session.StartAt <= to.Value);
             if (!string.IsNullOrWhiteSpace(status)) query = query.Where(session => session.Status == status.ToUpperInvariant());
@@ -86,6 +88,8 @@ public static class OperationalEndpoints
                 if (!Guid.TryParse(user.FindFirstValue("sub"), out var instructorId)) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
                 scopedSessions = scopedSessions.Where(item => item.InstructorId == instructorId || item.SubstituteInstructorId == instructorId);
             }
+            if (user.IsInRole("R03_HEAD_INSTRUCTORS") && Guid.TryParse(user.FindFirstValue("sub"), out var supervisorId))
+                scopedSessions = scopedSessions.Where(item => item.CourseOfferingId.HasValue && db.GroupSupervisionAssignments.Any(assignment => assignment.TenantId == scope.TenantId && assignment.BranchId == item.BranchId && assignment.CourseOfferingId == item.CourseOfferingId.Value && assignment.SupervisorUserId == supervisorId && assignment.Status == "ACTIVE" && (!assignment.StartsAt.HasValue || assignment.StartsAt <= DateTimeOffset.UtcNow) && (!assignment.EndsAt.HasValue || assignment.EndsAt > DateTimeOffset.UtcNow)));
             var session = (await ProjectSessionsAsync(db, scopedSessions, cancellationToken)).SingleOrDefault();
 
             return session is null
@@ -103,7 +107,7 @@ public static class OperationalEndpoints
             var session = await FindScopedSession(db, sessionId, scope, cancellationToken);
             if (session is null) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
 
-            if (!IsAssignedInstructor(user, session)) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
+            if (!IsAssignedInstructor(user, session) && !await HasSupervisionAccess(db, user, session, requireAttendance: true, cancellationToken)) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
 
             var rows = await LoadAttendance(db, session, cancellationToken);
             return TypedResults.Ok(new ApiEnvelope<AttendanceResponse>(
@@ -292,6 +296,12 @@ public static class OperationalEndpoints
         (Guid.TryParse(user.FindFirstValue("sub"), out var actorId) &&
          (session.InstructorId == actorId || session.SubstituteInstructorId == actorId));
 
+    private static async Task<bool> HasSupervisionAccess(MadaDbContext db, ClaimsPrincipal user, AcademySession session, bool requireAttendance, CancellationToken cancellationToken)
+    {
+        if (!user.IsInRole("R03_HEAD_INSTRUCTORS") || !session.CourseOfferingId.HasValue || !Guid.TryParse(user.FindFirstValue("sub"), out var supervisorId)) return false;
+        return await db.GroupSupervisionAssignments.AnyAsync(item => item.TenantId == session.TenantId && item.BranchId == session.BranchId && item.CourseOfferingId == session.CourseOfferingId.Value && item.SupervisorUserId == supervisorId && item.Status == "ACTIVE" && (!requireAttendance || item.CanReadAttendance) && (!item.StartsAt.HasValue || item.StartsAt <= DateTimeOffset.UtcNow) && (!item.EndsAt.HasValue || item.EndsAt > DateTimeOffset.UtcNow), cancellationToken);
+    }
+
     private static async Task<List<AttendanceItem>> LoadAttendance(MadaDbContext db, AcademySession session, CancellationToken cancellationToken) =>
         await LoadAttendanceCore(db, session, cancellationToken);
 
@@ -313,7 +323,7 @@ public static class OperationalEndpoints
     }
 
     private static bool CanWriteAttendance(ClaimsPrincipal user) =>
-        user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R03_HEAD_INSTRUCTORS") || user.IsInRole("R04_INSTRUCTOR");
+        user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R04_INSTRUCTOR");
 
     private static bool TryGetScope(ClaimsPrincipal user, out Scope scope, out ProblemHttpResult error)
     {

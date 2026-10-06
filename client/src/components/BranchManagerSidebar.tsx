@@ -1,4 +1,4 @@
-import { BarChart3, BookOpen, Building2, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, CircleHelp, GraduationCap, LayoutDashboard, LogOut, Settings, ShieldCheck, Users, Wallet, X } from "lucide-react";
+import { BarChart3, BookOpen, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, CircleHelp, GraduationCap, LayoutDashboard, LogOut, Settings, ShieldCheck, Users, UserPlus, Wallet, X } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import "./BranchManagerSidebar.css";
@@ -16,6 +16,7 @@ const R02_MAIN: Item[] = [
 ];
 const R02_ADMIN: Item[] = [
   { path: "/team", label: "الفريق والأدوار", icon: Users },
+  { path: "/supervision-assignments", label: "متابعة المجموعات", icon: UserPlus },
   { path: "/approvals", label: "الموافقات", icon: CheckCircle2 },
   { path: "/reports", label: "التقارير والتحليلات", icon: BarChart3 },
 ];
