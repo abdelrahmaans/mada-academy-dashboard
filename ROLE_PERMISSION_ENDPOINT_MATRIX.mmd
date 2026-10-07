@@ -1,0 +1,140 @@
+flowchart TB
+  %% Mada Academy role / permission / endpoint distribution
+  subgraph ROLES[الأدوار R00–R09]
+    R00["R00<br/>Platform Admin<br/>نطاق المنصة"]
+    R01["R01<br/>Academy Owner<br/>نطاق الأكاديمية"]
+    R02["R02<br/>Branch Manager<br/>نطاق الفرع"]
+    R03["R03<br/>Head Instructors<br/>الفرع + المجموعات المسندة"]
+    R04["R04<br/>Instructor<br/>الجلسات والطلاب المعيّنون"]
+    R05["R05<br/>Secretary<br/>عمليات الفرع"]
+    R06["R06<br/>Accountant<br/>مالية الفرع"]
+    R07["R07<br/>Marketing Manager<br/>تسويق الفرع"]
+    R08["R08<br/>Parent<br/>الأطفال المرتبطون"]
+    R09["R09<br/>Student<br/>السجل المرتبط"]
+  end
+
+  subgraph IDENTITY[الهوية والإدارة]
+    AUTH["Auth & Session<br/>/auth/* · /me"]
+    PLATFORM["Platform Admin APIs<br/>/platform/*<br/>platform.read"]
+    ACADEMY["Academy Admin APIs<br/>/academy/roles<br/>/academy/members<br/>/academy/branches<br/>/academy/classrooms<br/>roles.manage · staff.invite"]
+    LINKS["Consumer Link APIs<br/>/students/{id}/consumer-*<br/>staff link management"]
+  end
+
+  subgraph OPERATIONS[التشغيل والجلسات]
+    DASH["Dashboard & Scope<br/>/dashboard/summary<br/>/tenants/{id}/scope-check"]
+    STUDENTS["Students & Sessions<br/>/students · /sessions<br/>sessions.read · students.read"]
+    ATTENDANCE["Attendance<br/>/sessions/{id}/attendance<br/>attendance.read/write"]
+    SCHEDULING["Scheduling<br/>/scheduling/course-templates<br/>/scheduling/groups<br/>/scheduling/instructors<br/>/scheduling/sessions"]
+    APPROVALS["Approvals & Substitution<br/>/scheduling/approvals<br/>/session-requests<br/>/substitution-requests"]
+    SUPERVISION["Group Supervision<br/>/supervision/*<br/>assignment + branch scope"]
+  end
+
+  subgraph EVALUATIONS[التقييمات والتنبيهات]
+    EVALWRITE["Evaluation Authoring<br/>/scheduling/sessions/{id}/evaluations<br/>evaluations.write"]
+    EVALREVIEW["Evaluation Review<br/>/scheduling/evaluation-reviews<br/>/evaluation-status-summary<br/>evaluations.review"]
+    NOTIFY["Notifications<br/>/scheduling/notifications<br/>actor/recipient scope"]
+  end
+
+  subgraph FINANCE[المالية والتقارير]
+    INVOICES["Invoices & Payments<br/>/finance/invoices<br/>/finance/payments/*"]
+    EXPENSES["Expenses<br/>/finance/expenses/*"]
+    FINREPORTS["Finance Reports<br/>/finance/reports/*"]
+    REPORTS["Operational & Executive Reports<br/>/reports/* · /academy/executive-*"]
+  end
+
+  subgraph CONSUMER[بوابات المستهلك]
+    PORTAL["Consumer Portal<br/>/consumer/me/students<br/>/consumer/me/sessions<br/>published evaluations only"]
+    CINVOICES["Consumer Invoices<br/>/consumer/invoices"]
+  end
+
+  R00 --> AUTH
+  R00 --> PLATFORM
+  R00 --> APPROVALS
+
+  R01 --> AUTH
+  R01 --> ACADEMY
+  R01 --> DASH
+  R01 --> SCHEDULING
+  R01 --> APPROVALS
+  R01 --> EXPENSES
+  R01 --> FINREPORTS
+  R01 --> REPORTS
+
+  R02 --> AUTH
+  R02 --> DASH
+  R02 --> STUDENTS
+  R02 --> ATTENDANCE
+  R02 --> SCHEDULING
+  R02 --> APPROVALS
+  R02 --> SUPERVISION
+  R02 --> EXPENSES
+  R02 --> FINREPORTS
+  R02 --> REPORTS
+  R02 --> LINKS
+
+  R03 --> AUTH
+  R03 --> STUDENTS
+  R03 --> ATTENDANCE
+  R03 --> SCHEDULING
+  R03 --> APPROVALS
+  R03 --> SUPERVISION
+  R03 --> EVALWRITE
+  R03 --> EVALREVIEW
+  R03 --> NOTIFY
+
+  R04 --> AUTH
+  R04 --> STUDENTS
+  R04 --> ATTENDANCE
+  R04 --> APPROVALS
+  R04 --> EVALWRITE
+  R04 --> NOTIFY
+
+  R05 --> AUTH
+  R05 --> STUDENTS
+  R05 --> INVOICES
+  R05 --> LINKS
+  R05 --> NOTIFY
+
+  R06 --> AUTH
+  R06 --> STUDENTS
+  R06 --> INVOICES
+  R06 --> EXPENSES
+  R06 --> FINREPORTS
+  R06 --> REPORTS
+  R06 --> NOTIFY
+
+  R07 --> AUTH
+  R07 --> REPORTS
+  R07 --> NOTIFY
+  R07 -.->|Pending API| MARKETING["Marketing APIs<br/>غير مكتملة بعد"]
+
+  R08 --> AUTH
+  R08 --> PORTAL
+  R08 --> CINVOICES
+
+  R09 --> AUTH
+  R09 --> PORTAL
+  R09 --> CINVOICES
+
+  CONFLICT["Contract gap:<br/>R03 catalog says attendance.write,<br/>but backend CanWriteAttendance = R02/R04"]
+  SECURITY["Backend authoritative:<br/>JWT tenant/branch + linked records +<br/>supervision assignments + publication rules"]
+
+  EVALREVIEW -.-> SECURITY
+  PORTAL -.-> SECURITY
+  ATTENDANCE -.-> CONFLICT
+
+  classDef role fill:#183b56,color:#fff,stroke:#0b2538,stroke-width:2px;
+  classDef identity fill:#e8f1f8,color:#102a43,stroke:#6b9ab8;
+  classDef ops fill:#e8f5ee,color:#123b28,stroke:#73ad8b;
+  classDef eval fill:#fff4dc,color:#4a3210,stroke:#d7a84b;
+  classDef finance fill:#f4eafa,color:#392348,stroke:#a981bd;
+  classDef consumer fill:#fce8e8,color:#4b1f1f,stroke:#c27a7a;
+  classDef note fill:#fff1f2,color:#5b2026,stroke:#c94f5b,stroke-dasharray:5 5;
+
+  class R00,R01,R02,R03,R04,R05,R06,R07,R08,R09 role;
+  class AUTH,PLATFORM,ACADEMY,LINKS identity;
+  class DASH,STUDENTS,ATTENDANCE,SCHEDULING,APPROVALS,SUPERVISION ops;
+  class EVALWRITE,EVALREVIEW,NOTIFY eval;
+  class INVOICES,EXPENSES,FINREPORTS,REPORTS finance;
+  class PORTAL,CINVOICES consumer;
+  class CONFLICT,SECURITY,MARKETING note;
