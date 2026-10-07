@@ -32,6 +32,7 @@ import "@/components/RoleFoundation.css";
 
 type PortalTab = "overview" | "attendance" | "evaluations" | "invoices";
 type ChildData = FamilyChild & {
+  branchId: string;
   attendance: number;
   progress: number;
   nextSession: string;
@@ -47,6 +48,7 @@ const CHILDREN: ChildData[] = [
   {
     id: "MAD-0248",
     name: "ياسين محمد علي",
+    branchId: "branch-demo-a",
     initials: "يع",
     course: "روبوتكس مستوى 2",
     branch: "مدينة نصر",
@@ -62,6 +64,7 @@ const CHILDREN: ChildData[] = [
   {
     id: "MAD-0247",
     name: "ليلى أحمد محمود",
+    branchId: "branch-demo-b",
     initials: "لم",
     course: "برمجة للمبتدئين",
     branch: "المعادي",
@@ -86,7 +89,7 @@ function mapFamilyChild(student: ConsumerStudentRecord, records: ConsumerSession
   const mostRecent = ownSessions[0];
   const initials = student.name.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join("");
   return {
-    id: student.id, name: student.name, initials, color: index % 2 ? "violet" : "teal",
+    id: student.id, name: student.name, branchId: student.branchId, initials, color: index % 2 ? "violet" : "teal",
     course: mostRecent?.courseName ?? "لا توجد مجموعة مسجلة", branch: student.branchName ?? "—",
     attendance: marked.length ? Math.round(attended / marked.length * 100) : 0,
     progress: ownSessions.length ? Math.round(completed / ownSessions.length * 100) : 0,
@@ -126,7 +129,7 @@ export default function FamilyPortal() {
     const applyInvoices = (items: ChildData[]) => items.map(item => {
       if (invoiceState === "loading") return { ...item, invoices: [], invoiceStatus: "جارٍ التحميل", invoiceDue: "يتم جلب بيانات الفواتير…" };
       if (invoiceState === "error") return { ...item, invoices: [], invoiceStatus: "غير متاح", invoiceDue: "تعذر تحميل بيانات الفواتير." };
-      const invoices = invoicesForStudent(invoiceItems, item.id);
+      const invoices = invoicesForStudent(invoiceItems, item.id, item.branchId);
       const outstanding = invoices.reduce((sum, invoice) => sum + invoice.remainingPiastres, 0);
       return { ...item, invoices, invoiceStatus: invoices.length === 0 ? "لا توجد فواتير" : outstanding > 0 ? "قسط متبقٍ" : "مدفوع", invoiceDue: invoices.find(invoice => invoice.remainingPiastres > 0)?.dueDate ?? "لا توجد مستحقات حالية" };
     });

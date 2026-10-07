@@ -7,7 +7,10 @@ import type { FinanceInvoice } from "./apiClient";
  */
 export function invoicesForStudent(
   invoices: FinanceInvoice[],
-  studentId: string
+  studentId: string,
+  branchId: string
 ) {
-  return invoices.filter(invoice => invoice.studentId === studentId);
+  return invoices.filter(
+    invoice => invoice.studentId === studentId && invoice.branchId === branchId
+  );
 }
