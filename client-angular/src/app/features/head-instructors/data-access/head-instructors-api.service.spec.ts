@@ -38,4 +38,31 @@ describe('HeadInstructorsApiService', () => {
       data: { items: [], total: 0, scopeLevel: 'BRANCH', branchId: 'server-branch' },
     });
   });
+
+  it('reads and decides only the backend-scoped evaluation review resource', () => {
+    service.listEvaluationReviews().subscribe();
+    const queue = http.expectOne(`${environment.apiBaseUrl}/scheduling/evaluation-reviews`);
+    queue.flush({ data: { items: [], total: 0 } });
+
+    service
+      .decideEvaluationReview('evaluation-1', 'REQUEST_CHANGES', 'أضف مثالًا عمليًا.')
+      .subscribe();
+    const decision = http.expectOne(
+      `${environment.apiBaseUrl}/scheduling/evaluation-reviews/evaluation-1/decision`,
+    );
+    expect(decision.request.body).toEqual({
+      decision: 'REQUEST_CHANGES',
+      note: 'أضف مثالًا عمليًا.',
+    });
+    expect(decision.request.urlWithParams).not.toContain('branchId');
+    decision.flush({
+      data: {
+        evaluationId: 'evaluation-1',
+        sessionId: 'session-1',
+        status: 'CHANGES_REQUESTED',
+        reviewedAt: '2026-10-07T00:00:00Z',
+        publishedAt: null,
+      },
+    });
+  });
 });

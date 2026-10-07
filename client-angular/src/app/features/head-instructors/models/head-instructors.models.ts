@@ -42,6 +42,29 @@ export interface R03EvaluationSummary {
   readonly counts: Readonly<Record<R03EvaluationStatus, number>>;
 }
 
+export interface R03EvaluationReview {
+  readonly id: string;
+  readonly sessionId: string;
+  readonly studentId: string;
+  readonly studentName: string;
+  readonly courseName: string;
+  readonly instructorName: string | null;
+  readonly score: number | null;
+  readonly notes: string | null;
+  readonly submittedAt: string | null;
+  readonly sessionDate: string;
+}
+
+export type R03ReviewDecision = 'PUBLISH' | 'REQUEST_CHANGES';
+
+export interface R03ReviewDecisionResult {
+  readonly evaluationId: string;
+  readonly sessionId: string;
+  readonly status: R03EvaluationStatus;
+  readonly reviewedAt: string;
+  readonly publishedAt: string | null;
+}
+
 export interface R03Notification {
   readonly id: string;
   readonly title: string;

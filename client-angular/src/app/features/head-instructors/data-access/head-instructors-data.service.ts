@@ -2,9 +2,12 @@ import { Injectable, inject } from '@angular/core';
 import { catchError, forkJoin, map, of, type Observable } from 'rxjs';
 import { HeadInstructorsApiService } from './head-instructors-api.service';
 import type {
+  R03EvaluationReview,
   R03EvaluationSummary,
   R03LoadWarning,
   R03OverviewResult,
+  R03ReviewDecision,
+  R03ReviewDecisionResult,
 } from '../models/head-instructors.models';
 
 const EMPTY_EVALUATIONS: R03EvaluationSummary = {
@@ -51,6 +54,18 @@ export class HeadInstructorsDataService {
 
   markNotificationRead(notificationId: string): Observable<void> {
     return this.api.markNotificationRead(notificationId);
+  }
+
+  listEvaluationReviews(): Observable<readonly R03EvaluationReview[]> {
+    return this.api.listEvaluationReviews();
+  }
+
+  decideEvaluationReview(
+    evaluationId: string,
+    decision: R03ReviewDecision,
+    note?: string,
+  ): Observable<R03ReviewDecisionResult> {
+    return this.api.decideEvaluationReview(evaluationId, decision, note);
   }
 
   private optional<T>(request$: Observable<T>, source: R03LoadWarning['source'], message: string) {

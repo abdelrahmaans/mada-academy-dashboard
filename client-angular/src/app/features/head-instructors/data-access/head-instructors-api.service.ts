@@ -4,10 +4,13 @@ import { map, type Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import type { ApiEnvelope } from '../../../core/auth/auth.models';
 import type {
+  R03EvaluationReview,
   R03EvaluationSummary,
   R03Group,
   R03Instructor,
   R03Notification,
+  R03ReviewDecision,
+  R03ReviewDecisionResult,
   R03Session,
 } from '../models/head-instructors.models';
 
@@ -21,6 +24,11 @@ interface SessionsEnvelope {
   readonly total: number;
   readonly scopeLevel: string;
   readonly branchId: string | null;
+}
+
+interface ReviewQueueEnvelope {
+  readonly items: readonly R03EvaluationReview[];
+  readonly total: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -52,6 +60,25 @@ export class HeadInstructorsApiService {
     return this.http
       .get<ApiEnvelope<R03EvaluationSummary>>(
         `${this.baseUrl}/scheduling/evaluation-status-summary`,
+      )
+      .pipe(map((response) => response.data));
+  }
+
+  listEvaluationReviews(): Observable<readonly R03EvaluationReview[]> {
+    return this.http
+      .get<ApiEnvelope<ReviewQueueEnvelope>>(`${this.baseUrl}/scheduling/evaluation-reviews`)
+      .pipe(map((response) => response.data.items));
+  }
+
+  decideEvaluationReview(
+    evaluationId: string,
+    decision: R03ReviewDecision,
+    note?: string,
+  ): Observable<R03ReviewDecisionResult> {
+    return this.http
+      .post<ApiEnvelope<R03ReviewDecisionResult>>(
+        `${this.baseUrl}/scheduling/evaluation-reviews/${encodeURIComponent(evaluationId)}/decision`,
+        { decision, ...(note === undefined ? {} : { note }) },
       )
       .pipe(map((response) => response.data));
   }
