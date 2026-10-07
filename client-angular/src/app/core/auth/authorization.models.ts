@@ -47,6 +47,113 @@ export interface AuthorizationPolicy {
   readonly requireAllPermissions?: boolean;
 }
 
+export type EndpointKey =
+  | 'auth.session'
+  | 'platform.admin'
+  | 'academy.admin'
+  | 'dashboard.summary'
+  | 'students.read'
+  | 'sessions.read'
+  | 'sessions.manage'
+  | 'attendance.read'
+  | 'attendance.write'
+  | 'supervision.manage'
+  | 'supervision.read'
+  | 'evaluations.write'
+  | 'evaluations.review'
+  | 'notifications.read'
+  | 'finance.invoices'
+  | 'finance.expenses'
+  | 'finance.reports'
+  | 'reports.operational'
+  | 'consumer.links'
+  | 'consumer.portal'
+  | 'consumer.invoices'
+  | 'marketing';
+
+export const ENDPOINT_ROLES: Readonly<Record<EndpointKey, readonly StaffRoleCode[]>> = {
+  'auth.session': [
+    'R00_PLATFORM_ADMIN',
+    'R01_ACADEMY_OWNER',
+    'R02_BRANCH_MANAGER',
+    'R03_HEAD_INSTRUCTORS',
+    'R04_INSTRUCTOR',
+    'R05_SECRETARY',
+    'R06_ACCOUNTANT',
+    'R07_MEDIA_MANAGER',
+    'R08_PARENT',
+    'R09_STUDENT',
+  ],
+  'platform.admin': ['R00_PLATFORM_ADMIN'],
+  'academy.admin': ['R01_ACADEMY_OWNER'],
+  'dashboard.summary': ['R01_ACADEMY_OWNER', 'R02_BRANCH_MANAGER'],
+  'students.read': [
+    'R01_ACADEMY_OWNER',
+    'R02_BRANCH_MANAGER',
+    'R03_HEAD_INSTRUCTORS',
+    'R04_INSTRUCTOR',
+    'R05_SECRETARY',
+    'R06_ACCOUNTANT',
+  ],
+  'sessions.read': [
+    'R01_ACADEMY_OWNER',
+    'R02_BRANCH_MANAGER',
+    'R03_HEAD_INSTRUCTORS',
+    'R04_INSTRUCTOR',
+    'R05_SECRETARY',
+    'R06_ACCOUNTANT',
+  ],
+  'sessions.manage': ['R01_ACADEMY_OWNER', 'R02_BRANCH_MANAGER'],
+  'attendance.read': [
+    'R01_ACADEMY_OWNER',
+    'R02_BRANCH_MANAGER',
+    'R03_HEAD_INSTRUCTORS',
+    'R04_INSTRUCTOR',
+    'R05_SECRETARY',
+    'R06_ACCOUNTANT',
+  ],
+  'attendance.write': ['R02_BRANCH_MANAGER', 'R04_INSTRUCTOR'],
+  'supervision.manage': ['R02_BRANCH_MANAGER'],
+  'supervision.read': ['R03_HEAD_INSTRUCTORS'],
+  'evaluations.write': ['R03_HEAD_INSTRUCTORS', 'R04_INSTRUCTOR'],
+  'evaluations.review': ['R03_HEAD_INSTRUCTORS'],
+  'notifications.read': [
+    'R00_PLATFORM_ADMIN',
+    'R01_ACADEMY_OWNER',
+    'R02_BRANCH_MANAGER',
+    'R03_HEAD_INSTRUCTORS',
+    'R04_INSTRUCTOR',
+    'R05_SECRETARY',
+    'R06_ACCOUNTANT',
+    'R07_MEDIA_MANAGER',
+  ],
+  'finance.invoices': ['R05_SECRETARY', 'R06_ACCOUNTANT'],
+  'finance.expenses': ['R01_ACADEMY_OWNER', 'R02_BRANCH_MANAGER', 'R06_ACCOUNTANT'],
+  'finance.reports': ['R01_ACADEMY_OWNER', 'R02_BRANCH_MANAGER', 'R06_ACCOUNTANT'],
+  'reports.operational': ['R01_ACADEMY_OWNER', 'R02_BRANCH_MANAGER', 'R06_ACCOUNTANT'],
+  'consumer.links': ['R01_ACADEMY_OWNER', 'R02_BRANCH_MANAGER', 'R05_SECRETARY'],
+  'consumer.portal': ['R08_PARENT', 'R09_STUDENT'],
+  'consumer.invoices': ['R08_PARENT', 'R09_STUDENT'],
+  marketing: ['R07_MEDIA_MANAGER'],
+};
+
+export const ENDPOINT_PERMISSIONS: Readonly<
+  Partial<Record<EndpointKey, readonly PermissionKey[]>>
+> = {
+  'dashboard.summary': ['branch.read'],
+  'students.read': ['students.read'],
+  'sessions.read': ['sessions.read'],
+  'sessions.manage': ['sessions.create'],
+  'attendance.read': ['attendance.read'],
+  'attendance.write': ['attendance.write'],
+  'evaluations.write': ['evaluations.write'],
+  'evaluations.review': ['evaluations.review'],
+  'finance.expenses': ['finance.expenses.read'],
+  'finance.reports': ['reports.read'],
+  'reports.operational': ['reports.read'],
+  marketing: ['marketing.read'],
+};
+
 export function hasRole(me: AuthMe | null, roles: readonly StaffRoleCode[]): boolean {
   return me !== null && roles.includes(me.role as StaffRoleCode);
 }

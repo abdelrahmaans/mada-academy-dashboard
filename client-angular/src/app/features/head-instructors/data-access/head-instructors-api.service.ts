@@ -1,7 +1,8 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { map, type Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
+import { ENDPOINT_POLICY } from '../../../core/http/endpoint-policy.interceptor';
 import type { ApiEnvelope } from '../../../core/auth/auth.models';
 import type {
   R03EvaluationReview,
@@ -38,21 +39,27 @@ export class HeadInstructorsApiService {
 
   listGroups(): Observable<readonly R03Group[]> {
     return this.http
-      .get<ApiEnvelope<ListEnvelope<R03Group>>>(`${this.baseUrl}/scheduling/groups`)
+      .get<ApiEnvelope<ListEnvelope<R03Group>>>(`${this.baseUrl}/scheduling/groups`, {
+        context: new HttpContext().set(ENDPOINT_POLICY, 'sessions.read'),
+      })
       .pipe(map((response) => response.data.items));
   }
 
   listInstructors(): Observable<readonly R03Instructor[]> {
     // Branch scope comes from the authenticated JWT; do not send a client-selected branchId.
     return this.http
-      .get<ApiEnvelope<ListEnvelope<R03Instructor>>>(`${this.baseUrl}/scheduling/instructors`)
+      .get<ApiEnvelope<ListEnvelope<R03Instructor>>>(`${this.baseUrl}/scheduling/instructors`, {
+        context: new HttpContext().set(ENDPOINT_POLICY, 'sessions.read'),
+      })
       .pipe(map((response) => response.data.items));
   }
 
   listSessions(from: string, to: string): Observable<readonly R03Session[]> {
     const query = new URLSearchParams({ from, to });
     return this.http
-      .get<ApiEnvelope<SessionsEnvelope>>(`${this.baseUrl}/sessions?${query.toString()}`)
+      .get<ApiEnvelope<SessionsEnvelope>>(`${this.baseUrl}/sessions?${query.toString()}`, {
+        context: new HttpContext().set(ENDPOINT_POLICY, 'sessions.read'),
+      })
       .pipe(map((response) => response.data.items));
   }
 
@@ -60,13 +67,16 @@ export class HeadInstructorsApiService {
     return this.http
       .get<ApiEnvelope<R03EvaluationSummary>>(
         `${this.baseUrl}/scheduling/evaluation-status-summary`,
+        { context: new HttpContext().set(ENDPOINT_POLICY, 'evaluations.review') },
       )
       .pipe(map((response) => response.data));
   }
 
   listEvaluationReviews(): Observable<readonly R03EvaluationReview[]> {
     return this.http
-      .get<ApiEnvelope<ReviewQueueEnvelope>>(`${this.baseUrl}/scheduling/evaluation-reviews`)
+      .get<ApiEnvelope<ReviewQueueEnvelope>>(`${this.baseUrl}/scheduling/evaluation-reviews`, {
+        context: new HttpContext().set(ENDPOINT_POLICY, 'evaluations.review'),
+      })
       .pipe(map((response) => response.data.items));
   }
 
@@ -79,6 +89,7 @@ export class HeadInstructorsApiService {
       .post<ApiEnvelope<R03ReviewDecisionResult>>(
         `${this.baseUrl}/scheduling/evaluation-reviews/${encodeURIComponent(evaluationId)}/decision`,
         { decision, ...(note === undefined ? {} : { note }) },
+        { context: new HttpContext().set(ENDPOINT_POLICY, 'evaluations.review') },
       )
       .pipe(map((response) => response.data));
   }
@@ -87,6 +98,7 @@ export class HeadInstructorsApiService {
     return this.http
       .get<ApiEnvelope<ListEnvelope<R03Notification>>>(
         `${this.baseUrl}/scheduling/notifications?unreadOnly=true`,
+        { context: new HttpContext().set(ENDPOINT_POLICY, 'notifications.read') },
       )
       .pipe(map((response) => response.data.items));
   }
@@ -96,6 +108,7 @@ export class HeadInstructorsApiService {
       .post<ApiEnvelope<void>>(
         `${this.baseUrl}/scheduling/notifications/${encodeURIComponent(notificationId)}/read`,
         {},
+        { context: new HttpContext().set(ENDPOINT_POLICY, 'notifications.read') },
       )
       .pipe(map(() => undefined));
   }

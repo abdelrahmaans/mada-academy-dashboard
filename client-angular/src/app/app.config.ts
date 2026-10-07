@@ -35,12 +35,15 @@ import {
 import { routes } from './app.routes';
 import { apiErrorInterceptor } from './core/http/api-error.interceptor';
 import { authInterceptor } from './core/http/auth.interceptor';
+import { endpointPolicyInterceptor } from './core/http/endpoint-policy.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([authInterceptor, apiErrorInterceptor])),
+    provideHttpClient(
+      withInterceptors([authInterceptor, endpointPolicyInterceptor, apiErrorInterceptor]),
+    ),
     provideLucideIcons(
       LucideBarChart3,
       LucideBell,

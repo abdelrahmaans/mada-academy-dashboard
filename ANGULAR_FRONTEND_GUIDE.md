@@ -83,6 +83,8 @@ client-angular/
 
 طبقة authorization المشتركة موجودة في `src/app/core/auth/authorization.*`: `AuthorizationService` يقرأ `role` و`permissions` من استجابة `/me`، و`authorizationGuard` يطبق policy المعلنة في `route.data.authorization` بعد انتظار استعادة الجلسة. الـpolicy تساعد على توجيه المستخدم ومنع السطح غير المناسب فقط؛ لا تمنح صلاحية ولا تستبدل `RequireAuthorization` أو scope queries في backend. أضف كل route جديد إلى هذه الطبقة باستخدام role/permission keys من `RoleCatalog.cs`، وأضف اختبارًا لدور مسموح ودور مرفوض.
 
+يوجد أيضًا `ENDPOINT_ROLES` و`ENDPOINT_PERMISSIONS` و`endpointPolicyInterceptor`. وهو opt-in عبر `HttpContext` باستخدام `ENDPOINT_POLICY`، فيمنع الطلب غير المطابق للـmatrix محليًا قبل الشبكة ويحوّل الخطأ إلى `CLIENT_ENDPOINT_FORBIDDEN`. هذه طبقة UX/performance فقط وليست security boundary؛ كل feature يجب أن يظل قادرًا على التعامل مع `403` الحقيقي القادم من backend، ولا يجوز استخدام interceptor لتوسيع النطاق أو استنتاج tenant/branch.
+
 ## 7. حدود الصلاحيات ونطاقات البيانات
 
 الخادم هو مصدر التفويض النهائي. لا تقبل `tenantId`, `branchId`, role أو permissions من URL أو local storage كحقيقة، ولا تبنِ استعلامات أو mutations Angular على نطاق يختاره العميل دون أن يعيد الخادم فرضه. كل endpoint يجب أن يتحقق من ملكية/ارتباط كل سجل ذي صلة بنطاق الهوية المصادق عليها.

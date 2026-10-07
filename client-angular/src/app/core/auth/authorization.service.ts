@@ -3,7 +3,10 @@ import { AuthService } from './auth.service';
 import {
   hasPermissions,
   hasRole,
+  ENDPOINT_ROLES,
+  ENDPOINT_PERMISSIONS,
   type AuthorizationPolicy,
+  type EndpointKey,
   type PermissionKey,
   type StaffRoleCode,
 } from './authorization.models';
@@ -30,5 +33,14 @@ export class AuthorizationService {
 
   hasPermission(permission: PermissionKey): boolean {
     return hasPermissions(this.auth.me(), [permission]);
+  }
+
+  /** Client-side navigation/request hint only; backend authorization remains authoritative. */
+  canEndpoint(endpoint: EndpointKey): boolean {
+    const me = this.auth.me();
+    return (
+      hasRole(me, ENDPOINT_ROLES[endpoint]) &&
+      hasPermissions(me, ENDPOINT_PERMISSIONS[endpoint] ?? [])
+    );
   }
 }

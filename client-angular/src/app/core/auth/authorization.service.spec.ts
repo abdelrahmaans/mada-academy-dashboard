@@ -27,6 +27,8 @@ describe('AuthorizationService', () => {
     ).toBe(true);
     expect(authorization.can({ roles: ['R02_BRANCH_MANAGER'] })).toBe(false);
     expect(authorization.hasPermission('evaluations.review')).toBe(true);
+    expect(authorization.canEndpoint('evaluations.review')).toBe(true);
+    expect(authorization.canEndpoint('finance.invoices')).toBe(false);
   });
 
   it('supports explicit any-permission policies', () => {
