@@ -152,7 +152,7 @@
 ## Angular frontend — parallel foundation (7 October 2026)
 
 - أُنشئ `client-angular/` كتطبيق مستقل للتأسيس باستخدام Angular 21.2، standalone، strict TypeScript، SCSS، Vitest، وzoneless.
-- React في `client/` يظل المرجع والمصدر التشغيلي؛ Angular يملك الآن auth shell محدودًا (`/login` و`/workspace`) متصلًا بعقد auth و`/me` فقط، ولا يحتوي أسطح تشغيل LIVE، ولا يتغير النشر أو البنية الإنتاجية.
+- React في `client/` يظل المرجع والمصدر التشغيلي؛ Angular يملك auth shell محدودًا (`/login` و`/workspace`) وأول شريحة LIVE parity لـR02 على `/` متصلة بـ`/dashboard/summary`، ولا يحتوي تكافؤًا تشغيليًا كاملًا، ولا يتغير النشر أو البنية الإنتاجية.
 - يحدد [`ANGULAR_FRONTEND_GUIDE.md`](ANGULAR_FRONTEND_GUIDE.md) الهيكل، إشارات الحالة وOnPush، العربية/RTL، عقود auth الحالية، حدود R00–R09، استراتيجية التكافؤ والأمن.
 - أول تنفيذ وظيفي لاحق يتطلب اختيار شريحة صغيرة ومصفوفة تتبع React↔Angular؛ أي تغييرات تفويض/API تتطلب اختبارات backend integration، ولا تعتبر route guards حدًا أمنيًا.
 
@@ -169,3 +169,10 @@
 - access token يبقى في الذاكرة، وrefresh token في `sessionStorage`؛ فشل التجديد يمسح الجلسة، ولا تُعتبر route guards حدًا أمنيًا.
 - `/login` يطابق copy وRTL وresponsive surface في React، و`/workspace` يعرض identity/scope من backend دون بيانات demo أو صلاحيات مستنتجة من الواجهة.
 - اختبارات Angular تغطي login payload، validation، `/me`، refresh rotation/concurrency، 401 retry، وguard؛ لا توجد تغييرات backend أو عقد مشتركة.
+
+### Angular R02 branch dashboard — follow-up on `feat/angular-auth-shell`
+
+- أضيف `features/dashboard` بواجهة Dashboard مدير الفرع مطابقة للسطح LIVE في React: scope card، مؤشرات الطلاب/التسجيلات/الجلسات، الجلسات القادمة، وروابط التشغيل.
+- مصدر البيانات الوحيد هو `GET /api/v1/dashboard/summary`; لا يرسل العميل `tenantId` أو `branchId`، ويعتمد على عزل claims الذي يفرضه backend.
+- الأدوار المصادق عليها غير R02 ترى locked state ولا تطلق طلب Dashboard. حالات loading/error/retry/empty واضحة ولا يوجد fallback إلى demo data.
+- اختبار data access يغطي envelope والـURL وعدم توسيع النطاق. الخطوة التالية: مصفوفة parity ثم شريحة دور مستقلة (R01 أو R03) بعقدها واختباراتها، لا توسيع هذه الصفحة عشوائيًا.

@@ -29,6 +29,12 @@ export interface AuthMe {
     readonly status: string;
     readonly planCode: string;
   };
+  readonly branches?: readonly {
+    readonly id: string;
+    readonly name: string;
+    readonly code: string;
+    readonly status: string;
+  }[];
 }
 
 export interface ApiEnvelope<T> {

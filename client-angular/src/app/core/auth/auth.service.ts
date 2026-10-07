@@ -23,6 +23,7 @@ export class AuthService {
   private readonly meState = signal<AuthMe | null>(null);
   private readonly loadingState = signal(false);
   private readonly errorState = signal<string | null>(null);
+  private readonly initializedState = signal(false);
   private refreshRequest$: Observable<boolean> | null = null;
 
   readonly me = this.meState.asReadonly();
@@ -30,6 +31,7 @@ export class AuthService {
   readonly loading = this.loadingState.asReadonly();
   readonly error = this.errorState.asReadonly();
   readonly authenticated = computed(() => this.meState() !== null);
+  readonly initialized = this.initializedState.asReadonly();
 
   login(phone: string, password: string, accountType: AccountType): Observable<AuthMe> {
     this.loadingState.set(true);
@@ -67,12 +69,19 @@ export class AuthService {
   }
 
   restoreSession(): Observable<AuthMe | null> {
-    if (!this.tokens.hasRefreshToken()) return of(null);
+    if (this.initialized()) return of(this.meState());
+    if (!this.tokens.hasRefreshToken()) {
+      this.initializedState.set(true);
+      return of(null);
+    }
     this.loadingState.set(true);
     return this.refresh().pipe(
       switchMap((refreshed) => (refreshed ? this.loadMe() : of(null))),
       catchError(() => of(null)),
-      finalize(() => this.loadingState.set(false)),
+      finalize(() => {
+        this.loadingState.set(false);
+        this.initializedState.set(true);
+      }),
     );
   }
 

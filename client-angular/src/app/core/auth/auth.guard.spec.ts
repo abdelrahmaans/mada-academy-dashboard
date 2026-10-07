@@ -10,7 +10,10 @@ describe('authGuard', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
-        { provide: AuthService, useValue: { authenticated: vi.fn(() => false) } },
+        {
+          provide: AuthService,
+          useValue: { authenticated: vi.fn(() => false), initialized: vi.fn(() => true) },
+        },
         { provide: Router, useValue: router },
       ],
     });

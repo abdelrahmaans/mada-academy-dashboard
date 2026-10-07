@@ -3,7 +3,14 @@ import { authGuard } from './core/auth/auth.guard';
 import { FoundationPage } from './pages/foundation/foundation-page';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'workspace', pathMatch: 'full' },
+  {
+    path: '',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/dashboard/pages/branch-dashboard-page').then(
+        (module) => module.BranchDashboardPage,
+      ),
+  },
   {
     path: 'login',
     loadComponent: () => import('./pages/login/login-page').then((module) => module.LoginPage),
