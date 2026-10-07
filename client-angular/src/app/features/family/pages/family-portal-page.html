@@ -1,0 +1,64 @@
+<main class="family-page" dir="rtl">
+  <header class="family-header">
+    <div>
+      <a routerLink="/workspace" class="back-link">العودة لمساحة العمل</a>
+      <p class="eyebrow">R08 · ولي الأمر</p>
+      <h1>بوابة الأسرة</h1>
+      <p class="muted">بيانات الأطفال المرتبطين بحسابك فقط، للقراءة والمتابعة.</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="button button--secondary" (click)="load()" [disabled]="loading()">تحديث البيانات</button>
+      <button type="button" class="button button--quiet" (click)="logout()">تسجيل الخروج</button>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <section class="state-card"><strong>جاري تحميل بيانات الأسرة...</strong><span>يتم تطبيق روابط الأطفال من الخادم.</span></section>
+  } @else if (profileError()) {
+    <section class="state-card state-card--error"><strong>تعذر تحميل الأطفال المرتبطين</strong><span>{{ profileError() }}</span><button class="button" type="button" (click)="load()">إعادة المحاولة</button></section>
+  } @else if (!children().length) {
+    <section class="state-card"><strong>لا توجد ملفات أطفال مرتبطة</strong><span>تواصل مع الأكاديمية لربط الحساب بالملف الصحيح.</span></section>
+  } @else {
+    <section class="scope-note"><strong>النطاق المطبق:</strong> {{ children().length }} طفل مرتبط فقط · لا يتم اختيار tenant أو فرع من الواجهة.</section>
+    <section class="family-hero">
+      <div><p class="eyebrow">أهلًا {{ parentName() }}</p><h2>تابع رحلة أطفالك</h2><p>الجلسات والحضور والتقييمات المنشورة والفواتير المرتبطة بحسابك.</p></div>
+      <span class="live-badge">LIVE · بيانات الحساب</span>
+    </section>
+
+    @if (sessionsWarning()) { <div class="warning" role="status">تم تحميل الأطفال، لكن الجلسات غير متاحة مؤقتًا: {{ sessionsWarning() }} <button type="button" (click)="load()">إعادة المحاولة</button></div> }
+    @if (invoicesWarning()) { <div class="warning" role="status">تم تحميل الأطفال، لكن الفواتير غير متاحة مؤقتًا: {{ invoicesWarning() }} <button type="button" (click)="load()">إعادة المحاولة</button></div> }
+
+    <nav class="child-switcher" aria-label="اختيار الطفل">
+      @for (child of children(); track child.id) {
+        <button type="button" [class.active]="selectedChild().id === child.id" (click)="selectChild(child.id)">
+          <strong>{{ child.name }}</strong><small>{{ child.branchName || 'الأكاديمية' }}</small>
+        </button>
+      }
+    </nav>
+
+    @if (selectedChild(); as child) {
+      <section class="child-card"><div><p class="eyebrow">الطفل المحدد</p><h2>{{ child.name }}</h2><p>{{ child.branchName || 'الأكاديمية' }} · {{ child.relationship === 'SELF' ? 'حساب ذاتي' : 'مرتبط بالأسرة' }}</p></div><span class="status-badge">تسجيل نشط</span></section>
+      <div class="stats-grid">
+        <article class="stat-card"><span>الجلسات</span><strong>{{ childSessions().length }}</strong></article>
+        <article class="stat-card"><span>الحضور</span><strong>{{ attendanceRate() }}%</strong></article>
+          <article class="stat-card"><span>آخر تقييم منشور</span><strong>{{ latestEvaluationScore() }}</strong></article>
+        <article class="stat-card"><span>الفواتير</span><strong>{{ childInvoices().length }}</strong></article>
+      </div>
+      <div class="content-grid">
+        <section class="panel"><div class="panel-heading"><h2>الجلسة القادمة</h2><span>{{ nextSession() ? 'مجدولة' : 'لا توجد' }}</span></div>
+          @if (nextSession(); as session) { <strong>{{ session.courseName || 'جلسة تعليمية' }}</strong><p>{{ session.startAt | date:'EEEE d MMMM · h:mm a' }}</p><p>{{ session.classroomName || 'قاعة غير محددة' }} · {{ session.branchName || child.branchName }}</p> } @else { <p class="muted">لا توجد جلسة قادمة مسجلة.</p> }
+        </section>
+        <section class="panel"><div class="panel-heading"><h2>آخر تقييم منشور</h2><span>بعد النشر فقط</span></div>
+          @if (latestEvaluation(); as evaluation) { <strong class="score">{{ evaluation.score }} / 100</strong><p>{{ evaluation.notes || 'لا توجد ملاحظة إضافية.' }}</p> } @else { <p class="muted">لا يوجد تقييم منشور لهذا الطفل حتى الآن.</p> }
+        </section>
+      </div>
+      <section class="panel"><div class="panel-heading"><div><h2>الجلسات والحضور</h2><p class="muted">السجلات المرتبطة بالطفل المحدد فقط.</p></div><span>{{ childSessions().length }}</span></div>
+        @if (!childSessions().length) { <p class="muted">لا توجد جلسات مسجلة لهذا الطفل.</p> } @else { <div class="session-list">@for (session of childSessions(); track session.sessionId) { <article class="session-row"><div><strong>{{ session.courseName || 'جلسة تعليمية' }}</strong><span>الجلسة {{ session.sessionNumber }} · {{ session.startAt | date:'medium' }}</span></div><div><span>{{ formatStatus(session.status) }}</span><small>الحضور: {{ formatAttendance(session.attendanceStatus) }}</small>@if (session.score !== null && session.score !== undefined) { <small>التقييم: {{ session.score }}/100</small> }</div></article> }</div> }
+      </section>
+      <section class="panel"><div class="panel-heading"><div><h2>الفواتير والمدفوعات</h2><p class="muted">عرض للقراءة فقط؛ التحصيل وإثباتاته عبر الأكاديمية.</p></div><span>{{ childInvoices().length }}</span></div>
+        @if (invoicesWarning()) { <p class="muted">بيانات الفواتير غير متاحة مؤقتًا.</p> } @else if (!childInvoices().length) { <p class="muted">لا توجد فواتير مرتبطة بهذا الطفل حاليًا.</p> } @else { <div class="invoice-list">@for (invoice of childInvoices(); track invoice.id) { <article class="invoice-row"><div><strong>{{ invoice.invoiceNumber }}</strong><span>استحقاق {{ invoice.dueDate }} · {{ invoice.status }}</span></div><div><strong>{{ invoice.remainingPiastres / 100 | number:'1.0-2' }} ج.م متبقٍ</strong><small>الإجمالي {{ invoice.totalPiastres / 100 | number:'1.0-2' }} · المدفوع {{ invoice.paidPiastres / 100 | number:'1.0-2' }}</small></div></article> }</div> }
+      </section>
+    }
+    <footer class="privacy-note">خصوصيتك أولًا: لا يمكن لحساب الأسرة البحث عن أطفال آخرين أو تعديل بيانات حساسة مباشرة.</footer>
+  }
+</main>
