@@ -47,7 +47,7 @@ test.describe('Angular R08 family portal', () => {
     await page.goto('/family-portal');
     await expect(page.getByRole('heading', { name: 'بوابة الأسرة', exact: true })).toBeVisible();
     await expect(page.getByText('LIVE · بيانات الحساب', { exact: true })).toBeVisible();
-    await expect(page.getByText('Youssef Ahmed', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Youssef Ahmed', exact: true })).toBeVisible();
     await expect(page.getByText('Lina Omar', { exact: true })).toHaveCount(0);
     await expect(page.getByText('88 / 100', { exact: true })).toBeVisible();
     await expect(page.getByText('تقدم واضح في التطبيق العملي', { exact: true })).toBeVisible();
