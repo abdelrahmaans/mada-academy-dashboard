@@ -61,6 +61,20 @@ export const routes: Routes = [
         (module) => module.InstructorDashboardPage,
       ),
   },
+  {
+    path: 'secretary',
+    canActivate: [authGuard, authorizationGuard],
+    data: {
+      authorization: {
+        roles: ['R05_SECRETARY'],
+        permissions: ['students.read', 'invoices.read'],
+      },
+    },
+    loadComponent: () =>
+      import('./features/secretary/pages/secretary-dashboard-page').then(
+        (module) => module.SecretaryDashboardPage,
+      ),
+  },
   { path: 'foundation', component: FoundationPage, pathMatch: 'full' },
   {
     path: 'shared-components',

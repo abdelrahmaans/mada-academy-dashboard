@@ -485,7 +485,7 @@ public static class SessionWorkflowEndpoints
     private static bool IsInstructor(ClaimsPrincipal user) => user.IsInRole("R04_INSTRUCTOR") || user.IsInRole("R03_HEAD_INSTRUCTORS");
     private static bool CanReviewEvaluations(ClaimsPrincipal user) => user.IsInRole("R03_HEAD_INSTRUCTORS");
     private static bool CanManageScheduling(ClaimsPrincipal user) => user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER");
-    private static bool CanReadScheduling(ClaimsPrincipal user) => CanManageScheduling(user) || user.IsInRole("R03_HEAD_INSTRUCTORS");
+    private static bool CanReadScheduling(ClaimsPrincipal user) => CanManageScheduling(user) || user.IsInRole("R03_HEAD_INSTRUCTORS") || user.IsInRole("R05_SECRETARY");
     private static bool CanDecide(ClaimsPrincipal user) => user.IsInRole("R00_PLATFORM_ADMIN") || user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R03_HEAD_INSTRUCTORS");
     private static IResult NotFound(string code) => Results.NotFound(new { error = new { code, message = code } });
     private static IResult Conflict(string code, string message) => Results.Conflict(new { error = new { code, message } });
