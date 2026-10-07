@@ -88,6 +88,19 @@ export const routes: Routes = [
         (module) => module.StudentPortalPage,
       ),
   },
+  {
+    path: 'family-portal',
+    canActivate: [authGuard, authorizationGuard],
+    data: {
+      authorization: {
+        roles: ['R08_PARENT'],
+      },
+    },
+    loadComponent: () =>
+      import('./features/family/pages/family-portal-page').then(
+        (module) => module.FamilyPortalPage,
+      ),
+  },
   { path: 'foundation', component: FoundationPage, pathMatch: 'full' },
   {
     path: 'shared-components',
