@@ -27,7 +27,8 @@ import StudentProgressCard, {
 import { RoleScopeProvider } from "@/contexts/RoleScopeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient, type ConsumerSessionRecord } from "@/lib/apiClient";
-import { firstLinkedStudent, sessionsForStudent } from "@/lib/consumerScope";
+import { firstLinkedStudent } from "@/lib/consumerScope";
+import { studentSessionsForPortal } from "@/lib/studentScope";
 import { useLocation } from "wouter";
 import "@/components/RoleFoundation.css";
 
@@ -114,7 +115,7 @@ export default function StudentPortal() {
       }
       const student = firstLinkedStudent(studentsResult.value.items);
       const records = sessionsResult.status === "fulfilled" ? sessionsResult.value.items : [];
-      const ownRecords = student ? sessionsForStudent(records, student.id) : [];
+      const ownRecords = student ? studentSessionsForPortal(records, student.id) : [];
       setHasStudentProfile(Boolean(student));
       setStudentName(student?.name ?? me?.user?.displayName ?? "الطالب");
       setCourseName(ownRecords[0]?.courseName ?? "لا توجد مجموعة مسجلة");
