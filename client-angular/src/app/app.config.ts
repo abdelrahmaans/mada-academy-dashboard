@@ -1,3 +1,4 @@
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import {
@@ -11,6 +12,10 @@ import {
   LucideCircleHelp,
   LucideGraduationCap,
   LucideLayoutDashboard,
+  LucideArrowLeft,
+  LucideKeyRound,
+  LucideLockKeyhole,
+  LucidePhone,
   LucideLogOut,
   LucideMapPin,
   LucideMenu,
@@ -24,11 +29,14 @@ import {
 } from '@lucide/angular';
 
 import { routes } from './app.routes';
+import { apiErrorInterceptor } from './core/http/api-error.interceptor';
+import { authInterceptor } from './core/http/auth.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
+    provideHttpClient(withInterceptors([authInterceptor, apiErrorInterceptor])),
     provideLucideIcons(
       LucideBarChart3,
       LucideBookOpen,
@@ -40,6 +48,10 @@ export const appConfig: ApplicationConfig = {
       LucideCircleHelp,
       LucideGraduationCap,
       LucideLayoutDashboard,
+      LucideArrowLeft,
+      LucideKeyRound,
+      LucideLockKeyhole,
+      LucidePhone,
       LucideLogOut,
       LucideMapPin,
       LucideMenu,

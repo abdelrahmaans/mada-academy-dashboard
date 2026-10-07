@@ -4,7 +4,7 @@
 
 ## 1. حالة المشروع والنطاق
 
-أنشئ `client-angular/` كتطبيق مستقل من Angular CLI. يحتوي التأسيس التقني على standalone routing، عرض عربي RTL، إشارات (signals)، OnPush، وVitest، إضافةً إلى مكتبة عرضية صغيرة في `src/app/shared/components/` وصفحة معاينة ثابتة `/shared-components`. لا توجد مصادقة أو شاشات تشغيل أو طلبات API؛ لا تعرض Angular كواجهة LIVE ولا تملأه ببيانات demo توحي بأنها فعلية.
+أنشئ `client-angular/` كتطبيق مستقل من Angular CLI. يحتوي التأسيس التقني على standalone routing، عرض عربي RTL، إشارات (signals)، OnPush، وVitest، ومكتبة UI في `src/app/shared/components/`. أضيف الآن auth shell أولي: `/login` يتصل بعقد password login، و`/workspace` يعرض هوية الحساب القادمة من `/me` فقط. لا توجد بعد شاشات تشغيل LIVE؛ لا تعرض Angular كواجهة LIVE ولا تملأه ببيانات demo توحي بأنها فعلية.
 
 الـbackend المشترك هو ASP.NET Core 10 مع PostgreSQL وEF Core وJWT. لا تنشأ قاعدة بيانات ثانية ولا API بديلة للنسخة Angular. أي إضافة/تغيير على عقد الـAPI يخضع لمراجعة الخادم والعميلين React وAngular والاختبارات ذات الصلة.
 
@@ -79,7 +79,7 @@ client-angular/
 
 عقد الدخول الحالي: `POST /api/v1/auth/login` بجسم `{ phone, password, accountType }`، وقيم نوع الحساب المدعومة `staff|parent|student`. الاستجابة الناجحة مغلفة بـ`data` وتحوي access/refresh tokens. الخادم يطبق lockout بعد خمس محاولات فاشلة افتراضيًا وحدًا لعدد الطلبات؛ الخطأ غير الصحيح `401`، والقفل `429` مع `LOGIN_LOCKED`. التجديد على `POST /api/v1/auth/refresh`، والخروج `POST /api/v1/auth/logout` ويتطلب تفويضًا. اختبارات الخادم المرجعية: `PasswordLoginSecurityApiTests.cs` و`P1CoreJourneyApiTests.cs`، واختبارات واجهة React ذات الصلة `client/src/lib/apiClient.interceptor.test.ts` و`client/src/components/ProtectedRoute.test.ts`.
 
-قبل تنفيذ auth في Angular، راجع سياسة حفظ refresh/access token، عمرها، XSS/CSRF وrefresh concurrency في قرار أمني مخصص. لا تخترع بروتوكولًا، ولا تحفظ كلمات المرور أو OTP أو الأسرار، ولا تسجل token في logs. استخدم `Authorization: Bearer` حيث يتطلب العقد، وحافظ على structured errors (`status`, `code`, `message`) وإعادة محاولة محدودة؛ لا تجعل guard بديلًا عن رفض API.
+تنفيذ auth الحالي يستخدم `HttpClient` وinterceptor typed: access token يبقى في الذاكرة، وrefresh token في `sessionStorage` باسم خاص بالعميل، مع refresh واحد مشترك عند تزامن 401 ثم إعادة محاولة واحدة للطلب الأصلي. يتم مسح الجلسة عند فشل refresh، ولا تُرسل بيانات login/refresh إلى interceptor التفويض. هذا يقلل بقاء التوكن على القرص لكنه لا يلغي مخاطر XSS؛ لا تحفظ كلمات المرور أو OTP أو الأسرار، ولا تسجل token في logs. استخدم `Authorization: Bearer` حيث يتطلب العقد، وحافظ على structured errors (`status`, `code`, `message`) وإعادة محاولة محدودة؛ لا تجعل guard بديلًا عن رفض API.
 
 ## 7. حدود الصلاحيات ونطاقات البيانات
 
@@ -116,4 +116,4 @@ React يبقى المرجع العملي والمصدر عند أي التباس
 
 ## 10. الوضع الحالي والخطوة التالية
 
-المرحلة الحالية تتضمن صفحة تأسيس عربية، مكتبة shared UI أولية واختبار معاينة، وكلها غير متصلة ببيانات LIVE. الخطوة التالية هي اختيار شريحة تشغيلية صغيرة ومصفوفة تكافؤ React↔Angular قبل بدء auth أو أي mutation؛ لا تعني مكتبة العرض قبول التكافؤ. مرجع الحالة والخطة التفصيلية يظل [`PROJECT_STATUS.md`](PROJECT_STATUS.md) و[`NEXT_PHASE_PLAN.md`](NEXT_PHASE_PLAN.md).
+المرحلة الحالية تتضمن auth shell و`/workspace` غير التشغيلي، مكتبة shared UI واختبارات refresh/guard/login، وكلها لا تستبدل React ولا تعرض سطحًا تشغيليًا LIVE. الخطوة التالية هي مصفوفة تكافؤ React↔Angular واختيار أول صفحة تشغيلية صغيرة؛ لا تعني هذه الطبقة قبول التكافؤ الكامل. مرجع الحالة والخطة التفصيلية يظل [`PROJECT_STATUS.md`](PROJECT_STATUS.md) و[`NEXT_PHASE_PLAN.md`](NEXT_PHASE_PLAN.md).
