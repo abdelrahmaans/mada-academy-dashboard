@@ -201,9 +201,9 @@ export class SecretaryDashboardPage {
     request$.pipe(finalize(() => this.studentMutationLoading.set(false))).subscribe({
       next: (student) => {
         this.studentFormMode.set(null);
-        this.actionMessage.set(editingId ? 'تم تحديث بيانات الطالب.' : 'تم إنشاء الطالب داخل نطاق الفرع.');
         this.loadStudents();
         this.selectStudent(student.id);
+        this.actionMessage.set(editingId ? 'تم تحديث بيانات الطالب.' : 'تم إنشاء الطالب داخل نطاق الفرع.');
       },
       error: (error: unknown) => this.actionError.set(toMessage(error, 'تعذر حفظ بيانات الطالب.')),
     });
