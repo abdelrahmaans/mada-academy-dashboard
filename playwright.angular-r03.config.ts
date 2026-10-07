@@ -35,7 +35,7 @@ export default defineConfig({
     },
     {
       command:
-        "pnpm --dir client-angular start -- --host 127.0.0.1 --port 4200",
+        "pnpm --dir client-angular start --host 127.0.0.1 --port 4200",
       url: `${webUrl}/login`,
       reuseExistingServer: false,
       timeout: 120_000,

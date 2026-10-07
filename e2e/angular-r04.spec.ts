@@ -14,7 +14,7 @@ async function loginUi(page: Page) {
   await page.goto('/login');
   await page.getByLabel('نوع الحساب').selectOption('staff');
   await page.getByLabel('رقم الهاتف').fill(r04Phone);
-  await page.getByLabel('كلمة المرور').fill(password);
+  await page.getByRole('textbox', { name: 'كلمة المرور' }).fill(password);
   await page.getByRole('button', { name: /دخول إلى المساحة/ }).click();
   await expect(page).toHaveURL(/\/workspace$/);
 }

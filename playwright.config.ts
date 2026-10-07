@@ -5,6 +5,7 @@ const webUrl = "http://127.0.0.1:3000";
 
 export default defineConfig({
   testDir: "./e2e",
+  testIgnore: ["**/angular-r03.spec.ts", "**/angular-r04.spec.ts"],
   timeout: 45_000,
   fullyParallel: false,
   retries: 0,
