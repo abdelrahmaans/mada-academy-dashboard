@@ -1,0 +1,71 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+.foundation {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  padding: clamp(1rem, 4vw, 3rem);
+  background: var(--mada-page);
+}
+
+.foundation__card {
+  width: min(100%, 48rem);
+  padding: clamp(1.5rem, 5vw, 3rem);
+  border: 1px solid var(--mada-line);
+  border-radius: var(--mada-radius-lg);
+  background: var(--mada-paper);
+  box-shadow: var(--mada-shadow);
+}
+
+.foundation__eyebrow {
+  margin: 0 0 0.75rem;
+  color: var(--mada-teal-dark);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+h1 {
+  margin: 0;
+  color: var(--mada-ink);
+  font-size: clamp(1.6rem, 4vw, 2.25rem);
+  line-height: 1.35;
+}
+
+.foundation__intro {
+  max-width: 42rem;
+  margin: 1rem 0 1.5rem;
+  color: var(--mada-muted);
+  line-height: 1.9;
+}
+
+.foundation__list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.foundation__list li {
+  position: relative;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border: 1px solid var(--mada-line);
+  border-radius: var(--mada-radius-sm);
+  color: var(--mada-ink-soft);
+  line-height: 1.7;
+}
+
+.foundation__list li::after {
+  position: absolute;
+  inset-inline-start: 1rem;
+  top: 1.25rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--mada-teal);
+  content: '';
+}

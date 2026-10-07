@@ -148,3 +148,10 @@
 3. إغلاق الأدلة التشغيلية: private bucket upload/download، backup/restore، secrets، وstaging acceptance.
 4. قرار منتج صريح بشأن R07 Marketing: API حقيقية أو إبقاؤه Preview معلنًا خارج MVP.
 5. إصلاح Finance mutation pending states واسم ملف evidence قبل الإطلاق المالي النهائي.
+
+## Angular frontend — parallel foundation (7 October 2026)
+
+- أُنشئ `client-angular/` كتطبيق مستقل للتأسيس باستخدام Angular 21.2، standalone، strict TypeScript، SCSS، Vitest، وzoneless.
+- React في `client/` يظل المرجع والمصدر التشغيلي؛ Angular الحالي لا يتصل بالـAPI ولا يحتوي أسطح LIVE، ولا يتغير النشر أو البنية الإنتاجية.
+- يحدد [`ANGULAR_FRONTEND_GUIDE.md`](ANGULAR_FRONTEND_GUIDE.md) الهيكل، إشارات الحالة وOnPush، العربية/RTL، عقود auth الحالية، حدود R00–R09، استراتيجية التكافؤ والأمن.
+- أول تنفيذ وظيفي لاحق يتطلب اختيار شريحة صغيرة ومصفوفة تتبع React↔Angular؛ أي تغييرات تفويض/API تتطلب اختبارات backend integration، ولا تعتبر route guards حدًا أمنيًا.

@@ -9,7 +9,7 @@ Mada Academy is an Arabic-first, RTL academy operations system. It covers academ
 
 The primary stack is:
 
-- **Frontend:** React + Vite in `client/`
+- **Frontend:** React + Vite in `client/` (current reference client); isolated Angular client foundation in `client-angular/`
 - **Backend:** ASP.NET Core in `backend/MadaAcademy.Api/`
 - **Database:** PostgreSQL + EF Core migrations
 - **Tests:** Vitest, Playwright, and ASP.NET integration tests
@@ -73,6 +73,8 @@ Route mapping and guards are in `client/src/App.tsx`; role home mapping is in `c
 Completed vertical slices include authentication/JWT, role and scope guards, students, sessions, attendance, evaluations and publication, approvals, Finance invoice/payment/expense records, linked consumer reads, shared styling, and browser E2E.
 
 Known boundaries are production secret/storage configuration, deployed staging smoke, backup/restore, real SMS delivery, password recovery, finer Finance pending states, and fully live Marketing APIs. These are documented in `PROJECT_STATUS.md` and `NEXT_PHASE_PLAN.md`.
+
+Angular is an independent foundation only; React remains the source of truth until feature parity and acceptance are explicitly completed. See `ANGULAR_FRONTEND_GUIDE.md` for structure, signals/OnPush, API contracts, security boundaries, and the parallel migration process. Angular must not be presented as LIVE or replace production deployment in this phase.
 
 ## Validation
 

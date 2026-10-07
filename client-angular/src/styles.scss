@@ -1,0 +1,51 @@
+:root {
+  color-scheme: light;
+  --mada-ink: #14243a;
+  --mada-ink-soft: #27364a;
+  --mada-muted: #78879a;
+  --mada-line: #e8edf2;
+  --mada-page: #f4f7fa;
+  --mada-paper: #fff;
+  --mada-teal: #0d9488;
+  --mada-teal-dark: #08776c;
+  --mada-radius-sm: 9px;
+  --mada-radius-lg: 15px;
+  --mada-shadow: 0 6px 20px rgb(15 23 42 / 3.5%);
+
+  font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  background: var(--mada-page);
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  color: var(--mada-ink);
+  background: var(--mada-page);
+  direction: rtl;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid rgb(13 148 136 / 35%);
+  outline-offset: 2px;
+}

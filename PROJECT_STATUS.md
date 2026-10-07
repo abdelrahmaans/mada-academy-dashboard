@@ -5,6 +5,10 @@
 **Latest delivery PR:** [PR #65 — extract FinanceDesk dialogs](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/65), merged successfully.
 **Stack:** React + Vite + TypeScript; ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions.
 
+## Parallel Angular client — foundation only
+
+An isolated `client-angular/` workspace has been bootstrapped with Angular 21.2, standalone routing, strict TypeScript, SCSS, Vitest, and zoneless change detection. It currently renders only an Arabic RTL foundation notice; it has no API integration or operational screens and is **not LIVE**. React in `client/` remains the reference client. See [`ANGULAR_FRONTEND_GUIDE.md`](ANGULAR_FRONTEND_GUIDE.md) for its architecture and security/parity workflow. This does not alter production infrastructure or deployment.
+
 ## Executive summary
 
 Mada has moved beyond a static prototype: authentication, scoped operational APIs, consumer account links, session/evaluation workflows, finance APIs, and operational reports are persisted and tested. The **Finance code/local acceptance slice is complete**; production readiness still requires private-storage secret injection, authenticated storage smoke test, durable backup/restore evidence, and deployed staging acceptance. Production SMS is intentionally unconfigured and password recovery is missing.
