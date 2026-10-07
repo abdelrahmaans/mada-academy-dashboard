@@ -43,6 +43,19 @@ describe('StudentPortalPage', () => {
     expect(page.profileError()).toBeNull();
   });
 
+  it('does not render linked data when the profile request fails', () => {
+    const fixture = create({
+      listMyStudents: () => throwError(() => new Error('الحساب غير مرتبط')),
+      listMySessions: () => of([session]),
+    });
+    fixture.detectChanges();
+    const page = fixture.componentInstance;
+
+    expect(page.student()).toBeNull();
+    expect(page.sessions()).toEqual([]);
+    expect(page.profileError()).toContain('الحساب غير مرتبط');
+  });
+
   it('filters session records to the backend-linked student', () => {
     const otherSession = { ...session, sessionId: 'session-2', studentId: 'other-student' };
     const fixture = create({ listMyStudents: () => of([linkedStudent]), listMySessions: () => of([session, otherSession]) });
