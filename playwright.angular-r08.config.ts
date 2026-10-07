@@ -12,7 +12,7 @@ export default defineConfig({
   reporter: [['list'], ['html', { outputFolder: 'playwright-report/angular-r08', open: 'never' }]],
   use: { baseURL: webUrl, ...devices['Desktop Chrome'], browserName: 'chromium', headless: true, launchOptions: { executablePath: '/usr/bin/chromium', args: ['--no-sandbox', '--disable-dev-shm-usage'] }, screenshot: 'only-on-failure', trace: 'retain-on-failure' },
   webServer: [
-    { command: 'ASPNETCORE_ENVIRONMENT=Development DOTNET_ENVIRONMENT=Development MADA_DATABASE_MODE=memory MADA_SEED_DEMO_DATA=true ASPNETCORE_URLS=http://127.0.0.1:4192 dotnet run --project backend/MadaAcademy.Api/MadaAcademy.Api.csproj --no-launch-profile', url: `${apiUrl}/api/v1/health`, reuseExistingServer: false, timeout: 120_000 },
-    { command: 'pnpm --dir client-angular start --host 127.0.0.1 --port 4203', url: `${webUrl}/login`, reuseExistingServer: false, timeout: 120_000 },
+    { command: 'ASPNETCORE_ENVIRONMENT=Development DOTNET_ENVIRONMENT=Development MADA_DATABASE_MODE=memory MADA_SEED_DEMO_DATA=true ASPNETCORE_URLS=http://127.0.0.1:4191 dotnet run --project backend/MadaAcademy.Api/MadaAcademy.Api.csproj --no-launch-profile', url: `${apiUrl}/api/v1/health`, reuseExistingServer: false, timeout: 120_000 },
+    { command: 'pnpm --dir client-angular start --host 127.0.0.1 --port 4202', url: `${webUrl}/login`, reuseExistingServer: false, timeout: 120_000 },
   ],
 });
