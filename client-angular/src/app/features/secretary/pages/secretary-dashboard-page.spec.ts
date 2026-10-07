@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { AuthService } from '../../../core/auth/auth.service';
 import type { AuthMe } from '../../../core/auth/auth.models';
@@ -28,6 +28,24 @@ const student: SecretaryStudent = {
   status: 'ACTIVE',
   activeEnrollmentCount: 0,
 };
+
+function createPageWithApi(api: Record<string, any>): SecretaryDashboardPage {
+  const resolvedApi = {
+    getConsumerLinks: () => of({ studentId: student.id, studentAccount: null, guardians: [], totalGuardians: 0 }),
+    listEnrollments: () => of([]),
+    ...api,
+  };
+  TestBed.configureTestingModule({
+    imports: [SecretaryDashboardPage],
+    providers: [
+      provideRouter([]),
+      { provide: AuthService, useValue: { me: signal(secretary), logout: vi.fn(() => of(undefined)) } },
+      { provide: AuthorizationService, useValue: { hasRole: vi.fn(() => true) } },
+      { provide: SecretaryApiService, useValue: resolvedApi },
+    ],
+  });
+  return TestBed.createComponent(SecretaryDashboardPage).componentInstance;
+}
 
 describe('SecretaryDashboardPage', () => {
   function setup() {
@@ -84,5 +102,58 @@ describe('SecretaryDashboardPage', () => {
 
     expect(api.enrollStudent).toHaveBeenCalledWith('student-1', 'group-1', 35000);
     expect(page.actionMessage()).toBe('تم تسجيل الطالب في المجموعة.');
+  });
+
+  it('keeps the loading state until the live student request completes', () => {
+    const students$ = new Subject<readonly SecretaryStudent[]>();
+    const page = createPageWithApi({
+      listStudents: () => students$,
+      listInvoices: () => of([]),
+      listGroups: () => of([]),
+    });
+
+    expect(page.studentsLoading()).toBe(true);
+    students$.next([student]);
+    students$.complete();
+    expect(page.studentsLoading()).toBe(false);
+    expect(page.students()).toEqual([student]);
+  });
+
+  it('exposes a student error instead of replacing the live surface with demo data', () => {
+    const page = createPageWithApi({
+      listStudents: () => throwError(() => new Error('تعذر تحميل الطلاب')),
+      listInvoices: () => of([]),
+      listGroups: () => of([]),
+    });
+
+    expect(page.studentsLoading()).toBe(false);
+    expect(page.studentsError()).toBe('تعذر تحميل الطلاب');
+    expect(page.students()).toEqual([]);
+  });
+
+  it('keeps an explicit empty state when the branch has no students', () => {
+    const page = createPageWithApi({
+      listStudents: () => of([]),
+      listInvoices: () => of([]),
+      listGroups: () => of([]),
+    });
+
+    expect(page.students()).toEqual([]);
+    expect(page.selectedStudentId()).toBeNull();
+    expect(page.studentsError()).toBeNull();
+  });
+
+  it('keeps the student record visible when consumer-link loading fails', () => {
+    const page = createPageWithApi({
+      listStudents: () => of([student]),
+      listInvoices: () => of([]),
+      listGroups: () => of([]),
+      getConsumerLinks: () => throwError(() => new Error('تعذر تحميل الروابط')),
+      listEnrollments: () => of([]),
+    });
+
+    expect(page.students()).toEqual([student]);
+    expect(page.links()).toBeNull();
+    expect(page.linksError()).toBe('تعذر تحميل الروابط');
   });
 });

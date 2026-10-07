@@ -116,7 +116,10 @@ export class SecretaryDashboardPage {
     this.groupsError.set(null);
     this.api.listGroups().subscribe({
       next: (items) => this.groups.set(items),
-      error: (error: unknown) => this.groupsError.set(toMessage(error, 'تعذر تحميل مجموعات الفرع.')),
+      error: (error: unknown) => {
+        this.groupsError.set(toMessage(error, 'تعذر تحميل مجموعات الفرع.'));
+        this.groupsLoading.set(false);
+      },
       complete: () => this.groupsLoading.set(false),
     });
   }
@@ -131,7 +134,10 @@ export class SecretaryDashboardPage {
         const selected = items.find((item) => item.id === this.selectedStudentId());
         if (selected && this.studentFormMode() !== 'create') this.populateStudentForm(selected);
       },
-      error: (error: unknown) => this.studentsError.set(toMessage(error, 'تعذر تحميل طلاب الفرع.')),
+      error: (error: unknown) => {
+        this.studentsError.set(toMessage(error, 'تعذر تحميل طلاب الفرع.'));
+        this.studentsLoading.set(false);
+      },
       complete: () => this.studentsLoading.set(false),
     });
   }
@@ -141,7 +147,10 @@ export class SecretaryDashboardPage {
     this.invoicesError.set(null);
     this.api.listInvoices().subscribe({
       next: (items) => this.invoices.set(items),
-      error: (error: unknown) => this.invoicesError.set(toMessage(error, 'تعذر تحميل فواتير الفرع.')),
+      error: (error: unknown) => {
+        this.invoicesError.set(toMessage(error, 'تعذر تحميل فواتير الفرع.'));
+        this.invoicesLoading.set(false);
+      },
       complete: () => this.invoicesLoading.set(false),
     });
   }
@@ -160,7 +169,10 @@ export class SecretaryDashboardPage {
     this.linksError.set(null);
     this.api.getConsumerLinks(studentId).subscribe({
       next: (links) => this.links.set(links),
-      error: (error: unknown) => this.linksError.set(toMessage(error, 'تعذر تحميل روابط الحساب لهذا الطالب.')),
+      error: (error: unknown) => {
+        this.linksError.set(toMessage(error, 'تعذر تحميل روابط الحساب لهذا الطالب.'));
+        this.linksLoading.set(false);
+      },
       complete: () => this.linksLoading.set(false),
     });
     this.loadEnrollments(studentId);
@@ -214,7 +226,10 @@ export class SecretaryDashboardPage {
     this.enrollmentsError.set(null);
     this.api.listEnrollments(studentId).subscribe({
       next: (items) => this.enrollments.set(items),
-      error: (error: unknown) => this.enrollmentsError.set(toMessage(error, 'تعذر تحميل تسجيلات الطالب.')),
+      error: (error: unknown) => {
+        this.enrollmentsError.set(toMessage(error, 'تعذر تحميل تسجيلات الطالب.'));
+        this.enrollmentsLoading.set(false);
+      },
       complete: () => this.enrollmentsLoading.set(false),
     });
   }
@@ -254,7 +269,10 @@ export class SecretaryDashboardPage {
     this.accountMatches.set([]);
     this.api.searchConsumerAccounts(studentId, phone, this.accountType()).subscribe({
       next: (matches) => this.accountMatches.set(matches),
-      error: (error: unknown) => this.lookupError.set(toMessage(error, 'تعذر البحث عن الحساب.')),
+      error: (error: unknown) => {
+        this.lookupError.set(toMessage(error, 'تعذر البحث عن الحساب.'));
+        this.lookupLoading.set(false);
+      },
       complete: () => this.lookupLoading.set(false),
     });
   }
