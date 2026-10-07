@@ -53,7 +53,7 @@ client-angular/
 
 ### Shared UI الحالية (كلها عرضية وغير حية)
 
-`src/app/shared/components/` يصدّر `MadaSidebar`، `MadaButton`، `MadaCard`، `MadaBadge`/`MadaStatusBadge`، `MadaPageHeader`، `MadaFeedbackState`، و`MadaScopeCard`. كل مكوّن standalone و`OnPush` ويستخدم Inputs/Outputs صريحة؛ تفاصيل الواجهة في [`src/app/shared/README.md`](client-angular/src/app/shared/README.md)، ومعاينة العناصر الثابتة على `/shared-components`. الـsidebar يستقبل قوائم role-specific من المستهلك، وأوامر مثل الخروج تخرج كـevent؛ لا يقرر صلاحيات أو scope ولا ينفذ logout/API. حتى الآن معاينة R02 فقط، وأسطح R08/R09 مختلفة وتتطلب مطابقة مستقلة قبل إعادة استخدام المظهر.
+`src/app/shared/components/` يصدّر `MadaSidebar`، `MadaButton`، `MadaCard`، `MadaBadge`/`MadaStatusBadge`، `MadaPageHeader`، `MadaFeedbackState`، و`MadaScopeCard`. كل مكوّن standalone و`OnPush` ويستخدم Inputs/Outputs صريحة؛ تفاصيل الواجهة في [`src/app/shared/README.md`](client-angular/src/app/shared/README.md)، ومعاينة العناصر الثابتة على `/shared-components`. الـsidebar يستقبل قوائم role-specific من المستهلك، وأوامر مثل الخروج تخرج كـevent؛ لا يقرر صلاحيات أو scope ولا ينفذ logout/API. تستخدم أسطح R08/R09 مكونات مجالها الخاصة بعد قبول parity، ولا يُعاد استخدام shared UI إلا عندما يطابق السلوك والعقد.
 
 استخدم standalone components وtyped reactive forms عند وجود نماذج، route-level lazy loading للمناطق الكبيرة، وفصل التحميل والخطأ والفراغ والـforbidden بدل إظهار قوائم فارغة مضللة. لا تستنسخ شجرة React أو مكوناتها حرفيًا؛ حافظ على سلوك المنتج وعلامته، لا على قيود تقنية قديمة.
 
