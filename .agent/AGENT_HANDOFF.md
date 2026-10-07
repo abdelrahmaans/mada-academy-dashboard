@@ -18,8 +18,8 @@ The primary stack is:
 
 1. `PROJECT_STATUS.md` — current product truth and known gaps.
 2. `NEXT_PHASE_PLAN.md` — current priorities and acceptance criteria.
-3. `UI_FLOW_REVIEW_STATUS.md` — current route/style/live-demo boundaries.
-4. `PRE_PRODUCTION_RUNBOOK.md` — environment and release procedure.
+3. `../docs/UI_FLOW_REVIEW_STATUS.md` — current route/style/live-demo boundaries.
+4. `../docs/PRE_PRODUCTION_RUNBOOK.md` — environment and release procedure.
 5. `backend/README.md` and `backend/DATABASE_STATUS.md` — backend/database setup.
 6. The relevant backend contract under `backend/*_CONTRACT.md`.
 

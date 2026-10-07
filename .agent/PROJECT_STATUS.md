@@ -13,7 +13,7 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 
 | Role | What is implemented | Important gaps / truth to preserve |
 |---|---|---|
-| **R00 Platform Admin** | Live platform support inventory is documented in [R00_PLATFORM_ADMIN_INVENTORY.md](R00_PLATFORM_ADMIN_INVENTORY.md): overview, academy list/bootstrap, status support, masked member search, membership/session support, roles, and tenant/platform audit reads. Backend policy, tenant-paired lookups, reason requirements, audit writes, explicit response-shape privacy assertions, and LIVE no-demo behavior are implemented and tested. Bootstrap contract is aligned with password-based owner onboarding, and unsupported archive permission advertisement was removed. | Full platform administration is not supported: archive/delete, billing, and detailed student/finance/consumer support remain unavailable. |
+| **R00 Platform Admin** | Live platform support inventory is documented in [R00_PLATFORM_ADMIN_INVENTORY.md](../docs/R00_PLATFORM_ADMIN_INVENTORY.md): overview, academy list/bootstrap, status support, masked member search, membership/session support, roles, and tenant/platform audit reads. Backend policy, tenant-paired lookups, reason requirements, audit writes, explicit response-shape privacy assertions, and LIVE no-demo behavior are implemented and tested. Bootstrap contract is aligned with password-based owner onboarding, and unsupported archive permission advertisement was removed. | Full platform administration is not supported: archive/delete, billing, and detailed student/finance/consumer support remain unavailable. |
 | **R01 Academy Owner** | Academy bootstrap, tenant-level identity/member/role, branch and classroom foundations exist; LIVE route is guarded from the old demo page, academy roles preserve members/permissions when branch lookup fails, classroom/resource management preserves useful data on partial failures, the executive dashboard gives toast/error feedback for report and audit loading, and the global interceptor now covers 401, 403, and 5xx with automated tests. | Local acceptance evidence is documented; deployed staging acceptance remains open. |
 | **R02 Branch Manager** | Branch-scoped student/session/classroom and approval operations are available across implemented backend slices; `/branch-operations` now routes authenticated R02 users to the live dashboard instead of the legacy demo, and approvals/classes/schedule remain visible when optional endpoints are forbidden. | Some non-core branch panels remain outside the current P2 slice. |
 | **R03 Head Instructors** | Branch-scoped evaluation review queue; publish or request changes; dashboard avoids demo evaluation samples in LIVE evaluation surfaces, keeps core team/group/session data visible when optional endpoints fail, and preserves groups or sessions when one Academic Programs read fails. | Unsupported mastery/checkpoint analytics remain explicitly outside the LIVE contract. |
@@ -39,7 +39,7 @@ The current merged baseline includes PRs #41, #42, #46, #55, #56, #58, #61, #62,
 
 ## LIVE acceptance evidence — 4 October 2026
 
-The auditable R01/R03/R04 endpoint, role/scope, failure, empty-state, and preview-boundary checklist is maintained in [LIVE_ACCEPTANCE_EVIDENCE.md](LIVE_ACCEPTANCE_EVIDENCE.md). It documents local evidence only; staging and production acceptance are separate gates.
+The auditable R01/R03/R04 endpoint, role/scope, failure, empty-state, and preview-boundary checklist is maintained in [LIVE_ACCEPTANCE_EVIDENCE.md](../docs/LIVE_ACCEPTANCE_EVIDENCE.md). It documents local evidence only; staging and production acceptance are separate gates.
 
 ## UI / Flow / Architecture review — 4 October 2026
 
@@ -52,7 +52,7 @@ The auditable R01/R03/R04 endpoint, role/scope, failure, empty-state, and previe
 - Marketing ما زال Preview/local ويحتاج API قبل اعتباره LIVE.
 - Production storage/secrets/staging/backup-restore وFinance pending states ما زالت مفتوحة.
 
-التفاصيل الكاملة في [UI_FLOW_REVIEW_STATUS.md](UI_FLOW_REVIEW_STATUS.md).
+التفاصيل الكاملة في [UI_FLOW_REVIEW_STATUS.md](../docs/UI_FLOW_REVIEW_STATUS.md).
 
 Follow-up fixes prepared after PR #41: analytics is now loaded only when both optional environment values exist, so local builds no longer emit placeholder URL warnings; expense evidence downloads now preserve and use the uploaded/API filename. Full local validation remains green: 18/18 unit tests, build, and 7/7 browser E2E.
 
@@ -60,7 +60,7 @@ Follow-up fixes prepared after PR #41: analytics is now loaded only when both op
 
 - `DevelopmentSmsMessageSender` is registered only in ASP.NET Development and generates a random code for development/test use.
 - Non-Development currently uses `UnconfiguredSmsMessageSender` and fails closed; there is no live SMS. **Do not set production to Development** and do not use a universal fixed OTP.
-- User permits a temporary no-cost solution. A restricted staff-assisted pilot is proposed in [OTP_MVP_TEMPORARY_PLAN.md](OTP_MVP_TEMPORARY_PLAN.md), but is not implemented or enabled.
+- User permits a temporary no-cost solution. A restricted staff-assisted pilot is proposed in [OTP_MVP_TEMPORARY_PLAN.md](../docs/OTP_MVP_TEMPORARY_PLAN.md), but is not implemented or enabled.
 - Password recovery is not implemented.
 
 ## Authentication and proxy security boundaries
@@ -77,10 +77,10 @@ The P1/P2 consumer acceptance, Finance local acceptance, first page-decompositio
 
 Open implementation blockers and product debt:
 
-1. Finance production evidence deployment remains gated on backend secrets, authenticated staging upload/download smoke test, and durable backup evidence; see [FINANCE_RELEASE_GATE.md](FINANCE_RELEASE_GATE.md).
+1. Finance production evidence deployment remains gated on backend secrets, authenticated staging upload/download smoke test, and durable backup evidence; see [FINANCE_RELEASE_GATE.md](../docs/FINANCE_RELEASE_GATE.md).
 2. Invoice cancellation/correction/refund and expanded financial workflows remain outside the current slice and must not be implied as supported.
 3. Production SMS provider and password recovery are later identity work; interim OTP mode remains opt-in, limited, audited, and never a hard-coded/shared code.
-4. Run [CONSUMER_STAGING_SMOKE_TEST.md](CONSUMER_STAGING_SMOKE_TEST.md) against a controlled non-production API when deployment is authorized; local E2E is already automated in `e2e/critical-flows.spec.ts`.
+4. Run [CONSUMER_STAGING_SMOKE_TEST.md](../docs/CONSUMER_STAGING_SMOKE_TEST.md) against a controlled non-production API when deployment is authorized; local E2E is already automated in `e2e/critical-flows.spec.ts`.
 5. `deploy-pages.yml` publishes a static frontend to GitHub Pages. It is intentionally not a production API deployment; LIVE screens require `VITE_API_URL` to point to an accessible HTTPS API, otherwise the published site is only a preview shell or shows its explicit unavailable/empty states.
 6. The first decomposition wave is merged for Head Instructors (#55), Schedule (#56), Platform Console (#58), Marketing/legacy cleanup (#62), Classes (#63), and Team (#64). Students (#57), Approvals (#59), and Instructor Desk (#60) were closed because the proposed extraction did not materially reduce the page size; they require a smaller, higher-value split before reopening.
 7. `client/src/components/Map.tsx` and `ManusDialog.tsx` were confirmed unused and removed in merged PR #62.

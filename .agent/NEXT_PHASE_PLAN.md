@@ -31,7 +31,7 @@
 - API feedback interceptor: تم توحيد بث أخطاء API من `apiClient`، والجسر العام يعرض toast واحدًا لـ401، وtoast صلاحية لـ403، وtoast خطأ خادم لـ5xx؛ اختبارات interceptor الفعلية تغطي 403 و500، وأخطاء النطاق/العملية تظل محلية عندما تحتاج رسالة وسياقًا خاصًا.
 - FamilyPortal: تم فصل تحميل الأطفال والجلسات عن endpoint الفواتير؛ فشل الفواتير يعرض حالة مستقلة وtoast وRetry، ويحافظ على بيانات الأطفال والجلسات، كما لا تعرض بطاقة الطفل حالة فواتير مضللة أثناء التحميل أو الفشل.
 - StudentPortal: تم فصل ملف الطالب عن الجلسات باستخدام `Promise.allSettled`؛ فشل الجلسات يحافظ على ملف الطالب ويعرض warning وtoast وRetry، وفشل الملف الأساسي يعرض error وRetry، مع منع Demo fallback في LIVE.
-- Consumer final acceptance: اكتملت مراجعة R08/R09 وتوثقت في `CONSUMER_FINAL_ACCEPTANCE.md`; تم التأكد من عزل Demo، حالات empty/error/loading، Toast وRetry، وفصل البيانات الأساسية عن الفواتير/الجلسات الاختيارية.
+- Consumer final acceptance: اكتملت مراجعة R08/R09 وتوثقت في `../docs/CONSUMER_FINAL_ACCEPTANCE.md`; تم التأكد من عزل Demo، حالات empty/error/loading، Toast وRetry، وفصل البيانات الأساسية عن الفواتير/الجلسات الاختيارية.
 - **الفجوة التالية المثبتة:** production evidence/storage and staging acceptance؛ الـlocal API preflight والـbrowser E2E أُنجزا بالفعل.
 - التحقق المحلي: Finance/Invoice correction **11/11**، InMemory backend **54/54**، browser/API E2E **7/7**، Vitest **18/18**، `pnpm check`، `pnpm build`، و`git diff --check` ناجحة.
 - **Finance frontend follow-up (6 أكتوبر، فرع `fix/finance-payment-single-flight`):** Vitest **52/52** (بينها 4 اختبارات لحالات الانتظار/التعطيل)، `pnpm check`، `pnpm build`، Playwright **11/11**، و`git diff --check` ناجحة؛ لم يتغير backend.
@@ -43,9 +43,9 @@
 2. اختبارات frontend لعزل family/student scope، partial failure، وغياب Demo fallback في LIVE.
 3. اختبار backend لإعادة استخدام refresh token بعد rotation، مع التحقق من reuse detection/revocation.
 4. نقل endpoints الـauth من `Program.cs` إلى module مستقل دون تغيير العقود أو سياسات rate limiting.
-5. جرد R00 Platform Admin وتصنيف كل action إلى `LIVE` أو `PREVIEW` أو `NOT AVAILABLE` مع authorization/audit checklist في [R00_PLATFORM_ADMIN_INVENTORY.md](R00_PLATFORM_ADMIN_INVENTORY.md) **مغلق**.
+5. جرد R00 Platform Admin وتصنيف كل action إلى `LIVE` أو `PREVIEW` أو `NOT AVAILABLE` مع authorization/audit checklist في [R00_PLATFORM_ADMIN_INVENTORY.md](../docs/R00_PLATFORM_ADMIN_INVENTORY.md) **مغلق**.
 6. إغلاق R00 follow-ups: contract alignment، اختبارات bootstrap/reactivation/protected-R00/R00 assignment، response-shape privacy assertions، وإزالة `academy.archive` من advertised permissions **مغلق**.
-7. Production readiness: CORS production enforcement **مطبق ومختبر داخل الكود**، وتم تنفيذ single-instance startup guard موثق في [DISTRIBUTED_RATE_LIMIT_DECISION.md](DISTRIBUTED_RATE_LIMIT_DECISION.md)؛ المتبقي shared-limiter/two-instance evidence قبل التوسع الأفقي، ثم private storage smoke، backup/restore، وstaging acceptance.
+7. Production readiness: CORS production enforcement **مطبق ومختبر داخل الكود**، وتم تنفيذ single-instance startup guard موثق في [DISTRIBUTED_RATE_LIMIT_DECISION.md](../docs/DISTRIBUTED_RATE_LIMIT_DECISION.md)؛ المتبقي shared-limiter/two-instance evidence قبل التوسع الأفقي، ثم private storage smoke، backup/restore، وstaging acceptance.
 
 ## الهدف
 
@@ -59,7 +59,7 @@
 - بوابة الأسرة تقرأ فواتير أطفال الحساب المرتبط فقط.
 - المستخدم يسمح بمسار OTP مؤقت في البداية، ثم استبداله/استكماله بمزود فعلي لاحقًا.
 
-تفاصيل نموذج الفاتورة، endpoints، data model، الواجهات والاختبارات في [INVOICES_PAYMENTS_MVP_PLAN.md](INVOICES_PAYMENTS_MVP_PLAN.md). تفاصيل حد الأمان المؤقت في [OTP_MVP_TEMPORARY_PLAN.md](OTP_MVP_TEMPORARY_PLAN.md).
+تفاصيل نموذج الفاتورة، endpoints، data model، الواجهات والاختبارات في [INVOICES_PAYMENTS_MVP_PLAN.md](../docs/INVOICES_PAYMENTS_MVP_PLAN.md). تفاصيل حد الأمان المؤقت في [OTP_MVP_TEMPORARY_PLAN.md](../docs/OTP_MVP_TEMPORARY_PLAN.md).
 
 ## مراحل التنفيذ
 
@@ -107,7 +107,7 @@
 - المقترح: وضع **staff-assisted manual delivery** خلف feature flag مغلق افتراضيًا، pilot صغير/allowlist فقط، رمز عشوائي يعرض مرة واحدة لموظف مخول عبر API staff-only، سجل تدقيق دون الرمز، اتصال/تسليم يدوي للمستخدم، مع نفس مدة الانتهاء ومحاولات التحقق والـrate limits الحالية.
 - لا يوجد كود ثابت، ولا إرجاع للرمز من endpoint عام، ولا تسجيله في logs. يجب توضيح أن هذا pilot أقل ضمانًا من رسالة SMS خاصة لأن الموظف يرى الرمز.
 - عند تجهيز SMS provider حقيقي: إغلاق manual mode، ربط `ISmsMessageSender`، واختباره دون تغيير عقد قبول الدعوة.
-- التفاصيل التنفيذية في `OTP_MVP_TEMPORARY_PLAN.md`؛ هذا المسار أيضًا غير منفذ حاليًا.
+- التفاصيل التنفيذية في `../docs/OTP_MVP_TEMPORARY_PLAN.md`؛ هذا المسار أيضًا غير منفذ حاليًا.
 
 ## المشاكل والموانع المفتوحة
 
