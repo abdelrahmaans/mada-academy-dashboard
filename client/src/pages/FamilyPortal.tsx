@@ -27,6 +27,7 @@ import { RoleScopeProvider } from "@/contexts/RoleScopeContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient, type ConsumerSessionRecord, type ConsumerStudentRecord, type FinanceInvoice } from "@/lib/apiClient";
 import { sessionsForStudent } from "@/lib/consumerScope";
+import { invoicesForStudent } from "@/lib/familyScope";
 import "@/components/RoleFoundation.css";
 
 type PortalTab = "overview" | "attendance" | "evaluations" | "invoices";
@@ -125,7 +126,7 @@ export default function FamilyPortal() {
     const applyInvoices = (items: ChildData[]) => items.map(item => {
       if (invoiceState === "loading") return { ...item, invoices: [], invoiceStatus: "جارٍ التحميل", invoiceDue: "يتم جلب بيانات الفواتير…" };
       if (invoiceState === "error") return { ...item, invoices: [], invoiceStatus: "غير متاح", invoiceDue: "تعذر تحميل بيانات الفواتير." };
-      const invoices = invoiceItems.filter(invoice => invoice.studentId === item.id);
+      const invoices = invoicesForStudent(invoiceItems, item.id);
       const outstanding = invoices.reduce((sum, invoice) => sum + invoice.remainingPiastres, 0);
       return { ...item, invoices, invoiceStatus: invoices.length === 0 ? "لا توجد فواتير" : outstanding > 0 ? "قسط متبقٍ" : "مدفوع", invoiceDue: invoices.find(invoice => invoice.remainingPiastres > 0)?.dueDate ?? "لا توجد مستحقات حالية" };
     });
