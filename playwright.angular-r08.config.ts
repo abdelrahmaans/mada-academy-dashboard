@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const apiUrl = 'http://127.0.0.1:4192';
-const webUrl = 'http://127.0.0.1:4203';
+const apiUrl = 'http://127.0.0.1:4191';
+const webUrl = 'http://127.0.0.1:4202';
 
 export default defineConfig({
   testDir: './e2e',
