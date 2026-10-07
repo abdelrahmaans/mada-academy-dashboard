@@ -75,6 +75,19 @@ export const routes: Routes = [
         (module) => module.SecretaryDashboardPage,
       ),
   },
+  {
+    path: 'student-portal',
+    canActivate: [authGuard, authorizationGuard],
+    data: {
+      authorization: {
+        roles: ['R09_STUDENT'],
+      },
+    },
+    loadComponent: () =>
+      import('./features/student/pages/student-portal-page').then(
+        (module) => module.StudentPortalPage,
+      ),
+  },
   { path: 'foundation', component: FoundationPage, pathMatch: 'full' },
   {
     path: 'shared-components',

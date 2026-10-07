@@ -16,7 +16,8 @@
     "format": "prettier --write .",
     "e2e": "playwright test",
     "e2e:angular-r03": "playwright test --config=playwright.angular-r03.config.ts",
-    "e2e:angular-r04": "playwright test --config=playwright.angular-r04.config.ts"
+    "e2e:angular-r04": "playwright test --config=playwright.angular-r04.config.ts",
+    "e2e:angular-r09": "playwright test --config=playwright.angular-r09.config.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

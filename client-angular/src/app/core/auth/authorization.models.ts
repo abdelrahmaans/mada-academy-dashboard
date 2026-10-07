@@ -44,7 +44,11 @@ export type PermissionKey =
   | 'marketing.write'
   | 'reports.read'
   | 'platform.read'
-  | 'academy.create';
+  | 'academy.create'
+  | 'consumer.students.read'
+  | 'consumer.self.read'
+  | 'consumer.sessions.read'
+  | 'consumer.evaluations.read';
 
 export interface AuthorizationPolicy {
   readonly roles?: readonly StaffRoleCode[];
@@ -124,6 +128,7 @@ export const ENDPOINT_PERMISSIONS: Readonly<Partial<Record<EndpointKey, readonly
   'finance.expenses': ['finance.expenses.read'],
   'finance.reports': ['reports.read'],
   'reports.operational': ['reports.read'],
+  'consumer.portal': ['consumer.sessions.read'],
   marketing: ['marketing.read'],
 };
 
