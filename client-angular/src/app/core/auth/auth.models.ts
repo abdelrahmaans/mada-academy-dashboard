@@ -1,3 +1,5 @@
+import type { PermissionKey, StaffRoleCode } from './authorization.models';
+
 export type AccountType = 'staff' | 'parent' | 'student';
 
 export interface AuthTokens {
@@ -10,12 +12,12 @@ export interface AuthTokens {
 export interface AuthMe {
   readonly id: string;
   readonly accountType: string;
-  readonly role: string;
+  readonly role: StaffRoleCode;
   readonly roleLabel?: string;
   readonly tenantId: string;
   readonly branchId?: string | null;
   readonly scopeLevel: string;
-  readonly permissions?: readonly string[];
+  readonly permissions?: readonly PermissionKey[];
   readonly user?: {
     readonly id: string;
     readonly displayName: string | null;

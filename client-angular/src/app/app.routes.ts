@@ -1,11 +1,18 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
+import { authorizationGuard } from './core/auth/authorization.guard';
 import { FoundationPage } from './pages/foundation/foundation-page';
 
 export const routes: Routes = [
   {
     path: '',
-    canActivate: [authGuard],
+    canActivate: [authGuard, authorizationGuard],
+    data: {
+      authorization: {
+        roles: ['R02_BRANCH_MANAGER'],
+        permissions: ['branch.read'],
+      },
+    },
     loadComponent: () =>
       import('./features/dashboard/pages/branch-dashboard-page').then(
         (module) => module.BranchDashboardPage,
@@ -23,7 +30,13 @@ export const routes: Routes = [
   },
   {
     path: 'head-instructors',
-    canActivate: [authGuard],
+    canActivate: [authGuard, authorizationGuard],
+    data: {
+      authorization: {
+        roles: ['R03_HEAD_INSTRUCTORS'],
+        permissions: ['sessions.read', 'evaluations.review'],
+      },
+    },
     loadComponent: () =>
       import('./features/head-instructors/pages/head-instructors-dashboard-page').then(
         (module) => module.HeadInstructorsDashboardPage,
