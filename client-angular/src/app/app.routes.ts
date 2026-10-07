@@ -42,6 +42,25 @@ export const routes: Routes = [
         (module) => module.HeadInstructorsDashboardPage,
       ),
   },
+  {
+    path: 'instructor',
+    canActivate: [authGuard, authorizationGuard],
+    data: {
+      authorization: {
+        roles: ['R04_INSTRUCTOR'],
+        permissions: [
+          'sessions.assigned.read',
+          'attendance.read',
+          'attendance.write',
+          'evaluations.write',
+        ],
+      },
+    },
+    loadComponent: () =>
+      import('./features/instructor/pages/instructor-dashboard-page').then(
+        (module) => module.InstructorDashboardPage,
+      ),
+  },
   { path: 'foundation', component: FoundationPage, pathMatch: 'full' },
   {
     path: 'shared-components',
