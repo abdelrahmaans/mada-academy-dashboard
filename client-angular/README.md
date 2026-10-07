@@ -15,6 +15,8 @@ pnpm build       # production build
 pnpm test        # Vitest
 ```
 
+The R03 Angular-to-backend E2E scenario is kept at the repository root because it starts both the seeded API and the Angular dev server. From the repository root, run `pnpm e2e:angular-r03`. It logs in as the seeded `R03_HEAD_INSTRUCTORS` account, loads the typed R03 resources, checks that the backend returns the role/branch scope, verifies that the client does not send `branchId`, and renders `/head-instructors` through the real HTTP path. The scenario requires the .NET SDK and Chromium.
+
 Keep this package and lockfile isolated from the React root. Root `pnpm check/test/build/e2e` continue to target React only.
 
 ## Shared UI preview
