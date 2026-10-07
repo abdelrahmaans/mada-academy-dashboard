@@ -1,13 +1,13 @@
 # Mada Academy — Project Status
 
-**As of:** 5 October 2026
-**Verified Git state:** `main` includes merged PRs #55, #56, #58, #61, #62, #63, #64, #65, #67, #68, #69, #70, and #71 and is pushed to origin.
+**As of:** 7 October 2026
+**Verified Git state:** `main` at `a6c43ed` includes merged PRs #55, #56, #58, #61, #62, #63, #64, #65, #67, #68, #69, #70, #71, #72, #73, #75, and #77 and is pushed to origin.
 **Latest delivery PR:** [PR #65 — extract FinanceDesk dialogs](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/65), merged successfully.
 **Stack:** React + Vite + TypeScript; ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions.
 
-## Parallel Angular client — foundation only
+## Parallel Angular client — foundation and shared UI (non-LIVE)
 
-An isolated `client-angular/` workspace has been bootstrapped with Angular 21.2, standalone routing, strict TypeScript, SCSS, Vitest, and zoneless change detection. It currently renders only an Arabic RTL foundation notice; it has no API integration or operational screens and is **not LIVE**. React in `client/` remains the reference client. See [`ANGULAR_FRONTEND_GUIDE.md`](ANGULAR_FRONTEND_GUIDE.md) for its architecture and security/parity workflow. This does not alter production infrastructure or deployment.
+An isolated `client-angular/` workspace has Angular 21.2, standalone routing, strict TypeScript, SCSS, Vitest, and zoneless change detection. Its current additions are presentation-only shared components and a static R02 visual review page at `/shared-components`; there is no API integration, auth flow, or operational screen, and it is **not LIVE**. React in `client/` remains the reference client and `main` remains the source of truth. Shared UI implementation is on `feat/angular-foundation` in [open PR #79](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/79). This does not alter production infrastructure or deployment. See [`ANGULAR_FRONTEND_GUIDE.md`](ANGULAR_FRONTEND_GUIDE.md) for architecture and security/parity boundaries.
 
 ## Executive summary
 

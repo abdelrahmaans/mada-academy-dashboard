@@ -1,0 +1,129 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+}
+
+.shared-preview {
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: 248px minmax(0, 1fr);
+  direction: rtl;
+  background: #f6f8fb;
+}
+.shared-preview__main {
+  min-width: 0;
+  min-height: 100vh;
+}
+.shared-preview__topbar {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  display: flex;
+  min-height: 76px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding-inline: 34px;
+  border-bottom: 1px solid #e9eef4;
+  background: rgb(255 255 255 / 92%);
+  backdrop-filter: blur(16px);
+}
+.shared-preview__topbar mada-button:first-child {
+  display: none;
+}
+.shared-preview__academy {
+  display: grid;
+  flex: 1;
+  gap: 3px;
+  min-width: 0;
+  color: #27364a;
+  font-size: 12px;
+}
+.shared-preview__academy strong {
+  font-size: 12px;
+}
+.shared-preview__academy small {
+  color: #78879a;
+  font-size: 10px;
+}
+.shared-preview__content {
+  width: min(100%, 1480px);
+  margin-inline: auto;
+  padding: 28px 34px 40px;
+}
+.shared-preview__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+.shared-preview__card-title {
+  margin: 0;
+  color: #26344a;
+  font-size: 14px;
+}
+.shared-preview__copy {
+  margin: 7px 0 0;
+  color: #7c889a;
+  font-size: 11px;
+  line-height: 1.8;
+}
+.shared-preview__actions,
+.shared-preview__badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+  margin-top: 16px;
+}
+.shared-preview__notice {
+  margin: 16px 0 0;
+  padding: 11px 13px;
+  border: 1px solid #e4e9ee;
+  border-radius: 10px;
+  color: #708090;
+  background: #fff;
+  font-size: 10px;
+  line-height: 1.8;
+}
+.shared-preview__retry-count {
+  text-align: start;
+}
+
+@media (max-width: 1050px) and (min-width: 781px) {
+  .shared-preview {
+    grid-template-columns: 78px minmax(0, 1fr);
+  }
+  .shared-preview__topbar {
+    padding-inline: 19px;
+  }
+  .shared-preview__content {
+    padding-inline: 20px;
+  }
+}
+
+@media (max-width: 780px) {
+  .shared-preview {
+    display: block;
+  }
+  .shared-preview__topbar {
+    min-height: 66px;
+    padding-inline: 14px;
+    gap: 10px;
+  }
+  .shared-preview__topbar mada-button:first-child {
+    display: inline-flex;
+  }
+  .shared-preview__content {
+    padding: 20px 14px 34px;
+  }
+  .shared-preview__grid {
+    grid-template-columns: 1fr;
+  }
+  .shared-preview__actions {
+    align-items: stretch;
+  }
+  .shared-preview__actions mada-button {
+    max-width: 100%;
+  }
+}

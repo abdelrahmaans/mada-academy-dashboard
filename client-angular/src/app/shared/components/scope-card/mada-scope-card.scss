@@ -1,0 +1,114 @@
+:host {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.mada-scope-card {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 46px;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 11px;
+  overflow: hidden;
+  border: 1px solid #dce9e9;
+  border-radius: 11px;
+  color: #34545b;
+  background: linear-gradient(110deg, #f8fcfb, #fff);
+  box-shadow: 0 4px 13px rgb(27 83 88 / 5%);
+}
+
+.mada-scope-card__icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #cce7e1;
+  border-radius: 8px;
+  color: #19786f;
+  background: #eaf7f4;
+}
+
+.mada-scope-card__copy {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+}
+.mada-scope-card__copy small {
+  color: #789096;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.mada-scope-card__copy strong {
+  color: #284b53;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.mada-scope-card__copy > span {
+  overflow: hidden;
+  color: #6d8489;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mada-scope-card__boundary,
+.mada-scope-card__demo {
+  display: inline-flex;
+  min-height: 22px;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.mada-scope-card__boundary {
+  color: #39736c;
+  background: #edf8f5;
+}
+.mada-scope-card__demo {
+  color: #8b6b26;
+  background: #fff6d9;
+}
+.mada-scope-card--compact {
+  min-height: 38px;
+  padding: 5px 9px;
+  border-radius: 10px;
+  box-shadow: none;
+}
+.mada-scope-card--compact .mada-scope-card__icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+}
+.mada-scope-card--compact .mada-scope-card__copy small {
+  display: none;
+}
+.mada-scope-card--compact .mada-scope-card__copy {
+  gap: 0 7px;
+}
+.mada-scope-card--compact .mada-scope-card__copy strong {
+  font-size: 10px;
+}
+.mada-scope-card--compact .mada-scope-card__copy > span {
+  font-size: 9px;
+}
+
+@media (max-width: 560px) {
+  :host,
+  .mada-scope-card {
+    width: 100%;
+  }
+  .mada-scope-card__boundary {
+    display: none;
+  }
+}

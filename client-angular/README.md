@@ -1,6 +1,6 @@
 # Mada Academy — Angular client
 
-This is the **parallel Angular frontend**. The React app in `../client/` remains the production/reference client while Angular foundations and feature parity are reviewed. This scaffold has no operational API calls and is not a live portal.
+This is the **parallel Angular frontend**. The React app in `../client/` remains the production/reference client while Angular foundations and feature parity are reviewed. The current shared UI gallery contains static visual examples only; this package has no operational API calls and is not a live portal.
 
 ## Requirements and commands
 
@@ -16,6 +16,10 @@ pnpm test        # Vitest
 ```
 
 Keep this package and lockfile isolated from the React root. Root `pnpm check/test/build/e2e` continue to target React only.
+
+## Shared UI preview
+
+Run `pnpm start`, then open `/shared-components` to inspect the reusable Mada sidebar, buttons, cards, badges, page header, feedback states, and display-scope card. The gallery uses illustrative R02 labels/counts and never calls the API. Review the source React surfaces and read [`src/app/shared/README.md`](src/app/shared/README.md) before reusing a component. This menu is not an authorization control.
 
 ## Read before implementation
 

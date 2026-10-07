@@ -1,0 +1,101 @@
+<div class="shared-preview" dir="rtl">
+  <mada-sidebar
+    [open]="menuOpen()"
+    ariaLabel="تنقل مدير الفرع — معاينة واجهة فقط"
+    roleLabel="مدير الفرع"
+    roleCode="R02"
+    homePath="/"
+    [sections]="sections"
+    [utilityLinks]="utilityLinks"
+    helpDescription="دليل تشغيل الفرع"
+    (closed)="closeMenu()"
+  />
+
+  <main class="shared-preview__main">
+    <header class="shared-preview__topbar">
+      <mada-button size="icon" variant="ghost" ariaLabel="فتح القائمة" (clicked)="openMenu()">
+        <svg lucideIcon="menu" [size]="21" aria-hidden="true"></svg>
+      </mada-button>
+      <span class="shared-preview__academy"
+        ><strong>أكاديمية مدى</strong><small>مدير الفرع · R02 · معاينة واجهة فقط</small></span
+      >
+      <mada-badge [tone]="'warning'">معاينة غير LIVE</mada-badge>
+    </header>
+
+    <div class="shared-preview__content">
+      <mada-page-header
+        eyebrow="Angular shared UI · مطابقة Mada React"
+        title="مكتبة مكونات مدى المشتركة"
+        description="عناصر عرضية قابلة لإعادة الاستخدام؛ بيانات القائمة مثال توضيحي لـR02 فقط، وليست مصدر صلاحيات."
+      >
+        <div madaPageActions>
+          <mada-button variant="secondary" routerLink="/">العودة إلى صفحة التأسيس</mada-button>
+        </div>
+      </mada-page-header>
+
+      <mada-scope-card
+        [level]="'branch'"
+        scopeName="فرع تجريبي — قيمة توضيحية"
+        tenantName="أكاديمية مدى"
+        [demo]="true"
+      />
+
+      <div class="shared-preview__grid">
+        <mada-card label="مكوّنات الإجراءات والأزرار">
+          <h2 class="shared-preview__card-title">الأزرار</h2>
+          <p class="shared-preview__copy">
+            ترتيب الإجراءات وارتفاعها ودرجات اللون مشتق من أزرار React.
+          </p>
+          <div class="shared-preview__actions">
+            <mada-button variant="primary">إجراء أساسي</mada-button>
+            <mada-button variant="secondary">إجراء ثانوي</mada-button>
+            <mada-button variant="danger">إجراء خطر</mada-button>
+            <mada-button variant="ghost" size="compact">إجراء هادئ</mada-button>
+            <mada-button size="icon" variant="ghost" ariaLabel="إجراء بأيقونة فقط">
+              <svg lucideIcon="circle-help" [size]="18" aria-hidden="true"></svg>
+            </mada-button>
+            <mada-button [disabled]="true">غير متاح</mada-button>
+          </div>
+        </mada-card>
+
+        <mada-card label="الحالات والوسوم">
+          <h2 class="shared-preview__card-title">الحالات والـbadges</h2>
+          <p class="shared-preview__copy">
+            الترجمة العربية للحالة افتراضية، ويمكن تحديد label من المجال عند الحاجة.
+          </p>
+          <div class="shared-preview__badges">
+            <mada-status-badge status="ACTIVE" />
+            <mada-status-badge status="PENDING_APPROVAL" />
+            <mada-status-badge status="REJECTED" />
+            <mada-status-badge status="UNMAPPED_STATUS" labelOverride="حالة مخصصة" />
+            <mada-badge [tone]="'info'">معلومة</mada-badge>
+          </div>
+        </mada-card>
+
+        <mada-card label="أسطح البطاقات" [surface]="'tile'" [padding]="'compact'">
+          <h2 class="shared-preview__card-title">بطاقة مختصرة</h2>
+          <p class="shared-preview__copy">
+            تدعم البطاقة panel وtile وflat وحشوة مضغوطة أو بلا حشوة.
+          </p>
+        </mada-card>
+
+        <mada-card label="Feedback state">
+          <mada-feedback-state
+            [kind]="'error'"
+            title="حالة خطأ توضيحية"
+            description="لا يوجد طلب API في هذه المعاينة؛ الزر يوضح فقط حدث إعادة المحاولة."
+            (retry)="recordRetry()"
+          />
+          <p class="shared-preview__copy shared-preview__retry-count">
+            محاولات المعاينة: {{ retryCount() }}
+          </p>
+        </mada-card>
+      </div>
+
+      <p class="shared-preview__notice">
+        التنقل، النطاق والحالات في هذه الصفحة أمثلة UI ثابتة؛ لا تمنح الوصول ولا تعرض سجلات حقيقية.
+        التفويض وعزل الفرع/الأكاديمية يظلان مسؤولية الخادم.
+      </p>
+    </div>
+  </main>
+</div>

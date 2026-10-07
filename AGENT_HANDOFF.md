@@ -74,7 +74,7 @@ Completed vertical slices include authentication/JWT, role and scope guards, stu
 
 Known boundaries are production secret/storage configuration, deployed staging smoke, backup/restore, real SMS delivery, password recovery, finer Finance pending states, and fully live Marketing APIs. These are documented in `PROJECT_STATUS.md` and `NEXT_PHASE_PLAN.md`.
 
-Angular is an independent foundation only; React remains the source of truth until feature parity and acceptance are explicitly completed. See `ANGULAR_FRONTEND_GUIDE.md` for structure, signals/OnPush, API contracts, security boundaries, and the parallel migration process. Angular must not be presented as LIVE or replace production deployment in this phase.
+Angular is an independent parallel client; its current shared UI components and `/shared-components` visual review page are presentation-only, not an operational or LIVE surface. React remains the source of truth until feature parity and acceptance are explicitly completed. See `ANGULAR_FRONTEND_GUIDE.md` for the component inventory, structure, signals/OnPush, API contracts, security boundaries, and parallel migration process. Sidebar navigation does not authorize requests, and Angular must not replace production deployment in this phase. The dedicated branch/PR for this work is `feat/angular-foundation` / PR #79.
 
 ## Validation
 

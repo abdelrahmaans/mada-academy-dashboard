@@ -1,3 +1,5 @@
+@use './app/shared/components/sidebar/mada-sidebar';
+
 :root {
   color-scheme: light;
   --mada-ink: #14243a;
@@ -22,29 +24,32 @@
 * {
   box-sizing: border-box;
 }
-
 html {
-  min-width: 320px;
+  min-width: 360px;
   min-height: 100%;
   background: var(--mada-page);
 }
-
 body {
-  min-width: 320px;
+  min-width: 360px;
   min-height: 100vh;
   margin: 0;
   color: var(--mada-ink);
   background: var(--mada-page);
   direction: rtl;
 }
-
+mada-sidebar {
+  display: block;
+  min-width: 0;
+}
 button,
 input,
 select,
 textarea {
   font: inherit;
 }
-
+button:not(:disabled) {
+  cursor: pointer;
+}
 :focus-visible {
   outline: 3px solid rgb(13 148 136 / 35%);
   outline-offset: 2px;

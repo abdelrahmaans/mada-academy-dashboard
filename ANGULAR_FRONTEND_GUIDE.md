@@ -4,7 +4,7 @@
 
 ## 1. حالة المشروع والنطاق
 
-أنشئ `client-angular/` كتطبيق مستقل من Angular CLI. الموجود الآن **تأسيس تقني فقط**: standalone routing، عرض عربي RTL، إشارات (signals)، OnPush، وVitest. لا توجد مصادقة أو شاشات تشغيل أو طلبات API في هذا الـscaffold؛ لا تعرضه كواجهة LIVE ولا تملأه ببيانات demo توحي بأنها فعلية.
+أنشئ `client-angular/` كتطبيق مستقل من Angular CLI. يحتوي التأسيس التقني على standalone routing، عرض عربي RTL، إشارات (signals)، OnPush، وVitest، إضافةً إلى مكتبة عرضية صغيرة في `src/app/shared/components/` وصفحة معاينة ثابتة `/shared-components`. لا توجد مصادقة أو شاشات تشغيل أو طلبات API؛ لا تعرض Angular كواجهة LIVE ولا تملأه ببيانات demo توحي بأنها فعلية.
 
 الـbackend المشترك هو ASP.NET Core 10 مع PostgreSQL وEF Core وJWT. لا تنشأ قاعدة بيانات ثانية ولا API بديلة للنسخة Angular. أي إضافة/تغيير على عقد الـAPI يخضع لمراجعة الخادم والعميلين React وAngular والاختبارات ذات الصلة.
 
@@ -50,6 +50,10 @@ client-angular/
 ```
 
 التنظيم حسب المجال لا حسب نسخ الشاشات. المرشحون: `identity`, `academy`, `operations`, `scheduling`, `evaluations`, `finance`, `consumers`, `marketing`. داخل المجال استخدم `data-access` لعقود/طلبات المجال، `models` للأنواع، `pages` للشاشات، و`ui` لعناصر المجال. ضع فقط العناصر القابلة لإعادة الاستخدام فعلًا في `shared/`، وأبقِ منطق المجال خارج القالب والمكونات العامة.
+
+### Shared UI الحالية (كلها عرضية وغير حية)
+
+`src/app/shared/components/` يصدّر `MadaSidebar`، `MadaButton`، `MadaCard`، `MadaBadge`/`MadaStatusBadge`، `MadaPageHeader`، `MadaFeedbackState`، و`MadaScopeCard`. كل مكوّن standalone و`OnPush` ويستخدم Inputs/Outputs صريحة؛ تفاصيل الواجهة في [`src/app/shared/README.md`](client-angular/src/app/shared/README.md)، ومعاينة العناصر الثابتة على `/shared-components`. الـsidebar يستقبل قوائم role-specific من المستهلك، وأوامر مثل الخروج تخرج كـevent؛ لا يقرر صلاحيات أو scope ولا ينفذ logout/API. حتى الآن معاينة R02 فقط، وأسطح R08/R09 مختلفة وتتطلب مطابقة مستقلة قبل إعادة استخدام المظهر.
 
 استخدم standalone components وtyped reactive forms عند وجود نماذج، route-level lazy loading للمناطق الكبيرة، وفصل التحميل والخطأ والفراغ والـforbidden بدل إظهار قوائم فارغة مضللة. لا تستنسخ شجرة React أو مكوناتها حرفيًا؛ حافظ على سلوك المنتج وعلامته، لا على قيود تقنية قديمة.
 
@@ -112,4 +116,4 @@ React يبقى المرجع العملي والمصدر عند أي التباس
 
 ## 10. الوضع الحالي والخطوة التالية
 
-المرحلة التأسيسية تتضمن صفحة عربية معلنة بوضوح أنها غير متصلة ببيانات LIVE، الإعدادات والاختبارات ودليل التوازي. الخطوة التالية ليست افتراضًا ضمن هذا التغيير: الاتفاق على شريحة Angular الأولى ومصفوفة التكافؤ قبل بدء auth أو أي mutation. مرجع الحالة والخطة التفصيلية يظل [`PROJECT_STATUS.md`](PROJECT_STATUS.md) و[`NEXT_PHASE_PLAN.md`](NEXT_PHASE_PLAN.md).
+المرحلة الحالية تتضمن صفحة تأسيس عربية، مكتبة shared UI أولية واختبار معاينة، وكلها غير متصلة ببيانات LIVE. الخطوة التالية هي اختيار شريحة تشغيلية صغيرة ومصفوفة تكافؤ React↔Angular قبل بدء auth أو أي mutation؛ لا تعني مكتبة العرض قبول التكافؤ. مرجع الحالة والخطة التفصيلية يظل [`PROJECT_STATUS.md`](PROJECT_STATUS.md) و[`NEXT_PHASE_PLAN.md`](NEXT_PHASE_PLAN.md).

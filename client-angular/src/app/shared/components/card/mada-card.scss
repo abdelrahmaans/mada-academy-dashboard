@@ -1,0 +1,41 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.mada-card {
+  min-width: 0;
+  border: 1px solid var(--mada-line, #e8edf2);
+  color: var(--mada-ink, #14243a);
+  background: var(--mada-paper, #fff);
+}
+
+.mada-card--panel {
+  border-color: #e2eaf0;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgb(21 46 67 / 6%);
+}
+
+.mada-card--tile {
+  border-color: #e7edf1;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgb(15 23 42 / 3%);
+}
+
+.mada-card--flat {
+  border-radius: 13px;
+  box-shadow: none;
+}
+
+.mada-card--panel,
+.mada-card--tile {
+  padding: 20px;
+}
+
+.mada-card--compact {
+  padding: 13px;
+}
+
+.mada-card--no-padding {
+  padding: 0;
+}

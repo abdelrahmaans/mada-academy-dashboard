@@ -1,0 +1,24 @@
+<section
+  class="mada-feedback-state"
+  [class.mada-feedback-state--loading]="kind() === 'loading'"
+  [class.mada-feedback-state--empty]="kind() === 'empty'"
+  [class.mada-feedback-state--error]="kind() === 'error'"
+  [class.mada-feedback-state--locked]="kind() === 'locked'"
+  [class.mada-feedback-state--success]="kind() === 'success'"
+  [attr.role]="kind() === 'error' ? 'alert' : 'status'"
+  [attr.aria-live]="kind() === 'error' ? 'assertive' : 'polite'"
+>
+  @if (kind() === 'loading') {
+    <span class="mada-feedback-state__spinner" aria-hidden="true"></span>
+  }
+  <strong>{{ title() }}</strong>
+  @if (description()) {
+    <span class="mada-feedback-state__description">{{ description() }}</span>
+  }
+  @if (kind() === 'error') {
+    <mada-button variant="secondary" size="compact" (clicked)="retry.emit()">
+      {{ retryLabel() }}
+    </mada-button>
+  }
+  <ng-content select="[madaFeedbackAction]" />
+</section>

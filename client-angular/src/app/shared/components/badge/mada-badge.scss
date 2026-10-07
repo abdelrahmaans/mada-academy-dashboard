@@ -1,0 +1,49 @@
+:host {
+  display: inline-flex;
+  min-width: 0;
+}
+
+.mada-badge {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 22px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 3px 9px;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mada-badge--neutral {
+  border-color: #e2e8f0;
+  color: #59677b;
+  background: #f6f8fb;
+}
+.mada-badge--success {
+  border-color: #cdeade;
+  color: #137356;
+  background: #ecf8f1;
+}
+.mada-badge--warning {
+  border-color: #f2dfb2;
+  color: #8b6b26;
+  background: #fff6d9;
+}
+.mada-badge--danger {
+  border-color: #f0d1d2;
+  color: #a0444e;
+  background: #fff0f1;
+}
+.mada-badge--info {
+  border-color: #cce4ef;
+  color: #286780;
+  background: #eff8fc;
+}

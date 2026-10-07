@@ -155,3 +155,10 @@
 - React في `client/` يظل المرجع والمصدر التشغيلي؛ Angular الحالي لا يتصل بالـAPI ولا يحتوي أسطح LIVE، ولا يتغير النشر أو البنية الإنتاجية.
 - يحدد [`ANGULAR_FRONTEND_GUIDE.md`](ANGULAR_FRONTEND_GUIDE.md) الهيكل، إشارات الحالة وOnPush، العربية/RTL، عقود auth الحالية، حدود R00–R09، استراتيجية التكافؤ والأمن.
 - أول تنفيذ وظيفي لاحق يتطلب اختيار شريحة صغيرة ومصفوفة تتبع React↔Angular؛ أي تغييرات تفويض/API تتطلب اختبارات backend integration، ولا تعتبر route guards حدًا أمنيًا.
+
+### Angular shared UI foundation — 7 October 2026 (PR #79, open)
+
+- تمت إضافة مكتبة عرضية أولية في `client-angular/src/app/shared/components/`: sidebar يقبل تنقل الأدوار وإجراءات parent events، button، card، badge/status badge، page header، feedback states، وscope card.
+- تمت مطابقة السطح الداكن الافتراضي للـsidebar مع R02 React وإبقاء إعداد brand/academy role-specific؛ معاينة `/shared-components` ثابتة وتعلن أنها غير LIVE، وتستخدم labels/counts توضيحية فقط.
+- الاختبارات تشمل المكونات والـmobile close والـactive route وevents والـRTL/preview؛ لا توجد API/auth/backend/production تغييرات.
+- الاستمرار على فرع Angular المستقل `feat/angular-foundation` ومراجعة [PR #79](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/79). React في `client/` و`main` يظلان المصدر المرجعي. الخطوة التالية التشغيلية تُختار منفصلة وفق مصفوفة التكافؤ، ولا تستنتج صلاحيات من عناصر القائمة.
