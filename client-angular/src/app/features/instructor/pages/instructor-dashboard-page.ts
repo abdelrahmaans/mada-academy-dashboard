@@ -1,35 +1,287 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { AuthService } from '../../../core/auth/auth.service';
+import { switchMap } from 'rxjs';
 import { InstructorApiService } from '../data-access/instructor-api.service';
 import { InstructorDataService } from '../data-access/instructor-data.service';
-import type { AttendanceInput, AttendanceStatus, InstructorAttendance, InstructorSession, InstructorStudent, SessionEvaluation, EvaluationInput } from '../models/instructor.models';
+import type {
+  AttendanceInput,
+  AttendanceStatus,
+  InstructorAttendance,
+  InstructorSession,
+  InstructorStudent,
+  SessionEvaluation,
+} from '../models/instructor.models';
 
-interface EvaluationRow { readonly studentId: string; readonly studentName: string; readonly score: number | null; readonly notes: string; readonly status: SessionEvaluation['status'] | 'NOT_STARTED'; readonly reviewNote: string | null; }
-
-@Component({ selector: 'mada-instructor-dashboard-page', standalone: true, imports: [RouterLink, DatePipe], templateUrl: './instructor-dashboard-page.html', styleUrl: './instructor-dashboard-page.scss', changeDetection: ChangeDetectionStrategy.OnPush })
+@Component({
+  selector: 'mada-instructor-dashboard-page',
+  standalone: true,
+  imports: [RouterLink, DatePipe, FormsModule],
+  templateUrl: './instructor-dashboard-page.html',
+  styleUrl: './instructor-dashboard-page.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
 export class InstructorDashboardPage {
-  private readonly dataService = inject(InstructorDataService); private readonly api = inject(InstructorApiService); private readonly auth = inject(AuthService);
-  readonly loading = signal(true); readonly error = signal<string | null>(null); readonly sessions = signal<readonly InstructorSession[]>([]); readonly students = signal<readonly InstructorStudent[]>([]); readonly selectedSessionId = signal<string | null>(null); readonly attendance = signal<InstructorAttendance | null>(null); readonly evaluations = signal<readonly SessionEvaluation[]>([]); readonly attendanceLoading = signal(false); readonly evaluationsLoading = signal(false); readonly savingAttendance = signal(false); readonly savingEvaluations = signal(false); readonly submittingEvaluations = signal(false); readonly completingSession = signal(false); readonly requestingSubstitution = signal(false); readonly saved = signal(false); readonly evaluationSaved = signal(false); readonly evaluationSubmitted = signal(false); readonly substitutionReason = signal(''); readonly substitutionSent = signal(false);
-  readonly selectedSession = computed(() => this.sessions().find((item) => item.id === this.selectedSessionId()) ?? null);
-  readonly attendanceStats = computed(() => { const items = this.attendance()?.items ?? []; return { present: items.filter((item) => item.status === 'PRESENT').length, late: items.filter((item) => item.status === 'LATE').length, absent: items.filter((item) => item.status === 'ABSENT' || item.status === 'EXCUSED').length, unmarked: items.filter((item) => item.status === 'UNMARKED').length }; });
-  readonly evaluationRows = computed<readonly EvaluationRow[]>(() => { const byStudent = new Map(this.evaluations().map((item) => [item.studentId, item])); return (this.attendance()?.items ?? []).map((student) => { const evaluation = byStudent.get(student.studentId); return { studentId: student.studentId, studentName: student.studentName, score: evaluation?.score ?? null, notes: evaluation?.notes ?? '', status: evaluation?.status ?? 'NOT_STARTED', reviewNote: evaluation?.reviewNote ?? null }; }); });
-  readonly canComplete = computed(() => { const session = this.selectedSession(); return !!session && (session.status === 'SCHEDULED' || session.status === 'IN_PROGRESS') && new Date(session.endAt).getTime() <= Date.now() && this.attendanceStats().unmarked === 0 && !this.completingSession(); });
-  readonly canRequestSubstitution = computed(() => { const session = this.selectedSession(); const actor = this.auth.me()?.id; return !!session && !!actor && session.instructorId === actor && session.status !== 'COMPLETED' && session.status !== 'CANCELLED' && !this.requestingSubstitution() && !this.substitutionSent(); });
+  private readonly dataService = inject(InstructorDataService);
+  private readonly api = inject(InstructorApiService);
 
-  constructor() { this.load(); }
-  load(): void { this.loading.set(true); this.error.set(null); this.dataService.loadWorkspace().subscribe({ next: (workspace) => { this.sessions.set(workspace.sessions); this.students.set(workspace.students); this.loading.set(false); const first = workspace.sessions[0]; if (first) this.selectSession(first.id); else this.resetSessionState(); }, error: (error: Error) => { this.error.set(error.message || 'تعذر تحميل جلسات المدرب'); this.loading.set(false); } }); }
-  selectSession(sessionId: string): void { this.selectedSessionId.set(sessionId); this.resetSessionState(); this.attendanceLoading.set(true); this.evaluationsLoading.set(true); this.api.getAttendance(sessionId).subscribe({ next: (value) => { this.attendance.set(value); this.attendanceLoading.set(false); }, error: (error: Error) => { this.error.set(error.message || 'تعذر تحميل حضور الجلسة'); this.attendanceLoading.set(false); } }); this.api.listEvaluations(sessionId).subscribe({ next: (value) => { this.evaluations.set(value); this.evaluationsLoading.set(false); }, error: (error: Error) => { this.error.set(error.message || 'تعذر تحميل تقييمات الجلسة'); this.evaluationsLoading.set(false); } }); }
-  setAttendance(studentId: string, status: AttendanceStatus): void { if (status === 'UNMARKED') return; const current = this.attendance(); if (!current || current.sessionStatus === 'COMPLETED' || current.sessionStatus === 'CANCELLED') return; this.attendance.set({ ...current, items: current.items.map((item) => item.studentId === studentId ? { ...item, status, lateMinutes: status === 'LATE' ? (item.lateMinutes ?? 1) : null } : item) }); this.saved.set(false); }
-  saveAttendance(): void { const session = this.selectedSession(); const current = this.attendance(); if (!session || !current || this.attendanceStats().unmarked > 0 || this.savingAttendance()) { this.error.set('يجب تسجيل حالة كل طالب قبل الحفظ'); return; } const records: AttendanceInput[] = current.items.map((item) => ({ studentId: item.studentId, status: item.status as Exclude<AttendanceStatus, 'UNMARKED'>, lateMinutes: item.status === 'LATE' ? (item.lateMinutes ?? 1) : null })); this.savingAttendance.set(true); this.error.set(null); this.api.saveAttendance(session.id, records).subscribe({ next: (value) => { this.attendance.set(value); this.saved.set(true); this.savingAttendance.set(false); }, error: (error: Error) => { this.error.set(error.message || 'تعذر حفظ الحضور'); this.savingAttendance.set(false); } }); }
-  setEvaluationScore(studentId: string, value: string): void { const score = value.trim() === '' ? null : Number(value); if (score !== null && (!Number.isFinite(score) || score < 0 || score > 100)) return; this.updateEvaluation(studentId, { score }); }
-  setEvaluationNotes(studentId: string, notes: string): void { this.updateEvaluation(studentId, { notes }); }
-  private updateEvaluation(studentId: string, patch: Partial<Pick<EvaluationRow, 'score' | 'notes'>>): void { const existing = this.evaluations().find((item) => item.studentId === studentId); const next: SessionEvaluation = { studentId, score: patch.score !== undefined ? patch.score : existing?.score ?? null, notes: patch.notes !== undefined ? patch.notes : existing?.notes ?? null, status: existing?.status ?? 'DRAFT', reviewNote: existing?.reviewNote ?? null }; this.evaluations.set([...this.evaluations().filter((item) => item.studentId !== studentId), next]); this.evaluationSaved.set(false); this.evaluationSubmitted.set(false); }
-  saveEvaluations(): void { const session = this.selectedSession(); if (!session || !this.evaluationRows().length || this.savingEvaluations() || this.submittingEvaluations()) return; const items: EvaluationInput[] = this.evaluationRows().map((item) => ({ studentId: item.studentId, score: item.score, notes: item.notes || null })); this.savingEvaluations.set(true); this.error.set(null); this.api.saveEvaluations(session.id, items).subscribe({ next: () => { this.savingEvaluations.set(false); this.evaluationSaved.set(true); }, error: (error: Error) => { this.error.set(error.message || 'تعذر حفظ مسودات التقييم'); this.savingEvaluations.set(false); } }); }
-  submitEvaluations(): void { const session = this.selectedSession(); const rows = this.evaluationRows(); if (!session || !rows.length || rows.some((item) => item.score === null || !item.notes.trim()) || this.submittingEvaluations() || this.savingEvaluations()) { this.error.set('يجب إدخال الدرجة والملاحظة لكل طالب قبل الإرسال'); return; } this.submittingEvaluations.set(true); this.error.set(null); this.api.submitEvaluations(session.id, rows.map((item) => item.studentId)).subscribe({ next: () => { this.submittingEvaluations.set(false); this.evaluationSubmitted.set(true); this.evaluations.set(this.evaluations().map((item) => ({ ...item, status: 'SUBMITTED' as const }))); }, error: (error: Error) => { this.error.set(error.message || 'تعذر إرسال التقييمات للمراجعة'); this.submittingEvaluations.set(false); } }); }
-  completeSession(): void { const session = this.selectedSession(); if (!session || !this.canComplete()) return; this.completingSession.set(true); this.error.set(null); this.api.completeSession(session.id).subscribe({ next: (result) => { this.sessions.set(this.sessions().map((item) => item.id === session.id ? { ...item, status: result.status, completedAt: result.completedAt } : item)); this.attendance.update((current) => current ? { ...current, sessionStatus: result.status } : current); this.completingSession.set(false); }, error: (error: Error) => { this.error.set(error.message || 'تعذر إنهاء الجلسة'); this.completingSession.set(false); } }); }
-  setSubstitutionReason(reason: string): void { this.substitutionReason.set(reason); }
-  requestSubstitution(): void { const session = this.selectedSession(); const reason = this.substitutionReason().trim(); if (!session || !reason || !this.canRequestSubstitution()) { this.error.set('اكتب سبب طلب الاستبدال أولًا'); return; } this.requestingSubstitution.set(true); this.error.set(null); this.api.requestSubstitution(session.id, reason).subscribe({ next: () => { this.requestingSubstitution.set(false); this.substitutionSent.set(true); }, error: (error: Error) => { this.error.set(error.message || 'تعذر إرسال طلب الاستبدال'); this.requestingSubstitution.set(false); } }); }
-  private resetSessionState(): void { this.attendance.set(null); this.evaluations.set([]); this.saved.set(false); this.evaluationSaved.set(false); this.evaluationSubmitted.set(false); this.substitutionReason.set(''); this.substitutionSent.set(false); }
+  readonly loading = signal(true);
+  readonly error = signal<string | null>(null);
+  readonly feedback = signal<string | null>(null);
+  readonly sessions = signal<readonly InstructorSession[]>([]);
+  readonly students = signal<readonly InstructorStudent[]>([]);
+  readonly selectedSessionId = signal<string | null>(null);
+  readonly attendance = signal<InstructorAttendance | null>(null);
+  readonly attendanceLoading = signal(false);
+  readonly savingAttendance = signal(false);
+  readonly saved = signal(false);
+  readonly evaluations = signal<readonly SessionEvaluation[]>([]);
+  readonly evaluationsLoading = signal(false);
+  readonly savingEvaluation = signal(false);
+  readonly submittingEvaluation = signal(false);
+  readonly selectedStudentId = signal<string | null>(null);
+  readonly evaluationScore = signal<number | null>(null);
+  readonly evaluationNotes = signal('');
+  readonly substitutionReason = signal('');
+  readonly substitutionLoading = signal(false);
+  readonly substitutionSent = signal(false);
+
+  readonly selectedSession = computed(
+    () => this.sessions().find((item) => item.id === this.selectedSessionId()) ?? null,
+  );
+  readonly selectedStudent = computed(
+    () => this.attendance()?.items.find((item) => item.studentId === this.selectedStudentId()) ?? null,
+  );
+  readonly selectedEvaluation = computed(
+    () => this.evaluations().find((item) => item.studentId === this.selectedStudentId()) ?? null,
+  );
+  readonly canEditEvaluation = computed(() => {
+    const status = this.selectedEvaluation()?.status;
+    return status !== 'SUBMITTED' && status !== 'PUBLISHED';
+  });
+  readonly canSubmitEvaluation = computed(
+    () => this.evaluationScore() !== null && this.evaluationNotes().trim().length > 0,
+  );
+  readonly canCompleteSession = computed(() => {
+    const session = this.selectedSession();
+    return Boolean(
+      session &&
+        session.status !== 'COMPLETED' &&
+        session.status !== 'CANCELLED' &&
+        this.attendance() &&
+        this.attendanceStats().unmarked === 0 &&
+        new Date(session.endAt).getTime() <= Date.now(),
+    );
+  });
+  readonly attendanceStats = computed(() => {
+    const items = this.attendance()?.items ?? [];
+    return {
+      present: items.filter((item) => item.status === 'PRESENT').length,
+      late: items.filter((item) => item.status === 'LATE').length,
+      absent: items.filter((item) => item.status === 'ABSENT' || item.status === 'EXCUSED').length,
+      unmarked: items.filter((item) => item.status === 'UNMARKED').length,
+    };
+  });
+
+  constructor() {
+    this.load();
+  }
+
+  load(): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.feedback.set(null);
+    this.dataService.loadWorkspace().subscribe({
+      next: (workspace) => {
+        this.sessions.set(workspace.sessions);
+        this.students.set(workspace.students);
+        const first = workspace.sessions[0];
+        if (first) this.selectSession(first.id);
+        this.loading.set(false);
+      },
+      error: (error: Error) => {
+        this.error.set(error.message || 'تعذر تحميل جلسات المدرب');
+        this.loading.set(false);
+      },
+    });
+  }
+
+  selectSession(sessionId: string): void {
+    this.selectedSessionId.set(sessionId);
+    this.feedback.set(null);
+    this.saved.set(false);
+    this.substitutionReason.set('');
+    this.substitutionSent.set(false);
+    this.attendanceLoading.set(true);
+    this.evaluationsLoading.set(true);
+    this.api.getAttendance(sessionId).subscribe({
+      next: (value) => {
+        this.attendance.set(value);
+        if (!this.selectedStudentId() || !value.items.some((item) => item.studentId === this.selectedStudentId())) {
+          this.selectedStudentId.set(value.items[0]?.studentId ?? null);
+        }
+        this.attendanceLoading.set(false);
+        this.syncEvaluationForm();
+      },
+      error: (error: Error) => {
+        this.error.set(error.message || 'تعذر تحميل حضور الجلسة');
+        this.attendanceLoading.set(false);
+      },
+    });
+    this.api.listEvaluations(sessionId).subscribe({
+      next: (value) => {
+        this.evaluations.set(value);
+        this.evaluationsLoading.set(false);
+        this.syncEvaluationForm();
+      },
+      error: (error: Error) => {
+        this.error.set(error.message || 'تعذر تحميل تقييمات الجلسة');
+        this.evaluationsLoading.set(false);
+      },
+    });
+  }
+
+  selectStudent(studentId: string): void {
+    this.selectedStudentId.set(studentId);
+    this.syncEvaluationForm();
+  }
+
+  private syncEvaluationForm(): void {
+    const item = this.selectedEvaluation();
+    this.evaluationScore.set(item?.score ?? null);
+    this.evaluationNotes.set(item?.notes ?? '');
+  }
+
+  setAttendance(studentId: string, status: AttendanceStatus): void {
+    if (status === 'UNMARKED') return;
+    const current = this.attendance();
+    if (!current) return;
+    this.attendance.set({
+      ...current,
+      items: current.items.map((item) =>
+        item.studentId === studentId
+          ? { ...item, status, lateMinutes: status === 'LATE' ? (item.lateMinutes ?? 1) : null }
+          : item,
+      ),
+    });
+    this.saved.set(false);
+  }
+
+  saveAttendance(): void {
+    const session = this.selectedSession();
+    const current = this.attendance();
+    if (!session || !current || this.attendanceStats().unmarked > 0) {
+      this.error.set('يجب تسجيل حالة كل طالب قبل الحفظ');
+      return;
+    }
+    const records: AttendanceInput[] = current.items.map((item) => ({
+      studentId: item.studentId,
+      status: item.status as Exclude<AttendanceStatus, 'UNMARKED'>,
+      lateMinutes: item.status === 'LATE' ? (item.lateMinutes ?? 1) : null,
+    }));
+    this.savingAttendance.set(true);
+    this.error.set(null);
+    this.api.saveAttendance(session.id, records).subscribe({
+      next: (value) => {
+        this.attendance.set(value);
+        this.saved.set(true);
+        this.savingAttendance.set(false);
+      },
+      error: (error: Error) => {
+        this.error.set(error.message || 'تعذر حفظ الحضور');
+        this.savingAttendance.set(false);
+      },
+    });
+  }
+
+  saveEvaluation(): void {
+    const session = this.selectedSession();
+    const studentId = this.selectedStudentId();
+    if (!session || !studentId || this.evaluationScore() === null || !this.evaluationNotes().trim()) {
+      this.error.set('أدخل الدرجة والملاحظة قبل حفظ التقييم');
+      return;
+    }
+    this.savingEvaluation.set(true);
+    this.error.set(null);
+    this.api.saveEvaluations(session.id, [{ studentId, score: this.evaluationScore(), notes: this.evaluationNotes().trim() }]).subscribe({
+      next: () => {
+        this.savingEvaluation.set(false);
+        this.reloadEvaluations(session.id, 'تم حفظ التقييم كمسودة');
+      },
+      error: (error: Error) => {
+        this.error.set(error.message || 'تعذر حفظ التقييم');
+        this.savingEvaluation.set(false);
+      },
+    });
+  }
+
+  submitEvaluation(): void {
+    const session = this.selectedSession();
+    const studentId = this.selectedStudentId();
+    if (!session || !studentId || !this.canSubmitEvaluation()) {
+      this.error.set('أكمل الدرجة والملاحظة قبل الإرسال للمراجعة');
+      return;
+    }
+    this.submittingEvaluation.set(true);
+    this.error.set(null);
+    this.api
+      .saveEvaluations(session.id, [{ studentId, score: this.evaluationScore(), notes: this.evaluationNotes().trim() }])
+      .pipe(switchMap(() => this.api.submitEvaluations(session.id, [studentId])))
+      .subscribe({
+        next: () => {
+        this.submittingEvaluation.set(false);
+        this.reloadEvaluations(session.id, 'تم إرسال التقييم لرئيس المدربين للمراجعة');
+        },
+        error: (error: Error) => {
+          this.error.set(error.message || 'تعذر إرسال التقييم للمراجعة');
+          this.submittingEvaluation.set(false);
+        },
+      });
+  }
+
+  completeSession(): void {
+    const session = this.selectedSession();
+    if (!session || !this.canCompleteSession()) return;
+    this.api.completeSession(session.id).subscribe({
+      next: () => {
+        this.sessions.update((items) => items.map((item) => item.id === session.id ? { ...item, status: 'COMPLETED' } : item));
+      },
+      error: (error: Error) => this.error.set(error.message || 'تعذر إتمام الجلسة'),
+    });
+  }
+
+  requestSubstitution(): void {
+    const session = this.selectedSession();
+    const reason = this.substitutionReason().trim();
+    if (!session || !reason) {
+      this.error.set('اكتب سبب طلب المدرب البديل أولًا');
+      return;
+    }
+    this.substitutionLoading.set(true);
+    this.error.set(null);
+    this.api.requestSubstitution(session.id, reason).subscribe({
+      next: () => {
+        this.substitutionLoading.set(false);
+        this.substitutionReason.set('');
+        this.substitutionSent.set(true);
+        this.feedback.set('تم إرسال طلب المدرب البديل للمراجعة');
+      },
+      error: (error: Error) => {
+        this.error.set(error.message || 'تعذر إرسال طلب المدرب البديل');
+        this.substitutionLoading.set(false);
+      },
+    });
+  }
+
+  private reloadEvaluations(sessionId: string, successMessage: string): void {
+    this.api.listEvaluations(sessionId).subscribe({
+      next: (items) => {
+        this.evaluations.set(items);
+        this.syncEvaluationForm();
+        this.feedback.set(successMessage);
+      },
+      error: (error: Error) => this.error.set(error.message || 'تعذر إعادة تحميل التقييمات'),
+    });
+  }
 }
