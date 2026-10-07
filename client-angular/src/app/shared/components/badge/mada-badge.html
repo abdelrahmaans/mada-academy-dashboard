@@ -1,0 +1,11 @@
+<span
+  class="mada-badge"
+  [class.mada-badge--neutral]="tone() === 'neutral'"
+  [class.mada-badge--success]="tone() === 'success'"
+  [class.mada-badge--warning]="tone() === 'warning'"
+  [class.mada-badge--danger]="tone() === 'danger'"
+  [class.mada-badge--info]="tone() === 'info'"
+  [attr.aria-label]="label()"
+>
+  <ng-content />
+</span>

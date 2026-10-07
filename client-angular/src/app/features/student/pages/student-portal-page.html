@@ -1,0 +1,68 @@
+<main class="student-page" dir="rtl">
+  <header class="student-page__header">
+    <div>
+      <a routerLink="/workspace" class="back-link">العودة لمساحة العمل</a>
+      <p class="eyebrow">R09 · الطالب</p>
+      <h1>مساحتي التعليمية</h1>
+      <p class="muted">بيانات القراءة المرتبطة بحساب الطالب فقط. لا توجد فواتير أو أدوات إدارية هنا.</p>
+    </div>
+    <div class="header-actions">
+      <button type="button" class="button button--secondary" (click)="load()" [disabled]="loading()">تحديث البيانات</button>
+      <button type="button" class="button button--quiet" (click)="logout()">تسجيل الخروج</button>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <section class="state-card"><strong>جاري تحميل ملف الطالب...</strong><span>يتم تطبيق رابط الحساب من الخادم.</span></section>
+  } @else if (profileError()) {
+    <section class="state-card state-card--error"><strong>تعذر تحميل ملف الطالب</strong><span>{{ profileError() }}</span><button class="button" type="button" (click)="load()">إعادة المحاولة</button></section>
+  } @else if (!student()) {
+    <section class="state-card"><strong>لا يوجد ملف طالب مرتبط</strong><span>تواصل مع الأكاديمية لربط الحساب بالطالب الصحيح.</span></section>
+  } @else {
+    <section class="scope-note"><strong>النطاق المطبق:</strong> {{ studentName() }} فقط · لا يتم اختيار الطالب أو الفرع من الواجهة.</section>
+    <section class="student-hero">
+      <div><p class="eyebrow">أهلًا بك</p><h2>{{ studentName() }}</h2><p>{{ student()?.branchName || 'الأكاديمية' }} · حساب الطالب المرتبط</p></div>
+      <span class="live-badge">LIVE · حساب الطالب</span>
+    </section>
+    @if (sessionsWarning()) { <div class="warning" role="status">تم تحميل ملف الطالب، لكن الجلسات غير متاحة مؤقتًا: {{ sessionsWarning() }} <button type="button" (click)="load()">إعادة المحاولة</button></div> }
+    <div class="stats-grid">
+      <article class="stat-card"><span>الجلسات المسجلة</span><strong>{{ sessions().length }}</strong></article>
+      <article class="stat-card"><span>الجلسات المكتملة</span><strong>{{ completedSessions() }}</strong></article>
+      <article class="stat-card"><span>نسبة الحضور</span><strong>{{ attendanceRate() }}%</strong></article>
+      <article class="stat-card"><span>آخر تقييم منشور</span><strong>{{ latestEvaluationScore() }}</strong></article>
+    </div>
+    <div class="content-grid">
+      <section class="panel next-panel">
+        <div class="panel__heading"><h2>الجلسة القادمة</h2><span>{{ nextSession() ? 'مجدولة' : 'لا توجد' }}</span></div>
+        @if (nextSession(); as session) { <strong class="session-title">{{ session.courseName || 'جلسة تعليمية' }}</strong><p>{{ session.startAt | date:'EEEE d MMMM · h:mm a' }}</p><p>{{ session.classroomName || 'قاعة غير محددة' }} · {{ session.branchName || student()?.branchName }}</p> } @else { <p class="muted">لا توجد جلسة قادمة مسجلة في نطاق حسابك.</p> }
+      </section>
+      <section class="panel evaluation-panel">
+        <div class="panel__heading"><h2>آخر تقييم منشور</h2><span>ظاهر بعد النشر</span></div>
+        @if (latestEvaluation(); as evaluation) { <strong class="score">{{ evaluation.score }} / 100</strong><p>{{ evaluation.notes || 'لا توجد ملاحظة إضافية.' }}</p> } @else { <p class="muted">لا توجد نتائج تقييم منشورة حتى الآن.</p> }
+      </section>
+    </div>
+    <section class="panel sessions-panel">
+      <div class="panel__heading"><div><h2>جلساتي</h2><p class="muted">الجلسات المرتبطة بملفك فقط.</p></div><span>{{ sessions().length }}</span></div>
+      @if (!sessions().length) { <p class="muted">لا توجد جلسات مسجلة لهذا الحساب.</p> }
+      @else {
+        <div class="session-list">
+          @for (session of sessions(); track session.sessionId) {
+            <article class="session-row">
+              <div>
+                <strong>{{ session.courseName || 'جلسة تعليمية' }}</strong>
+                <span>الجلسة {{ session.sessionNumber }} · {{ session.startAt | date:'medium' }}</span>
+              </div>
+              <div class="session-meta">
+                <span>{{ formatStatus(session.status) }}</span>
+                <small>الحضور: {{ formatAttendance(session.attendanceStatus) }}</small>
+                @if (session.score !== null && session.score !== undefined) {
+                  <small>التقييم: {{ session.score }}/100</small>
+                }
+              </div>
+            </article>
+          }
+        </div>
+      }
+    </section>
+  }
+</main>

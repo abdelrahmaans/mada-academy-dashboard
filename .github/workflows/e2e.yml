@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - "client/**"
+      - "client-angular/**"
       - "backend/**"
       - "e2e/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "playwright.config.ts"
+      - "playwright.angular-r09.config.ts"
       - "vite.config.*"
       - "tsconfig.json"
       - "index.html"
@@ -64,6 +66,12 @@ jobs:
 
       - name: Run Playwright E2E suite
         run: pnpm e2e
+
+      - name: Install Angular frontend dependencies
+        run: pnpm --dir client-angular install --frozen-lockfile
+
+      - name: Run Angular R09 E2E suite
+        run: pnpm e2e:angular-r09
 
       - name: Upload Playwright diagnostics
         if: always()

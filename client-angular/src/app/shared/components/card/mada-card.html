@@ -1,0 +1,11 @@
+<section
+  class="mada-card"
+  [class.mada-card--panel]="surface() === 'panel'"
+  [class.mada-card--tile]="surface() === 'tile'"
+  [class.mada-card--flat]="surface() === 'flat'"
+  [class.mada-card--compact]="padding() === 'compact'"
+  [class.mada-card--no-padding]="padding() === 'none'"
+  [attr.aria-label]="label()"
+>
+  <ng-content />
+</section>

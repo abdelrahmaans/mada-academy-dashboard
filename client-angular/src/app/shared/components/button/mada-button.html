@@ -1,0 +1,21 @@
+<button
+  class="mada-button"
+  [class.mada-button--primary]="variant() === 'primary'"
+  [class.mada-button--secondary]="variant() === 'secondary'"
+  [class.mada-button--danger]="variant() === 'danger'"
+  [class.mada-button--ghost]="variant() === 'ghost'"
+  [class.mada-button--compact]="size() === 'compact'"
+  [class.mada-button--icon]="size() === 'icon'"
+  [attr.type]="type()"
+  [attr.aria-label]="ariaLabel()"
+  [attr.aria-busy]="loading() ? 'true' : null"
+  [disabled]="unavailable()"
+  (click)="onClick($event)"
+>
+  <ng-content select="[madaButtonLeading]" />
+  @if (loading()) {
+    <span class="mada-button__spinner" aria-hidden="true"></span>
+  }
+  <span class="mada-button__content"><ng-content /></span>
+  <ng-content select="[madaButtonTrailing]" />
+</button>

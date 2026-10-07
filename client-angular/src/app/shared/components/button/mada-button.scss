@@ -1,0 +1,124 @@
+:host {
+  display: inline-flex;
+  min-width: 0;
+}
+
+.mada-button {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 39px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.16s ease;
+}
+
+.mada-button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.mada-button:focus-visible {
+  outline: 3px solid rgb(13 148 136 / 35%);
+  outline-offset: 2px;
+}
+.mada-button--primary {
+  border-color: var(--mada-teal-dark, #0b746b);
+  color: #fff;
+  background: var(--mada-teal-dark, #0b746b);
+  box-shadow: 0 5px 12px rgb(11 116 107 / 14%);
+}
+.mada-button--primary:hover:not(:disabled) {
+  border-color: #095f58;
+  background: #095f58;
+  box-shadow: 0 7px 16px rgb(11 116 107 / 21%);
+}
+.mada-button--secondary {
+  border-color: #e2e8f0;
+  color: #435168;
+  background: #fff;
+}
+.mada-button--secondary:hover:not(:disabled) {
+  border-color: #b7dcd7;
+  color: var(--mada-teal-dark, #0b746b);
+  background: #fbfefd;
+}
+.mada-button--danger {
+  border-color: #b45b62;
+  color: #fff;
+  background: #b45b62;
+}
+.mada-button--danger:hover:not(:disabled) {
+  border-color: #963f47;
+  background: #963f47;
+}
+.mada-button--ghost {
+  border-color: transparent;
+  color: #435168;
+  background: transparent;
+}
+.mada-button--ghost:hover:not(:disabled) {
+  border-color: #e3f1ef;
+  color: var(--mada-teal-dark, #0b746b);
+  background: #f1f8f7;
+}
+.mada-button--compact {
+  min-height: 32px;
+  gap: 6px;
+  padding-inline: 10px;
+  font-size: 10px;
+}
+.mada-button--icon {
+  width: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-color: transparent;
+  border-radius: 10px;
+  color: var(--mada-button-icon-color, #5d6a7c);
+  background: transparent;
+}
+.mada-button--icon:hover:not(:disabled) {
+  border-color: #e3f1ef;
+  color: var(--mada-button-icon-hover, var(--mada-teal-dark, #0b746b));
+  background: #f1f8f7;
+}
+.mada-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+.mada-button__content:empty {
+  display: none;
+}
+.mada-button__spinner {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  border: 2px solid currentColor;
+  border-inline-end-color: transparent;
+  border-radius: 50%;
+  animation: mada-button-spin 0.8s linear infinite;
+}
+
+@keyframes mada-button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mada-button,
+  .mada-button__spinner {
+    transition: none;
+    animation-duration: 0.01ms;
+  }
+}

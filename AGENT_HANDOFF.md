@@ -9,7 +9,7 @@ Mada Academy is an Arabic-first, RTL academy operations system. It covers academ
 
 The primary stack is:
 
-- **Frontend:** React + Vite in `client/`
+- **Frontend:** React + Vite in `client/` (current reference client); isolated Angular client foundation in `client-angular/`
 - **Backend:** ASP.NET Core in `backend/MadaAcademy.Api/`
 - **Database:** PostgreSQL + EF Core migrations
 - **Tests:** Vitest, Playwright, and ASP.NET integration tests
@@ -73,6 +73,8 @@ Route mapping and guards are in `client/src/App.tsx`; role home mapping is in `c
 Completed vertical slices include authentication/JWT, role and scope guards, students, sessions, attendance, evaluations and publication, approvals, Finance invoice/payment/expense records, linked consumer reads, shared styling, and browser E2E.
 
 Known boundaries are production secret/storage configuration, deployed staging smoke, backup/restore, real SMS delivery, password recovery, finer Finance pending states, and fully live Marketing APIs. These are documented in `PROJECT_STATUS.md` and `NEXT_PHASE_PLAN.md`.
+
+Angular is an independent parallel client; its shared UI, `/shared-components`, auth shell, R02 dashboard, and R03 Head Instructors dashboard are incremental parity work, not a full LIVE replacement. R03 is isolated under `features/head-instructors` with typed models, API/data orchestration, lazy route `/head-instructors`, signals/OnPush, parallel core requests, optional-source warnings, and no client-selected branch scope. React remains the source of truth until feature parity and acceptance are explicitly completed. See `ANGULAR_FRONTEND_GUIDE.md` for the component inventory, structure, signals/OnPush, API contracts, security boundaries, and parallel migration process. Sidebar navigation and route guards do not authorize requests, and Angular must not replace production deployment in this phase. The foundation is `feat/angular-foundation` / PR #79, auth is PR #80, R02 is `feat/angular-r02-dashboard`, and R03 is `feat/angular-r03-head-instructors`.
 
 ## Validation
 

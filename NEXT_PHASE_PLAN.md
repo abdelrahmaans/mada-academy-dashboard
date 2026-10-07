@@ -24,6 +24,7 @@
 - BranchOperations: تم منع redirect الخاطئ إلى HomeLive؛ المسار يعرض صفحة إدارة التشغيل نفسها، مع بقاء محتوى التشغيل الحالي محليًا/توضيحيًا إلى أن يُربط بعقد API مكتمل.
 - AcademyBranches: تمت مراجعة التحميل؛ لا يوجد fallback تجريبي، وrefresh الفاشل يحافظ على آخر قائمة محملة بدل استبدالها بقائمة فارغة، لذلك لا يلزم تغيير إضافي حاليًا.
 - HeadInstructors: تم فصل endpoints الأساسية للمجموعات والمدربين والجلسات عن ملخص التقييمات والتنبيهات الاختيارية؛ فشل الملحقات يعرض تحذيرًا واضحًا مع إبقاء بيانات R03 الحية الأساسية بدل إسقاط اللوحة كلها.
+- **Angular R03 (فرع `feat/angular-r03-head-instructors`):** أضيفت route lazy على `/head-instructors` بواجهة signals/OnPush. طبقة `data-access` تفصل `HeadInstructorsApiService` عن orchestration `HeadInstructorsDataService`، وتطلب المجموعات/المدربين/الجلسات بالتوازي، وتفشل aggregate عند فشل core، بينما تعزل التقييمات والتنبيهات كـoptional warnings. لا يرسل العميل `branchId`؛ endpoint يقرأ branch من JWT ويعيد تطبيق scope في backend، مع اختبار صريح لذلك.
 - PlatformConsoleLive: تم فصل تحميل مؤشرات المنصة وقائمة الأكاديميات وتعريفات الأدوار؛ فشل endpoint منفرد يعرض البيانات المتاحة مع تحذير، وفشل التحميل/الدعم يظهر أيضًا عبر toast، بينما نجاح التحديث يعطي toast نجاح.
 - AcademyRoles: تم فصل الصلاحيات والأعضاء عن lookup الفروع؛ فشل الفروع لا يمنع إدارة الأعضاء، ويظهر كتحذير وtoast خطأ، بينما retry الناجح يعطي toast نجاح.
 - AcademicProgramsLive: تم فصل مجموعات البرامج عن الجلسات؛ فشل قراءة أحدهما لا يمسح البيانات الأخرى، ويظهر warning وtoast خطأ، بينما زر التحديث الناجح يعطي toast نجاح.
@@ -148,3 +149,31 @@
 3. إغلاق الأدلة التشغيلية: private bucket upload/download، backup/restore، secrets، وstaging acceptance.
 4. قرار منتج صريح بشأن R07 Marketing: API حقيقية أو إبقاؤه Preview معلنًا خارج MVP.
 5. إصلاح Finance mutation pending states واسم ملف evidence قبل الإطلاق المالي النهائي.
+
+## Angular frontend — parallel foundation (7 October 2026)
+
+- أُنشئ `client-angular/` كتطبيق مستقل للتأسيس باستخدام Angular 21.2، standalone، strict TypeScript، SCSS، Vitest، وzoneless.
+- React في `client/` يظل المرجع والمصدر التشغيلي؛ Angular يملك auth shell محدودًا (`/login` و`/workspace`) وأول شريحة LIVE parity لـR02 على `/` متصلة بـ`/dashboard/summary`، ولا يحتوي تكافؤًا تشغيليًا كاملًا، ولا يتغير النشر أو البنية الإنتاجية.
+- يحدد [`ANGULAR_FRONTEND_GUIDE.md`](ANGULAR_FRONTEND_GUIDE.md) الهيكل، إشارات الحالة وOnPush، العربية/RTL، عقود auth الحالية، حدود R00–R09، استراتيجية التكافؤ والأمن.
+- أول تنفيذ وظيفي لاحق يتطلب اختيار شريحة صغيرة ومصفوفة تتبع React↔Angular؛ أي تغييرات تفويض/API تتطلب اختبارات backend integration، ولا تعتبر route guards حدًا أمنيًا.
+
+### Angular shared UI foundation — 7 October 2026 (PR #79, open)
+
+- تمت إضافة مكتبة عرضية أولية في `client-angular/src/app/shared/components/`: sidebar يقبل تنقل الأدوار وإجراءات parent events، button، card، badge/status badge، page header، feedback states، وscope card.
+- تمت مطابقة السطح الداكن الافتراضي للـsidebar مع R02 React وإبقاء إعداد brand/academy role-specific؛ معاينة `/shared-components` ثابتة وتعلن أنها غير LIVE، وتستخدم labels/counts توضيحية فقط.
+- الاختبارات تشمل المكونات والـmobile close والـactive route وevents والـRTL/preview؛ لا توجد API/auth/backend/production تغييرات.
+- الاستمرار على فرع Angular المستقل `feat/angular-foundation` ومراجعة [PR #79](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/79). React في `client/` و`main` يظلان المصدر المرجعي. الخطوة التالية التشغيلية تُختار منفصلة وفق مصفوفة التكافؤ، ولا تستنتج صلاحيات من عناصر القائمة.
+
+### Angular auth shell — 7 October 2026 (follow-up branch)
+
+- أضيف `core/auth` و`core/http`: عقد typed، `HttpClient`، interceptor للتفويض، refresh single-flight، structured API errors، وguard عرضي يعيد غير المصادق إلى `/login`.
+- access token يبقى في الذاكرة، وrefresh token في `sessionStorage`؛ فشل التجديد يمسح الجلسة، ولا تُعتبر route guards حدًا أمنيًا.
+- `/login` يطابق copy وRTL وresponsive surface في React، و`/workspace` يعرض identity/scope من backend دون بيانات demo أو صلاحيات مستنتجة من الواجهة.
+- اختبارات Angular تغطي login payload، validation، `/me`، refresh rotation/concurrency، 401 retry، وguard؛ لا توجد تغييرات backend أو عقد مشتركة.
+
+### Angular R02 branch dashboard — follow-up on `feat/angular-auth-shell`
+
+- أضيف `features/dashboard` بواجهة Dashboard مدير الفرع مطابقة للسطح LIVE في React: scope card، مؤشرات الطلاب/التسجيلات/الجلسات، الجلسات القادمة، وروابط التشغيل.
+- مصدر البيانات الوحيد هو `GET /api/v1/dashboard/summary`; لا يرسل العميل `tenantId` أو `branchId`، ويعتمد على عزل claims الذي يفرضه backend.
+- الأدوار المصادق عليها غير R02 ترى locked state ولا تطلق طلب Dashboard. حالات loading/error/retry/empty واضحة ولا يوجد fallback إلى demo data.
+- اختبار data access يغطي envelope والـURL وعدم توسيع النطاق. الخطوة التالية: مصفوفة parity ثم شريحة دور مستقلة (R01 أو R03) بعقدها واختباراتها، لا توسيع هذه الصفحة عشوائيًا.

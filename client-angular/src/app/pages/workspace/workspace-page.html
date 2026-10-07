@@ -1,0 +1,38 @@
+<main class="workspace" dir="rtl">
+  <section class="workspace__card" aria-labelledby="workspace-title">
+    <div class="workspace__head">
+      <div>
+        <p class="workspace__eyebrow">Mada Academy · Authenticated shell</p>
+        <h1 id="workspace-title">مرحبًا {{ auth.me()?.user?.displayName || 'بك' }}</h1>
+        <p>
+          تم فتح جلسة الحساب. الوجهة التشغيلية الكاملة تُضاف فقط بعد مراجعة تكافؤ المسار مع React.
+        </p>
+      </div>
+      <mada-button variant="secondary" (clicked)="logout()">تسجيل الخروج</mada-button>
+    </div>
+    <mada-card variant="panel">
+      <h2>نطاق الحساب</h2>
+      <dl class="workspace__scope">
+        <div>
+          <dt>الدور</dt>
+          <dd>{{ auth.me()?.roleLabel || auth.me()?.role }}</dd>
+        </div>
+        <div>
+          <dt>المستوى</dt>
+          <dd>{{ auth.me()?.scopeLevel }}</dd>
+        </div>
+        <div>
+          <dt>الأكاديمية</dt>
+          <dd>{{ auth.me()?.academy?.name || 'من الـBackend' }}</dd>
+        </div>
+        <div>
+          <dt>الفرع</dt>
+          <dd>{{ auth.me()?.branchId || 'نطاق الأكاديمية' }}</dd>
+        </div>
+      </dl>
+    </mada-card>
+    <p class="workspace__note">
+      هذه ليست لوحة تشغيل LIVE بعد؛ لا توجد بيانات تجريبية أو صلاحيات مستنتجة من الواجهة.
+    </p>
+  </section>
+</main>

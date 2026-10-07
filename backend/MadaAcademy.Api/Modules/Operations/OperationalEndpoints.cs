@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -40,6 +41,12 @@ public static class OperationalEndpoints
             return TypedResults.Ok(new ApiEnvelope<StudentListResponse>(
                 new StudentListResponse(students, students.Count, scope.ScopeLevel, scope.BranchId)));
         });
+
+        operations.MapPost("/students", CreateStudentAsync);
+        operations.MapPut("/students/{studentId:guid}", UpdateStudentAsync);
+        operations.MapGet("/students/{studentId:guid}/enrollments", ListStudentEnrollmentsAsync);
+        operations.MapPost("/students/{studentId:guid}/enrollments", CreateStudentEnrollmentAsync);
+        operations.MapDelete("/students/{studentId:guid}/enrollments/{enrollmentId:guid}", CancelStudentEnrollmentAsync);
 
         operations.MapGet("/sessions", async Task<Results<Ok<ApiEnvelope<SessionListResponse>>, ProblemHttpResult>> (
             ClaimsPrincipal user,
@@ -240,6 +247,92 @@ public static class OperationalEndpoints
         return endpoints;
     }
 
+    private static async Task<IResult> CreateStudentAsync(CreateStudentRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!CanManageStudents(user)) return Problem(403, "STUDENT_WRITE_FORBIDDEN", "The current role cannot manage students.");
+        if (!TryGetScope(user, out var scope, out var scopeError)) return scopeError;
+        if (!scope.BranchId.HasValue) return Problem(403, "BRANCH_SCOPE_REQUIRED", "A branch scope is required for this operation.");
+        var fullName = request.FullName?.Trim();
+        if (string.IsNullOrWhiteSpace(fullName) || fullName.Length > 160) return Validation("fullName", "Full name is required and must be at most 160 characters.");
+        if (request.DateOfBirth.HasValue && request.DateOfBirth.Value > DateOnly.FromDateTime(DateTime.UtcNow)) return Validation("dateOfBirth", "Date of birth cannot be in the future.");
+        var actorId = Actor(user); if (!actorId.HasValue) return Problem(403, "ACTOR_REQUIRED", "The authenticated staff identity is missing.");
+        var student = new Student { TenantId = scope.TenantId, BranchId = scope.BranchId.Value, FullName = fullName, DateOfBirth = request.DateOfBirth, Status = "ACTIVE" };
+        db.Students.Add(student);
+        db.AuditEvents.Add(new AuditEvent { ActorUserId = actorId, TenantId = scope.TenantId, BranchId = scope.BranchId, Action = "STUDENT_CREATED", TargetType = "STUDENT", TargetId = student.Id.ToString(), MetadataJson = JsonSerializer.Serialize(new { student.FullName, student.DateOfBirth }) });
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.Created($"/api/v1/students/{student.Id}", new { data = new StudentListItem(student.Id, student.BranchId, student.FullName, student.DateOfBirth, student.Status, 0) });
+    }
+
+    private static async Task<IResult> UpdateStudentAsync(Guid studentId, UpdateStudentRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!CanManageStudents(user)) return Problem(403, "STUDENT_WRITE_FORBIDDEN", "The current role cannot manage students.");
+        if (!TryGetScope(user, out var scope, out var scopeError)) return scopeError;
+        var student = await db.Students.SingleOrDefaultAsync(item => item.Id == studentId && item.TenantId == scope.TenantId && scope.BranchId.HasValue && item.BranchId == scope.BranchId.Value, cancellationToken);
+        if (student is null) return Problem(404, "STUDENT_NOT_FOUND", "The student was not found in the current scope.");
+        var fullName = request.FullName?.Trim();
+        if (string.IsNullOrWhiteSpace(fullName) || fullName.Length > 160) return Validation("fullName", "Full name is required and must be at most 160 characters.");
+        if (request.DateOfBirth.HasValue && request.DateOfBirth.Value > DateOnly.FromDateTime(DateTime.UtcNow)) return Validation("dateOfBirth", "Date of birth cannot be in the future.");
+        var actorId = Actor(user); if (!actorId.HasValue) return Problem(403, "ACTOR_REQUIRED", "The authenticated staff identity is missing.");
+        var previous = new { student.FullName, student.DateOfBirth };
+        student.FullName = fullName; student.DateOfBirth = request.DateOfBirth;
+        db.AuditEvents.Add(new AuditEvent { ActorUserId = actorId, TenantId = scope.TenantId, BranchId = scope.BranchId, Action = "STUDENT_UPDATED", TargetType = "STUDENT", TargetId = student.Id.ToString(), MetadataJson = JsonSerializer.Serialize(new { previous, next = new { student.FullName, student.DateOfBirth } }) });
+        await db.SaveChangesAsync(cancellationToken);
+        var activeEnrollments = await db.StudentEnrollments.CountAsync(item => item.StudentId == student.Id && item.Status == "ACTIVE", cancellationToken);
+        return Results.Ok(new { data = new StudentListItem(student.Id, student.BranchId, student.FullName, student.DateOfBirth, student.Status, activeEnrollments) });
+    }
+
+    private static async Task<IResult> ListStudentEnrollmentsAsync(Guid studentId, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!TryGetScope(user, out var scope, out var scopeError)) return scopeError;
+        if (!CanReadStudentManagement(user)) return Problem(403, "STUDENT_ENROLLMENT_READ_FORBIDDEN", "The current role cannot read student enrollments.");
+        var student = await db.Students.AsNoTracking().SingleOrDefaultAsync(item => item.Id == studentId && item.TenantId == scope.TenantId && (!scope.BranchId.HasValue || item.BranchId == scope.BranchId.Value), cancellationToken);
+        if (student is null) return Problem(404, "STUDENT_NOT_FOUND", "The student was not found in the current scope.");
+        var items = await (from enrollment in db.StudentEnrollments.AsNoTracking()
+                           join offering in db.CourseOfferings.AsNoTracking() on enrollment.CourseOfferingId equals offering.Id
+                           join template in db.CourseTemplates.AsNoTracking() on offering.CourseTemplateId equals template.Id
+                           where enrollment.StudentId == studentId && offering.TenantId == scope.TenantId && (!scope.BranchId.HasValue || offering.BranchId == scope.BranchId.Value)
+                           orderby enrollment.Status, offering.StartDate descending
+                           select new StudentEnrollmentItem(enrollment.Id, enrollment.CourseOfferingId, template.Name, offering.StartDate, offering.EndDate, enrollment.FinalPricePiastres, enrollment.Status, offering.MaxStudents, db.StudentEnrollments.Count(other => other.CourseOfferingId == offering.Id && other.Status == "ACTIVE")))
+            .ToListAsync(cancellationToken);
+        return Results.Ok(new { data = new { items, total = items.Count } });
+    }
+
+    private static async Task<IResult> CreateStudentEnrollmentAsync(Guid studentId, CreateStudentEnrollmentRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!CanManageStudents(user)) return Problem(403, "STUDENT_WRITE_FORBIDDEN", "The current role cannot manage students.");
+        if (!TryGetScope(user, out var scope, out var scopeError)) return scopeError;
+        if (!scope.BranchId.HasValue) return Problem(403, "BRANCH_SCOPE_REQUIRED", "A branch scope is required for this operation.");
+        if (request.CourseOfferingId == Guid.Empty) return Validation("courseOfferingId", "A course group is required.");
+        if (request.FinalPricePiastres < 0) return Validation("finalPricePiastres", "Final price cannot be negative.");
+        var student = await db.Students.SingleOrDefaultAsync(item => item.Id == studentId && item.TenantId == scope.TenantId && item.BranchId == scope.BranchId.Value && item.Status == "ACTIVE", cancellationToken);
+        if (student is null) return Problem(404, "STUDENT_NOT_FOUND", "The student was not found in the current branch.");
+        var offering = await db.CourseOfferings.SingleOrDefaultAsync(item => item.Id == request.CourseOfferingId && item.TenantId == scope.TenantId && item.BranchId == scope.BranchId.Value && item.Status != "ARCHIVED" && item.Status != "CANCELLED", cancellationToken);
+        if (offering is null) return Problem(404, "GROUP_NOT_FOUND", "The course group was not found in the current branch.");
+        if (await db.StudentEnrollments.AnyAsync(item => item.StudentId == studentId && item.CourseOfferingId == offering.Id && item.Status == "ACTIVE", cancellationToken)) return Conflict("STUDENT_ALREADY_ENROLLED", "The student is already actively enrolled in this group.");
+        var activeCount = await db.StudentEnrollments.CountAsync(item => item.CourseOfferingId == offering.Id && item.Status == "ACTIVE", cancellationToken);
+        if (activeCount >= offering.MaxStudents) return Conflict("GROUP_CAPACITY_REACHED", "The selected group has reached its capacity.");
+        var actorId = Actor(user); if (!actorId.HasValue) return Problem(403, "ACTOR_REQUIRED", "The authenticated staff identity is missing.");
+        var enrollment = new StudentEnrollment { StudentId = studentId, CourseOfferingId = offering.Id, FinalPricePiastres = request.FinalPricePiastres, Status = "ACTIVE" };
+        db.StudentEnrollments.Add(enrollment);
+        db.AuditEvents.Add(new AuditEvent { ActorUserId = actorId, TenantId = scope.TenantId, BranchId = scope.BranchId, Action = "STUDENT_ENROLLED", TargetType = "STUDENT_ENROLLMENT", TargetId = enrollment.Id.ToString(), MetadataJson = JsonSerializer.Serialize(new { studentId, courseOfferingId = offering.Id, enrollment.FinalPricePiastres }) });
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.Created($"/api/v1/students/{studentId}/enrollments/{enrollment.Id}", new { data = new StudentEnrollmentItem(enrollment.Id, offering.Id, null, offering.StartDate, offering.EndDate, enrollment.FinalPricePiastres, enrollment.Status, offering.MaxStudents, activeCount + 1) });
+    }
+
+    private static async Task<IResult> CancelStudentEnrollmentAsync(Guid studentId, Guid enrollmentId, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!CanManageStudents(user)) return Problem(403, "STUDENT_WRITE_FORBIDDEN", "The current role cannot manage students.");
+        if (!TryGetScope(user, out var scope, out var scopeError)) return scopeError;
+        if (!scope.BranchId.HasValue) return Problem(403, "BRANCH_SCOPE_REQUIRED", "A branch scope is required for this operation.");
+        var enrollment = await (from item in db.StudentEnrollments join student in db.Students on item.StudentId equals student.Id join offering in db.CourseOfferings on item.CourseOfferingId equals offering.Id where item.Id == enrollmentId && item.StudentId == studentId && item.Status == "ACTIVE" && student.TenantId == scope.TenantId && student.BranchId == scope.BranchId.Value && offering.TenantId == scope.TenantId && offering.BranchId == scope.BranchId.Value select item).SingleOrDefaultAsync(cancellationToken);
+        if (enrollment is null) return Problem(404, "ENROLLMENT_NOT_FOUND", "The active enrollment was not found in the current branch.");
+        var actorId = Actor(user); if (!actorId.HasValue) return Problem(403, "ACTOR_REQUIRED", "The authenticated staff identity is missing.");
+        enrollment.Status = "CANCELLED";
+        db.AuditEvents.Add(new AuditEvent { ActorUserId = actorId, TenantId = scope.TenantId, BranchId = scope.BranchId, Action = "STUDENT_ENROLLMENT_CANCELLED", TargetType = "STUDENT_ENROLLMENT", TargetId = enrollment.Id.ToString(), MetadataJson = JsonSerializer.Serialize(new { studentId, enrollment.CourseOfferingId }) });
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.NoContent();
+    }
+
     private static async Task<List<SessionDetails>> ProjectSessionsAsync(
         MadaDbContext db,
         IQueryable<AcademySession> query,
@@ -322,6 +415,8 @@ public static class OperationalEndpoints
             : new AttendanceItem(student.Id, student.FullName, "UNMARKED", null, null)).ToList();
     }
 
+    private static bool CanManageStudents(ClaimsPrincipal user) => user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R05_SECRETARY");
+    private static bool CanReadStudentManagement(ClaimsPrincipal user) => user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R05_SECRETARY") || user.IsInRole("R06_ACCOUNTANT");
     private static bool CanWriteAttendance(ClaimsPrincipal user) =>
         user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R04_INSTRUCTOR");
 
@@ -339,6 +434,12 @@ public static class OperationalEndpoints
         return true;
     }
 
+    private static Guid? Actor(ClaimsPrincipal user) => Guid.TryParse(user.FindFirstValue("sub"), out var id) ? id : null;
+
+    private static IResult Validation(string field, string message) => Results.ValidationProblem(new Dictionary<string, string[]> { [field] = [message] });
+
+    private static IResult Conflict(string code, string message) => Results.Conflict(new { error = new { code, message } });
+
     private static ProblemHttpResult Problem(int status, string code, string detail) =>
         TypedResults.Problem(statusCode: status, title: code, detail: detail,
             extensions: new Dictionary<string, object?> { ["code"] = code });
@@ -351,6 +452,10 @@ public static class OperationalEndpoints
 public sealed record ApiEnvelope<T>(T Data);
 public sealed record StudentListResponse(IReadOnlyList<StudentListItem> Items, int Total, string ScopeLevel, Guid? BranchId);
 public sealed record StudentListItem(Guid Id, Guid BranchId, string FullName, DateOnly? DateOfBirth, string Status, int ActiveEnrollmentCount);
+public sealed record CreateStudentRequest(string? FullName, DateOnly? DateOfBirth);
+public sealed record UpdateStudentRequest(string? FullName, DateOnly? DateOfBirth);
+public sealed record StudentEnrollmentItem(Guid Id, Guid CourseOfferingId, string? CourseName, DateOnly StartDate, DateOnly EndDate, int FinalPricePiastres, string Status, int MaxStudents, int ActiveEnrollmentCount);
+public sealed record CreateStudentEnrollmentRequest(Guid CourseOfferingId, int FinalPricePiastres);
 public sealed record SessionListResponse(IReadOnlyList<SessionDetails> Items, int Total, string ScopeLevel, Guid? BranchId);
 public sealed record SessionDetails(Guid Id, Guid BranchId, Guid? CourseOfferingId, int SessionNumber, DateTimeOffset StartAt, DateTimeOffset EndAt, Guid InstructorId, Guid ClassroomId, string Type, string Status, string? Notes, DateTimeOffset? CompletedAt, string? InstructorName = null, string? ClassroomName = null, string? BranchName = null, string? CourseName = null);
 public sealed record AttendanceResponse(Guid SessionId, string SessionStatus, IReadOnlyList<AttendanceItem> Items, int Total);
