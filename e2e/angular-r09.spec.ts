@@ -54,4 +54,24 @@ test.describe('Angular R09 student portal', () => {
     expect(capturedUrls.some((url) => url.endsWith('/consumer/me/sessions'))).toBeTruthy();
     expect(capturedUrls.every((url) => !url.includes('studentId=') && !url.includes('tenantId=') && !url.includes('branchId='))).toBeTruthy();
   });
+
+  test('shows only published evaluations for the linked student', async ({ request, page }) => {
+    const tokens = await loginApi(request);
+    const headers = { Authorization: `Bearer ${tokens.accessToken}` };
+    const studentsResponse = await request.get(`${apiBase}/consumer/me/students`, { headers });
+    const studentId = (await studentsResponse.json()).data.items[0].id as string;
+    const sessionsResponse = await request.get(`${apiBase}/consumer/me/sessions`, { headers });
+    const sessions = (await sessionsResponse.json()).data.items as Array<{ studentId: string; score?: number | null; notes?: string | null }>;
+
+    expect(sessions.every((item) => item.studentId === studentId)).toBeTruthy();
+    expect(sessions.every((item) => item.score === null || item.score === undefined)).toBeTruthy();
+    expect(sessions.every((item) => item.notes === null || item.notes === undefined)).toBeTruthy();
+
+    await loginUi(page);
+    await page.goto('/student-portal');
+    await expect(page.getByText('لا توجد نتائج تقييم منشورة حتى الآن.', { exact: true })).toBeVisible();
+    await expect(page.getByText('88 / 100', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('تقدم واضح في التطبيق العملي', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('Youssef Ahmed', { exact: true })).toHaveCount(0);
+  });
 });
