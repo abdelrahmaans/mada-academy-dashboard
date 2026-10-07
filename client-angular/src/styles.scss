@@ -1,5 +1,6 @@
 @use './app/shared/components/sidebar/mada-sidebar';
 @use './app/pages/login/login-page';
+@use './app/features/head-instructors/pages/head-instructors-dashboard-page';
 
 :root {
   color-scheme: light;

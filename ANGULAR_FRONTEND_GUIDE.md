@@ -4,7 +4,7 @@
 
 ## 1. حالة المشروع والنطاق
 
-أنشئ `client-angular/` كتطبيق مستقل من Angular CLI. يحتوي التأسيس التقني على standalone routing، عرض عربي RTL، إشارات (signals)، OnPush، وVitest، ومكتبة UI في `src/app/shared/components/`. أضيف auth shell أولي (`/login` و`/workspace`) ثم أول شريحة LIVE parity لـR02 على `/`: لوحة مدير الفرع تقرأ `GET /dashboard/summary` فقط وتعرض loading/error/empty صريحة. لا تعرض Angular كواجهة LIVE كاملة ولا تملأه ببيانات demo توحي بأنها فعلية.
+أنشئ `client-angular/` كتطبيق مستقل من Angular CLI. يحتوي التأسيس التقني على standalone routing، عرض عربي RTL، إشارات (signals)، OnPush، وVitest، ومكتبة UI في `src/app/shared/components/`. أضيف auth shell أولي (`/login` و`/workspace`) ثم شرائح LIVE parity لـR02 على `/` وR03 على `/head-instructors`. لوحة R03 تستخدم feature مستقلة (`models`, `data-access`, `pages`) وتعرض loading/error/empty/warning صريحة. لا تعرض Angular كواجهة LIVE كاملة ولا تملأه ببيانات demo توحي بأنها فعلية.
 
 الـbackend المشترك هو ASP.NET Core 10 مع PostgreSQL وEF Core وJWT. لا تنشأ قاعدة بيانات ثانية ولا API بديلة للنسخة Angular. أي إضافة/تغيير على عقد الـAPI يخضع لمراجعة الخادم والعميلين React وAngular والاختبارات ذات الصلة.
 
@@ -116,4 +116,4 @@ React يبقى المرجع العملي والمصدر عند أي التباس
 
 ## 10. الوضع الحالي والخطوة التالية
 
-المرحلة الحالية تتضمن auth shell، لوحة R02 الأولى، مكتبة shared UI واختبارات API/refresh/guard/login، لكنها لا تستبدل React ولا تعني قبول التكافؤ الكامل. لا تُضاف طلبات Dashboard للأدوار غير R02، ولا تُرسل `tenantId` أو`branchId` من العميل؛ يفرض backend النطاق من JWT. الخطوة التالية هي مصفوفة تكافؤ React↔Angular وإضافة أدوار منفصلة بعد مراجعة عقودها. مرجع الحالة والخطة التفصيلية يظل [`PROJECT_STATUS.md`](PROJECT_STATUS.md) و[`NEXT_PHASE_PLAN.md`](NEXT_PHASE_PLAN.md).
+المرحلة الحالية تتضمن auth shell، لوحتي R02 وR03، مكتبة shared UI واختبارات API/refresh/guard/login/data-access، لكنها لا تستبدل React ولا تعني قبول التكافؤ الكامل. في R03 تُحمّل مصادر المجموعات/المدربين/الجلسات بالتوازي كبيانات أساسية، بينما التقييمات والتنبيهات optional مع warnings؛ لا تُرسل `tenantId` أو`branchId` من العميل، ويُفرض النطاق من JWT وbackend query policy. تستخدم الصفحة `OnPush` وsignals و`computed` للمشتقات، وتُحمّل lazy route، وتبقي stylesheet خارج component budget. الخطوة التالية هي مصفوفة تكافؤ React↔Angular ثم شريحة R04 بعد عقد assigned-scope واختباراته. مرجع الحالة والخطة التفصيلية يظل [`PROJECT_STATUS.md`](PROJECT_STATUS.md) و[`NEXT_PHASE_PLAN.md`](NEXT_PHASE_PLAN.md).

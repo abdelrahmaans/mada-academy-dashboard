@@ -21,6 +21,14 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/workspace/workspace-page').then((module) => module.WorkspacePage),
   },
+  {
+    path: 'head-instructors',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/head-instructors/pages/head-instructors-dashboard-page').then(
+        (module) => module.HeadInstructorsDashboardPage,
+      ),
+  },
   { path: 'foundation', component: FoundationPage, pathMatch: 'full' },
   {
     path: 'shared-components',

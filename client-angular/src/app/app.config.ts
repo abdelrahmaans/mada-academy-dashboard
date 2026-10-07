@@ -3,6 +3,7 @@ import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/
 import { provideRouter } from '@angular/router';
 import {
   LucideBarChart3,
+  LucideBell,
   LucideBookOpen,
   LucideBuilding2,
   LucideCalendarDays,
@@ -10,6 +11,7 @@ import {
   LucideChevronLeft,
   LucideCircleCheck,
   LucideCircleHelp,
+  LucideClock3,
   LucideGraduationCap,
   LucideLayoutDashboard,
   LucideArrowLeft,
@@ -41,6 +43,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([authInterceptor, apiErrorInterceptor])),
     provideLucideIcons(
       LucideBarChart3,
+      LucideBell,
       LucideBookOpen,
       LucideBuilding2,
       LucideCalendarDays,
@@ -48,6 +51,7 @@ export const appConfig: ApplicationConfig = {
       LucideChevronLeft,
       LucideCircleCheck,
       LucideCircleHelp,
+      LucideClock3,
       LucideGraduationCap,
       LucideLayoutDashboard,
       LucideArrowLeft,

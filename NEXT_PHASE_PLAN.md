@@ -24,6 +24,7 @@
 - BranchOperations: تم منع redirect الخاطئ إلى HomeLive؛ المسار يعرض صفحة إدارة التشغيل نفسها، مع بقاء محتوى التشغيل الحالي محليًا/توضيحيًا إلى أن يُربط بعقد API مكتمل.
 - AcademyBranches: تمت مراجعة التحميل؛ لا يوجد fallback تجريبي، وrefresh الفاشل يحافظ على آخر قائمة محملة بدل استبدالها بقائمة فارغة، لذلك لا يلزم تغيير إضافي حاليًا.
 - HeadInstructors: تم فصل endpoints الأساسية للمجموعات والمدربين والجلسات عن ملخص التقييمات والتنبيهات الاختيارية؛ فشل الملحقات يعرض تحذيرًا واضحًا مع إبقاء بيانات R03 الحية الأساسية بدل إسقاط اللوحة كلها.
+- **Angular R03 (فرع `feat/angular-r03-head-instructors`):** أضيفت route lazy على `/head-instructors` بواجهة signals/OnPush. طبقة `data-access` تفصل `HeadInstructorsApiService` عن orchestration `HeadInstructorsDataService`، وتطلب المجموعات/المدربين/الجلسات بالتوازي، وتفشل aggregate عند فشل core، بينما تعزل التقييمات والتنبيهات كـoptional warnings. لا يرسل العميل `branchId`؛ endpoint يقرأ branch من JWT ويعيد تطبيق scope في backend، مع اختبار صريح لذلك.
 - PlatformConsoleLive: تم فصل تحميل مؤشرات المنصة وقائمة الأكاديميات وتعريفات الأدوار؛ فشل endpoint منفرد يعرض البيانات المتاحة مع تحذير، وفشل التحميل/الدعم يظهر أيضًا عبر toast، بينما نجاح التحديث يعطي toast نجاح.
 - AcademyRoles: تم فصل الصلاحيات والأعضاء عن lookup الفروع؛ فشل الفروع لا يمنع إدارة الأعضاء، ويظهر كتحذير وtoast خطأ، بينما retry الناجح يعطي toast نجاح.
 - AcademicProgramsLive: تم فصل مجموعات البرامج عن الجلسات؛ فشل قراءة أحدهما لا يمسح البيانات الأخرى، ويظهر warning وtoast خطأ، بينما زر التحديث الناجح يعطي toast نجاح.
