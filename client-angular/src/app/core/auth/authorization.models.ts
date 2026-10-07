@@ -142,7 +142,7 @@ export const ENDPOINT_PERMISSIONS: Readonly<
 > = {
   'dashboard.summary': ['branch.read'],
   'students.read': ['students.read'],
-  'sessions.read': ['sessions.read'],
+  // R04 is intentionally represented by the role/assignment scope; its catalog key is sessions.assigned.read.
   'sessions.manage': ['sessions.create'],
   'attendance.read': ['attendance.read'],
   'attendance.write': ['attendance.write'],
