@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
+using MadaAcademy.Api.Storage;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -13,14 +14,14 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace MadaAcademy.Api.IntegrationTests;
 
-public sealed class TestApiFactory(bool useInMemory, bool unconfigureSms = false) : WebApplicationFactory<Program>
+public sealed class TestApiFactory(bool useInMemory, bool unconfigureSms = false, bool unavailableStorage = false) : WebApplicationFactory<Program>
 {
     private readonly string _databaseName = $"mada-tests-{Guid.NewGuid():N}";
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
-        if (!useInMemory && !unconfigureSms) return;
+        if (!useInMemory && !unconfigureSms && !unavailableStorage) return;
 
         builder.ConfigureTestServices(services =>
         {
@@ -35,6 +36,11 @@ public sealed class TestApiFactory(bool useInMemory, bool unconfigureSms = false
             {
                 services.RemoveAll<ISmsMessageSender>();
                 services.AddSingleton<ISmsMessageSender, UnconfiguredSmsMessageSender>();
+            }
+            if (unavailableStorage)
+            {
+                services.RemoveAll<IPrivateObjectStorage>();
+                services.AddSingleton<IPrivateObjectStorage, UnavailablePrivateObjectStorage>();
             }
         });
     }
