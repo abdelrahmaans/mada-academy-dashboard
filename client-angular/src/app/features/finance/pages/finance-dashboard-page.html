@@ -15,6 +15,43 @@
       <mada-card><span class="kpi-label">المصروفات المعتمدة</span><strong>{{ (report()?.approvedExpensesPiastres ?? 0) / 100 | currency:'EGP':'symbol':'1.0-2':'ar-EG' }}</strong><small>المصروفات APPROVED فقط</small></mada-card>
     </section>
 
+    @if (actionError()) { <p class="action-error" role="alert">{{ actionError() }}</p> }
+    @if (actionMessage()) { <p class="action-success" role="status">{{ actionMessage() }}</p> }
+
+    <section class="panel operations-panel" aria-labelledby="operations-title">
+      <div class="panel-heading"><div><span class="eyebrow">R06-B · عمليات مالية</span><h2 id="operations-title">إصدار وتحصيل وتوثيق</h2></div><span class="boundary-note">كل عملية تُراجع من الخادم وتُسجل تدقيقيًا</span></div>
+      <div class="operation-grid">
+        <form class="operation-card" (submit)="$event.preventDefault(); createInvoice()">
+          <h3>إصدار فاتورة</h3>
+          @if (studentsLoading()) { <small>جارٍ تحميل الطلاب…</small> }
+          @if (studentsError()) { <p class="error">{{ studentsError() }}</p> }
+          <label><span>الطالب</span><select [ngModel]="invoiceStudentId()" (ngModelChange)="invoiceStudentId.set($event)" name="invoiceStudentId"><option value="">اختر طالبًا</option>@for (student of students(); track student.id) { <option [value]="student.id">{{ student.fullName }}</option> }</select></label>
+          <label><span>وصف البند</span><input [ngModel]="invoiceDescription()" (ngModelChange)="invoiceDescription.set($event)" name="invoiceDescription" placeholder="اشتراك شهري" /></label>
+          <label><span>المبلغ بالجنيه</span><input type="text" inputmode="decimal" [ngModel]="invoiceAmount()" (ngModelChange)="invoiceAmount.set($event)" name="invoiceAmount" placeholder="1500.00" /></label>
+          <label><span>تاريخ الاستحقاق</span><input type="date" [ngModel]="invoiceDueDate()" (ngModelChange)="invoiceDueDate.set($event)" name="invoiceDueDate" /></label>
+          <button class="primary" type="submit" [disabled]="invoiceSubmitting()">{{ invoiceSubmitting() ? 'جارٍ الإنشاء…' : 'إصدار الفاتورة' }}</button>
+        </form>
+        <form class="operation-card" (submit)="$event.preventDefault(); createPayment()">
+          <h3>تسجيل دفعة</h3>
+          <label><span>الفاتورة</span><select [ngModel]="selectedInvoiceId()" (ngModelChange)="selectInvoice($event)" name="paymentInvoice"><option value="">اختر فاتورة</option>@for (invoice of invoices(); track invoice.id) { <option [value]="invoice.id">{{ invoice.invoiceNumber }} · {{ invoice.studentName ?? invoice.studentId }}</option> }</select></label>
+          <small>الرصيد المتبقي: {{ selectedRemaining() / 100 | currency:'EGP':'symbol':'1.0-2':'ar-EG' }}</small>
+          <label><span>المبلغ بالجنيه</span><input type="text" inputmode="decimal" [ngModel]="paymentAmount()" (ngModelChange)="paymentAmount.set($event)" name="paymentAmount" placeholder="500.00" /></label>
+          <label><span>طريقة التحصيل</span><select [ngModel]="paymentMethod()" (ngModelChange)="paymentMethod.set($event)" name="paymentMethod"><option value="CASH">كاش</option><option value="VISA">Visa</option><option value="INSTAPAY">InstaPay</option><option value="VODAFONE_CASH">Vodafone Cash</option></select></label>
+          <label><span>تاريخ الاستلام</span><input type="date" [ngModel]="paymentReceivedOn()" (ngModelChange)="paymentReceivedOn.set($event)" name="paymentReceivedOn" /></label>
+          @if (paymentMethod() === 'INSTAPAY' || paymentMethod() === 'VODAFONE_CASH') { <label><span>مرجع العملية</span><input [ngModel]="paymentReference()" (ngModelChange)="paymentReference.set($event)" name="paymentReference" placeholder="رقم العملية مطلوب" /></label> }
+          <label><span>ملاحظة اختيارية</span><input [ngModel]="paymentNote()" (ngModelChange)="paymentNote.set($event)" name="paymentNote" /></label>
+          <button class="primary" type="submit" [disabled]="paymentSubmitting() || !selectedInvoiceId()">{{ paymentSubmitting() ? 'جارٍ التسجيل…' : 'تسجيل الدفعة' }}</button>
+        </form>
+        <form class="operation-card" (submit)="$event.preventDefault(); createExpense()">
+          <h3>تسجيل مصروف</h3><p class="muted">يُسجل أولًا PENDING ولا يصبح معتمدًا تلقائيًا.</p>
+          <label><span>الوصف</span><input [ngModel]="expenseDescription()" (ngModelChange)="expenseDescription.set($event)" name="expenseDescription" placeholder="مستلزمات تشغيل" /></label>
+          <label><span>المبلغ بالجنيه</span><input type="text" inputmode="decimal" [ngModel]="expenseAmount()" (ngModelChange)="expenseAmount.set($event)" name="expenseAmount" placeholder="250.00" /></label>
+          <label><span>تاريخ المصروف</span><input type="date" [ngModel]="expenseSpentOn()" (ngModelChange)="expenseSpentOn.set($event)" name="expenseSpentOn" /></label>
+          <button class="primary" type="submit" [disabled]="expenseSubmitting()">{{ expenseSubmitting() ? 'جارٍ التسجيل…' : 'تسجيل المصروف' }}</button>
+        </form>
+      </div>
+    </section>
+
     <section class="panel" aria-labelledby="invoices-title">
       <div class="panel-heading"><div><span class="eyebrow">قراءة مالية</span><h2 id="invoices-title">الفواتير</h2></div><button type="button" class="secondary" (click)="loadInvoices()" [disabled]="invoicesLoading()">تحديث</button></div>
       <label class="search-field"><span>بحث بالفاتورة أو الطالب</span><input [value]="query()" (input)="query.set($any($event.target).value)" placeholder="MAD-…" /></label>
@@ -23,7 +60,9 @@
       @if (!invoicesLoading() && !invoicesError() && filteredInvoices().length === 0) { <mada-feedback-state kind="empty" title="لا توجد فواتير ضمن النطاق الحالي." /> }
       @if (!invoicesLoading() && !invoicesError() && filteredInvoices().length > 0) {
         <div class="invoice-table"><div class="invoice-head"><span>الفاتورة</span><span>الطالب</span><span>الاستحقاق</span><span>المتبقي</span><span>الحالة</span></div>
-          @for (invoice of filteredInvoices(); track invoice.id) { <div class="invoice-row"><strong dir="ltr">{{ invoice.invoiceNumber }}</strong><span>{{ invoice.studentName ?? invoice.studentId }}</span><span dir="ltr">{{ invoice.dueDate }}</span><b>{{ invoice.remainingPiastres / 100 | currency:'EGP':'symbol':'1.0-2':'ar-EG' }}</b><span class="status" [class.paid]="invoice.status === 'PAID'">{{ invoice.status }}</span></div> }
+          @for (invoice of filteredInvoices(); track invoice.id) { <div class="invoice-row"><strong dir="ltr">{{ invoice.invoiceNumber }}</strong><span>{{ invoice.studentName ?? invoice.studentId }}</span><span dir="ltr">{{ invoice.dueDate }}</span><b>{{ invoice.remainingPiastres / 100 | currency:'EGP':'symbol':'1.0-2':'ar-EG' }}</b><span class="status" [class.paid]="invoice.status === 'PAID'">{{ invoice.status }}</span><button type="button" class="secondary compact-button" (click)="selectInvoice(invoice.id)">{{ selectedInvoiceId() === invoice.id ? 'محدد' : 'تحصيل' }}</button></div>
+            @if (selectedInvoiceId() === invoice.id && invoice.payments.length > 0) { <div class="payment-list"><strong>سجل الدفعات</strong>@for (payment of invoice.payments; track payment.id) { <div class="payment-row"><span>{{ payment.method }} · {{ payment.receivedOn }}</span><b>{{ payment.amountPiastres / 100 | currency:'EGP':'symbol':'1.0-2':'ar-EG' }}</b><span class="status" [class.paid]="payment.evidenceStatus === 'ATTACHED'">{{ payment.evidenceStatus === 'ATTACHED' ? 'مرفق' : 'لم يرفق بعد' }}</span><label class="file-button">{{ paymentEvidenceLoading() === payment.id ? 'جارٍ الرفع…' : 'رفع إثبات' }}<input type="file" accept="application/pdf,image/jpeg,image/png" (change)="uploadEvidence($event, payment)" [disabled]="paymentEvidenceLoading() === payment.id || payment.evidenceStatus === 'ATTACHED'" /></label></div> }</div> }
+          }
         </div>
       }
     </section>
@@ -34,7 +73,7 @@
         @if (expensesLoading()) { <mada-feedback-state kind="loading" title="جارٍ تحميل المصروفات…" /> }
         @if (expensesError()) { <mada-feedback-state kind="error" [title]="expensesError()!" /> }
         @if (!expensesLoading() && !expensesError() && expenses().length === 0) { <mada-feedback-state kind="empty" title="لا توجد مصروفات ضمن النطاق الحالي." /> }
-        @if (!expensesLoading() && !expensesError() && expenses().length > 0) { <div class="expense-list">@for (expense of expenses(); track expense.id) { <div class="expense-row"><span><strong>{{ expense.description }}</strong><small>{{ expense.category }} · {{ expense.spentOn }}</small></span><b>{{ expense.amountPiastres / 100 | currency:'EGP':'symbol':'1.0-2':'ar-EG' }}</b><span class="status" [class.paid]="expense.status === 'APPROVED'">{{ expense.status }}</span></div> }</div> }
+        @if (!expensesLoading() && !expensesError() && expenses().length > 0) { <div class="expense-list">@for (expense of expenses(); track expense.id) { <div class="expense-row"><span><strong>{{ expense.description }}</strong><small>{{ expense.category }} · {{ expense.spentOn }}</small></span><b>{{ expense.amountPiastres / 100 | currency:'EGP':'symbol':'1.0-2':'ar-EG' }}</b><span class="status" [class.paid]="expense.status === 'APPROVED'">{{ expense.status }}</span>@if (expense.status === 'PENDING') { <span class="decision-actions"><button type="button" class="secondary compact-button" (click)="decideExpense(expense, 'approve')" [disabled]="decisionSubmitting() === expense.id">اعتماد</button><button type="button" class="secondary compact-button" (click)="decideExpense(expense, 'reject')" [disabled]="decisionSubmitting() === expense.id">رفض</button></span> }</div> }</div> }
       </section>
       <section class="panel" aria-labelledby="report-title">
         <div class="panel-heading"><div><span class="eyebrow">قراءة مجمعة</span><h2 id="report-title">ملخص التقرير المالي</h2></div><button type="button" class="secondary" (click)="loadReport()" [disabled]="reportLoading()">تحديث</button></div>

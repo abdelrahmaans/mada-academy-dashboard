@@ -75,8 +75,14 @@ export type EndpointKey =
   | 'evaluations.review'
   | 'notifications.read'
   | 'finance.invoices'
+  | 'finance.invoices.write'
+  | 'finance.payments.write'
+  | 'finance.payment-evidence.write'
+  | 'finance.payment-evidence.read'
   | 'consumer.invitations'
   | 'finance.expenses'
+  | 'finance.expenses.write'
+  | 'finance.expenses.approve'
   | 'finance.reports'
   | 'reports.operational'
   | 'consumer.links'
@@ -103,8 +109,14 @@ export const ENDPOINT_ROLES: Readonly<Record<EndpointKey, readonly StaffRoleCode
   'evaluations.review': ['R03_HEAD_INSTRUCTORS'],
   'notifications.read': ['R00_PLATFORM_ADMIN', 'R01_ACADEMY_OWNER', 'R02_BRANCH_MANAGER', 'R03_HEAD_INSTRUCTORS', 'R04_INSTRUCTOR', 'R05_SECRETARY', 'R06_ACCOUNTANT', 'R07_MEDIA_MANAGER'],
   'finance.invoices': ['R05_SECRETARY', 'R06_ACCOUNTANT'],
+  'finance.invoices.write': ['R05_SECRETARY', 'R06_ACCOUNTANT'],
+  'finance.payments.write': ['R05_SECRETARY', 'R06_ACCOUNTANT'],
+  'finance.payment-evidence.write': ['R05_SECRETARY', 'R06_ACCOUNTANT'],
+  'finance.payment-evidence.read': ['R05_SECRETARY', 'R06_ACCOUNTANT'],
   'consumer.invitations': ['R01_ACADEMY_OWNER', 'R02_BRANCH_MANAGER', 'R05_SECRETARY'],
   'finance.expenses': ['R01_ACADEMY_OWNER', 'R02_BRANCH_MANAGER', 'R06_ACCOUNTANT'],
+  'finance.expenses.write': ['R06_ACCOUNTANT'],
+  'finance.expenses.approve': ['R01_ACADEMY_OWNER', 'R02_BRANCH_MANAGER', 'R06_ACCOUNTANT'],
   'finance.reports': ['R01_ACADEMY_OWNER', 'R02_BRANCH_MANAGER', 'R06_ACCOUNTANT'],
   'reports.operational': ['R01_ACADEMY_OWNER', 'R02_BRANCH_MANAGER', 'R06_ACCOUNTANT'],
   'consumer.links': ['R01_ACADEMY_OWNER', 'R02_BRANCH_MANAGER', 'R05_SECRETARY'],
@@ -125,7 +137,13 @@ export const ENDPOINT_PERMISSIONS: Readonly<Partial<Record<EndpointKey, readonly
   'evaluations.write': ['evaluations.write'],
   'evaluations.review': ['evaluations.review'],
   'finance.invoices': ['invoices.read'],
+  'finance.invoices.write': ['invoices.create'],
+  'finance.payments.write': ['payments.create'],
+  'finance.payment-evidence.write': ['payments.evidence.write'],
+  'finance.payment-evidence.read': ['payments.evidence.read'],
   'finance.expenses': ['finance.expenses.read'],
+  'finance.expenses.write': ['finance.expenses.write'],
+  'finance.expenses.approve': ['finance.expenses.approve'],
   'finance.reports': ['reports.read'],
   'reports.operational': ['reports.read'],
   'consumer.portal': ['consumer.sessions.read'],

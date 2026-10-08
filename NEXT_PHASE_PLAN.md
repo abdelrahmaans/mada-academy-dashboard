@@ -1,7 +1,7 @@
 # خطة المرحلة القادمة — Mada Academy
 
 **تاريخ اللقطة:** 8 أكتوبر 2026
-**قاعدة العمل الحالية:** `main` عند `b062c24` بعد دمج تحسينات الـshell ومسار Leads وإعدادات Railway/Render/Docker/staging smoke؛ PR #89 لـR06-A وPR #90 لـR06-B ما زالا مفتوحين، والفرع المتسلسل الحالي هو `feat/angular-r06b-finance-mutations`.
+**قاعدة العمل الحالية:** PR #89 لـR06-A فوق `main` اجتاز **6/6 checks**، وفرع العمل المتسلسل الحالي هو `feat/angular-r06b-finance-mutations`.
 **الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وموجة التقسيم الأولى مغلقة. اختبارات frontend الحرجة، refresh-token reuse، فصل auth endpoints، وجرد R00 مع contract/tests مغلقة؛ وتظل private-storage/backup-restore/staging بوابات بيئية منفصلة.
 
 ## قرار التنفيذ الحالي
@@ -9,10 +9,8 @@
 1. **تم إغلاق شريحة P2 source acceptance:** تقارير التشغيل، عزل النطاق، حماية LIVE، وحالات R08/R09 الجزئية مثبتة؛ أُغلق R08 عبر PR #88 وأصبح R09 مغلقًا ضمن خط الدمج السابق.
 2. **تم دمج P1 core journey:** الـseeder repairable، وحسابات R04/R08/R09 وروابطهم واختبارات الرحلة موجودة في `main`.
 3. **تم تنفيذ local browser/API E2E:** `pnpm e2e` يمر بـ **7/7** ويغطي R06/R08/R09 ودورة الفاتورة/الدفع/الإثبات.
-4. **تم دمج الخطوة الثانية (بوابات الأسرة والطلاب الحية):** ربط كامل بـ `/api/v1/consumer/me/*` لحسابات R08 وR09، مع منع أخطاء 403 للموظفين وإتاحة زر تبديل فوري بضغطة زر ببيانات العرض الحية.
-5. **تم دمج الخطوة الأولى (مسار العملاء المحتملين والتسجيل للسكرتارية):** إضافة كيان `Lead` ومهاجرة EF Core وواجهات CRUD كاملة، وتحويل العميل لطالب مع فحص السعة وتوليد الفاتورة، والتسجيل الفوري واختبارات تكامل كاملة (78/78 ناجحة)، والدمج في `main`.
-6. **تم تجهيز بيئة النشر داخل الريبو:** Dockerfile، production env template، staging smoke script، وrunbook.
-7. **المرحلة Angular الحالية:** R06-B عمليات Finance ورفع إثباتات الدفع فوق R06-A؛ بوابات Finance production (secret injection، private-storage smoke، backup/restore، وstaging smoke) تبقى منفصلة ولا تعتبر مكتملة محليًا.
+4. **تم تجهيز بيئة النشر داخل الريبو:** Dockerfile، production env template، staging smoke script، وrunbook.
+5. **المرحلة Angular الحالية:** R06-B عمليات Finance ورفع إثباتات الدفع فوق R06-A؛ بوابات Finance production (secret injection، private-storage smoke، backup/restore، وstaging smoke) تبقى منفصلة ولا تعتبر مكتملة محليًا.
 
 ## نتيجة acceptance الحالية
 
@@ -50,6 +48,15 @@
 - مراجعة صفحة React المرجعية، عميل API، endpoints، الكيانات، authorization matrix، واختبارات backend قبل تعديل الكود.
 - إضافة unit/component tests للقراءة وحالات الفشل والنطاق؛ لا تبدأ mutations أو evidence upload قبل قبول R06-A.
 - معيار القبول: `client-angular` tests/build، اختبارات API policy، E2E قراءة Finance، و`git diff --check` ناجحة.
+
+### R06-B — Angular Finance mutations and payment evidence
+
+- إضافة clients typed لإنشاء الفاتورة، تسجيل الدفعة، إنشاء المصروف، اعتماد/رفض المصروف، ورفع إثبات الدفع.
+- استخدام سياسات endpoint منفصلة للكتابة والرفع، مع إبقاء tenant/branch scope مفروضًا من backend وعدم إرسال selectors من العميل.
+- تطبيق تحقق محلي للمبالغ بالقرش، الرصيد المتبقي، تاريخ العملية، ومرجع InstaPay/Vodafone Cash، دون اعتباره بديلًا عن تحقق الخادم.
+- منع double-submit عبر single-flight guards، وإبقاء تسجيل الدفع مستقلًا عن رفع الإثبات؛ فشل الرفع لا يلغي الدفعة.
+- تغطية حالات النجاح والفشل، pending، over-collection، missing reference، file type، والـpartial refresh في اختبارات Angular.
+- لا تشمل المرحلة الدفع الإلكتروني المباشر أو تغيير backend أو تفعيل تخزين إنتاجي؛ التخزين الخاص وstaging smoke بوابات منفصلة.
 
 ## الأعمال المتبقية بعد R06-A
 

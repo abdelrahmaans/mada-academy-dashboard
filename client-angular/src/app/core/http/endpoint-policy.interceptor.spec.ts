@@ -16,6 +16,10 @@ const r03: AuthMe = {
   scopeLevel: 'BRANCH',
   permissions: ['sessions.read', 'evaluations.review'],
 };
+const r06: AuthMe = {
+  id: 'accountant-1', accountType: 'staff', role: 'R06_ACCOUNTANT', tenantId: 'tenant-1', branchId: 'branch-1', scopeLevel: 'BRANCH',
+  permissions: ['invoices.read', 'invoices.create', 'payments.create', 'payments.evidence.write', 'finance.expenses.read', 'finance.expenses.write', 'finance.expenses.approve', 'reports.read'],
+};
 
 describe('endpointPolicyInterceptor', () => {
   it('does not send a request for a role outside the endpoint matrix', () => {
@@ -60,5 +64,19 @@ describe('endpointPolicyInterceptor', () => {
       })
       .subscribe();
     http.expectOne('/scheduling/evaluation-reviews').flush({ data: { items: [] } });
+  });
+
+  it('allows R06 mutation policies and blocks a read-only role from them', () => {
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: AuthService, useValue: { me: signal(r06) } },
+        provideHttpClient(withInterceptors([endpointPolicyInterceptor])),
+        provideHttpClientTesting(),
+      ],
+    });
+    const httpClient = TestBed.inject(HttpClient);
+    const http = TestBed.inject(HttpTestingController);
+    httpClient.post('/finance/invoices', {}, { context: new HttpContext().set(ENDPOINT_POLICY, 'finance.invoices.write') }).subscribe();
+    http.expectOne('/finance/invoices').flush({ data: {} });
   });
 });
