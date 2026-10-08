@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: mada-academy-api
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: .
+    plan: starter
+    region: frankfurt
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS
+        value: http://+:8080
+      - key: MADA_RATE_LIMIT_MODE
+        value: single-instance
+      - key: MADA_RATE_LIMIT_EXPECTED_INSTANCES
+        value: "1"
+      - key: MADA_PRIVATE_STORAGE_MODE
+        value: supabase
+      - key: SUPABASE_STORAGE_BUCKET
+        value: private-evidence
+      - key: DATABASE_URL
+        sync: false
+      - key: MADA_JWT_SIGNING_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: MADA_CORS_ORIGINS
+        sync: false
+      - key: MADA_FRONTEND_URL
+        sync: false
