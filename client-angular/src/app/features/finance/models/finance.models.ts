@@ -69,3 +69,46 @@ export interface FinanceReport {
   readonly netPiastres: number;
   readonly branches: readonly FinanceReportBranch[];
 }
+
+export interface FinanceStudent {
+  readonly id: string;
+  readonly fullName: string;
+  readonly branchId: string;
+  readonly status: string;
+}
+
+export interface FinanceEvidenceResult {
+  readonly paymentId: string;
+  readonly status: 'ATTACHED';
+  readonly fileName: string;
+  readonly contentType: string;
+  readonly sizeBytes: number;
+}
+
+export interface FinancePaymentResult {
+  readonly payment: FinancePayment;
+  readonly invoiceId: string;
+}
+
+export interface FinanceInvoiceInput {
+  readonly studentId: string;
+  readonly dueDate: string;
+  readonly enrollmentId?: string;
+  readonly lines: readonly { readonly description: string; readonly amountPiastres: number }[];
+}
+
+export interface FinancePaymentInput {
+  readonly amountPiastres: number;
+  readonly method: 'CASH' | 'VISA' | 'INSTAPAY' | 'VODAFONE_CASH';
+  readonly receivedOn: string;
+  readonly externalReference?: string;
+  readonly note?: string;
+}
+
+export interface FinanceExpenseInput {
+  readonly description: string;
+  readonly category: string;
+  readonly amountPiastres: number;
+  readonly spentOn?: string;
+  readonly note?: string;
+}

@@ -1,5 +1,6 @@
 import { Component, input, signal } from '@angular/core';
 import { CommonModule, CurrencyPipe, registerLocaleData } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import ar from '@angular/common/locales/ar';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
@@ -42,7 +43,7 @@ function setup(api: Partial<FinanceApiService>) {
     ],
   });
   TestBed.overrideComponent(FinanceDashboardPage, {
-    set: { imports: [CommonModule, CurrencyPipe, MadaCard, MadaFeedbackState, MadaPageHeader, StubScopeCard] },
+    set: { imports: [CommonModule, FormsModule, CurrencyPipe, MadaCard, MadaFeedbackState, MadaPageHeader, StubScopeCard] },
   });
   const fixture = TestBed.createComponent(FinanceDashboardPage);
   fixture.detectChanges();
@@ -51,7 +52,7 @@ function setup(api: Partial<FinanceApiService>) {
 
 describe('FinanceDashboardPage', () => {
   it('renders independent live read sections when all requests succeed', () => {
-    const fixture = setup({ listInvoices: () => of([]), listExpenses: () => of([]), getReport: () => of(report) });
+    const fixture = setup({ listStudents: () => of([]), listInvoices: () => of([]), listExpenses: () => of([]), getReport: () => of(report) });
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('LIVE');
     expect(fixture.nativeElement.textContent).toContain('لا توجد فواتير');
@@ -59,7 +60,7 @@ describe('FinanceDashboardPage', () => {
   });
 
   it('keeps report data visible when invoice loading fails', () => {
-    const fixture = setup({ listInvoices: () => throwError(() => new Error('فشل الفواتير')), listExpenses: () => of([]), getReport: () => of(report) });
+    const fixture = setup({ listStudents: () => of([]), listInvoices: () => throwError(() => new Error('فشل الفواتير')), listExpenses: () => of([]), getReport: () => of(report) });
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('فشل الفواتير');
     expect(fixture.nativeElement.textContent).toContain('40');
