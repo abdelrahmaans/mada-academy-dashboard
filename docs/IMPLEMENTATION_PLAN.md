@@ -46,7 +46,7 @@
 - تثبيت banner واضح بالعربي والإنجليزية أن البيانات محلية ولا تُحفظ.
 - إبقاء الصفحة خارج أي route معلن كـLIVE capability.
 - عدم إضافة mutations أو API جزئية تعطي انطباعًا مضللًا بأن Marketing أصبحت حية.
-- تحديث `PROJECT_STATUS.md` و`NEXT_PHASE_PLAN.md` فقط لتسجيل القرار الحالي.
+- تحديث `../.agent/PROJECT_STATUS.md` و`../.agent/NEXT_PHASE_PLAN.md` فقط لتسجيل القرار الحالي.
 - إنشاء backlog منفصل بعنوان Marketing API Phase بدل خلطه مع هذه المرحلة.
 
 **شرط فتح Marketing لاحقًا:** contract، entities/migrations، branch/tenant authorization، audit، API tests، UI tests، وقرار معتمد لمصدر الـleads.
@@ -229,8 +229,8 @@
 
 لا نحذف ملفات بالاسم فقط. نحدد:
 
-- `PROJECT_STATUS.md`: مصدر حقيقة الحالة.
-- `NEXT_PHASE_PLAN.md`: مصدر خطة التنفيذ.
+- `../.agent/PROJECT_STATUS.md`: مصدر حقيقة الحالة.
+- `../.agent/NEXT_PHASE_PLAN.md`: مصدر خطة التنفيذ.
 - API contracts: مستقلة.
 - runbooks/release gates: مستقلة.
 - acceptance docs: تبقى فقط إذا فيها evidence غير مكرر.

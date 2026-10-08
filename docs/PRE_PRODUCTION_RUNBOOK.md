@@ -14,7 +14,7 @@ Use PostgreSQL for staging/production. Do not set `MADA_DATABASE_MODE=memory` ou
 
 ## 2. Required API environment
 
-Start from [backend/.env.production.example](backend/.env.production.example) and configure these in the hosting provider's secret manager:
+Start from [backend/.env.production.example](../backend/.env.production.example) and configure these in the hosting provider's secret manager:
 
 - `ASPNETCORE_ENVIRONMENT=Production`
 - `MADA_FRONTEND_URL=https://<frontend-host>`
