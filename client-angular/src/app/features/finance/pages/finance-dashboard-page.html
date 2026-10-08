@@ -1,0 +1,47 @@
+<main class="finance-shell" dir="rtl">
+  <div class="finance-content">
+    <mada-page-header
+      eyebrow="المالية · R06-A"
+      title="أهلًا {{ displayName() }}"
+      description="قراءة الفواتير والمصروفات وملخص التقرير من API داخل النطاق المصرح به فقط."
+    />
+    <mada-scope-card level="branch" [scopeName]="'فرع ' + branchName()" [tenantName]="auth.me()?.academy?.name || 'أكاديمية مدى'" />
+    <p class="live-boundary" role="status">LIVE · بيانات مالية من الخادم — لا توجد بيانات DEMO أو عمليات كتابة في هذه المرحلة</p>
+
+    <section class="kpi-grid" aria-label="ملخص مالي">
+      <mada-card><span class="kpi-label">الفواتير</span><strong>{{ invoices().length }}</strong><small>ضمن نطاق الحساب</small></mada-card>
+      <mada-card><span class="kpi-label">المتبقي</span><strong>{{ totalOutstanding() / 100 | currency:'EGP':'symbol':'1.0-2':'ar-EG' }}</strong><small>من استجابة الفواتير</small></mada-card>
+      <mada-card><span class="kpi-label">المحصّل</span><strong>{{ (report()?.totalCollectedPiastres ?? 0) / 100 | currency:'EGP':'symbol':'1.0-2':'ar-EG' }}</strong><small>من التقرير المالي</small></mada-card>
+      <mada-card><span class="kpi-label">المصروفات المعتمدة</span><strong>{{ (report()?.approvedExpensesPiastres ?? 0) / 100 | currency:'EGP':'symbol':'1.0-2':'ar-EG' }}</strong><small>المصروفات APPROVED فقط</small></mada-card>
+    </section>
+
+    <section class="panel" aria-labelledby="invoices-title">
+      <div class="panel-heading"><div><span class="eyebrow">قراءة مالية</span><h2 id="invoices-title">الفواتير</h2></div><button type="button" class="secondary" (click)="loadInvoices()" [disabled]="invoicesLoading()">تحديث</button></div>
+      <label class="search-field"><span>بحث بالفاتورة أو الطالب</span><input [value]="query()" (input)="query.set($any($event.target).value)" placeholder="MAD-…" /></label>
+      @if (invoicesLoading()) { <mada-feedback-state kind="loading" title="جارٍ تحميل الفواتير…" /> }
+      @if (invoicesError()) { <mada-feedback-state kind="error" [title]="invoicesError()!" /> }
+      @if (!invoicesLoading() && !invoicesError() && filteredInvoices().length === 0) { <mada-feedback-state kind="empty" title="لا توجد فواتير ضمن النطاق الحالي." /> }
+      @if (!invoicesLoading() && !invoicesError() && filteredInvoices().length > 0) {
+        <div class="invoice-table"><div class="invoice-head"><span>الفاتورة</span><span>الطالب</span><span>الاستحقاق</span><span>المتبقي</span><span>الحالة</span></div>
+          @for (invoice of filteredInvoices(); track invoice.id) { <div class="invoice-row"><strong dir="ltr">{{ invoice.invoiceNumber }}</strong><span>{{ invoice.studentName ?? invoice.studentId }}</span><span dir="ltr">{{ invoice.dueDate }}</span><b>{{ invoice.remainingPiastres / 100 | currency:'EGP':'symbol':'1.0-2':'ar-EG' }}</b><span class="status" [class.paid]="invoice.status === 'PAID'">{{ invoice.status }}</span></div> }
+        </div>
+      }
+    </section>
+
+    <div class="two-columns">
+      <section class="panel" aria-labelledby="expenses-title">
+        <div class="panel-heading"><div><span class="eyebrow">قراءة المصروفات</span><h2 id="expenses-title">المصروفات</h2></div><button type="button" class="secondary" (click)="loadExpenses()" [disabled]="expensesLoading()">تحديث</button></div>
+        @if (expensesLoading()) { <mada-feedback-state kind="loading" title="جارٍ تحميل المصروفات…" /> }
+        @if (expensesError()) { <mada-feedback-state kind="error" [title]="expensesError()!" /> }
+        @if (!expensesLoading() && !expensesError() && expenses().length === 0) { <mada-feedback-state kind="empty" title="لا توجد مصروفات ضمن النطاق الحالي." /> }
+        @if (!expensesLoading() && !expensesError() && expenses().length > 0) { <div class="expense-list">@for (expense of expenses(); track expense.id) { <div class="expense-row"><span><strong>{{ expense.description }}</strong><small>{{ expense.category }} · {{ expense.spentOn }}</small></span><b>{{ expense.amountPiastres / 100 | currency:'EGP':'symbol':'1.0-2':'ar-EG' }}</b><span class="status" [class.paid]="expense.status === 'APPROVED'">{{ expense.status }}</span></div> }</div> }
+      </section>
+      <section class="panel" aria-labelledby="report-title">
+        <div class="panel-heading"><div><span class="eyebrow">قراءة مجمعة</span><h2 id="report-title">ملخص التقرير المالي</h2></div><button type="button" class="secondary" (click)="loadReport()" [disabled]="reportLoading()">تحديث</button></div>
+        @if (reportLoading()) { <mada-feedback-state kind="loading" title="جارٍ تحميل التقرير…" /> }
+        @if (reportError()) { <mada-feedback-state kind="error" [title]="reportError()!" /> }
+        @if (!reportLoading() && !reportError() && report(); as currentReport) { <dl class="report-list"><div><dt>إجمالي الفواتير</dt><dd>{{ currentReport.totalBilledPiastres / 100 | currency:'EGP':'symbol':'1.0-2':'ar-EG' }}</dd></div><div><dt>إجمالي المحصّل</dt><dd>{{ currentReport.totalCollectedPiastres / 100 | currency:'EGP':'symbol':'1.0-2':'ar-EG' }}</dd></div><div><dt>إجمالي المتبقي</dt><dd>{{ currentReport.totalOutstandingPiastres / 100 | currency:'EGP':'symbol':'1.0-2':'ar-EG' }}</dd></div><div><dt>الصافي</dt><dd>{{ currentReport.netPiastres / 100 | currency:'EGP':'symbol':'1.0-2':'ar-EG' }}</dd></div></dl> }
+      </section>
+    </div>
+  </div>
+</main>

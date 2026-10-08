@@ -101,6 +101,20 @@ export const routes: Routes = [
         (module) => module.FamilyPortalPage,
       ),
   },
+  {
+    path: 'finance',
+    canActivate: [authGuard, authorizationGuard],
+    data: {
+      authorization: {
+        roles: ['R06_ACCOUNTANT'],
+        permissions: ['invoices.read', 'finance.expenses.read', 'reports.read'],
+      },
+    },
+    loadComponent: () =>
+      import('./features/finance/pages/finance-dashboard-page').then(
+        (module) => module.FinanceDashboardPage,
+      ),
+  },
   { path: 'foundation', component: FoundationPage, pathMatch: 'full' },
   {
     path: 'shared-components',

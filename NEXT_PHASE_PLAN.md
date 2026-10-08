@@ -1,18 +1,18 @@
 # خطة المرحلة القادمة — Mada Academy
 
-**تاريخ اللقطة:** 5 أكتوبر 2026
-**قاعدة العمل الحالية:** `main` بعد إصلاحات UI/UX ومسارات الأدوار؛ آخر commit موثق هو `7c351ec`، والـworking tree مطابق لـ`origin/main`.
+**تاريخ اللقطة:** 8 أكتوبر 2026
+**قاعدة العمل الحالية:** `main` عند `b062c24` بعد دمج تحسينات الـshell ومسار Leads وإعدادات Railway/Render/Docker/staging smoke؛ PR #89 لـR06-A وPR #90 لـR06-B ما زالا مفتوحين، والفرع المتسلسل الحالي هو `feat/angular-r06b-finance-mutations`.
 **الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وموجة التقسيم الأولى مغلقة. اختبارات frontend الحرجة، refresh-token reuse، فصل auth endpoints، وجرد R00 مع contract/tests مغلقة؛ وتظل private-storage/backup-restore/staging بوابات بيئية منفصلة.
 
 ## قرار التنفيذ الحالي
 
-1. **تم إغلاق شريحة P2 source acceptance:** تقارير التشغيل، عزل النطاق، حماية LIVE، وحالات R08/R09 الجزئية مثبتة.
+1. **تم إغلاق شريحة P2 source acceptance:** تقارير التشغيل، عزل النطاق، حماية LIVE، وحالات R08/R09 الجزئية مثبتة؛ أُغلق R08 عبر PR #88 وأصبح R09 مغلقًا ضمن خط الدمج السابق.
 2. **تم دمج P1 core journey:** الـseeder repairable، وحسابات R04/R08/R09 وروابطهم واختبارات الرحلة موجودة في `main`.
 3. **تم تنفيذ local browser/API E2E:** `pnpm e2e` يمر بـ **7/7** ويغطي R06/R08/R09 ودورة الفاتورة/الدفع/الإثبات.
 4. **تم دمج الخطوة الثانية (بوابات الأسرة والطلاب الحية):** ربط كامل بـ `/api/v1/consumer/me/*` لحسابات R08 وR09، مع منع أخطاء 403 للموظفين وإتاحة زر تبديل فوري بضغطة زر ببيانات العرض الحية.
 5. **تم دمج الخطوة الأولى (مسار العملاء المحتملين والتسجيل للسكرتارية):** إضافة كيان `Lead` ومهاجرة EF Core وواجهات CRUD كاملة، وتحويل العميل لطالب مع فحص السعة وتوليد الفاتورة، والتسجيل الفوري واختبارات تكامل كاملة (78/78 ناجحة)، والدمج في `main`.
 6. **تم تجهيز بيئة النشر داخل الريبو:** Dockerfile، production env template، staging smoke script، وrunbook.
-7. **الخطوة المتبقية للـFinance:** secret injection + authenticated private-storage smoke + durable backup/restore policy + deployed staging smoke. لا نعتبرها مكتملة محليًا.
+7. **المرحلة Angular الحالية:** R06-B عمليات Finance ورفع إثباتات الدفع فوق R06-A؛ بوابات Finance production (secret injection، private-storage smoke، backup/restore، وstaging smoke) تبقى منفصلة ولا تعتبر مكتملة محليًا.
 
 ## نتيجة acceptance الحالية
 
@@ -40,7 +40,18 @@
 - **Finance frontend follow-up (6 أكتوبر، فرع `fix/finance-payment-single-flight`):** Vitest **52/52** (بينها 4 اختبارات لحالات الانتظار/التعطيل)، `pnpm check`، `pnpm build`، Playwright **11/11**، و`git diff --check` ناجحة؛ لم يتغير backend.
 - التحقق عبر GitHub: PR #41 وPR #42 مرّا بـ **4/4 checks ناجحة** لكل PR.
 
-## الخطة التالية بعد موجة التقسيم
+## الخطة التالية بعد إغلاق R08 وR09
+
+### R06-A — Angular Finance read parity
+
+- بناء feature Angular مستقلة لـFinanceDesk فوق العقود والـendpoints الحالية، دون API بديل أو تغيير backend.
+- قراءة الفواتير والمدفوعات والمصروفات والتقارير المسموح بها حسب role/permission ونطاق الأكاديمية/الفرع الذي يفرضه الخادم.
+- تغطية `loading/error/forbidden/empty` وpartial failure دون Demo fallback، مع الحفاظ على RTL وتصميم Mada.
+- مراجعة صفحة React المرجعية، عميل API، endpoints، الكيانات، authorization matrix، واختبارات backend قبل تعديل الكود.
+- إضافة unit/component tests للقراءة وحالات الفشل والنطاق؛ لا تبدأ mutations أو evidence upload قبل قبول R06-A.
+- معيار القبول: `client-angular` tests/build، اختبارات API policy، E2E قراءة Finance، و`git diff --check` ناجحة.
+
+## الأعمال المتبقية بعد R06-A
 
 1. **اختبارات frontend لـFinance mutations — مكتملة محليًا على `fix/finance-payment-single-flight`:** تغطي دقة المبالغ/over-collection، pending وsingle-flight، disabled states للفواتير والمدفوعات والمصروفات والقرارات، رفع الإثبات، وتحرير الحالة بعد الفشل مع إبقاء المدخلات.
 2. اختبارات frontend لعزل family/student scope، partial failure، وغياب Demo fallback في LIVE.

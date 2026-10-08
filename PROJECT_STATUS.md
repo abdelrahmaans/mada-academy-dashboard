@@ -1,13 +1,13 @@
 # Mada Academy — Project Status
 
-**As of:** 7 October 2026
-**Verified Git state:** `main` at `a6c43ed` includes merged PRs #55, #56, #58, #61, #62, #63, #64, #65, #67, #68, #69, #70, #71, #72, #73, #75, and #77 and is pushed to origin.
-**Latest delivery PR:** [PR #65 — extract FinanceDesk dialogs](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/65), merged successfully.
+**As of:** 8 October 2026
+**Verified Git state:** `main` at `b062c24` includes PR #88 plus the merged live-shell/Leads updates and Railway/Render/Docker/staging-smoke configuration; it is pushed to origin.
+**Latest delivery PRs:** [PR #89 — R06-A Finance read parity](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/89) and [PR #90 — R06-B Finance mutations/evidence](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/90) are open, with successful visible CI checks; #90 is stacked on #89.
 **Stack:** React + Vite + TypeScript; ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions.
 
 ## Parallel Angular client — foundation and shared UI (non-LIVE)
 
-An isolated `client-angular/` workspace has Angular 21.2, standalone routing, strict TypeScript, SCSS, Vitest, and zoneless change detection. In addition to shared UI and the auth shell (`/login`, `/workspace`), it now contains LIVE-parity R02 (`/`) and R03 (`/head-instructors`) dashboard slices. A reusable auth interceptor, refresh lifecycle, typed role/permission catalog, `AuthorizationService`, and route policy guard now provide the project-wide client policy layer; backend authorization and scope remain authoritative. R03 uses separate typed `models`/`data-access`/`pages`, parallel core loading, optional-source warnings, JWT-derived branch scope, signals, OnPush, and lazy routing. It is **not a full Angular replacement** and other role surfaces remain pending; the catalog is not evidence that every role endpoint is already wired. React in `client/` remains the reference client and `main` remains the source of truth. Shared UI is on [PR #79](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/79), auth is on [PR #80](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/80), R02 is isolated on `feat/angular-r02-dashboard`, and R03 is isolated on `feat/angular-r03-head-instructors`. This does not alter production infrastructure or deployment. See [`ANGULAR_FRONTEND_GUIDE.md`](ANGULAR_FRONTEND_GUIDE.md) for architecture and security/parity boundaries.
+An isolated `client-angular/` workspace has Angular 21.2, standalone routing, strict TypeScript, SCSS, Vitest, and zoneless change detection. In addition to shared UI and the auth shell (`/login`, `/workspace`), it now contains accepted LIVE-parity slices for R02, R03, R04, R05, R08 (`/family-portal`), and R09 (`/student-portal`). R08 and R09 enforce linked/self scope through backend contracts, expose published evaluations only, and keep LIVE states separate from DEMO fallback. A reusable auth interceptor, refresh lifecycle, typed role/permission catalog, `AuthorizationService`, and route policy guard provide the project-wide client policy layer; backend authorization and scope remain authoritative. Angular is **not a full replacement** for React, which remains the reference client and `main` remains the source of truth. R06-A read parity and R06-B mutation/evidence parity are implemented on stacked branches pending merge; their local Angular suite is green, while production storage/staging gates remain separate. This does not alter production infrastructure or deployment. See [`ANGULAR_FRONTEND_GUIDE.md`](ANGULAR_FRONTEND_GUIDE.md) for architecture and security/parity boundaries.
 
 ## Executive summary
 
@@ -39,7 +39,7 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 
 ## CI and verified baseline
 
-The current merged baseline includes PRs #41, #42, #46, #55, #56, #58, #61, #62, #63, #64, #65, #67, #68, #69, #70, and #71. The merged refactors cover Head Instructors, Schedule, Platform Console, Marketing/legacy cleanup, Classes, Team, and Finance dialogs. Local frontend validation is green: Vitest **24/24**, `pnpm check`, `pnpm build`, `git diff --check`, and browser E2E **7/7** using Chromium. PR #65 also passed Frontend Checks and Playwright after the stale pnpm setup was corrected. Vercel `client-angular` checks remain externally rate-limited and are not repository failures; no real deployment secrets are stored in Git.
+The current merged baseline includes PR #88 for Angular R08. Its CI passed Angular R08 Playwright, the critical Playwright flows, Frontend Checks, and Vercel checks. R08/R09 acceptance covers linked/self scope, published evaluations, partial failures, and no-Demo LIVE behavior. No real deployment secrets are stored in Git.
 
 ## LIVE acceptance evidence — 4 October 2026
 
