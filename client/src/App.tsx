@@ -18,6 +18,7 @@ const FinanceDesk = lazy(() => import("./pages/FinanceDesk"));
 const MarketingDesk = lazy(() => import("./pages/MarketingDesk"));
 const Team = lazy(() => import("./pages/Team"));
 const BranchOperations = lazy(() => import("./pages/BranchOperations"));
+const SupervisionAssignments = lazy(() => import("./pages/SupervisionAssignments"));
 const Approvals = lazy(() => import("./pages/Approvals"));
 const Reports = lazy(() => import("./pages/Reports"));
 const InstructorDesk = lazy(() => import("./pages/InstructorDesk"));
@@ -79,6 +80,7 @@ const APP_ROUTES = [
   ["/marketing-desk", () => <Guard roles={["R07_MEDIA_MANAGER"]} permission="marketing.read"><MarketingDesk /></Guard>],
   ["/team", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS"]}><Team /></Guard>],
   ["/branch-operations", () => <Guard roles={["R02_BRANCH_MANAGER"]}><BranchOperations /></Guard>],
+  ["/supervision-assignments", () => <Guard roles={["R02_BRANCH_MANAGER"]}><SupervisionAssignments /></Guard>],
   ["/approvals", () => <Guard roles={["R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS", "R05_SECRETARY", "R06_ACCOUNTANT"]}><Approvals /></Guard>],
   ["/reports", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R06_ACCOUNTANT"]}><Reports /></Guard>],
   ["/instructor", () => <Guard roles={["R04_INSTRUCTOR"]}><Redirect to="/instructor-desk" /></Guard>],
@@ -86,6 +88,9 @@ const APP_ROUTES = [
   ["/head-instructors", () => <Guard roles={["R03_HEAD_INSTRUCTORS"]}><HeadInstructors /></Guard>],
   ["/academic-programs", () => <Guard roles={["R03_HEAD_INSTRUCTORS"]}><AcademicPrograms /></Guard>],
   ["/academy-owner", () => <Guard roles={["R01_ACADEMY_OWNER"]}><AcademyOwner /></Guard>],
+  ["/academy-owner/branches", () => <Guard roles={["R01_ACADEMY_OWNER"]}><AcademyOwner /></Guard>],
+  ["/academy-owner/tickets", () => <Guard roles={["R01_ACADEMY_OWNER"]}><AcademyOwner /></Guard>],
+  ["/academy-owner/reports", () => <Guard roles={["R01_ACADEMY_OWNER"]}><AcademyOwner /></Guard>],
   ["/executive-dashboard", () => <Guard roles={["R01_ACADEMY_OWNER"]}><ExecutiveDashboard /></Guard>],
   ["/platform-console", () => <Guard roles={["R00_PLATFORM_ADMIN"]}><PlatformConsole /></Guard>],
   ["/family-portal", () => <Guard roles={["R08_PARENT"]}><FamilyPortal /></Guard>],

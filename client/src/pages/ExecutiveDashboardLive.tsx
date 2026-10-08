@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, Activity, Building2, CalendarDays, CheckCircle2, GraduationCap, RefreshCw, Users, Wallet } from "lucide-react";
+import { AlertCircle, Activity, BarChart3, Building2, CalendarDays, CheckCircle2, GraduationCap, LayoutDashboard, Menu, RefreshCw, ShieldCheck, Users, Wallet, X } from "lucide-react";
 import { toast } from "sonner";
+import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
+import R01AcademySidebar from "@/components/R01AcademySidebar";
+import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { apiClient, type ExecutiveActivityItem, type ExecutiveDashboardReport, type ExecutiveMetrics } from "@/lib/apiClient";
 import { executiveFailureMessage } from "@/lib/liveSurfaceAcceptance";
 import "./ExecutiveDashboardLive.css";
@@ -58,6 +61,7 @@ export default function ExecutiveDashboardLive() {
   const [activity, setActivity] = useState<ExecutiveActivityItem[]>([]);
   const [activityError, setActivityError] = useState<string | null>(null);
   const [activityLoading, setActivityLoading] = useState(true);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const range = useMemo(() => periodRange(period), [period]);
 
   useEffect(() => {
@@ -100,8 +104,11 @@ export default function ExecutiveDashboardLive() {
   const selectedBranchName = branchId === "ALL" ? "كل الفروع" : report?.availableBranches.find(branch => branch.id === branchId)?.name ?? "الفرع المحدد";
   const retry = () => setRetryKey(value => value + 1);
 
-  return <RoleDashboardShell className="app-shell executive-dashboard-shell r1-live-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية الحالية" branchName={selectedBranchName} demo={false}>
-    <main className="r1-live-page" dir="rtl">
+  return <RoleDashboardShell className="app-shell executive-dashboard-shell r1-live-shell" showSessionLogout={false} roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية الحالية" branchName={selectedBranchName} demo={false}>
+    <R01AcademySidebar activePath="/executive-dashboard" mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+    <main className="main-panel">
+      <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel={selectedBranchName} />
+      <div className="workspace r1-live-page" dir="rtl">
       <PageHeader className="welcome-row" eyebrow={<span className="eyebrow"><i className="eyebrow-dot" /> الإدارة التنفيذية · R01 · LIVE</span>} title="لوحة الإدارة التنفيذية" description="مؤشرات تشغيلية ومالية للقراءة فقط، محسوبة من بيانات الأكاديمية ضمن الفرع والفترة المختارين." />
       <RoleScopeCard className="executive-scope-card" />
       <section className="r1-live-controls" aria-label="تصفية التقرير التنفيذي">
@@ -128,6 +135,7 @@ export default function ExecutiveDashboardLive() {
         <small className="r1-live-audit-source">المصادر: AuditEvents + ApprovalRequests. لا يتم إرجاع metadata أو بيانات الاتصال.</small>
       </section>
       <p className="r1-live-scope-note">بيانات القراءة فقط داخل Tenant الحالي؛ لا تتيح هذه اللوحة إنشاء دفعات أو اعتماد مصروفات.</p>
+      </div>
     </main>
   </RoleDashboardShell>;
 }

@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, RefreshCw, ShieldCheck, Users } from "lucide-react";
 import EvaluationReviewQueue from "@/components/EvaluationReviewQueue";
 import HeadInstructorsLiveOverview, { type HeadInstructorsOverviewData } from "@/components/HeadInstructorsLiveOverview";
+import R03HeadInstructorsSidebar from "@/components/R03HeadInstructorsSidebar";
 import { LoadingState } from "@/components/FeedbackStates";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
+import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient, type NotificationRecord } from "@/lib/apiClient";
 import { mergeR03LiveResults } from "@/lib/liveSurfaceAcceptance";
@@ -14,12 +16,13 @@ type LiveView = "overview" | "evaluations";
 
 export default function HeadInstructorsLive() {
   const { me, loading: authLoading } = useAuth();
-  const [view, setView] = useState<LiveView>("overview");
+  const [view, setView] = useState<LiveView>(() => window.location.hash === "#evaluations" ? "evaluations" : "overview");
   const [data, setData] = useState<HeadInstructorsOverviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [markingId, setMarkingId] = useState<string | null>(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!me?.branchId) {
@@ -57,6 +60,13 @@ export default function HeadInstructorsLive() {
     if (!authLoading) void load();
   }, [authLoading, load]);
 
+  useEffect(() => {
+    const syncHashView = () => setView(window.location.hash === "#evaluations" ? "evaluations" : "overview");
+    window.addEventListener("hashchange", syncHashView);
+    syncHashView();
+    return () => window.removeEventListener("hashchange", syncHashView);
+  }, []);
+
   const branch = me?.branches?.find(item => item.id === me.branchId)?.name ?? "الفرع المسند";
   const upcomingSessions = useMemo(() => {
     if (!data) return [];
@@ -85,8 +95,11 @@ export default function HeadInstructorsLive() {
   }
 
   return (
-    <RoleDashboardShell className="r03-live-shell" roleCode="R03" roleLabel="رئيس المدربين" scopeLevel="branch" scopeLabel={`فرع واحد · ${branch}`} branchName={branch} tenantName={me.academy?.name} demo={false}>
-      <main className="r03-live-page" dir="rtl">
+    <RoleDashboardShell className="app-shell r03-live-shell" showSessionLogout={false} roleCode="R03" roleLabel="رئيس المدربين" scopeLevel="branch" scopeLabel={`فرع واحد · ${branch}`} branchName={branch} tenantName={me.academy?.name} demo={false}>
+      <R03HeadInstructorsSidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} activePath="/head-instructors" />
+      <main className="main-panel" dir="rtl">
+        <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel={`فرع ${branch}`} roleLabel="رئيس المدربين" />
+        <div className="r03-live-page">
         <header className="r03-live-header">
           <div><span className="r03-live-eyebrow"><span /> لوحة أكاديمية · LIVE</span><h1>إشراف فريق المدربين</h1><p>بيانات فعلية من {branch} · الجلسات ضمن آخر 30 يومًا والقادم 60 يومًا.</p></div>
           <button className="r03-live-refresh" type="button" onClick={() => void load()} disabled={loading}><RefreshCw size={15} className={loading ? "spinning" : ""} /> تحديث البيانات</button>
@@ -101,6 +114,7 @@ export default function HeadInstructorsLive() {
         {!loading && !error && warning && <section className="r03-live-error" role="status"><ShieldCheck size={20} /><div><strong>بعض الملحقات غير متاحة</strong><p>{warning} البيانات الأساسية ما زالت معروضة من الخادم.</p></div><button type="button" onClick={() => void load()}>إعادة المحاولة</button></section>}
         {!loading && !error && data && view === "overview" && <HeadInstructorsLiveOverview data={data} upcomingSessions={upcomingSessions} activeGroups={activeGroups} coachCount={coachCount} completedSessions={completedSessions} markingId={markingId} onMarkRead={notification => void markRead(notification)} />}
         {!loading && !error && data && view === "evaluations" && <EvaluationReviewQueue />}
+        </div>
       </main>
     </RoleDashboardShell>
   );

@@ -107,6 +107,19 @@ test.describe("critical local MVP journeys", () => {
     await expect(page.getByRole("alert")).toContainText("إعادة المحاولة");
     await expect(page.getByRole("heading", { name: "Youssef Ahmed", exact: true })).toBeVisible();
     await expect(page.getByText("Lina Omar", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("LIVE · بيانات الحساب", { exact: true })).toBeVisible();
+    await expect(page.getByText("DEMO · معاينة محلية", { exact: true })).toHaveCount(0);
+  });
+
+  test("R08 keeps linked children visible when sessions fail without a DEMO fallback", async ({ page }) => {
+    await page.route("**/api/v1/consumer/me/sessions", route => route.abort());
+    await login(page, "parent", "+201000000011");
+    await expect(page).toHaveURL(/\/family-portal$/);
+    await expect(page.getByRole("heading", { name: "Youssef Ahmed", exact: true })).toBeVisible();
+    await expect(page.getByRole("status")).toContainText("الجلسات غير متاحة مؤقتًا");
+    await expect(page.getByText("LIVE · بيانات الحساب", { exact: true })).toBeVisible();
+    await expect(page.getByText("DEMO · معاينة محلية", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Lina Omar", { exact: true })).toHaveCount(0);
   });
 
   test("R09 keeps the student profile visible when sessions fail", async ({ page }) => {
@@ -117,6 +130,8 @@ test.describe("critical local MVP journeys", () => {
     await expect(page.getByRole("status")).toContainText("الجلسات غير متاحة مؤقتًا");
     await expect(page.getByRole("status")).toContainText("إعادة المحاولة");
     await expect(page.getByText("Youssef Ahmed", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("LIVE · حساب الطالب", { exact: true })).toBeVisible();
+    await expect(page.getByText("DEMO · حساب الطالب", { exact: true })).toHaveCount(0);
   });
 
   test("R04 disables attendance mutations for a completed session", async ({ page }) => {

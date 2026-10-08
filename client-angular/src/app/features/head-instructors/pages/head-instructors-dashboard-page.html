@@ -1,0 +1,317 @@
+<main class="r03-dashboard" dir="rtl">
+  <mada-sidebar
+    [open]="mobileMenuOpen()"
+    [sections]="sections"
+    [utilityLinks]="utilityLinks"
+    ariaLabel="تنقل رئيس المدربين"
+    [academyName]="auth.me()?.academy?.name || 'أكاديمية مدى'"
+    [roleLabel]="auth.me()?.roleLabel || 'رئيس المدربين'"
+    roleCode="R03"
+    homePath="/head-instructors"
+    helpDescription="دليل الإشراف الأكاديمي"
+    (closed)="closeMenu()"
+    (itemActivated)="handleSidebarAction($event)"
+  />
+  @if (mobileMenuOpen()) {
+    <button
+      class="r03-dashboard__scrim"
+      type="button"
+      aria-label="إغلاق القائمة"
+      (click)="closeMenu()"
+    ></button>
+  }
+  <section class="r03-dashboard__content">
+    <header class="r03-dashboard__topbar">
+      <mada-button
+        class="r03-dashboard__menu"
+        variant="ghost"
+        size="icon"
+        ariaLabel="فتح قائمة رئيس المدربين"
+        (clicked)="openMenu()"
+        ><svg lucideIcon="menu" [size]="21"></svg
+      ></mada-button>
+      <div>
+        <strong>{{ auth.me()?.academy?.name || 'أكاديمية مدى' }}</strong
+        ><span>فرع {{ branchName() }} · بيانات مباشرة</span>
+      </div>
+    </header>
+    <div class="r03-dashboard__workspace">
+      @if (!isHeadInstructor()) {
+        <mada-feedback-state
+          kind="locked"
+          title="هذه الصفحة مخصصة لرئيس المدربين"
+          description="لم يتم تحميل أو عرض بيانات تجريبية."
+        />
+      } @else {
+        <div class="r03-dashboard__heading">
+          <mada-page-header
+            eyebrow="لوحة أكاديمية · LIVE"
+            title="إشراف فريق المدربين"
+            description="بيانات فعلية من الفرع · الجلسات ضمن آخر 30 يومًا والقادم 60 يومًا."
+          />
+          <mada-button
+            variant="secondary"
+            [disabled]="loading()"
+            [loading]="loading()"
+            (clicked)="load()"
+            ><svg lucideIcon="refresh-cw" [size]="16"></svg> تحديث البيانات</mada-button
+          >
+        </div>
+        <mada-scope-card
+          level="branch"
+          [scopeName]="'فرع واحد · ' + branchName()"
+          [tenantName]="auth.me()?.academy?.name || null"
+          [compact]="true"
+        />
+        <nav class="r03-dashboard__tabs" aria-label="أقسام إشراف المدربين">
+          <button
+            type="button"
+            [class.is-active]="view() === 'overview'"
+            (click)="selectView('overview')"
+          >
+            <svg lucideIcon="users" [size]="15"></svg> ملخص الفرع
+          </button>
+          <button
+            type="button"
+            [class.is-active]="view() === 'evaluations'"
+            (click)="selectView('evaluations')"
+          >
+            <svg lucideIcon="circle-check" [size]="15"></svg> مراجعة التقييمات
+            <b>{{ data()?.evaluations?.counts?.SUBMITTED ?? '—' }}</b>
+          </button>
+        </nav>
+        @if (loading()) {
+          <mada-feedback-state
+            kind="loading"
+            title="جارٍ تحميل بيانات الفريق والمجموعات والجلسات والتقييمات…"
+            description="نقرأ البيانات من نطاق الفرع المصادق عليه."
+          />
+        } @else if (error()) {
+          <mada-feedback-state
+            kind="error"
+            title="تعذر عرض لوحة R03 الحية"
+            [description]="error() + ' لم يتم استبدال بيانات الخادم ببيانات تجريبية.'"
+            (retry)="load()"
+          />
+        } @else if (result(); as currentResult) {
+          @if (currentResult.warnings.length > 0) {
+            <div class="r03-dashboard__warning" role="status">
+              <svg lucideIcon="shield-check" [size]="18"></svg
+              ><span
+                >بعض الملحقات غير متاحة: {{ currentResult.warnings[0].message }} البيانات الأساسية
+                ما زالت معروضة من الخادم.</span
+              ><button type="button" (click)="load()">إعادة المحاولة</button>
+            </div>
+          }
+          @if (view() === 'overview') {
+            <section class="r03-dashboard__metrics" aria-label="مؤشرات الفرع الحية">
+              <article>
+                <span class="r03-metric__icon"><svg lucideIcon="users" [size]="17"></svg></span
+                ><small>مدربون نشطون</small><strong>{{ coachCount() | number: 'ar-EG' }}</strong
+                ><em>عضويات نشطة في الفرع</em>
+              </article>
+              <article>
+                <span class="r03-metric__icon"><svg lucideIcon="book-open" [size]="17"></svg></span
+                ><small>مجموعات قائمة</small
+                ><strong>{{ activeGroups().length | number: 'ar-EG' }}</strong
+                ><em>من سجلات البرامج</em>
+              </article>
+              <article>
+                <span class="r03-metric__icon"
+                  ><svg lucideIcon="calendar-days" [size]="17"></svg></span
+                ><small>جلسات قادمة</small
+                ><strong>{{ upcomingSessions().length | number: 'ar-EG' }}</strong
+                ><em>ضمن نافذة 60 يومًا</em>
+              </article>
+              <article>
+                <span class="r03-metric__icon"><svg lucideIcon="clock-3" [size]="17"></svg></span
+                ><small>جلسات مكتملة</small
+                ><strong>{{ completedSessions() | number: 'ar-EG' }}</strong
+                ><em>ضمن آخر 30 يومًا</em>
+              </article>
+            </section>
+            <section class="r03-dashboard__status-grid" aria-label="حالات التقييم">
+              <header>
+                <svg lucideIcon="circle-check" [size]="17"></svg>
+                <div>
+                  <h2>حالات التقييم</h2>
+                  <p>أعداد من قاعدة البيانات؛ لا تظهر التقييمات للمستهلك إلا بعد النشر.</p>
+                </div>
+              </header>
+              @for (state of evaluationStates; track state.key) {
+                <article>
+                  <span>{{ state.label }}</span
+                  ><strong>{{ data()?.evaluations?.counts?.[state.key] ?? 0 }}</strong>
+                </article>
+              }
+            </section>
+            <div class="r03-dashboard__two-col">
+              <mada-card surface="panel"
+                ><header class="r03-panel__heading">
+                  <svg lucideIcon="users" [size]="17"></svg>
+                  <div>
+                    <h2>فريق الفرع</h2>
+                    <p>الأسماء والأدوار من العضويات النشطة.</p>
+                  </div>
+                </header>
+                @if (data()?.instructors?.length === 0) {
+                  <p class="r03-empty">لا توجد عضويات تدريب نشطة في هذا الفرع.</p>
+                } @else {
+                  <div class="r03-person-list">
+                    @for (
+                      instructor of data()?.instructors ?? [];
+                      track instructor.id + instructor.roleCode
+                    ) {
+                      <article>
+                        <span class="r03-avatar">{{ (instructor.name || '؟').slice(0, 1) }}</span>
+                        <div>
+                          <strong>{{ instructor.name || 'اسم غير متاح' }}</strong
+                          ><small>{{
+                            instructor.roleCode === 'R03_HEAD_INSTRUCTORS'
+                              ? 'رئيس المدربين'
+                              : 'مدرب'
+                          }}</small>
+                        </div>
+                        <em
+                          >{{ instructorStats().get(instructor.id)?.groups ?? 0 }} مجموعة ·
+                          {{ instructorStats().get(instructor.id)?.sessions ?? 0 }} جلسة</em
+                        >
+                      </article>
+                    }
+                  </div>
+                }
+              </mada-card>
+              <mada-card surface="panel"
+                ><header class="r03-panel__heading">
+                  <svg lucideIcon="bell" [size]="17"></svg>
+                  <div>
+                    <h2>تنبيهات غير مقروءة</h2>
+                    <p>إشعارات مرتبطة بالحساب من الخادم.</p>
+                  </div>
+                </header>
+                @if (data()?.notifications?.length === 0) {
+                  <p class="r03-empty">لا توجد تنبيهات غير مقروءة.</p>
+                } @else {
+                  <div class="r03-notification-list">
+                    @for (notification of data()?.notifications ?? []; track notification.id) {
+                      <article>
+                        <div>
+                          <strong>{{ notification.title }}</strong>
+                          <p>{{ notification.body }}</p>
+                          <small>{{ formatDate(notification.createdAt) }}</small>
+                        </div>
+                        <button
+                          type="button"
+                          [disabled]="markingNotificationId() === notification.id"
+                          (click)="markRead(notification.id)"
+                        >
+                          تمت القراءة
+                        </button>
+                      </article>
+                    }
+                  </div>
+                }
+              </mada-card>
+            </div>
+            <mada-card surface="panel"
+              ><header class="r03-panel__heading">
+                <svg lucideIcon="book-open" [size]="17"></svg>
+                <div>
+                  <h2>المجموعات والبرامج</h2>
+                  <p>بيانات CourseOffering المسجلة والمسموح بها في الفرع.</p>
+                </div>
+              </header>
+              @if (data()?.groups?.length === 0) {
+                <p class="r03-empty">لا توجد مجموعات مسجلة في هذا الفرع.</p>
+              } @else {
+                <div class="r03-table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>البرنامج</th>
+                        <th>المدرب</th>
+                        <th>المسجلون</th>
+                        <th>الفترة</th>
+                        <th>الحالة</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (group of data()?.groups ?? []; track group.id) {
+                        <tr>
+                          <td>
+                            <strong>{{ group.courseName }}</strong
+                            ><small>{{ group.track }}</small>
+                          </td>
+                          <td>{{ group.instructorName || 'غير محدد' }}</td>
+                          <td>{{ group.enrolledStudents }} / {{ group.maxStudents }}</td>
+                          <td>
+                            {{ formatDate(group.startDate) }} – {{ formatDate(group.endDate) }}
+                          </td>
+                          <td>
+                            <span class="r03-pill">{{ group.status }}</span>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            </mada-card>
+            <mada-card surface="panel"
+              ><header class="r03-panel__heading">
+                <svg lucideIcon="calendar-days" [size]="17"></svg>
+                <div>
+                  <h2>الجلسات القادمة</h2>
+                  <p>مواعيد فعلية من جدول الفرع.</p>
+                </div>
+              </header>
+              @if (upcomingSessions().length === 0) {
+                <p class="r03-empty">لا توجد جلسات قادمة ضمن النافذة المحددة.</p>
+              } @else {
+                <div class="r03-session-grid">
+                  @for (session of upcomingSessions(); track session.id) {
+                    <article>
+                      <div>
+                        <strong>{{ session.courseName || 'جلسة' }}</strong
+                        ><span class="r03-pill">{{ session.status }}</span>
+                      </div>
+                      <p>{{ formatDateTime(session.startAt) }}</p>
+                      <small
+                        >{{ session.instructorName || instructorName(session.instructorId) }} ·
+                        {{ session.classroomName || 'قاعة غير محددة' }}</small
+                      >
+                    </article>
+                  }
+                </div>
+              }
+            </mada-card>
+            <p class="r03-dashboard__disclaimer">
+              <svg lucideIcon="shield-check" [size]="15"></svg> لا تتضمن لوحة R03 الماليات. مؤشرات
+              الإتقان غير معروضة لأن مصدرًا حيًا لها غير موجود في عقد البيانات الحالي.
+            </p>
+          } @else {
+            <mada-card surface="panel"
+              ><header class="r03-panel__heading">
+                <svg lucideIcon="circle-check" [size]="17"></svg>
+                <div>
+                  <h2>مراجعة التقييمات</h2>
+                  <p>
+                    الملخص الحي لحالات التقييم داخل الفرع. تفاصيل التقييمات لا تُعرض للمستهلك إلا
+                    بعد PUBLISHED.
+                  </p>
+                </div>
+              </header>
+              <div class="r03-evaluation-summary">
+                <strong>{{ data()?.evaluations?.counts?.SUBMITTED ?? 0 }}</strong
+                ><span>تقييم بانتظار المراجعة</span
+                ><button type="button" (click)="selectView('overview')">
+                  العودة إلى ملخص الفرع
+                </button>
+              </div></mada-card
+            >
+          }
+        }
+      }
+    </div>
+  </section>
+</main>

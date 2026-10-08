@@ -23,10 +23,11 @@ import {
   Settings,
   Sparkles,
   Users,
-  Wallet,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import R03HeadInstructorsSidebar from "@/components/R03HeadInstructorsSidebar";
+import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
 import {
   apiClient,
@@ -927,6 +928,7 @@ function SchedulePage() {
 
   return (
     <div className="app-shell" dir="rtl">
+      {me?.role === "R03_HEAD_INSTRUCTORS" ? <R03HeadInstructorsSidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} activePath="/schedule" /> : <>
       {mobileNavOpen && (
         <button
           className="mobile-scrim"
@@ -981,10 +983,6 @@ function SchedulePage() {
         </nav>
         <div className="nav-caption nav-caption-spaced">الإدارة</div>
         <nav className="primary-nav" aria-label="قائمة الإدارة">
-          <button className="nav-link" onClick={() => navigate("/finance")}>
-            <Wallet size={19} />
-            <span>المالية والتحصيل</span>
-          </button>
           <button className="nav-link" onClick={() => navigate("/team")}>
             <Users size={19} />
             <span>الفريق والأدوار</span>
@@ -1020,6 +1018,8 @@ function SchedulePage() {
           مدى لإدارة الأكاديميات <span>نسخة تجريبية</span>
         </div>
       </aside>
+
+      </>}
 
       <main className="main-panel">
         <header className="topbar">

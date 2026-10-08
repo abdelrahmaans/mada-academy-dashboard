@@ -1,0 +1,131 @@
+@if (open()) {
+  <button
+    class="mada-sidebar__scrim"
+    type="button"
+    aria-label="إغلاق القائمة"
+    (click)="requestClose()"
+  ></button>
+}
+<aside class="mada-sidebar" [class.mada-sidebar--open]="open()" [attr.aria-label]="ariaLabel()">
+  <div class="mada-sidebar__top">
+    <a
+      class="mada-sidebar__brand"
+      [routerLink]="homePath()"
+      aria-label="مدى — الصفحة الرئيسية"
+      (click)="requestClose()"
+    >
+      @if (brandVariant() === 'mark') {
+        <svg class="mada-sidebar__brand-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+          <path d="M4 12.5 12.5 8l8.2 4.5v9.4l-8.2 4.6L4 21.9v-9.4Z" fill="currentColor" />
+          <path
+            d="m19.3 12.5 8.2-4.5 8.5 4.5v9.4l-8.5 4.6-8.2-4.6v-9.4Z"
+            fill="currentColor"
+            opacity=".72"
+          />
+          <path
+            d="m11.5 24.1 8.3-4.6 8.2 4.6v8.2l-8.2 4.4-8.3-4.4v-8.2Z"
+            fill="currentColor"
+            opacity=".5"
+          />
+        </svg>
+      } @else {
+        <svg
+          class="mada-sidebar__brand-mark"
+          lucideIcon="graduation-cap"
+          [size]="28"
+          aria-hidden="true"
+        ></svg>
+      }
+      <span class="mada-sidebar__brand-word">مدى</span>
+    </a>
+    <mada-button
+      size="icon"
+      variant="ghost"
+      ariaLabel="إغلاق القائمة"
+      class="mada-sidebar__close"
+      (clicked)="requestClose()"
+    >
+      <svg lucideIcon="x" [size]="19" aria-hidden="true"></svg>
+    </mada-button>
+  </div>
+
+  <div class="mada-sidebar__academy">
+    <span class="mada-sidebar__academy-avatar" aria-hidden="true"
+      ><svg [lucideIcon]="academyIcon()" [size]="20"></svg
+    ></span>
+    <span class="mada-sidebar__academy-meta"
+      ><strong>{{ academyName() }}</strong
+      ><small>{{ roleLabel() }} · {{ roleCode() }}</small></span
+    >
+    <svg
+      class="mada-sidebar__chevron"
+      lucideIcon="chevron-down"
+      [size]="15"
+      aria-hidden="true"
+    ></svg>
+  </div>
+
+  @for (section of sections(); track section.label) {
+    <div class="mada-sidebar__caption">{{ section.label }}</div>
+    <nav class="mada-sidebar__nav" [attr.aria-label]="section.ariaLabel">
+      @for (item of section.items; track item.path) {
+        <a
+          class="mada-sidebar__link"
+          [routerLink]="item.path"
+          routerLinkActive="is-active"
+          #activeLink="routerLinkActive"
+          [routerLinkActiveOptions]="{ exact: item.exact ?? item.path === homePath() }"
+          [attr.aria-current]="activeLink.isActive ? 'page' : null"
+          (click)="requestClose()"
+        >
+          <svg [lucideIcon]="item.icon" [size]="19" aria-hidden="true"></svg>
+          <span>{{ item.label }}</span>
+          @if (item.badge !== undefined) {
+            <span class="mada-sidebar__count">{{ item.badge }}</span>
+          }
+        </a>
+      }
+    </nav>
+  }
+
+  <div class="mada-sidebar__spacer"></div>
+  <div class="mada-sidebar__help">
+    <span class="mada-sidebar__help-icon" aria-hidden="true"
+      ><svg lucideIcon="circle-help" [size]="18"></svg
+    ></span>
+    <span class="mada-sidebar__help-copy"
+      ><strong>محتاج مساعدة؟</strong><span>{{ helpDescription() }}</span></span
+    >
+    <svg
+      class="mada-sidebar__help-chevron"
+      lucideIcon="chevron-left"
+      [size]="16"
+      aria-hidden="true"
+    ></svg>
+  </div>
+
+  @if (utilityLinks().length > 0) {
+    <nav class="mada-sidebar__bottom" aria-label="إعدادات ومساعدة">
+      @for (item of utilityLinks(); track item.actionId ?? item.path) {
+        @if (item.actionId) {
+          <button
+            class="mada-sidebar__link mada-sidebar__action"
+            type="button"
+            (click)="activateAction(item)"
+          >
+            <svg [lucideIcon]="item.icon" [size]="19" aria-hidden="true"></svg
+            ><span>{{ item.label }}</span>
+          </button>
+        } @else if (item.path) {
+          <a class="mada-sidebar__link" [routerLink]="item.path" (click)="requestClose()">
+            <svg [lucideIcon]="item.icon" [size]="19" aria-hidden="true"></svg
+            ><span>{{ item.label }}</span>
+          </a>
+        }
+      }
+    </nav>
+  }
+  <div class="mada-sidebar__version">
+    {{ versionLabel() }} <span>{{ roleCode() }}</span>
+  </div>
+</aside>

@@ -1,0 +1,98 @@
+<main class="auth-login-page" dir="rtl">
+  <section class="auth-login-aside" aria-labelledby="login-hero-title">
+    <div class="auth-login-brand">
+      <span><svg lucideIcon="shield-check" [size]="20" aria-hidden="true"></svg></span>
+      <strong>مدى</strong>
+      <small>Academy Operating System</small>
+    </div>
+    <span class="auth-login-kicker">SECURE WORKSPACE ACCESS</span>
+    <h1 id="login-hero-title">ادخل إلى مساحة الأكاديمية بصلاحيتك.</h1>
+    <p>
+      كل حساب يرى نطاقه فقط. الدور والأكاديمية والصلاحيات يتم تحميلها من الـBackend بعد تسجيل
+      الدخول.
+    </p>
+    <div class="auth-login-trust">
+      <div>
+        <svg lucideIcon="circle-check" [size]="16" aria-hidden="true"></svg
+        ><span><strong>نطاق واضح</strong><small>Academy · Branch · Assigned</small></span>
+      </div>
+      <div>
+        <svg lucideIcon="lock-keyhole" [size]="16" aria-hidden="true"></svg
+        ><span><strong>دخول آمن</strong><small>رقم الهاتف وكلمة المرور</small></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="auth-login-card" aria-labelledby="login-title">
+    <div class="auth-login-card-head">
+      <span class="auth-login-icon"
+        ><svg lucideIcon="key-round" [size]="19" aria-hidden="true"></svg
+      ></span>
+      <div>
+        <h2 id="login-title">تسجيل الدخول</h2>
+        <p>استخدم رقم الهاتف وكلمة المرور لحسابك في مدى.</p>
+      </div>
+    </div>
+    @if (submittedError() || auth.error()) {
+      <div class="auth-login-error" role="alert">{{ submittedError() || auth.error() }}</div>
+    }
+    <form class="auth-login-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <label
+        ><span>نوع الحساب</span>
+        <select aria-label="نوع الحساب" formControlName="accountType">
+          <option value="staff">فريق الأكاديمية</option>
+          <option value="parent">ولي أمر</option>
+          <option value="student">طالب</option>
+        </select>
+      </label>
+      <label
+        ><span>رقم الهاتف</span>
+        <div class="auth-input-with-icon">
+          <svg lucideIcon="phone" [size]="16" aria-hidden="true"></svg
+          ><input
+            autocomplete="tel"
+            aria-label="رقم الهاتف"
+            dir="ltr"
+            type="tel"
+            formControlName="phone"
+            placeholder="01012345678"
+          />
+        </div>
+      </label>
+      <label
+        ><span>كلمة المرور</span>
+        <div class="auth-input-with-icon">
+          <svg lucideIcon="lock-keyhole" [size]="16" aria-hidden="true"></svg
+          ><input
+            autocomplete="current-password"
+            aria-label="كلمة المرور"
+            dir="ltr"
+            [type]="showPassword() ? 'text' : 'password'"
+            formControlName="password"
+            placeholder="••••••••"
+          /><button
+            type="button"
+            class="auth-password-toggle"
+            (click)="showPassword.set(!showPassword())"
+            [attr.aria-label]="showPassword() ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'"
+          >
+            {{ showPassword() ? 'إخفاء' : 'إظهار' }}
+          </button>
+        </div>
+      </label>
+      <button
+        class="auth-login-primary"
+        type="submit"
+        [disabled]="auth.loading()"
+        [attr.aria-busy]="auth.loading()"
+      >
+        {{ auth.loading() ? 'جارٍ تسجيل الدخول…' : 'دخول إلى المساحة'
+        }}<svg lucideIcon="arrow-left" [size]="16" aria-hidden="true"></svg>
+      </button>
+    </form>
+    <footer class="auth-login-footer">
+      <svg lucideIcon="shield-check" [size]="14" aria-hidden="true"></svg> لا تملك حسابًا؟ اطلب دعوة
+      من مسؤول الأكاديمية.
+    </footer>
+  </section>
+</main>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   AlertCircle,
   ArrowDownToLine,
@@ -62,12 +62,22 @@ import {
   type FinanceReport,
   type StudentRecord,
 } from "@/lib/apiClient";
-import { buildExpenseMutation, buildInvoiceMutation, buildPaymentMutation } from "@/lib/financeMutations";
+import {
+  buildExpenseMutation,
+  buildInvoiceMutation,
+  buildPaymentMutation,
+  createSingleFlightGuard,
+  runSingleFlightMutation,
+} from "@/lib/financeMutations";
 
 export type View = FinanceView;
 export type InvoiceStatus = "partial" | "overdue" | "paid" | "unpaid";
 export type ExpenseStatus = "pending" | "approved" | "rejected";
 export type PaymentMethod = "CASH" | "VISA" | "INSTAPAY" | "VODAFONE_CASH";
+type ExpenseDecisionSubmission = {
+  expenseId: string;
+  action: "approve" | "reject";
+};
 export type Invoice = {
   id: string;
   number: string;
@@ -249,6 +259,8 @@ export default function FinanceDesk() {
     liveMode ? "" : INVOICES[0].id
   );
   const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+  const paymentSubmitGuard = useRef(createSingleFlightGuard());
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
   const [receivedOn, setReceivedOn] = useState(
     new Date().toISOString().slice(0, 10)
@@ -256,6 +268,11 @@ export default function FinanceDesk() {
   const [externalReference, setExternalReference] = useState("");
   const [expenseDescription, setExpenseDescription] = useState("");
   const [expenseAmount, setExpenseAmount] = useState("");
+  const [expenseSubmitting, setExpenseSubmitting] = useState(false);
+  const expenseSubmitGuard = useRef(createSingleFlightGuard());
+  const [expenseDecisionSubmitting, setExpenseDecisionSubmitting] =
+    useState<ExpenseDecisionSubmission | null>(null);
+  const expenseDecisionSubmitGuard = useRef(createSingleFlightGuard());
   const [expenseBranch, setExpenseBranch] = useState("مدينة نصر");
   const [students, setStudents] = useState<StudentRecord[]>([]);
   const [invoiceStudentId, setInvoiceStudentId] = useState("");
@@ -267,8 +284,16 @@ export default function FinanceDesk() {
     return date.toISOString().slice(0, 10);
   });
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [invoiceSubmitting, setInvoiceSubmitting] = useState(false);
+  const invoiceSubmitGuard = useRef(createSingleFlightGuard());
   const [rejecting, setRejecting] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [evidenceUploadingIds, setEvidenceUploadingIds] = useState<Set<string>>(
+    () => new Set()
+  );
+  const evidenceUploadGuards = useRef(
+    new Map<string, ReturnType<typeof createSingleFlightGuard>>()
+  );
   const [report, setReport] = useState<FinanceReport | null>(null);
   const [financeMe, setFinanceMe] = useState<AuthMe | null>(null);
   const [financeAccess, setFinanceAccess] = useState(() =>
@@ -279,6 +304,24 @@ export default function FinanceDesk() {
   >(() => (liveMode ? "loading" : "ready"));
   const [loadError, setLoadError] = useState("");
   const [loadAttempt, setLoadAttempt] = useState(0);
+
+  const getEvidenceUploadGuard = (key: string) => {
+    let guard = evidenceUploadGuards.current.get(key);
+    if (!guard) {
+      guard = createSingleFlightGuard();
+      evidenceUploadGuards.current.set(key, guard);
+    }
+    return guard;
+  };
+  const setEvidenceUploadPending = (key: string, pending: boolean) => {
+    setEvidenceUploadingIds(current => {
+      if (current.has(key) === pending) return current;
+      const next = new Set(current);
+      if (pending) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!liveMode) return;
@@ -436,12 +479,13 @@ export default function FinanceDesk() {
       toast.error(messages[mutation.code], mutation.code === "OVER_COLLECTION" ? { description: `المتاح للتحصيل ${money(remaining)} ج.م فقط.` } : undefined);
       return;
     }
-    const amount = Number(paymentAmount);
     const input = mutation.input;
+    const amount = input.amountPiastres / 100;
     if (liveMode) {
-      void apiClient
-        .createFinancePayment(invoice.id, input)
-        .then(response => {
+      void runSingleFlightMutation(
+        paymentSubmitGuard.current,
+        async () => {
+          const response = await apiClient.createFinancePayment(invoice.id, input);
           setInvoices(current =>
             current.map(item =>
               item.id === invoice.id
@@ -456,12 +500,13 @@ export default function FinanceDesk() {
           toast.success("تم تسجيل التحصيل على الـAPI");
           setPaymentAmount("");
           setExternalReference("");
-        })
-        .catch(error =>
-          toast.error(
-            error instanceof Error ? error.message : "تعذر تسجيل التحصيل"
-          )
-        );
+        },
+        setPaymentSubmitting
+      ).catch(error =>
+        toast.error(
+          error instanceof Error ? error.message : "تعذر تسجيل التحصيل"
+        )
+      );
       return;
     }
     setInvoices(current =>
@@ -485,21 +530,23 @@ export default function FinanceDesk() {
       return;
     }
     if (liveMode) {
-      void apiClient
-        .createFinanceExpense({
-          ...mutation,
-        })
-        .then(expense => {
+      void runSingleFlightMutation(
+        expenseSubmitGuard.current,
+        async () => {
+          const expense = await apiClient.createFinanceExpense({
+            ...mutation,
+          });
           setExpenses(current => [mapFinanceExpense(expense), ...current]);
           toast.success("تم رفع المصروف للمراجعة");
           setExpenseDescription("");
           setExpenseAmount("");
-        })
-        .catch(error =>
-          toast.error(
-            error instanceof Error ? error.message : "تعذر رفع المصروف"
-          )
-        );
+        },
+        setExpenseSubmitting
+      ).catch(error =>
+        toast.error(
+          error instanceof Error ? error.message : "تعذر رفع المصروف"
+        )
+      );
       return;
     }
     setExpenses(current => [
@@ -528,21 +575,29 @@ export default function FinanceDesk() {
         toast.error("يجب إدخال سبب اعتماد المصروف");
         return;
       }
-      void apiClient
-        .approveFinanceExpense(expenseId, reason.trim())
-        .then(expense => {
+      void runSingleFlightMutation(
+        expenseDecisionSubmitGuard.current,
+        async () => {
+          const expense = await apiClient.approveFinanceExpense(
+            expenseId,
+            reason.trim()
+          );
           setExpenses(current =>
             current.map(item =>
               item.id === expenseId ? mapFinanceExpense(expense) : item
             )
           );
           toast.success("تم اعتماد المصروف");
-        })
-        .catch(error =>
-          toast.error(
-            error instanceof Error ? error.message : "تعذر اعتماد المصروف"
+        },
+        pending =>
+          setExpenseDecisionSubmitting(
+            pending ? { expenseId, action: "approve" } : null
           )
-        );
+      ).catch(error =>
+        toast.error(
+          error instanceof Error ? error.message : "تعذر اعتماد المصروف"
+        )
+      );
       return;
     }
     setExpenses(current =>
@@ -558,23 +613,33 @@ export default function FinanceDesk() {
       return;
     }
     if (liveMode) {
-      void apiClient
-        .rejectFinanceExpense(rejecting, rejectReason)
-        .then(expense => {
+      const expenseId = rejecting;
+      const reason = rejectReason.trim();
+      void runSingleFlightMutation(
+        expenseDecisionSubmitGuard.current,
+        async () => {
+          const expense = await apiClient.rejectFinanceExpense(
+            expenseId,
+            reason
+          );
           setExpenses(current =>
             current.map(item =>
-              item.id === rejecting ? mapFinanceExpense(expense) : item
+              item.id === expenseId ? mapFinanceExpense(expense) : item
             )
           );
           toast.success("تم رفض المصروف بسبب موثق");
           setRejecting(null);
           setRejectReason("");
-        })
-        .catch(error =>
-          toast.error(
-            error instanceof Error ? error.message : "تعذر رفض المصروف"
+        },
+        pending =>
+          setExpenseDecisionSubmitting(
+            pending ? { expenseId, action: "reject" } : null
           )
-        );
+      ).catch(error =>
+        toast.error(
+          error instanceof Error ? error.message : "تعذر رفض المصروف"
+        )
+      );
       return;
     }
     setExpenses(current =>
@@ -590,7 +655,12 @@ export default function FinanceDesk() {
   };
   const createInvoice = (event: FormEvent) => {
     event.preventDefault();
-    const mutation = buildInvoiceMutation(invoiceStudentId, invoiceDescription, invoiceAmount, invoiceDueDate);
+    const mutation = buildInvoiceMutation(
+      invoiceStudentId,
+      invoiceDescription,
+      invoiceAmount,
+      invoiceDueDate
+    );
     if (!mutation) {
       toast.error("أدخل الطالب والوصف والمبلغ وتاريخ الاستحقاق");
       return;
@@ -599,28 +669,32 @@ export default function FinanceDesk() {
       toast.info("إنشاء الفواتير متاح في وضع LIVE فقط");
       return;
     }
-    void apiClient
-      .createFinanceInvoice({
-        ...mutation,
-      })
-      .then(invoice => {
+    void runSingleFlightMutation(
+      invoiceSubmitGuard.current,
+      async () => {
+        const invoice = await apiClient.createFinanceInvoice({
+          ...mutation,
+        });
         setInvoices(current => [mapFinanceInvoice(invoice), ...current]);
         toast.success("تم إنشاء الفاتورة");
         setInvoiceDialogOpen(false);
         setInvoiceDescription("");
         setInvoiceAmount("");
-      })
-      .catch(error =>
-        toast.error(
-          error instanceof Error ? error.message : "تعذر إنشاء الفاتورة"
-        )
-      );
+      },
+      setInvoiceSubmitting
+    ).catch(error =>
+      toast.error(
+        error instanceof Error ? error.message : "تعذر إنشاء الفاتورة"
+      )
+    );
   };
   const uploadPaymentEvidence = (paymentId: string, file: File) => {
     if (!liveMode) return;
-    void apiClient
-      .uploadPaymentEvidence(paymentId, file)
-      .then(() => {
+    const key = `payment:${paymentId}`;
+    void runSingleFlightMutation(
+      getEvidenceUploadGuard(key),
+      async () => {
+        await apiClient.uploadPaymentEvidence(paymentId, file);
         setInvoices(current =>
           current.map(invoice => ({
             ...invoice,
@@ -636,18 +710,21 @@ export default function FinanceDesk() {
           }))
         );
         toast.success("تم رفع إثبات الدفع");
-      })
-      .catch(error =>
-        toast.error(
-          error instanceof Error ? error.message : "تعذر رفع إثبات الدفع"
-        )
-      );
+      },
+      pending => setEvidenceUploadPending(key, pending)
+    ).catch(error =>
+      toast.error(
+        error instanceof Error ? error.message : "تعذر رفع إثبات الدفع"
+      )
+    );
   };
   const uploadExpenseEvidence = (expenseId: string, file: File) => {
     if (!liveMode) return;
-    void apiClient
-      .uploadExpenseEvidence(expenseId, file)
-      .then(() => {
+    const key = `expense:${expenseId}`;
+    void runSingleFlightMutation(
+      getEvidenceUploadGuard(key),
+      async () => {
+        await apiClient.uploadExpenseEvidence(expenseId, file);
         setExpenses(current =>
           current.map(expense =>
             expense.id === expenseId
@@ -660,12 +737,13 @@ export default function FinanceDesk() {
           )
         );
         toast.success("تم رفع إثبات المصروف");
-      })
-      .catch(error =>
-        toast.error(
-          error instanceof Error ? error.message : "تعذر رفع إثبات المصروف"
-        )
-      );
+      },
+      pending => setEvidenceUploadPending(key, pending)
+    ).catch(error =>
+      toast.error(
+        error instanceof Error ? error.message : "تعذر رفع إثبات المصروف"
+      )
+    );
   };
   const downloadEvidence = async (
     loader: () => Promise<Blob>,
@@ -941,6 +1019,8 @@ export default function FinanceDesk() {
                 setPaymentInvoice={setPaymentInvoice}
                 amount={paymentAmount}
                 setAmount={setPaymentAmount}
+                submitting={paymentSubmitting}
+                evidenceUploadingIds={evidenceUploadingIds}
                 onSubmit={recordPayment}
                 onCreateInvoice={() => setInvoiceDialogOpen(true)}
                 onUploadEvidence={uploadPaymentEvidence}
@@ -983,6 +1063,9 @@ export default function FinanceDesk() {
                   )
                 }
                 liveMode={liveMode}
+                submitting={expenseSubmitting}
+                decisionSubmitting={expenseDecisionSubmitting}
+                evidenceUploadingIds={evidenceUploadingIds}
               />
             )}
           {(!liveMode || workspaceState === "ready") &&
@@ -1013,11 +1096,13 @@ export default function FinanceDesk() {
         setInvoiceAmount={setInvoiceAmount}
         invoiceDueDate={invoiceDueDate}
         setInvoiceDueDate={setInvoiceDueDate}
+        invoiceSubmitting={invoiceSubmitting}
         createInvoice={createInvoice}
         rejecting={rejecting}
         setRejecting={setRejecting}
         rejectReason={rejectReason}
         setRejectReason={setRejectReason}
+        rejectSubmitting={expenseDecisionSubmitting?.action === "reject" && expenseDecisionSubmitting.expenseId === rejecting}
         rejectExpense={rejectExpense}
         liveMode={liveMode}
         workspaceState={workspaceState}

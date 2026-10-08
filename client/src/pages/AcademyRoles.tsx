@@ -4,6 +4,8 @@ import { useLocation } from "wouter";
 import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
+import R01AcademySidebar from "@/components/R01AcademySidebar";
+import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient, type AcademyBranch, type AcademyMember, type AcademyRoleDefinition } from "@/lib/apiClient";
 import "./AcademyRoles.css";
@@ -14,6 +16,7 @@ const isBranchRole = (roles: AcademyRoleDefinition[], code: string) => roles.fin
 export default function AcademyRoles() {
   const { me } = useAuth();
   const [, navigate] = useLocation();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [roles, setRoles] = useState<AcademyRoleDefinition[]>([]);
   const [branches, setBranches] = useState<AcademyBranch[]>([]);
   const [members, setMembers] = useState<AcademyMember[]>([]);
@@ -87,10 +90,11 @@ export default function AcademyRoles() {
 
   const activeMembers = useMemo(() => members.filter(member => member.membershipStatus === "ACTIVE").length, [members]);
 
-  return <RoleDashboardShell className="academy-roles-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName={me?.academy?.name ?? "الأكاديمية"} demo={false}>
-    <main className="academy-roles-page" dir="rtl">
-      <header className="academy-roles-topbar"><button onClick={() => navigate("/executive-dashboard")}><ArrowRight size={16} /> العودة إلى اللوحة التنفيذية</button><span><ShieldCheck size={15} /> R01 · صلاحيات الأكاديمية</span></header>
-      <div className="academy-roles-content"><PageHeader className="academy-roles-header" eyebrow={<span><i /> GOVERNANCE · صلاحيات ونطاق</span>} title="إدارة المستخدمين والصلاحيات" description="أضف مستخدمي الأكاديمية، حدّد دور كل شخص، وثبّت الفرع الذي يعمل داخله بدون تجاوز نطاق R00." actions={<button className="academy-roles-add-button" onClick={() => setShowAdd(true)}><UserPlus size={16} /> إضافة مستخدم</button>} />
+  return <RoleDashboardShell className="app-shell academy-roles-shell" showSessionLogout={false} roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName={me?.academy?.name ?? "الأكاديمية"} demo={false}>
+    <R01AcademySidebar activePath="/academy/roles" mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+    <main className="main-panel academy-roles-page" dir="rtl">
+      <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel="كل فروع الأكاديمية" />
+      <div className="workspace academy-roles-content"><PageHeader className="academy-roles-header" eyebrow={<span><i /> GOVERNANCE · صلاحيات ونطاق</span>} title="إدارة المستخدمين والصلاحيات" description="أضف مستخدمي الأكاديمية، حدّد دور كل شخص، وثبّت الفرع الذي يعمل داخله بدون تجاوز نطاق R00." actions={<button className="academy-roles-add-button" onClick={() => setShowAdd(true)}><UserPlus size={16} /> إضافة مستخدم</button>} />
         <div className="academy-roles-scope"><ShieldCheck size={16} /><span><strong>نطاقك الحالي:</strong> {me?.academy?.name ?? "الأكاديمية"} · كل الفروع · لا يمكنك منح صلاحية مسؤول المنصة R00.</span></div>
         {error && <div className="academy-roles-error">{error}<button onClick={() => void load(true)}>إعادة المحاولة</button></div>}
         {warning && !error && <div className="academy-roles-error">{warning}<button onClick={() => void load(true)}>إعادة المحاولة</button></div>}

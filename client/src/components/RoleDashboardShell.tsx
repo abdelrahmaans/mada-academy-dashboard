@@ -16,6 +16,7 @@ import {
 } from "@/contexts/RoleScopeContext";
 import { getRoleDefinition } from "@/lib/roleNavigation";
 import RoleSidebar from "./RoleSidebar";
+import SessionLogoutButton from "./SessionLogoutButton";
 import "./RoleDashboardShell.css";
 import "./RoleFoundation.css";
 
@@ -44,6 +45,7 @@ type RoleDashboardShellProps = Omit<HTMLAttributes<HTMLDivElement>, "role"> & {
   branchName?: string;
   demo?: boolean;
   hideSidebar?: boolean;
+  showSessionLogout?: boolean;
 };
 
 function hasSidebarElement(nodes: ReactNode): boolean {
@@ -57,7 +59,6 @@ function hasSidebarElement(nodes: ReactNode): boolean {
     if (typeof child.props === "object" && child.props !== null) {
       const cls = String((child.props as { className?: string }).className || "");
       if (cls.includes("sidebar")) return true;
-      // Also check immediate children in case of React fragments
       if ("children" in child.props && child.props.children) {
         if (hasSidebarElement(child.props.children as ReactNode)) return true;
       }
@@ -78,6 +79,7 @@ export default function RoleDashboardShell({
   branchName,
   demo = true,
   hideSidebar = false,
+  showSessionLogout = true,
   ...props
 }: RoleDashboardShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -128,6 +130,7 @@ export default function RoleDashboardShell({
           data-role-home={roleDefinition.homePath}
           data-scope-level={scopeLevel}
         >
+          {showSessionLogout && <SessionLogoutButton />}
           {!existingSidebar && (
             <>
               {mobileNavOpen && (

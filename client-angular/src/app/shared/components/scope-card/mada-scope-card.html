@@ -1,0 +1,21 @@
+<section
+  class="mada-scope-card"
+  [class.mada-scope-card--compact]="compact()"
+  [attr.aria-label]="'نطاق العرض: ' + scopeName()"
+  [attr.data-demo]="demo() ? 'true' : 'false'"
+>
+  <span class="mada-scope-card__icon" aria-hidden="true"
+    ><svg lucideIcon="map-pin" [size]="16"></svg
+  ></span>
+  <span class="mada-scope-card__copy">
+    <small>نطاق العرض · {{ levelLabel }}</small>
+    @if (tenantName()) {
+      <strong>{{ tenantName() }}</strong>
+    }
+    <span>{{ scopeName() }}</span>
+  </span>
+  <span class="mada-scope-card__boundary">{{ levelLabel }}</span>
+  @if (demo()) {
+    <span class="mada-scope-card__demo">معاينة</span>
+  }
+</section>

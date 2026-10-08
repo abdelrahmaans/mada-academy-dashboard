@@ -1,0 +1,144 @@
+<main class="instructor-page" dir="rtl">
+  <header class="instructor-page__header">
+    <div>
+      <a routerLink="/workspace" class="back-link">العودة لمساحة العمل</a>
+      <p class="eyebrow">R04 · المدرب</p>
+      <h1>مكتب المدرب</h1>
+      <p class="muted">الجلسات والطلاب المعيّنون من النظام. لا يتم اختيار الفرع من الواجهة.</p>
+    </div>
+    <button type="button" class="button button--secondary" (click)="load()" [disabled]="loading()">
+      تحديث البيانات
+    </button>
+  </header>
+
+  @if (loading()) {
+    <section class="state-card">
+      <strong>جاري تحميل جلساتك...</strong><span>يتم تطبيق نطاق المدرس من JWT والـbackend.</span>
+    </section>
+  } @else if (error() && !sessions().length) {
+    <section class="state-card state-card--error">
+      <strong>تعذر تحميل لوحة المدرب</strong><span>{{ error() }}</span
+      ><button class="button" type="button" (click)="load()">إعادة المحاولة</button>
+    </section>
+  } @else {
+    <section class="scope-note">
+      <strong>النطاق المطبق:</strong> الجلسات والطلاب المسندون إلى حسابك فقط.
+    </section>
+    <div class="instructor-grid">
+      <aside class="panel sessions-panel">
+        <div class="panel__heading">
+          <h2>جلساتي</h2>
+          <span>{{ sessions().length }}</span>
+        </div>
+        @if (!sessions().length) {
+          <p class="muted">لا توجد جلسات معيّنة في النطاق الحالي.</p>
+        } @else {
+          @for (session of sessions(); track session.id) {
+            <button
+              type="button"
+              class="session-item"
+              [class.session-item--active]="selectedSessionId() === session.id"
+              (click)="selectSession(session.id)"
+            >
+              <strong>{{ session.courseName || 'جلسة تشغيلية' }}</strong>
+              <span>الجلسة {{ session.sessionNumber }} · {{ session.status }}</span>
+              <small>{{ session.startAt | date: 'medium' }} — {{ session.endAt | date: 'shortTime' }}</small>
+            </button>
+          }
+        }
+      </aside>
+
+      <section class="panel attendance-panel">
+        @if (selectedSession(); as session) {
+          <div class="panel__heading">
+            <div>
+              <h2>حضور الجلسة {{ session.sessionNumber }}</h2>
+              <p class="muted">{{ session.courseName || 'جلسة تشغيلية' }}</p>
+            </div>
+            <span class="status">{{ session.status }}</span>
+          </div>
+          @if (attendanceLoading()) {
+            <p class="muted">جاري تحميل الحضور...</p>
+          }
+          @if (attendance(); as current) {
+            <div class="stats">
+              <span>حاضر: {{ attendanceStats().present }}</span><span>متأخر: {{ attendanceStats().late }}</span
+              ><span>غائب: {{ attendanceStats().absent }}</span><span>لم يسجل: {{ attendanceStats().unmarked }}</span>
+            </div>
+            <div class="attendance-list">
+              @for (item of current.items; track item.studentId) {
+                <div class="attendance-row">
+                  <div><strong>{{ item.studentName }}</strong><small>{{ item.studentId }}</small></div>
+                  <div class="attendance-actions">
+                    <button type="button" [class.active]="item.status === 'PRESENT'" (click)="setAttendance(item.studentId, 'PRESENT')">حاضر</button>
+                    <button type="button" [class.active]="item.status === 'LATE'" (click)="setAttendance(item.studentId, 'LATE')">متأخر</button>
+                    <button type="button" [class.active]="item.status === 'ABSENT'" (click)="setAttendance(item.studentId, 'ABSENT')">غائب</button>
+                    <button type="button" [class.active]="item.status === 'EXCUSED'" (click)="setAttendance(item.studentId, 'EXCUSED')">بعذر</button>
+                  </div>
+                </div>
+              }
+            </div>
+            <div class="panel__footer">
+              <button class="button" type="button" (click)="saveAttendance()" [disabled]="savingAttendance() || attendanceStats().unmarked > 0">
+                {{ savingAttendance() ? 'جاري الحفظ...' : 'حفظ الحضور' }}
+              </button>
+              <button class="button button--secondary" type="button" (click)="completeSession()" [disabled]="!canCompleteSession()">
+                إتمام الجلسة
+              </button>
+              @if (saved()) { <span class="success">تم الحفظ من خلال API</span> }
+            </div>
+          }
+        } @else {
+          <p class="muted">اختر جلسة لعرض الحضور.</p>
+        }
+      </section>
+    </div>
+
+    @if (selectedSession(); as session) {
+      <div class="instructor-secondary-grid">
+        <section class="panel evaluation-panel">
+          <div class="panel__heading">
+            <div><h2>تقييمات الطلاب</h2><p class="muted">المسودة خاصة بك ولا تظهر للأسرة أو الطالب قبل النشر.</p></div>
+            <span class="status">{{ selectedEvaluation()?.status || 'مسودة جديدة' }}</span>
+          </div>
+          @if (evaluationsLoading()) {
+            <p class="muted">جاري تحميل التقييمات...</p>
+          } @else if (!attendance()?.items?.length) {
+            <p class="muted">لا يوجد طلاب مسجلون في هذه الجلسة.</p>
+          } @else {
+            <div class="student-tabs" role="tablist" aria-label="طلاب الجلسة">
+              @for (student of attendance()!.items; track student.studentId) {
+                <button type="button" [class.active]="selectedStudentId() === student.studentId" (click)="selectStudent(student.studentId)">
+                  {{ student.studentName }}
+                </button>
+              }
+            </div>
+            @if (selectedStudent(); as student) {
+              <div class="evaluation-form">
+                <label>الطالب<input [value]="student.studentName" readonly /></label>
+                <label>الدرجة من 100<input type="number" min="0" max="100" [value]="evaluationScore() ?? ''" (input)="evaluationScore.set(($any($event.target).value === '' ? null : +$any($event.target).value))" [disabled]="!canEditEvaluation()" /></label>
+                <label class="full-width">ملاحظة بنّاءة<textarea rows="4" [value]="evaluationNotes()" (input)="evaluationNotes.set($any($event.target).value)" [disabled]="!canEditEvaluation()" placeholder="اكتب ملاحظة تساعد الطالب على الخطوة التالية..."></textarea></label>
+              </div>
+              <div class="panel__footer">
+                <button class="button" type="button" (click)="saveEvaluation()" [disabled]="savingEvaluation() || !canEditEvaluation() || !canSubmitEvaluation()">{{ savingEvaluation() ? 'جاري الحفظ...' : 'حفظ كمسودة' }}</button>
+                <button class="button button--secondary" type="button" (click)="submitEvaluation()" [disabled]="submittingEvaluation() || !canEditEvaluation() || !canSubmitEvaluation()">{{ submittingEvaluation() ? 'جاري الإرسال...' : 'إرسال للمراجعة' }}</button>
+              </div>
+            }
+          }
+        </section>
+
+        <section class="panel substitution-panel">
+          <div class="panel__heading"><div><h2>طلب مدرب بديل</h2><p class="muted">يرسل الطلب للمراجعة ولا يغيّر الجلسة من الواجهة.</p></div><span class="status">نطاق الجلسة</span></div>
+          <label class="full-width">سبب الطلب<textarea rows="5" [value]="substitutionReason()" (input)="substitutionReason.set($any($event.target).value)" placeholder="اكتب سبب طلب تغطية الجلسة..."></textarea></label>
+          <div class="panel__footer">
+            <button class="button" type="button" (click)="requestSubstitution()" [disabled]="substitutionLoading() || !substitutionReason().trim() || session.status === 'COMPLETED' || session.status === 'CANCELLED'">{{ substitutionLoading() ? 'جاري الإرسال...' : 'إرسال طلب البديل' }}</button>
+            @if (substitutionSent()) { <span class="success">تم إرسال الطلب للمراجعة</span> }
+          </div>
+          <p class="scope-hint">يطبق الخادم التحقق من المدرب المعيّن ومنع الطلبات المكررة.</p>
+        </section>
+      </div>
+    }
+    @if (feedback()) { <p class="success" role="status">{{ feedback() }}</p> }
+    @if (error() && sessions().length) { <p class="inline-error" role="alert">{{ error() }}</p> }
+  }
+</main>

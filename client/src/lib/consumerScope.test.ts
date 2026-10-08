@@ -62,6 +62,10 @@ describe("consumer scope helpers", () => {
     ).toEqual(["session-a"]);
   });
 
+  it("does not expose sessions when the selected student is not linked", () => {
+    expect(sessionsForStudent(sessions, "unlinked-student")).toEqual([]);
+  });
+
   it("maps family children with only their own sessions", () => {
     expect(
       linkedStudentsWithSessions(students, sessions).map(item => [
@@ -77,5 +81,15 @@ describe("consumer scope helpers", () => {
   it("selects only the first backend-linked student for the student portal", () => {
     expect(firstLinkedStudent(students)?.id).toBe("student-a");
     expect(firstLinkedStudent([])).toBeNull();
+  });
+
+  it("keeps every family child paired only with its own records", () => {
+    const scoped = linkedStudentsWithSessions(students, sessions);
+
+    expect(scoped.find(item => item.student.id === "student-a")?.sessions).toEqual([sessions[0]]);
+    expect(scoped.find(item => item.student.id === "student-b")?.sessions).toEqual([sessions[1]]);
+    expect(scoped.flatMap(item => item.sessions).every(session =>
+      scoped.some(item => item.student.id === session.studentId)
+    )).toBe(true);
   });
 });

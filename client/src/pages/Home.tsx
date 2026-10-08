@@ -29,12 +29,12 @@ import {
   TrendingUp,
   UserPlus,
   Users,
-  Wallet,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
+import BranchManagerSidebar from "@/components/BranchManagerSidebar";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import SharedStatusBadge from "@/components/StatusBadge";
@@ -200,6 +200,7 @@ function HomePreview() {
   return (
     <RoleDashboardShell
       className="app-shell"
+      showSessionLogout={false}
       roleCode="R02"
       roleLabel="مدير الفرع"
       scopeLevel="branch"
@@ -207,129 +208,7 @@ function HomePreview() {
       tenantName="أكاديمية مدى"
       branchName={branch}
     >
-      {mobileNavOpen && (
-        <button
-          className="mobile-scrim"
-          aria-label="إغلاق القائمة"
-          onClick={() => setMobileNavOpen(false)}
-        />
-      )}
-
-      <aside className={`sidebar ${mobileNavOpen ? "sidebar-open" : ""}`}>
-        <div className="sidebar-top">
-          <BrandMark />
-          <button
-            className="icon-button sidebar-close"
-            aria-label="إغلاق القائمة"
-            onClick={() => setMobileNavOpen(false)}
-          >
-            <X size={19} />
-          </button>
-        </div>
-
-        <div className="academy-switcher">
-          <span className="academy-avatar">
-            <GraduationCap size={20} />
-          </span>
-          <span className="academy-meta">
-            <strong>أكاديمية مدى</strong>
-            <small>إدارة الأكاديمية</small>
-          </span>
-          <ChevronDown size={15} className="switcher-chevron" />
-        </div>
-
-        <div className="nav-caption">القائمة الرئيسية</div>
-        <nav className="primary-nav" aria-label="القائمة الرئيسية">
-          <button className="nav-link active" aria-current="page">
-            <LayoutDashboard size={19} />
-            <span>الرئيسية</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/students")}>
-            <Users size={19} />
-            <span>الطلاب</span>
-            <span className="nav-count">{studentCount}</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/schedule")}>
-            <CalendarDays size={19} />
-            <span>الجدول</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/classes")}>
-            <BookOpen size={19} />
-            <span>الحصص والكورسات</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/branch-operations")}>
-            <Settings size={19} />
-            <span>إدارة التشغيل</span>
-          </button>
-          <button
-            className="nav-link"
-            onClick={() => showComingSoon("المسابقات")}
-          >
-            <Sparkles size={19} />
-            <span>المسابقات</span>
-          </button>
-        </nav>
-
-        <div className="nav-caption nav-caption-spaced">الإدارة</div>
-        <nav className="primary-nav" aria-label="قائمة الإدارة">
-          <button className="nav-link" onClick={() => navigate("/finance")}>
-            <Wallet size={19} />
-            <span>المالية والتحصيل</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/team")}>
-            <Users size={19} />
-            <span>الفريق والأدوار</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/approvals")}>
-            <CheckCircle2 size={19} />
-            <span>الموافقات</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/reports")}>
-            <BarChart3 size={19} />
-            <span>التقارير والتحليلات</span>
-          </button>
-          <button
-            className="nav-link academy-owner-preview-nav"
-            onClick={() => navigate("/academy-owner")}
-          >
-            <GraduationCap size={19} />
-            <span>معاينة رئيس الأكاديمية</span>
-          </button>
-          <button
-            className="nav-link"
-            onClick={() => navigate("/platform-console")}
-          >
-            <Building2 size={19} />
-            <span>معاينة إدارة المنصة</span>
-            <span className="nav-count">R00</span>
-          </button>
-        </nav>
-
-        <div className="sidebar-spacer" />
-        <div className="sidebar-help">
-          <span className="help-icon">
-            <CircleHelp size={18} />
-          </span>
-          <div>
-            <strong>محتاج مساعدة؟</strong>
-            <span>مركز الدعم والإرشادات</span>
-          </div>
-          <ChevronLeft size={16} />
-        </div>
-        <div className="sidebar-bottom">
-          <button
-            className="nav-link"
-            onClick={() => showComingSoon("الإعدادات")}
-          >
-            <Settings size={19} />
-            <span>الإعدادات</span>
-          </button>
-          <SessionLogoutButton className="nav-link" iconSize={19} />
-        </div>
-        <div className="sidebar-version">
-          مدى لإدارة الأكاديميات <span>نسخة تجريبية</span>
-        </div>
-      </aside>
+      <BranchManagerSidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
 
       <main className="main-panel">
         <header className="topbar">
@@ -380,21 +259,6 @@ function HomePreview() {
                     <strong>الإشعارات</strong>
                     <span>2 جديد</span>
                   </div>
-                  <button
-                    className="notification-item notification-action"
-                    onClick={() => {
-                      setNotificationsOpen(false);
-                      navigate("/finance");
-                    }}
-                  >
-                    <span className="notice-icon notice-amber">
-                      <Wallet size={16} />
-                    </span>
-                    <div>
-                      <strong>أقساط تحتاج متابعة</strong>
-                      <small>12 قسطًا مستحقًا في الفرع</small>
-                    </div>
-                  </button>
                   <button
                     className="notification-item notification-action"
                     onClick={() => {
@@ -523,31 +387,6 @@ function HomePreview() {
                 >
                   فتح الجدول <ChevronLeft size={12} />
                 </button>
-              </div>
-            </article>
-
-            <article className="stat-card">
-              <div className="stat-topline">
-                <span className="stat-icon icon-amber">
-                  <Wallet size={19} />
-                </span>
-                <span className="stat-trend trend-down">
-                  <ArrowDownLeft size={14} /> متابعة
-                </span>
-              </div>
-              <div className="stat-label">أقساط مستحقة</div>
-              <div className="stat-value-row">
-                <strong>12</strong>
-                <span className="stat-period">قسط</span>
-              </div>
-              <div className="stat-foot">
-                <button
-                  className="stat-link"
-                  onClick={() => navigate("/finance")}
-                >
-                  عرض التحصيل <ChevronLeft size={12} />
-                </button>
-                <b className="stat-money">12,850 ج.م</b>
               </div>
             </article>
 
@@ -802,19 +641,6 @@ function HomePreview() {
                 </button>
                 <button
                   className="followup-item"
-                  onClick={() => navigate("/finance")}
-                >
-                  <span className="followup-icon followup-amber">
-                    <Wallet size={17} />
-                  </span>
-                  <span className="followup-copy">
-                    <strong>أقساط مستحقة</strong>
-                    <small>مواعيدها خلال هذا الأسبوع</small>
-                  </span>
-                  <b className="followup-number amber-number">12</b>
-                </button>
-                <button
-                  className="followup-item"
                   onClick={() => navigate("/approvals")}
                 >
                   <span className="followup-icon followup-blue">
@@ -852,13 +678,6 @@ function HomePreview() {
                       <UserPlus size={17} />
                     </span>
                     <span>تسجيل طالب</span>
-                    <ChevronLeft size={15} />
-                  </button>
-                  <button onClick={() => navigate("/finance")}>
-                    <span className="quick-icon quick-amber">
-                      <Wallet size={17} />
-                    </span>
-                    <span>تسجيل تحصيل</span>
                     <ChevronLeft size={15} />
                   </button>
                   <button onClick={() => navigate("/schedule")}>
@@ -974,5 +793,5 @@ export default function Home() {
     return <main className="r02-home-auth-state r02-home-auth-error" dir="rtl" role="alert">هذه اللوحة متاحة لمدير الفرع فقط. استخدم مساحة الدور المرتبط بحسابك.</main>;
   }
   if (error) return <main className="r02-home-auth-state r02-home-auth-error" dir="rtl" role="alert">انتهت الجلسة أو تعذر التحقق منها. سجّل الدخول مجددًا لعرض بيانات حقيقية؛ لن نعرض بيانات تجريبية بدلًا منها.</main>;
-  return <HomePreview />;
+  return <main className="r02-home-auth-state r02-home-auth-error" dir="rtl" role="alert">سجّل الدخول لفتح مساحة مدير الفرع.</main>;
 }

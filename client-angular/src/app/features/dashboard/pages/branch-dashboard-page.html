@@ -1,0 +1,186 @@
+<main class="r02-dashboard" dir="rtl">
+  <mada-sidebar
+    [open]="mobileMenuOpen()"
+    [sections]="sections"
+    [utilityLinks]="utilityLinks"
+    ariaLabel="تنقل مدير الفرع"
+    [academyName]="auth.me()?.academy?.name || 'أكاديمية مدى'"
+    [roleLabel]="auth.me()?.roleLabel || 'مدير الفرع'"
+    roleCode="R02"
+    homePath="/"
+    helpDescription="دليل تشغيل الفرع"
+    (closed)="closeMenu()"
+    (itemActivated)="handleSidebarAction($event)"
+  />
+  @if (mobileMenuOpen()) {
+    <button
+      class="dashboard-scrim"
+      type="button"
+      aria-label="إغلاق القائمة"
+      (click)="closeMenu()"
+    ></button>
+  }
+
+  <section class="r02-dashboard__content">
+    <header class="r02-dashboard__topbar">
+      <mada-button
+        class="r02-dashboard__menu"
+        variant="ghost"
+        size="icon"
+        ariaLabel="فتح قائمة مدير الفرع"
+        (clicked)="openMenu()"
+      >
+        <svg lucideIcon="menu" [size]="21" aria-hidden="true"></svg>
+      </mada-button>
+      <div class="r02-dashboard__scope">
+        <strong>{{ auth.me()?.academy?.name || 'أكاديمية مدى' }}</strong
+        ><span>{{ branchName() }} · بيانات مباشرة</span>
+      </div>
+    </header>
+
+    <div class="r02-dashboard__workspace">
+      @if (!isBranchManager()) {
+        <mada-feedback-state
+          kind="locked"
+          title="هذه اللوحة متاحة لمدير الفرع فقط"
+          description="استخدم مساحة الدور المرتبط بحسابك. لم يتم إرسال طلب Dashboard لهذا الحساب."
+        />
+      } @else {
+        <div class="r02-dashboard__heading">
+          <mada-page-header
+            eyebrow="ملخص التشغيل · بيانات مباشرة"
+            [title]="'أهلًا، ' + displayName()"
+            description="مؤشرات الجلسات والطلاب المسجلة لهذا الفرع فقط."
+          />
+          <mada-button
+            variant="secondary"
+            [disabled]="loading()"
+            [loading]="loading()"
+            (clicked)="load()"
+          >
+            <svg lucideIcon="refresh-cw" [size]="16" aria-hidden="true"></svg> تحديث البيانات
+          </mada-button>
+        </div>
+        <mada-scope-card
+          level="branch"
+          [scopeName]="branchName()"
+          [tenantName]="auth.me()?.academy?.name || null"
+          [compact]="true"
+        />
+        <div class="r02-dashboard__source">
+          <svg lucideIcon="activity" [size]="14" aria-hidden="true"></svg> المصدر: API الفرع ·
+          النطاق مستمد من جلسة المستخدم
+        </div>
+
+        @if (loading()) {
+          <mada-feedback-state
+            kind="loading"
+            title="جارٍ تحميل مؤشرات الفرع…"
+            description="نقرأ البيانات من نطاق الحساب المصادق عليه."
+          />
+        } @else if (error()) {
+          <mada-feedback-state
+            kind="error"
+            title="تعذر تحميل لوحة الفرع"
+            [description]="error()"
+            (retry)="load()"
+          />
+        } @else if (summary(); as currentSummary) {
+          <section class="r02-dashboard__stats" aria-label="مؤشرات الفرع الحية">
+            <article class="r02-stat r02-stat--teal">
+              <span class="r02-stat__icon"
+                ><svg lucideIcon="users" [size]="18" aria-hidden="true"></svg
+              ></span>
+              <div>
+                <small>الطلاب المسجلون</small
+                ><strong>{{ currentSummary.students | number: 'ar-EG' }} <em>طالب</em></strong>
+              </div>
+            </article>
+            <article class="r02-stat r02-stat--blue">
+              <span class="r02-stat__icon"
+                ><svg lucideIcon="book-open" [size]="18" aria-hidden="true"></svg
+              ></span>
+              <div>
+                <small>التسجيلات النشطة</small
+                ><strong
+                  >{{ currentSummary.activeEnrollments | number: 'ar-EG' }} <em>تسجيل</em></strong
+                >
+              </div>
+            </article>
+            <article class="r02-stat r02-stat--amber">
+              <span class="r02-stat__icon"
+                ><svg lucideIcon="calendar-days" [size]="18" aria-hidden="true"></svg
+              ></span>
+              <div>
+                <small>الجلسات القادمة</small
+                ><strong
+                  >{{ currentSummary.upcomingSessions | number: 'ar-EG' }} <em>جلسة</em></strong
+                >
+              </div>
+            </article>
+            <article class="r02-stat r02-stat--violet">
+              <span class="r02-stat__icon"
+                ><svg lucideIcon="circle-check" [size]="18" aria-hidden="true"></svg
+              ></span>
+              <div>
+                <small>الجلسات المكتملة</small
+                ><strong
+                  >{{ currentSummary.completedSessions | number: 'ar-EG' }} <em>جلسة</em></strong
+                >
+              </div>
+            </article>
+          </section>
+          <mada-card surface="panel" class="r02-dashboard__sessions">
+            <div class="r02-dashboard__panel-heading">
+              <div>
+                <h2>الجلسات القادمة</h2>
+                <p>{{ branchName() }} · أقرب الجلسات المسجلة</p>
+              </div>
+              <span>{{ currentSummary.upcoming.length | number: 'ar-EG' }} جلسات</span>
+            </div>
+            @if (currentSummary.upcoming.length === 0) {
+              <mada-feedback-state
+                kind="empty"
+                title="لا توجد جلسات قادمة مسجلة لهذا الفرع"
+                description="ستظهر الجلسات هنا بعد تسجيلها في الجدول."
+              />
+            } @else {
+              <div class="r02-dashboard__session-list">
+                @for (session of currentSummary.upcoming; track session.id) {
+                  <article class="r02-session">
+                    <span class="r02-session__icon"
+                      ><svg lucideIcon="calendar-days" [size]="17" aria-hidden="true"></svg
+                    ></span>
+                    <div>
+                      <strong>الجلسة رقم {{ session.sessionNumber }}</strong
+                      ><small>{{ formatSessionTime(session.startAt) }}</small>
+                    </div>
+                    <span class="r02-session__status">{{
+                      session.status === 'SCHEDULED' ? 'مجدولة' : session.status
+                    }}</span>
+                  </article>
+                }
+              </div>
+            }
+          </mada-card>
+          <section class="r02-dashboard__actions" aria-label="روابط تشغيلية">
+            <button type="button" (click)="go('/students')">
+              <svg lucideIcon="users" [size]="17" aria-hidden="true"></svg><span>إدارة الطلاب</span
+              ><svg lucideIcon="arrow-left" [size]="15" aria-hidden="true"></svg>
+            </button>
+            <button type="button" (click)="go('/approvals')">
+              <svg lucideIcon="circle-check" [size]="17" aria-hidden="true"></svg
+              ><span>طلبات الموافقة</span
+              ><svg lucideIcon="arrow-left" [size]="15" aria-hidden="true"></svg>
+            </button>
+            <button type="button" (click)="go('/reports')">
+              <svg lucideIcon="activity" [size]="17" aria-hidden="true"></svg
+              ><span>التقرير التشغيلي للفرع</span
+              ><svg lucideIcon="arrow-left" [size]="15" aria-hidden="true"></svg>
+            </button>
+          </section>
+        }
+      }
+    </div>
+  </section>
+</main>

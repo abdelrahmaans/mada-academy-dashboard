@@ -31,13 +31,61 @@ export type PaymentMutationResult =
         | "MISSING_REFERENCE";
     };
 
+export function createSingleFlightGuard() {
+  let inFlight = false;
+
+  return {
+    tryAcquire() {
+      if (inFlight) return false;
+      inFlight = true;
+      return true;
+    },
+    release() {
+      inFlight = false;
+    },
+  };
+}
+
+export type SingleFlightMutationResult<T> =
+  | { started: false }
+  | { started: true; value: T };
+
+export async function runSingleFlightMutation<T>(
+  guard: ReturnType<typeof createSingleFlightGuard>,
+  mutation: () => Promise<T>,
+  setPending: (pending: boolean) => void
+): Promise<SingleFlightMutationResult<T>> {
+  if (!guard.tryAcquire()) return { started: false };
+  try {
+    setPending(true);
+    return { started: true, value: await mutation() };
+  } finally {
+    guard.release();
+    setPending(false);
+  }
+}
+
+const MAX_AMOUNT_PIASTRES = 2_147_483_647;
+
+function parseAmountPiastres(amount: string): number | null {
+  const normalized = amount.trim();
+  if (!/^(?:\d+(?:\.\d{0,2})?|\.\d{1,2})$/.test(normalized)) return null;
+  const [whole = "0", fraction = ""] = normalized.split(".");
+  const piastres = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
+  return Number.isSafeInteger(piastres) && piastres > 0 && piastres <= MAX_AMOUNT_PIASTRES
+    ? piastres
+    : null;
+}
+
 export function buildPaymentMutation(
   input: PaymentMutationInput
 ): PaymentMutationResult {
-  const amount = Number(input.amount);
+  const amountPiastres = parseAmountPiastres(input.amount);
   const reference = input.externalReference.trim();
-  if (!amount || amount <= 0) return { ok: false, code: "INVALID_AMOUNT" };
-  if (amount > input.remaining) return { ok: false, code: "OVER_COLLECTION" };
+  if (amountPiastres === null) return { ok: false, code: "INVALID_AMOUNT" };
+  if (amountPiastres > Math.round(input.remaining * 100)) {
+    return { ok: false, code: "OVER_COLLECTION" };
+  }
   if (!input.receivedOn) return { ok: false, code: "MISSING_DATE" };
   if (
     (input.method === "INSTAPAY" || input.method === "VODAFONE_CASH") &&
@@ -48,7 +96,7 @@ export function buildPaymentMutation(
   return {
     ok: true,
     input: {
-      amountPiastres: amount * 100,
+      amountPiastres,
       method: input.method,
       receivedOn: input.receivedOn,
       ...(reference ? { externalReference: reference } : {}),
@@ -57,12 +105,12 @@ export function buildPaymentMutation(
 }
 
 export function buildExpenseMutation(description: string, amount: string) {
-  const numericAmount = Number(amount);
-  if (!description.trim() || !numericAmount || numericAmount <= 0) return null;
+  const amountPiastres = parseAmountPiastres(amount);
+  if (!description.trim() || amountPiastres === null) return null;
   return {
     description: description.trim(),
     category: "OPERATIONS",
-    amountPiastres: numericAmount * 100,
+    amountPiastres,
   };
 }
 
@@ -72,12 +120,11 @@ export function buildInvoiceMutation(
   amount: string,
   dueDate: string
 ) {
-  const numericAmount = Number(amount);
+  const amountPiastres = parseAmountPiastres(amount);
   if (
     !studentId ||
     !description.trim() ||
-    !numericAmount ||
-    numericAmount <= 0 ||
+    amountPiastres === null ||
     !dueDate
   )
     return null;
@@ -85,7 +132,7 @@ export function buildInvoiceMutation(
     studentId,
     dueDate,
     lines: [
-      { description: description.trim(), amountPiastres: numericAmount * 100 },
+      { description: description.trim(), amountPiastres },
     ],
   };
 }

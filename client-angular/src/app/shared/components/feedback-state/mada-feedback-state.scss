@@ -1,0 +1,78 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.mada-feedback-state {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 28px 20px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  color: #475569;
+  background: #f8fafc;
+  text-align: center;
+}
+
+.mada-feedback-state strong {
+  color: #0f172a;
+  font-size: 14px;
+}
+.mada-feedback-state__description {
+  max-width: 38ch;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.mada-feedback-state--loading {
+  border-style: solid;
+  border-color: #bae6fd;
+  color: #0369a1;
+  background: #f0f9ff;
+}
+.mada-feedback-state--loading strong,
+.mada-feedback-state--loading .mada-feedback-state__description {
+  color: #0369a1;
+}
+.mada-feedback-state--error {
+  border-style: solid;
+  border-color: #fecaca;
+  color: #b91c1c;
+  background: #fff7f7;
+}
+.mada-feedback-state--error strong,
+.mada-feedback-state--error .mada-feedback-state__description {
+  color: #991b1b;
+}
+.mada-feedback-state--locked {
+  border-style: solid;
+  border-color: #cbd5e1;
+  color: #64748b;
+  background: #f1f5f9;
+}
+.mada-feedback-state--success {
+  border-style: solid;
+  border-color: #a7f3d0;
+  color: #047857;
+  background: #ecfdf5;
+}
+.mada-feedback-state__spinner {
+  width: 19px;
+  height: 19px;
+  border: 2px solid #7dd3fc;
+  border-inline-end-color: transparent;
+  border-radius: 50%;
+  animation: mada-feedback-spin 0.9s linear infinite;
+}
+
+@keyframes mada-feedback-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mada-feedback-state__spinner {
+    animation-duration: 0.01ms;
+  }
+}

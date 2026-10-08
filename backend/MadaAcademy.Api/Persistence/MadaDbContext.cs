@@ -9,6 +9,7 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
     public DbSet<Branch> Branches => Set<Branch>();
     public DbSet<UserAccount> UserAccounts => Set<UserAccount>();
     public DbSet<Membership> Memberships => Set<Membership>();
+    public DbSet<GroupSupervisionAssignment> GroupSupervisionAssignments => Set<GroupSupervisionAssignment>();
     public DbSet<Invitation> Invitations => Set<Invitation>();
     public DbSet<ConsumerInvitation> ConsumerInvitations => Set<ConsumerInvitation>();
     public DbSet<RefreshSession> RefreshSessions => Set<RefreshSession>();
@@ -80,6 +81,16 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
             entity.HasOne(x => x.UserAccount).WithMany(x => x.Memberships).HasForeignKey(x => x.UserAccountId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.Tenant).WithMany(x => x.Memberships).HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.Branch).WithMany(x => x.Memberships).HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<GroupSupervisionAssignment>(entity =>
+        {
+            entity.HasIndex(x => new { x.TenantId, x.BranchId, x.SupervisorUserId, x.Status });
+            entity.HasIndex(x => new { x.CourseOfferingId, x.SupervisorUserId, x.Status }).IsUnique();
+            entity.Property(x => x.Status).HasMaxLength(24).IsRequired();
+            entity.HasOne<CourseOffering>().WithMany().HasForeignKey(x => x.CourseOfferingId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Branch>().WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<UserAccount>().WithMany().HasForeignKey(x => x.SupervisorUserId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Invitation>(entity =>
