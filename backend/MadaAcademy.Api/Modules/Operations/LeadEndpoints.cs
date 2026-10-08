@@ -251,7 +251,7 @@ public static class LeadEndpoints
                 student.FullName)));
         });
 
-        group.MapPost("/students", async Task<Results<Ok<ApiEnvelope<ConvertLeadResponse>>, ProblemHttpResult>> (
+        group.MapPost("/students/register", async Task<Results<Ok<ApiEnvelope<ConvertLeadResponse>>, ProblemHttpResult>> (
             DirectStudentRegistrationRequest request,
             ClaimsPrincipal user,
             MadaDbContext db,

@@ -35,9 +35,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         }
 
         var appBuilder = new NpgsqlConnectionStringBuilder(original) { SearchPath = Schema };
-        Environment.SetEnvironmentVariable("DATABASE_URL", appBuilder.ConnectionString);
-        Environment.SetEnvironmentVariable("MADA_DATABASE_MODE", null);
-        _factory = new TestApiFactory(useInMemory: false);
+        _factory = new TestApiFactory(useInMemory: false, connectionString: appBuilder.ConnectionString);
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
         await db.Database.MigrateAsync();

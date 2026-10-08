@@ -8,18 +8,30 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace MadaAcademy.Api.IntegrationTests;
 
-public sealed class TestApiFactory(bool useInMemory, bool unconfigureSms = false) : WebApplicationFactory<Program>
+public sealed class TestApiFactory(bool useInMemory, bool unconfigureSms = false, string? connectionString = null) : WebApplicationFactory<Program>
 {
     private readonly string _databaseName = $"mada-tests-{Guid.NewGuid():N}";
+    private readonly string? _connectionString = connectionString;
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+        if (!useInMemory && !string.IsNullOrWhiteSpace(_connectionString))
+        {
+            builder.UseSetting("ConnectionStrings:Default", _connectionString);
+            builder.ConfigureAppConfiguration((_, configuration) =>
+                configuration.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["ConnectionStrings:Default"] = _connectionString,
+                    ["MADA_DATABASE_MODE"] = "postgres"
+                }));
+        }
         if (!useInMemory && !unconfigureSms) return;
 
         builder.ConfigureTestServices(services =>

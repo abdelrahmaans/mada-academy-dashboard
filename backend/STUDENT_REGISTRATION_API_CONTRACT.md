@@ -21,6 +21,23 @@ Allowed roles: `R02_BRANCH_MANAGER`, `R05_SECRETARY` (`students.create`). The au
 
 The server creates an `ACTIVE` student in the authenticated branch and emits `STUDENT_CREATED`.
 
+### `POST /api/v1/students/register`
+
+Allowed roles: staff roles permitted to manage the Lead workflow. This route is the direct-registration workflow and is intentionally separate from `POST /students`, which creates a student record for the Student CRUD surface.
+
+```json
+{
+  "fullName": "اسم الطالب",
+  "phone": "01000000000",
+  "courseOfferingId": "guid",
+  "dateOfBirth": "2014-05-12",
+  "discountPercent": 0,
+  "createInvoice": true
+}
+```
+
+The server derives tenant and branch scope from the authenticated staff context, validates the selected offering and capacity, and may create the enrollment and invoice atomically with the student registration. Clients must not use this route to bypass the scoped Student CRUD or enrollment checks.
+
 ### `PUT /api/v1/students/{studentId}`
 
 Allowed roles: `R02_BRANCH_MANAGER`, `R05_SECRETARY`. The target student must belong to the authenticated tenant and branch. The operation updates only `fullName` and `dateOfBirth` and emits `STUDENT_UPDATED`.
