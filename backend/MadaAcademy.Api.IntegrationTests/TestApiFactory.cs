@@ -24,6 +24,7 @@ public sealed class TestApiFactory(bool useInMemory, bool unconfigureSms = false
         builder.UseEnvironment("Development");
         if (!useInMemory && !string.IsNullOrWhiteSpace(_connectionString))
         {
+            builder.UseSetting("ConnectionStrings:Default", _connectionString);
             builder.ConfigureAppConfiguration((_, configuration) =>
                 configuration.AddInMemoryCollection(new Dictionary<string, string?>
                 {

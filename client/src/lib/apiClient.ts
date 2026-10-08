@@ -587,7 +587,7 @@ export const apiClient = {
   createLead: (input: CreateLeadInput) => request<LeadRecord>("/leads", { method: "POST", body: JSON.stringify(input) }),
   updateLeadStatus: (id: string, status: string) => request<LeadRecord>(`/leads/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
   convertLead: (id: string, input: ConvertLeadInput) => request<ConvertLeadResult>(`/leads/${id}/convert`, { method: "POST", body: JSON.stringify(input) }),
-  registerStudent: (input: DirectStudentInput) => request<ConvertLeadResult>("/students", { method: "POST", body: JSON.stringify(input) }),
+  registerStudent: (input: DirectStudentInput) => request<ConvertLeadResult>("/students/register", { method: "POST", body: JSON.stringify(input) }),
   listSchedulingGroups: () => request<{ items: SchedulingGroupRecord[]; total: number }>("/scheduling/groups"),
   logout: async () => {
     const refreshToken = localStorage.getItem(REFRESH_KEY);
@@ -672,4 +672,3 @@ export type ConvertLeadResult = {
   invoiceNumber?: string;
   studentName: string;
 };
-
