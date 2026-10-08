@@ -120,6 +120,7 @@ app.MapMadaClassroomSchedulingEndpoints();
 app.MapMadaSessionWorkflowEndpoints();
 app.MapGroupSupervisionEndpoints();
 app.MapMadaOperationalEndpoints();
+app.MapMadaLeadEndpoints();
 app.MapMadaFinanceEndpoints();
 app.MapMadaExecutiveDashboardEndpoints();
 app.MapMadaInvoiceCorrectionEndpoints();

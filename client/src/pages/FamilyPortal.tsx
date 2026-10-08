@@ -99,21 +99,31 @@ function mapFamilyChild(student: ConsumerStudentRecord, records: ConsumerSession
 export default function FamilyPortal() {
   const { me, logout } = useAuth();
   const [, navigate] = useLocation();
-  const [children, setChildren] = useState<ChildData[]>(apiClient.hasSession() ? [] : CHILDREN);
-  const [liveMode, setLiveMode] = useState(apiClient.hasSession());
-  const [dataLoading, setDataLoading] = useState(apiClient.hasSession());
+  const isParentAccount = me?.role === "R08_PARENT" || me?.accountType === "parent";
+
+  const [children, setChildren] = useState<ChildData[]>(isParentAccount ? [] : CHILDREN);
+  const [liveMode, setLiveMode] = useState(isParentAccount);
+  const [dataLoading, setDataLoading] = useState(isParentAccount);
   const [dataError, setDataError] = useState<string | null>(null);
   const [dataWarning, setDataWarning] = useState<string | null>(null);
-  const [invoiceLoading, setInvoiceLoading] = useState(apiClient.hasSession());
+  const [invoiceLoading, setInvoiceLoading] = useState(isParentAccount);
   const [invoiceError, setInvoiceError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
-  const [selectedId, setSelectedId] = useState(apiClient.hasSession() ? "" : CHILDREN[0].id);
+  const [selectedId, setSelectedId] = useState(isParentAccount ? "" : CHILDREN[0].id);
   const [tab, setTab] = useState<PortalTab>("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [supportRequested, setSupportRequested] = useState(false);
   const child = useMemo(() => children.find(item => item.id === selectedId) ?? children[0], [children, selectedId]);
+
   useEffect(() => {
-    if (!apiClient.hasSession()) return;
+    if (!isParentAccount) {
+      setLiveMode(false);
+      setDataLoading(false);
+      setInvoiceLoading(false);
+      setChildren(CHILDREN);
+      setSelectedId(CHILDREN[0]?.id ?? "");
+      return;
+    }
     let cancelled = false;
     let invoiceItems: FinanceInvoice[] = [];
     let invoiceState: "loading" | "ready" | "error" = "loading";
@@ -162,7 +172,7 @@ export default function FamilyPortal() {
       if (results.every(result => result.status === "fulfilled")) toast.success("تم تحديث بيانات بوابة الأسرة");
     });
     return () => { cancelled = true; };
-  }, [retryKey]);
+  }, [retryKey, isParentAccount]);
   const retry = () => setRetryKey(value => value + 1);
   const tabs: Array<{ id: PortalTab; label: string; icon: typeof Home }> = [
     { id: "overview", label: "ملخص الطفل", icon: Home },
@@ -295,6 +305,27 @@ export default function FamilyPortal() {
           {dataLoading && <div className="family-info-note">جارٍ تحميل الأطفال والجلسات المرتبطة بحسابك…</div>}
           {dataError && <div className="family-info-note" role="alert">تعذر تحميل بيانات الأسرة: {dataError} <button type="button" onClick={retry}>إعادة المحاولة</button></div>}
           {dataWarning && !dataError && <div className="family-info-note" role="status">تم تحميل الأطفال، لكن الجلسات غير متاحة مؤقتًا: {dataWarning} <button type="button" onClick={retry}>إعادة المحاولة</button></div>}
+
+          {!isParentAccount && (
+            <div className="family-info-note" style={{ background: "rgba(12, 117, 105, 0.08)", borderColor: "rgba(12, 117, 105, 0.25)", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "10px" }} role="note">
+              <span><strong>معاينة بوابة الأسرة:</strong> أنت الآن في وضع العرض التوضيحي. لتجربة الربط المباشر مع بيانات الأبناء الحقيقية والفواتير:</span>
+              <button
+                type="button"
+                className="button button-primary"
+                style={{ padding: "6px 14px", fontSize: "0.84rem" }}
+                onClick={async () => {
+                  try {
+                    await apiClient.login("+201000000011", "Mada@2026", "parent");
+                    window.location.reload();
+                  } catch {
+                    toast.error("تعذر الدخول بحساب ولي الأمر");
+                  }
+                }}
+              >
+                الدخول كولي أمر (Youssef's Parent)
+              </button>
+            </div>
+          )}
           {children.length > 0 && <ChildrenSwitcher
             children={children}
             selectedId={selectedId}

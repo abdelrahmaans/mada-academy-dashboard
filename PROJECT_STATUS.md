@@ -1,13 +1,13 @@
 # Mada Academy — Project Status
 
-**As of:** 7 October 2026
-**Verified Git state:** `main` at `78546db` includes the merged Angular R08 Family Portal PR #88 in addition to the previously merged project changes and is pushed to origin.
-**Latest delivery PR:** [PR #88 — Angular R08 Family Portal](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/88), merged successfully.
+**As of:** 8 October 2026
+**Verified Git state:** `main` at `b062c24` includes PR #88 plus the merged live-shell/Leads updates and Railway/Render/Docker/staging-smoke configuration; it is pushed to origin.
+**Latest delivery PRs:** [PR #89 — R06-A Finance read parity](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/89) and [PR #90 — R06-B Finance mutations/evidence](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/90) are open, with successful visible CI checks; #90 is stacked on #89.
 **Stack:** React + Vite + TypeScript; ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions.
 
 ## Parallel Angular client — foundation and shared UI (non-LIVE)
 
-An isolated `client-angular/` workspace has Angular 21.2, standalone routing, strict TypeScript, SCSS, Vitest, and zoneless change detection. In addition to shared UI and the auth shell (`/login`, `/workspace`), it now contains accepted LIVE-parity slices for R02, R03, R04, R05, R08 (`/family-portal`), and R09 (`/student-portal`). R08 and R09 enforce linked/self scope through backend contracts, expose published evaluations only, and keep LIVE states separate from DEMO fallback. A reusable auth interceptor, refresh lifecycle, typed role/permission catalog, `AuthorizationService`, and route policy guard provide the project-wide client policy layer; backend authorization and scope remain authoritative. Angular is **not a full replacement** for React, which remains the reference client and `main` remains the source of truth. R06-A Finance read parity is the next implementation slice on `feat/angular-r06-finance-read`; mutations and evidence upload are explicitly out of scope for R06-A. This does not alter production infrastructure or deployment. See [`ANGULAR_FRONTEND_GUIDE.md`](ANGULAR_FRONTEND_GUIDE.md) for architecture and security/parity boundaries.
+An isolated `client-angular/` workspace has Angular 21.2, standalone routing, strict TypeScript, SCSS, Vitest, and zoneless change detection. In addition to shared UI and the auth shell (`/login`, `/workspace`), it now contains accepted LIVE-parity slices for R02, R03, R04, R05, R08 (`/family-portal`), and R09 (`/student-portal`). R08 and R09 enforce linked/self scope through backend contracts, expose published evaluations only, and keep LIVE states separate from DEMO fallback. A reusable auth interceptor, refresh lifecycle, typed role/permission catalog, `AuthorizationService`, and route policy guard provide the project-wide client policy layer; backend authorization and scope remain authoritative. Angular is **not a full replacement** for React, which remains the reference client and `main` remains the source of truth. R06-A read parity and R06-B mutation/evidence parity are implemented on stacked branches pending merge; their local Angular suite is green, while production storage/staging gates remain separate. This does not alter production infrastructure or deployment. See [`ANGULAR_FRONTEND_GUIDE.md`](ANGULAR_FRONTEND_GUIDE.md) for architecture and security/parity boundaries.
 
 ## Executive summary
 

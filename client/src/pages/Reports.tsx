@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient } from "@/lib/apiClient";
+import SessionLogoutButton from "@/components/SessionLogoutButton";
 import ReportsLive from "./ReportsLive";
 
 type Branch = "مدينة نصر";
@@ -303,13 +304,7 @@ function ReportsPreview() {
             <Settings size={19} />
             <span>الإعدادات</span>
           </button>
-          <button
-            className="nav-link"
-            onClick={() => toast("تسجيل الخروج التجريبي")}
-          >
-            <LogOut size={19} />
-            <span>تسجيل الخروج</span>
-          </button>
+          <SessionLogoutButton className="nav-link" iconSize={19} />
         </div>
         <div className="sidebar-version">
           مدى لإدارة الأكاديميات <span>نسخة تجريبية</span>

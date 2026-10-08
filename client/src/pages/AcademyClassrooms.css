@@ -1,0 +1,267 @@
+.academy-classrooms-page {
+  display: grid;
+  gap: 20px;
+  padding: 24px clamp(16px, 3vw, 36px) 48px;
+  color: #172b38;
+}
+
+.academy-classrooms-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e4ebed;
+}
+
+.academy-classrooms-topbar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #dce8ea;
+  border-radius: 9px;
+  background: #fff;
+  color: #2b5662;
+  padding: 8px 13px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.academy-classrooms-topbar button:hover {
+  background: #f0f7f6;
+  border-color: #0d9488;
+  color: #0d9488;
+}
+
+.academy-classrooms-topbar span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #51717b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.academy-classrooms-content {
+  display: grid;
+  gap: 20px;
+}
+
+.academy-classrooms-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 10px;
+  background: #0d9488;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.academy-classrooms-add:hover {
+  background: #0f766e;
+}
+
+.academy-classrooms-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #43636d;
+}
+
+.academy-classrooms-filter select {
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid #dce5e7;
+  border-radius: 9px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+}
+
+.academy-classrooms-scope {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid #ccede5;
+  border-radius: 12px;
+  background: #f0faf7;
+  color: #136a59;
+  font-size: 12px;
+}
+
+.academy-classrooms-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.academy-classrooms-metrics article {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #e5ecee;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 4px 18px rgba(16, 46, 56, 0.04);
+}
+
+.academy-classrooms-metrics article > span {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #e6f6f3;
+  color: #0d9488;
+}
+
+.academy-classrooms-metrics article > div {
+  display: grid;
+  gap: 2px;
+}
+
+.academy-classrooms-metrics strong {
+  font-size: 24px;
+  line-height: 1.1;
+  color: #163640;
+}
+
+.academy-classrooms-metrics small {
+  font-size: 11px;
+  color: #718890;
+}
+
+.academy-classrooms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 18px;
+}
+
+.academy-classroom-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid #e4ebed;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 4px 18px rgba(16, 46, 56, 0.04);
+}
+
+.academy-classroom-card header {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.academy-classroom-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #edf6f4;
+  color: #0d9488;
+}
+
+.academy-classroom-card header div {
+  display: grid;
+  gap: 2px;
+}
+
+.academy-classroom-card header strong {
+  font-size: 15px;
+  color: #173842;
+}
+
+.academy-classroom-card header small {
+  font-size: 11px;
+  color: #7b949c;
+}
+
+.academy-classroom-capacity {
+  padding: 4px 9px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.academy-classroom-status {
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.academy-classroom-status.available {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.academy-classroom-status.maintenance {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.academy-classroom-status.inactive {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.academy-classroom-card footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #edf2f4;
+}
+
+.academy-classroom-card footer button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 11px;
+  border: 1px solid #dce6e8;
+  border-radius: 8px;
+  background: #fff;
+  color: #2e535e;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.academy-classrooms-empty {
+  grid-column: 1 / -1;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 50px 20px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 18px;
+  background: #fff;
+  color: #8ba0a8;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .academy-classrooms-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

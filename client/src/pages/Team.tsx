@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { TeamManagementViews } from "@/components/TeamManagementViews";
+import SessionLogoutButton from "@/components/SessionLogoutButton";
 import {
   ROLE_BY_CODE,
   ROLES,
@@ -394,13 +395,7 @@ export default function Team() {
             <Settings size={19} />
             <span>الإعدادات</span>
           </button>
-          <button
-            className="nav-link"
-            onClick={() => toast("تسجيل الخروج التجريبي")}
-          >
-            <LogOut size={19} />
-            <span>تسجيل الخروج</span>
-          </button>
+          <SessionLogoutButton className="nav-link" iconSize={19} />
         </div>
         <div className="sidebar-version">
           مدى لإدارة الأكاديميات <span>نسخة تجريبية</span>

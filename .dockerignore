@@ -1,0 +1,22 @@
+.git
+.github
+.agents
+.tools
+.manus-logs
+node_modules
+client/node_modules
+client-angular/node_modules
+dist
+artifacts
+temp
+*.log
+.env
+.env.local
+.env.development
+.env.production
+
+# .NET artifacts
+backend/**/bin/
+backend/**/obj/
+backend/**/*.user
+backend/**/*.suo

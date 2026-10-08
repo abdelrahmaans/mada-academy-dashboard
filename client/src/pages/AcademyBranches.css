@@ -1,0 +1,290 @@
+.academy-branches-page {
+  display: grid;
+  gap: 20px;
+  padding: 24px clamp(16px, 3vw, 36px) 48px;
+  color: #172b38;
+}
+
+.academy-branches-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e4ebed;
+}
+
+.academy-branches-topbar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #dce8ea;
+  border-radius: 9px;
+  background: #fff;
+  color: #2b5662;
+  padding: 8px 13px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.academy-branches-topbar button:hover {
+  background: #f0f7f6;
+  border-color: #0d9488;
+  color: #0d9488;
+}
+
+.academy-branches-topbar span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #51717b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.academy-branches-content {
+  display: grid;
+  gap: 20px;
+}
+
+.academy-branches-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 10px;
+  background: #0d9488;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.academy-branches-add:hover {
+  background: #0f766e;
+}
+
+.academy-branches-scope {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid #ccede5;
+  border-radius: 12px;
+  background: #f0faf7;
+  color: #136a59;
+  font-size: 12px;
+}
+
+.academy-branches-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  background: #fff5f5;
+  color: #b91c1c;
+  font-size: 12px;
+}
+
+.academy-branches-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 16px;
+  background: #fff;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.academy-branches-loading .spin {
+  animation: spin 1s linear infinite;
+}
+
+.academy-branches-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.academy-branches-metrics article {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #e5ecee;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 4px 18px rgba(16, 46, 56, 0.04);
+}
+
+.academy-branches-metrics article > span {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #e6f6f3;
+  color: #0d9488;
+}
+
+.academy-branches-metrics article > div {
+  display: grid;
+  gap: 2px;
+}
+
+.academy-branches-metrics strong {
+  font-size: 24px;
+  line-height: 1.1;
+  color: #163640;
+}
+
+.academy-branches-metrics small {
+  font-size: 11px;
+  color: #718890;
+}
+
+.academy-branches-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px;
+}
+
+.academy-branch-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid #e4ebed;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 4px 18px rgba(16, 46, 56, 0.04);
+}
+
+.academy-branch-card header {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.academy-branch-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  background: #eaf5f2;
+  color: #0d9488;
+}
+
+.academy-branch-card header div {
+  display: grid;
+  gap: 2px;
+}
+
+.academy-branch-card header strong {
+  font-size: 15px;
+  color: #173842;
+}
+
+.academy-branch-card header small {
+  font-size: 11px;
+  color: #7b949c;
+}
+
+.academy-branch-status {
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.academy-branch-status.active {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.academy-branch-status.inactive {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.academy-branch-counts {
+  display: flex;
+  gap: 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f8fafb;
+}
+
+.academy-branch-counts span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #55727b;
+}
+
+.academy-branch-counts b {
+  color: #173842;
+}
+
+.academy-branch-card footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #edf2f4;
+}
+
+.academy-branch-card footer button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 11px;
+  border: 1px solid #dce6e8;
+  border-radius: 8px;
+  background: #fff;
+  color: #2e535e;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.academy-branch-card footer button.link {
+  margin-right: auto;
+  border: 0;
+  background: transparent;
+  color: #0d9488;
+}
+
+.academy-branches-empty {
+  grid-column: 1 / -1;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 50px 20px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 18px;
+  background: #fff;
+  color: #8ba0a8;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .academy-branches-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

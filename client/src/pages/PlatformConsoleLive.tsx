@@ -5,6 +5,7 @@ import { useLocation } from "wouter";
 import PageHeader from "@/components/PageHeader";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
+import SessionLogoutButton from "@/components/SessionLogoutButton";
 import { apiClient, type PlatformAcademy, type PlatformActivity, type PlatformMember, type PlatformOverview, type PlatformRole } from "@/lib/apiClient";
 import "./PlatformConsoleLive.css";
 
@@ -159,6 +160,7 @@ export default function PlatformConsoleLive() {
       <div className="pc-live-brand"><span><ShieldCheck size={20} /></span><div><strong>مدى</strong><small>إدارة المنصة · R00</small></div></div>
       <nav>{nav.map(item => { const Icon = item.icon; return <button key={item.id} className={view === item.id ? "active" : ""} onClick={() => setView(item.id)} type="button"><Icon size={17} /><span>{item.label}</span></button>; })}</nav>
       <div className="pc-live-side-note"><LockKeyhole size={16} /><span>البيانات الإدارية فقط؛ لا توجد تفاصيل مالية أو سجلات طلاب في نطاق الدعم.</span></div>
+      <SessionLogoutButton className="nav-link pc-live-logout" iconSize={17} />
       <small className="pc-live-status"><i /> اتصال API مباشر</small>
     </aside>
     <main className="pc-live-main" dir="rtl">
