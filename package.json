@@ -18,6 +18,7 @@
     "e2e:angular-r03": "playwright test --config=playwright.angular-r03.config.ts",
     "e2e:angular-r04": "playwright test --config=playwright.angular-r04.config.ts",
     "e2e:angular-r09": "playwright test --config=playwright.angular-r09.config.ts",
+    "e2e:angular-r06": "playwright test --config=playwright.angular-r06.config.ts",
     "e2e:angular-r08": "playwright test --config=playwright.angular-r08.config.ts"
   },
   "dependencies": {

@@ -12,6 +12,7 @@ on:
       - "playwright.config.ts"
       - "playwright.angular-r09.config.ts"
       - "playwright.angular-r08.config.ts"
+      - "playwright.angular-r06.config.ts"
       - "vite.config.*"
       - "tsconfig.json"
       - "index.html"
@@ -73,6 +74,9 @@ jobs:
 
       - name: Run Angular R09 E2E suite
         run: pnpm e2e:angular-r09
+
+      - name: Run Angular R06 E2E suite
+        run: pnpm e2e:angular-r06
 
       - name: Upload Playwright diagnostics
         if: always()
