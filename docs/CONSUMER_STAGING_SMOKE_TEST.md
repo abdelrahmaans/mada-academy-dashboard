@@ -48,8 +48,9 @@ Use the returned access token as `Authorization: Bearer <token>` for `/api/v1/co
 The repository now includes Playwright coverage in `e2e/critical-flows.spec.ts`:
 
 - **R06:** authenticated LIVE FinanceDesk surface and finance summary (no demo banner).
-- **R08:** Family Portal linked-child scope and financial tab.
-- **R09:** Student Portal self-scope; the parent-linked child is not visible.
+- **R08:** Family Portal linked-child scope; session/invoice records are filtered to returned linked children; session/invoice partial failures preserve available child data; empty/error states do not fall back to demo fixtures.
+- **R09:** Student Portal self-scope; session records are filtered to the linked student; profile/session partial failures and empty-link states do not fall back to demo fixtures.
+- Route guards, role isolation, logout, plus the existing Finance and Instructor critical flows.
 
 Run it locally with:
 
@@ -57,4 +58,4 @@ Run it locally with:
 pnpm e2e
 ```
 
-The Playwright config starts the seeded InMemory API and Vite automatically and uses the system Chromium binary. Latest verified result: **7/7 passed**, including route guards, role isolation, and logout.
+The Playwright config starts the seeded InMemory API and Vite automatically and uses the system Chromium binary. Latest local branch verification: **17/17 passed** (`test/consumer-scope-partial-failures`). These browser checks validate frontend behavior only; the backend consumer authorization and tenant/link queries remain the security authority. A live authenticated staging click-through is still a separate release gate.

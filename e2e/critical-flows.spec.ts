@@ -19,6 +19,45 @@ async function login(page: Page, accountType: "staff" | "parent" | "student", ph
   await page.getByRole("button", { name: /دخول إلى المساحة/ }).click();
 }
 
+const FAMILY_LINKED_STUDENT_ID = "70000000-0000-0000-0000-000000000001";
+const STUDENT_LINKED_STUDENT_ID = "70000000-0000-0000-0000-000000000002";
+
+function mockConsumerSession(sessionId: string, studentId: string, studentName: string, courseName: string) {
+  return {
+    sessionId,
+    studentId,
+    studentName,
+    sessionNumber: 1,
+    startAt: "2026-10-10T10:00:00Z",
+    endAt: "2026-10-10T11:00:00Z",
+    status: "SCHEDULED",
+    courseName,
+    branchName: "الفرع الرئيسي",
+    classroomName: "المعمل",
+    attendanceStatus: "UNMARKED",
+    score: null,
+    notes: null,
+  };
+}
+
+function mockConsumerInvoice(id: string, invoiceNumber: string, studentId: string) {
+  return {
+    id,
+    invoiceNumber,
+    tenantId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    branchId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+    studentId,
+    issueDate: "2026-10-01",
+    dueDate: "2026-10-31",
+    totalPiastres: 10000,
+    paidPiastres: 0,
+    remainingPiastres: 10000,
+    status: "OPEN",
+    lines: [{ description: "رسوم اختبار الواجهة", amountPiastres: 10000 }],
+    payments: [],
+  };
+}
+
 test.describe("critical local MVP journeys", () => {
   test("Finance API completes invoice, payment, over-collection, and evidence lifecycle", async ({ request }) => {
     const token = await apiLogin(request);
@@ -97,6 +136,118 @@ test.describe("critical local MVP journeys", () => {
     await expect(page.getByText("Youssef Ahmed", { exact: true })).toHaveCount(0);
   });
 
+  test("R08 filters sessions and invoices to children linked to the family account", async ({ page }) => {
+    await page.route("**/api/v1/consumer/me/sessions**", async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: { items: [
+          mockConsumerSession("session-linked-family", FAMILY_LINKED_STUDENT_ID, "Youssef Ahmed", "جلسة الطفل المرتبط"),
+          mockConsumerSession("session-unlinked-family", STUDENT_LINKED_STUDENT_ID, "Lina Omar", "جلسة طفل غير مرتبط"),
+        ], total: 2 } }),
+      });
+    });
+    await page.route("**/api/v1/consumer/invoices", async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: { items: [
+          mockConsumerInvoice("invoice-linked-family", "INV-LINKED-CHILD", FAMILY_LINKED_STUDENT_ID),
+          mockConsumerInvoice("invoice-unlinked-family", "INV-UNLINKED-CHILD", STUDENT_LINKED_STUDENT_ID),
+        ], total: 2 } }),
+      });
+    });
+
+    await login(page, "parent", "+201000000011");
+    await expect(page).toHaveURL(/\/family-portal$/);
+    await expect(page.getByRole("heading", { name: "Youssef Ahmed", exact: true })).toBeVisible();
+    await expect(page.getByText("جلسة الطفل المرتبط", { exact: true })).toBeVisible();
+    await expect(page.getByText("جلسة طفل غير مرتبط", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("LIVE · بيانات الحساب", { exact: true })).toBeVisible();
+
+    await page.getByRole("button", { name: /^الفواتير/ }).click();
+    await expect(page.getByText("INV-LINKED-CHILD", { exact: true })).toBeVisible();
+    await expect(page.getByText("INV-UNLINKED-CHILD", { exact: true })).toHaveCount(0);
+  });
+
+  test("R09 filters sessions to the student's linked profile", async ({ page }) => {
+    await page.route("**/api/v1/consumer/me/sessions**", async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: { items: [
+          mockConsumerSession("session-linked-student", STUDENT_LINKED_STUDENT_ID, "Lina Omar", "جلسة الطالب المرتبط"),
+          mockConsumerSession("session-other-student", FAMILY_LINKED_STUDENT_ID, "Youssef Ahmed", "جلسة طالب آخر"),
+        ], total: 2 } }),
+      });
+    });
+
+    await login(page, "student", "+201000000012");
+    await expect(page).toHaveURL(/\/student-portal$/);
+    await page.locator("#student-portal-sidebar").getByRole("button", { name: "جلساتي", exact: true }).click();
+    await expect(page.getByRole("main").getByText("جلسة الطالب المرتبط", { exact: true })).toBeVisible();
+    await expect(page.getByText("جلسة طالب آخر", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("LIVE · حساب الطالب", { exact: true })).toBeVisible();
+  });
+
+  test("R08 keeps linked children and LIVE state when the sessions endpoint fails", async ({ page }) => {
+    await page.route("**/api/v1/consumer/me/sessions**", route => route.abort());
+    await login(page, "parent", "+201000000011");
+    await expect(page).toHaveURL(/\/family-portal$/);
+    await expect(page.getByRole("heading", { name: "Youssef Ahmed", exact: true })).toBeVisible();
+    await expect(page.getByRole("status")).toContainText("الجلسات غير متاحة مؤقتًا");
+    await expect(page.getByText("LIVE · بيانات الحساب", { exact: true })).toBeVisible();
+    await expect(page.getByText("DEMO · معاينة محلية", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("ياسين محمد علي", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("ليلى أحمد محمود", { exact: true })).toHaveCount(0);
+  });
+
+  test("R08 shows a real empty state, not demo children, when no linked students are returned", async ({ page }) => {
+    await page.route("**/api/v1/consumer/me/students**", async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: { items: [], total: 0 } }),
+      });
+    });
+    await login(page, "parent", "+201000000011");
+    await expect(page).toHaveURL(/\/family-portal$/);
+    await expect(page.getByText("لا توجد ملفات أطفال مرتبطة بهذا الحساب.", { exact: false })).toBeVisible();
+    await expect(page.getByText("LIVE · بيانات الحساب", { exact: true })).toBeVisible();
+    await expect(page.getByText("DEMO · معاينة محلية", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("ياسين محمد علي", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("ليلى أحمد محمود", { exact: true })).toHaveCount(0);
+  });
+
+  test("R09 shows a profile error without demo student data when the linked-student endpoint fails", async ({ page }) => {
+    await page.route("**/api/v1/consumer/me/students**", route => route.abort());
+    await login(page, "student", "+201000000012");
+    await expect(page).toHaveURL(/\/student-portal$/);
+    await expect(page.getByRole("alert")).toContainText("تعذر تحميل بيانات الطالب");
+    await expect(page.getByRole("alert")).toContainText("إعادة المحاولة");
+    await expect(page.getByText("LIVE · حساب الطالب", { exact: true })).toBeVisible();
+    await expect(page.getByText("DEMO · حساب الطالب", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("روبوتكس مستوى 2", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("مستكشف الحلول", { exact: true })).toHaveCount(0);
+  });
+
+  test("R09 shows a real unlinked-profile state, not demo data, when no student link is returned", async ({ page }) => {
+    await page.route("**/api/v1/consumer/me/students**", async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: { items: [], total: 0 } }),
+      });
+    });
+    await login(page, "student", "+201000000012");
+    await expect(page).toHaveURL(/\/student-portal$/);
+    await expect(page.getByText("لا يوجد ملف طالب مرتبط بهذا الحساب حتى الآن.", { exact: false })).toBeVisible();
+    await expect(page.getByText("LIVE · حساب الطالب", { exact: true })).toBeVisible();
+    await expect(page.getByText("DEMO · حساب الطالب", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("روبوتكس مستوى 2", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("مستكشف الحلول", { exact: true })).toHaveCount(0);
+  });
+
   test("R08 keeps linked children visible when invoices fail", async ({ page }) => {
     await page.route("**/api/v1/consumer/invoices", route => route.abort());
     await login(page, "parent", "+201000000011");
@@ -132,6 +283,8 @@ test.describe("critical local MVP journeys", () => {
     await expect(page.getByText("Youssef Ahmed", { exact: true })).toHaveCount(0);
     await expect(page.getByText("LIVE · حساب الطالب", { exact: true })).toBeVisible();
     await expect(page.getByText("DEMO · حساب الطالب", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("روبوتكس مستوى 2", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("مستكشف الحلول", { exact: true })).toHaveCount(0);
   });
 
   test("R04 disables attendance mutations for a completed session", async ({ page }) => {
