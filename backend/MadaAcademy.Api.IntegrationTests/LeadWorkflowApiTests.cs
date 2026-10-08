@@ -197,7 +197,7 @@ public sealed class LeadWorkflowApiTests
             offeringId = offering.Id;
         }
 
-        var response = await client.PostAsJsonAsync("/api/v1/students", new
+        var response = await client.PostAsJsonAsync("/api/v1/students/register", new
         {
             fullName = "زين الدين خالد",
             phone = "+201055443322",
