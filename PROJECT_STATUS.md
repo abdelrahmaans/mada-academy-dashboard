@@ -1,13 +1,13 @@
 # Mada Academy — Project Status
 
 **As of:** 8 October 2026
-**Verified Git state:** `main` at `b062c24` includes PR #88 plus the merged live-shell/Leads updates and Railway/Render/Docker/staging-smoke configuration; it is pushed to origin.
-**Latest delivery PRs:** [PR #89 — R06-A Finance read parity](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/89) and [PR #90 — R06-B Finance mutations/evidence](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/90) are open, with successful visible CI checks; #90 is stacked on #89.
+**Verified Git state:** `main` at `c2d9954` includes PR #88, the live-shell/Leads updates, Railway/Render/Docker/staging-smoke configuration, and the merged Angular R06 Finance slices; it is pushed to origin.
+**Latest delivery PRs:** [PR #89 — R06-A Finance read parity](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/89) and [PR #90 — R06-B Finance mutations/evidence](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/90) are merged successfully with passing CI.
 **Stack:** React + Vite + TypeScript; ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions.
 
 ## Parallel Angular client — foundation and shared UI (non-LIVE)
 
-An isolated `client-angular/` workspace has Angular 21.2, standalone routing, strict TypeScript, SCSS, Vitest, and zoneless change detection. In addition to shared UI and the auth shell (`/login`, `/workspace`), it now contains accepted LIVE-parity slices for R02, R03, R04, R05, R08 (`/family-portal`), and R09 (`/student-portal`). R08 and R09 enforce linked/self scope through backend contracts, expose published evaluations only, and keep LIVE states separate from DEMO fallback. A reusable auth interceptor, refresh lifecycle, typed role/permission catalog, `AuthorizationService`, and route policy guard provide the project-wide client policy layer; backend authorization and scope remain authoritative. Angular is **not a full replacement** for React, which remains the reference client and `main` remains the source of truth. R06-A read parity and R06-B mutation/evidence parity are implemented on stacked branches pending merge; their local Angular suite is green, while production storage/staging gates remain separate. This does not alter production infrastructure or deployment. See [`ANGULAR_FRONTEND_GUIDE.md`](ANGULAR_FRONTEND_GUIDE.md) for architecture and security/parity boundaries.
+An isolated `client-angular/` workspace has Angular 21.2, standalone routing, strict TypeScript, SCSS, Vitest, and zoneless change detection. In addition to shared UI and the auth shell (`/login`, `/workspace`), it now contains accepted LIVE-parity slices for R02, R03, R04, R05, R06 Finance, R08 (`/family-portal`), and R09 (`/student-portal`). R06 covers scoped reads, invoice/payment/expense mutations, payment evidence, single-flight protection, and Angular R06 E2E coverage. R08 and R09 enforce linked/self scope through backend contracts, expose published evaluations only, and keep LIVE states separate from DEMO fallback. Backend authorization and scope remain authoritative; Angular is not a full replacement for React. Production storage/staging gates remain separate. The final route-by-role closure record is [`ANGULAR_PARITY_MATRIX.md`](ANGULAR_PARITY_MATRIX.md); architecture and security boundaries are in [`ANGULAR_FRONTEND_GUIDE.md`](ANGULAR_FRONTEND_GUIDE.md).
 
 ## Executive summary
 
@@ -39,7 +39,7 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 
 ## CI and verified baseline
 
-The current merged baseline includes PR #88 for Angular R08. Its CI passed Angular R08 Playwright, the critical Playwright flows, Frontend Checks, and Vercel checks. R08/R09 acceptance covers linked/self scope, published evaluations, partial failures, and no-Demo LIVE behavior. No real deployment secrets are stored in Git.
+The current merged baseline includes PR #88 for Angular R08 plus PRs #89 and #90 for Angular Finance R06. Their CI passed the relevant Angular Playwright, critical Playwright, Frontend Checks, and Vercel checks. R06/R08/R09 acceptance covers scoped access, published evaluations where applicable, partial failures, and no-Demo LIVE behavior. No real deployment secrets are stored in Git.
 
 ## LIVE acceptance evidence — 4 October 2026
 
@@ -54,7 +54,7 @@ The auditable R01/R03/R04 endpoint, role/scope, failure, empty-state, and previe
 - `pnpm build`: PASS
 - الجولة الأولى من E2E: 6/7، وتم تعديل assertion العزل لقبول الرفض الصريح أو العودة الآمنة إلى login.
 - Marketing ما زال Preview/local ويحتاج API قبل اعتباره LIVE.
-- Production storage/secrets/staging/backup-restore وFinance pending states ما زالت مفتوحة.
+- Production storage/secrets/staging/backup-restore ما زالت مفتوحة؛ حالات Finance pending وsingle-flight مغطاة في الشريحة المدموجة.
 
 التفاصيل الكاملة في [UI_FLOW_REVIEW_STATUS.md](UI_FLOW_REVIEW_STATUS.md).
 
@@ -93,6 +93,6 @@ Open implementation blockers and product debt:
 
 ## Frontend coverage and architecture debt
 
-- The frontend unit suite currently has 7 test files covering **24 tests**; it does not yet provide broad page-level mutation or authorization coverage.
-- Finance mutation and family/student consumer-scope behavior remain primarily covered by backend integration tests and the critical browser flow; dedicated frontend tests are the next implementation priority.
+- The frontend suite and Angular Finance/R08/R09 suites provide the accepted local component, mutation, scope, and browser coverage documented in [ANGULAR_PARITY_MATRIX.md](ANGULAR_PARITY_MATRIX.md); broad parity beyond the listed routes is intentionally not claimed.
+- Production storage, backup/restore, and deployed staging evidence remain separate from local frontend acceptance.
 - PostgreSQL coverage is separate from the InMemory E2E path. CI backend integration coverage is required for persistence-specific regressions; local sandbox runs without the .NET SDK cannot reproduce those tests.

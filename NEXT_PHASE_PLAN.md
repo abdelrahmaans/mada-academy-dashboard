@@ -1,8 +1,8 @@
 # خطة المرحلة القادمة — Mada Academy
 
 **تاريخ اللقطة:** 8 أكتوبر 2026
-**قاعدة العمل الحالية:** PR #89 لـR06-A فوق `main` اجتاز **6/6 checks**، وفرع العمل المتسلسل الحالي هو `feat/angular-r06b-finance-mutations`.
-**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وموجة التقسيم الأولى مغلقة. اختبارات frontend الحرجة، refresh-token reuse، فصل auth endpoints، وجرد R00 مع contract/tests مغلقة؛ وتظل private-storage/backup-restore/staging بوابات بيئية منفصلة.
+**قاعدة العمل الحالية:** `main` عند `c2d9954`، وقد تم دمج PR #89 (R06-A) وPR #90 (R06-B) بنجاح.
+**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وAngular R06 parity وموجة التقسيم الأولى مغلقة. اختبارات frontend الحرجة، refresh-token reuse، فصل auth endpoints، وجرد R00 مع contract/tests مغلقة؛ وتظل private-storage/backup-restore/staging بوابات بيئية منفصلة. مصفوفة الأدوار النهائية موثقة في [ANGULAR_PARITY_MATRIX.md](ANGULAR_PARITY_MATRIX.md).
 
 ## قرار التنفيذ الحالي
 
@@ -10,7 +10,7 @@
 2. **تم دمج P1 core journey:** الـseeder repairable، وحسابات R04/R08/R09 وروابطهم واختبارات الرحلة موجودة في `main`.
 3. **تم تنفيذ local browser/API E2E:** `pnpm e2e` يمر بـ **7/7** ويغطي R06/R08/R09 ودورة الفاتورة/الدفع/الإثبات.
 4. **تم تجهيز بيئة النشر داخل الريبو:** Dockerfile، production env template، staging smoke script، وrunbook.
-5. **المرحلة Angular الحالية:** R06-B عمليات Finance ورفع إثباتات الدفع فوق R06-A؛ بوابات Finance production (secret injection، private-storage smoke، backup/restore، وstaging smoke) تبقى منفصلة ولا تعتبر مكتملة محليًا.
+5. **حالة Angular الحالية:** أُغلقت R06-A وR06-B على `main`؛ شملت القراءة والعمليات المالية وإثباتات الدفع، مع اختبارات Angular وPlaywright وbuild ناجحة. بوابات Finance production (secret injection، private-storage smoke، backup/restore، وstaging smoke) تبقى منفصلة ولا تعتبر مكتملة محليًا.
 
 ## نتيجة acceptance الحالية
 
@@ -38,18 +38,18 @@
 - **Finance frontend follow-up (6 أكتوبر، فرع `fix/finance-payment-single-flight`):** Vitest **52/52** (بينها 4 اختبارات لحالات الانتظار/التعطيل)، `pnpm check`، `pnpm build`، Playwright **11/11**، و`git diff --check` ناجحة؛ لم يتغير backend.
 - التحقق عبر GitHub: PR #41 وPR #42 مرّا بـ **4/4 checks ناجحة** لكل PR.
 
-## الخطة التالية بعد إغلاق R08 وR09
+## شرائح Angular المغلقة بعد إغلاق R08 وR09
 
-### R06-A — Angular Finance read parity
+### R06-A — Angular Finance read parity — مكتملة
 
 - بناء feature Angular مستقلة لـFinanceDesk فوق العقود والـendpoints الحالية، دون API بديل أو تغيير backend.
 - قراءة الفواتير والمدفوعات والمصروفات والتقارير المسموح بها حسب role/permission ونطاق الأكاديمية/الفرع الذي يفرضه الخادم.
 - تغطية `loading/error/forbidden/empty` وpartial failure دون Demo fallback، مع الحفاظ على RTL وتصميم Mada.
 - مراجعة صفحة React المرجعية، عميل API، endpoints، الكيانات، authorization matrix، واختبارات backend قبل تعديل الكود.
-- إضافة unit/component tests للقراءة وحالات الفشل والنطاق؛ لا تبدأ mutations أو evidence upload قبل قبول R06-A.
+- تمت إضافة unit/component tests للقراءة وحالات الفشل والنطاق؛ وقد تم قبول R06-A قبل بدء mutations وevidence upload.
 - معيار القبول: `client-angular` tests/build، اختبارات API policy، E2E قراءة Finance، و`git diff --check` ناجحة.
 
-### R06-B — Angular Finance mutations and payment evidence
+### R06-B — Angular Finance mutations and payment evidence — مكتملة
 
 - إضافة clients typed لإنشاء الفاتورة، تسجيل الدفعة، إنشاء المصروف، اعتماد/رفض المصروف، ورفع إثبات الدفع.
 - استخدام سياسات endpoint منفصلة للكتابة والرفع، مع إبقاء tenant/branch scope مفروضًا من backend وعدم إرسال selectors من العميل.
@@ -58,15 +58,14 @@
 - تغطية حالات النجاح والفشل، pending، over-collection، missing reference، file type، والـpartial refresh في اختبارات Angular.
 - لا تشمل المرحلة الدفع الإلكتروني المباشر أو تغيير backend أو تفعيل تخزين إنتاجي؛ التخزين الخاص وstaging smoke بوابات منفصلة.
 
-## الأعمال المتبقية بعد R06-A
+## الأعمال التالية بعد إغلاق R06-B
 
-1. **اختبارات frontend لـFinance mutations — مكتملة محليًا على `fix/finance-payment-single-flight`:** تغطي دقة المبالغ/over-collection، pending وsingle-flight، disabled states للفواتير والمدفوعات والمصروفات والقرارات، رفع الإثبات، وتحرير الحالة بعد الفشل مع إبقاء المدخلات.
-2. اختبارات frontend لعزل family/student scope، partial failure، وغياب Demo fallback في LIVE.
-3. اختبار backend لإعادة استخدام refresh token بعد rotation، مع التحقق من reuse detection/revocation.
-4. نقل endpoints الـauth من `Program.cs` إلى module مستقل دون تغيير العقود أو سياسات rate limiting.
-5. جرد R00 Platform Admin وتصنيف كل action إلى `LIVE` أو `PREVIEW` أو `NOT AVAILABLE` مع authorization/audit checklist في [R00_PLATFORM_ADMIN_INVENTORY.md](R00_PLATFORM_ADMIN_INVENTORY.md) **مغلق**.
-6. إغلاق R00 follow-ups: contract alignment، اختبارات bootstrap/reactivation/protected-R00/R00 assignment، response-shape privacy assertions، وإزالة `academy.archive` من advertised permissions **مغلق**.
-7. Production readiness: CORS production enforcement **مطبق ومختبر داخل الكود**، وتم تنفيذ single-instance startup guard موثق في [DISTRIBUTED_RATE_LIMIT_DECISION.md](DISTRIBUTED_RATE_LIMIT_DECISION.md)؛ المتبقي shared-limiter/two-instance evidence قبل التوسع الأفقي، ثم private storage smoke، backup/restore، وstaging acceptance.
+1. **Private storage:** حقن الأسرار في بيئة staging وتشغيل authenticated storage smoke test؛ الأدلة المحلية ليست بديلًا عن ذلك.
+2. **Backup/restore:** إنتاج دليل قابل لإعادة التحقق لاستعادة السجلات المالية، مع توثيق الملكية والنطاق وسلامة audit trail.
+3. **Staging acceptance:** تشغيل smoke tests المصادق عليها على deployment فعلي، بما في ذلك Finance وR08/R09 وtenant/branch isolation.
+4. **Distributed production gate:** استكمال shared-limiter/two-instance evidence قبل التوسع الأفقي؛ CORS وsingle-instance startup guard مطبقان ومختبران داخل الكود.
+5. **Product decisions:** اختيار مزود SMS وتنفيذ password recovery، مع إبقاء Marketing Desk R07 موثقًا كـPreview إلى أن يُعتمد قرار live API.
+6. **Repository hygiene:** مراجعة وإغلاق PRs القديمة التي أصبحت مكررة بعد الدمج، ثم إزالة الفروع البعيدة للميزات المدموجة بعد التأكد من عدم استخدامها.
 
 ## الهدف
 
