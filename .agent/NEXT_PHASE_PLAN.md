@@ -2,7 +2,7 @@
 
 **تاريخ اللقطة:** 8 أكتوبر 2026
 **قاعدة العمل الحالية:** `main` عند `c2d9954`، وقد تم دمج PR #89 (R06-A) وPR #90 (R06-B) بنجاح.
-**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وAngular R06 parity وموجة التقسيم الأولى مغلقة. اختبارات frontend الحرجة، refresh-token reuse، فصل auth endpoints، وجرد R00 مع contract/tests مغلقة؛ وتظل private-storage/backup-restore/staging بوابات بيئية منفصلة. مصفوفة الأدوار النهائية موثقة في [ANGULAR_PARITY_MATRIX.md](ANGULAR_PARITY_MATRIX.md).
+**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وAngular R06 parity وموجة التقسيم الأولى مغلقة. اختبارات frontend الحرجة، refresh-token reuse، فصل auth endpoints، وجرد R00 مع contract/tests مغلقة؛ وتظل private-storage/backup-restore/staging بوابات بيئية منفصلة. مصفوفة الأدوار النهائية موثقة في [ANGULAR_PARITY_MATRIX.md](../ANGULAR_PARITY_MATRIX.md).
 
 ## قرار التنفيذ الحالي
 
@@ -79,7 +79,7 @@
 - بوابة الأسرة تقرأ فواتير أطفال الحساب المرتبط فقط.
 - المستخدم يسمح بمسار OTP مؤقت في البداية، ثم استبداله/استكماله بمزود فعلي لاحقًا.
 
-تفاصيل نموذج الفاتورة، endpoints، data model، الواجهات والاختبارات في [INVOICES_PAYMENTS_MVP_PLAN.md](INVOICES_PAYMENTS_MVP_PLAN.md). تفاصيل حد الأمان المؤقت في [OTP_MVP_TEMPORARY_PLAN.md](OTP_MVP_TEMPORARY_PLAN.md).
+تفاصيل نموذج الفاتورة، endpoints، data model، الواجهات والاختبارات في [INVOICES_PAYMENTS_MVP_PLAN.md](../docs/INVOICES_PAYMENTS_MVP_PLAN.md). تفاصيل حد الأمان المؤقت في [OTP_MVP_TEMPORARY_PLAN.md](../docs/OTP_MVP_TEMPORARY_PLAN.md).
 
 ## مراحل التنفيذ
 
@@ -173,7 +173,7 @@
 
 - أُنشئ `client-angular/` كتطبيق مستقل للتأسيس باستخدام Angular 21.2، standalone، strict TypeScript، SCSS، Vitest، وzoneless.
 - React في `client/` يظل المرجع والمصدر التشغيلي؛ Angular يملك auth shell محدودًا (`/login` و`/workspace`) وأول شريحة LIVE parity لـR02 على `/` متصلة بـ`/dashboard/summary`، ولا يحتوي تكافؤًا تشغيليًا كاملًا، ولا يتغير النشر أو البنية الإنتاجية.
-- يحدد [`ANGULAR_FRONTEND_GUIDE.md`](ANGULAR_FRONTEND_GUIDE.md) الهيكل، إشارات الحالة وOnPush، العربية/RTL، عقود auth الحالية، حدود R00–R09، استراتيجية التكافؤ والأمن.
+- يحدد [`ANGULAR_FRONTEND_GUIDE.md`](../ANGULAR_FRONTEND_GUIDE.md) الهيكل، إشارات الحالة وOnPush، العربية/RTL، عقود auth الحالية، حدود R00–R09، استراتيجية التكافؤ والأمن.
 - أول تنفيذ وظيفي لاحق يتطلب اختيار شريحة صغيرة ومصفوفة تتبع React↔Angular؛ أي تغييرات تفويض/API تتطلب اختبارات backend integration، ولا تعتبر route guards حدًا أمنيًا.
 
 ### Angular shared UI foundation — 7 October 2026 (PR #79, open)
