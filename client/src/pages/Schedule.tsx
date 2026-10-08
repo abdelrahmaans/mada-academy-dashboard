@@ -41,7 +41,6 @@ import {
   ScheduleFormDialog,
 } from "@/components/ScheduleViews";
 import SessionLogoutButton from "@/components/SessionLogoutButton";
-import { useAuth } from "@/contexts/AuthContext";
 
 export type SessionStatus =
   | "scheduled"
