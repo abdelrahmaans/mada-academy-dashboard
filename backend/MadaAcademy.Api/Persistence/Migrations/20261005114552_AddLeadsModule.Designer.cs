@@ -3,6 +3,7 @@ using System;
 using MadaAcademy.Api.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MadaAcademy.Api.Persistence.Migrations
 {
     [DbContext(typeof(MadaDbContext))]
-    partial class MadaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261005114552_AddLeadsModule")]
+    partial class AddLeadsModule
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -626,70 +629,6 @@ namespace MadaAcademy.Api.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("ExpenseEvidences");
-                });
-
-            modelBuilder.Entity("MadaAcademy.Api.Persistence.Entities.GroupSupervisionAssignment", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("BranchId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("CanReadAttendance")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("CanReviewEvaluations")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("CourseOfferingId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("CreatedByUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset?>("EndsAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTimeOffset?>("RevokedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("RevokedByUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset?>("StartsAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(24)
-                        .HasColumnType("character varying(24)");
-
-                    b.Property<Guid>("SupervisorUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BranchId");
-
-                    b.HasIndex("SupervisorUserId");
-
-                    b.HasIndex("CourseOfferingId", "SupervisorUserId", "Status")
-                        .IsUnique();
-
-                    b.HasIndex("TenantId", "BranchId", "SupervisorUserId", "Status");
-
-                    b.ToTable("GroupSupervisionAssignments");
                 });
 
             modelBuilder.Entity("MadaAcademy.Api.Persistence.Entities.GuardianStudentLink", b =>
@@ -1787,27 +1726,6 @@ namespace MadaAcademy.Api.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Expense");
-                });
-
-            modelBuilder.Entity("MadaAcademy.Api.Persistence.Entities.GroupSupervisionAssignment", b =>
-                {
-                    b.HasOne("MadaAcademy.Api.Persistence.Entities.Branch", null)
-                        .WithMany()
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("MadaAcademy.Api.Persistence.Entities.CourseOffering", null)
-                        .WithMany()
-                        .HasForeignKey("CourseOfferingId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("MadaAcademy.Api.Persistence.Entities.UserAccount", null)
-                        .WithMany()
-                        .HasForeignKey("SupervisorUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("MadaAcademy.Api.Persistence.Entities.GuardianStudentLink", b =>

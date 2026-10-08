@@ -8,6 +8,7 @@ import R01AcademySidebar from "@/components/R01AcademySidebar";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient, type AcademyBranch, type AcademyMember, type AcademyRoleDefinition } from "@/lib/apiClient";
+import "./AcademyRoles.css";
 
 const roleLabel = (roles: AcademyRoleDefinition[], code: string) => roles.find(role => role.code === code)?.label ?? code;
 const isBranchRole = (roles: AcademyRoleDefinition[], code: string) => roles.find(role => role.code === code)?.scopeLevel === "BRANCH";
@@ -80,6 +81,7 @@ export default function AcademyRoles() {
   const addMember = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!newMember.fullName || !newMember.email || !newMember.phone || (isBranchRole(roles, newMember.roleCode) && !newMember.branchId)) { toast.error("أكمل بيانات العضو والفرع المطلوب."); return; }
+    if (!newMember.password || newMember.password.trim().length < 8) { toast.error("كلمة المرور يجب أن تكون 8 أحرف على الأقل."); return; }
     setSaving(true);
     try { const created = await apiClient.addAcademyMember({ ...newMember, branchId: newMember.branchId || undefined }); setMembers(current => [created, ...current]); setNewMember({ fullName: "", email: "", phone: "", password: "", roleCode: "R04_INSTRUCTOR", branchId: branches[0]?.id ?? "" }); setShowAdd(false); toast.success("تمت إضافة العضو بالصلاحية المحددة"); }
     catch (cause) { toast.error(cause instanceof Error ? cause.message : "تعذر إضافة العضو."); }
@@ -88,7 +90,7 @@ export default function AcademyRoles() {
 
   const activeMembers = useMemo(() => members.filter(member => member.membershipStatus === "ACTIVE").length, [members]);
 
-  return <RoleDashboardShell className="app-shell academy-roles-shell" showSessionLogout={false} roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName={me?.academy?.name ?? "الأكاديمية"}>
+  return <RoleDashboardShell className="app-shell academy-roles-shell" showSessionLogout={false} roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName={me?.academy?.name ?? "الأكاديمية"} demo={false}>
     <R01AcademySidebar activePath="/academy/roles" mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
     <main className="main-panel academy-roles-page" dir="rtl">
       <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel="كل فروع الأكاديمية" />

@@ -38,6 +38,7 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
     public DbSet<InvoiceCorrectionRequest> InvoiceCorrectionRequests => Set<InvoiceCorrectionRequest>();
     public DbSet<Expense> Expenses => Set<Expense>();
     public DbSet<ExpenseEvidence> ExpenseEvidences => Set<ExpenseEvidence>();
+    public DbSet<Lead> Leads => Set<Lead>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -313,6 +314,16 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
             entity.Property(x => x.ContentType).HasMaxLength(120).IsRequired();
             entity.Property(x => x.Sha256).HasMaxLength(64).IsRequired();
             entity.HasOne(x => x.Expense).WithOne(x => x.Evidence).HasForeignKey<ExpenseEvidence>(x => x.ExpenseId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<Lead>(entity =>
+        {
+            entity.HasIndex(x => new { x.TenantId, x.BranchId, x.Status });
+            entity.Property(x => x.ChildName).HasMaxLength(160).IsRequired();
+            entity.Property(x => x.ParentName).HasMaxLength(160).IsRequired();
+            entity.Property(x => x.Phone).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Channel).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Notes).HasMaxLength(500);
         });
     }
 }

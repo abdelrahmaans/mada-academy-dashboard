@@ -1,28 +1,44 @@
-import { LogOut } from "lucide-react";
+import { LogIn, LogOut } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { apiClient } from "@/lib/apiClient";
 
-export default function SessionLogoutButton() {
+type SessionLogoutButtonProps = {
+  className?: string;
+  iconSize?: number;
+};
+
+export default function SessionLogoutButton({
+  className = "session-logout-button",
+  iconSize = 19,
+}: SessionLogoutButtonProps) {
   const { logout, me } = useAuth();
   const [, navigate] = useLocation();
+  const isAuthenticated = Boolean(me || apiClient.hasSession());
 
-  const handleLogout = async () => {
-    await logout();
-    toast.success("تم تسجيل الخروج بأمان");
+  const handleClick = async () => {
+    if (isAuthenticated) {
+      try {
+        await logout();
+      } catch {
+        // ignore
+      }
+      toast.success("تم تسجيل الخروج بنجاح");
+    }
     navigate("/login");
   };
 
   return (
     <button
       type="button"
-      className="session-logout-button"
-      onClick={() => void handleLogout()}
-      aria-label="تسجيل الخروج"
-      title={me?.user?.displayName ? `تسجيل خروج ${me.user.displayName}` : "تسجيل الخروج"}
+      className={className}
+      onClick={() => void handleClick()}
+      aria-label={isAuthenticated ? "تسجيل الخروج" : "تسجيل الدخول"}
+      title={isAuthenticated ? (me?.user?.displayName ? `تسجيل خروج ${me.user.displayName}` : "تسجيل الخروج") : "تسجيل الدخول"}
     >
-      <LogOut size={15} />
-      <span>تسجيل الخروج</span>
+      {isAuthenticated ? <LogOut size={iconSize} /> : <LogIn size={iconSize} />}
+      <span>{isAuthenticated ? "تسجيل الخروج" : "تسجيل الدخول"}</span>
     </button>
   );
 }

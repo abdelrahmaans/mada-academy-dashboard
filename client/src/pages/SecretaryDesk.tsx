@@ -26,6 +26,7 @@ import FamilyProfileCard from "@/components/FamilyProfileCard";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
+import SessionLogoutButton from "@/components/SessionLogoutButton";
 import SecretaryDeskLive from "./SecretaryDeskLive";
 import { DISCOUNTS, LEAD_LABELS, LEADS, OFFERINGS, type Lead, type LeadStatus, type Offering, OverviewView, FollowupsView, RegistrationView, OperationsView, NavButton, VIEW_COPY, VIEW_TITLES } from "@/components/SecretaryPreviewViews";
 
@@ -219,13 +220,7 @@ function SecretaryDeskPreview() {
             <Settings size={19} />
             <span>الإعدادات</span>
           </button>
-          <button
-            className="nav-link"
-            onClick={() => toast("تم تسجيل الخروج التجريبي")}
-          >
-            <LogOut size={19} />
-            <span>تسجيل الخروج</span>
-          </button>
+          <SessionLogoutButton className="nav-link" iconSize={19} />
         </div>
       </aside>
       <main className="main-panel">

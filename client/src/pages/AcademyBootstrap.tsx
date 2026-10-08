@@ -65,7 +65,7 @@ export default function AcademyBootstrap() {
           </div>
           <div className="academy-bootstrap-next-step"><ShieldCheck size={17} /><span><strong>الخطوة التالية:</strong> سجّل دخول مسؤول الأكاديمية برقم الهاتف وكلمة المرور التي تم تعيينها.</span></div>
           <div className="academy-bootstrap-actions">
-            <button className="academy-bootstrap-primary" onClick={() => navigate("/workspace")}><ArrowLeft size={16} /> العودة إلى Workspace</button>
+            <button className="academy-bootstrap-primary" onClick={() => navigate("/platform-console")}><ArrowLeft size={16} /> العودة إلى لوحة المنصة</button>
             <button className="academy-bootstrap-secondary" onClick={() => { setCreated(null); setForm(initialForm); }}>إنشاء أكاديمية أخرى</button>
           </div>
         </section>

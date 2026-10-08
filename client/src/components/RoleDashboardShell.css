@@ -29,3 +29,33 @@
 @media (max-width: 700px) {
   .session-logout-button { left: 12px; bottom: 12px; width: 204px; min-height: 38px; }
 }
+
+.shell-mobile-trigger {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .shell-mobile-trigger {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 40;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid #dce8ea;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #1a2a35;
+    box-shadow: 0 4px 14px rgba(16, 46, 56, 0.12);
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .shell-mobile-trigger:hover {
+    background: #f0f7f6;
+    border-color: #0d9488;
+    color: #0d9488;
+  }
+}

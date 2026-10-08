@@ -40,6 +40,7 @@ import {
   ScheduleDetailsDialog,
   ScheduleFormDialog,
 } from "@/components/ScheduleViews";
+import SessionLogoutButton from "@/components/SessionLogoutButton";
 
 export type SessionStatus =
   | "scheduled"
@@ -505,7 +506,9 @@ function BrandMark() {
 function SchedulePage() {
   const [, navigate] = useLocation();
   const { me } = useAuth();
-  const [sessions, setSessions] = useState<Session[]>(seededSessions);
+  const [liveMode, setLiveMode] = useState(() => apiClient.hasSession());
+  const [loading, setLoading] = useState(() => apiClient.hasSession());
+  const [sessions, setSessions] = useState<Session[]>(() => apiClient.hasSession() ? [] : seededSessions());
   const [query, setQuery] = useState("");
   const [branch, setBranch] = useState("كل الفروع");
   const [branchMenuOpen, setBranchMenuOpen] = useState(false);
@@ -525,7 +528,6 @@ function SchedulePage() {
   const [dialogMode, setDialogMode] = useState<"add" | "edit" | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [detailsSession, setDetailsSession] = useState<Session | null>(null);
-  const [liveMode, setLiveMode] = useState(() => apiClient.hasSession());
   const [loadError, setLoadError] = useState<string | null>(null);
   const [liveClassrooms, setLiveClassrooms] = useState<SchedulingClassroom[]>(
     []
@@ -548,10 +550,12 @@ function SchedulePage() {
   useEffect(() => {
     if (!apiClient.hasSession()) {
       setLiveMode(false);
+      setLoading(false);
+      setSessions(seededSessions());
       return;
     }
     setLiveMode(true);
-    setSessions([]);
+    setLoading(true);
     setLoadError(null);
     Promise.allSettled([
       apiClient.listSessions(),
@@ -593,6 +597,8 @@ function SchedulePage() {
           "تم تحميل جلسات الجدول؛ بعض بيانات إنشاء الجلسة غير متاحة لصلاحيات الحساب الحالية."
         );
       }
+    }).finally(() => {
+      setLoading(false);
     });
   }, []);
 
@@ -1005,13 +1011,7 @@ function SchedulePage() {
             <Settings size={19} />
             <span>الإعدادات</span>
           </button>
-          <button
-            className="nav-link"
-            onClick={() => toast("تم تسجيل الخروج التجريبي")}
-          >
-            <LogOut size={19} />
-            <span>تسجيل الخروج</span>
-          </button>
+          <SessionLogoutButton className="nav-link" iconSize={19} />
         </div>
         <div className="sidebar-version">
           مدى لإدارة الأكاديميات <span>نسخة تجريبية</span>
@@ -1097,10 +1097,10 @@ function SchedulePage() {
               onClick={() => toast("إعدادات الحساب قيد التجهيز")}
             >
               <span className="profile-copy">
-                <strong>أحمد محمود</strong>
-                <small>مدير الفرع</small>
+                <strong>{me?.user?.displayName?.trim() || "أحمد محمود"}</strong>
+                <small>{me?.roleLabel || (liveMode ? "مدير الفرع" : "مدير الفرع")}</small>
               </span>
-              <span className="profile-avatar">أم</span>
+              <span className="profile-avatar">{me?.user?.displayName ? me.user.displayName.trim().slice(0, 2) : "أم"}</span>
               <ChevronDown size={14} />
             </button>
           </div>
@@ -1158,7 +1158,7 @@ function SchedulePage() {
               </span>
               <div>
                 <small>حصص هذا الأسبوع</small>
-                <strong>{weekCount}</strong>
+                <strong>{loading ? "..." : weekCount}</strong>
               </div>
               <span className="schedule-stat-note">
                 في {branch === "كل الفروع" ? "كل الفروع" : branch}
@@ -1170,7 +1170,7 @@ function SchedulePage() {
               </span>
               <div>
                 <small>حصص السبت</small>
-                <strong>{todayCount}</strong>
+                <strong>{loading ? "..." : todayCount}</strong>
               </div>
               <span className="schedule-stat-note">26 سبتمبر</span>
             </article>
@@ -1180,7 +1180,7 @@ function SchedulePage() {
               </span>
               <div>
                 <small>تحتاج مراجعة</small>
-                <strong>{reviewCount}</strong>
+                <strong>{loading ? "..." : reviewCount}</strong>
               </div>
               <span className="schedule-stat-note">موافقة مطلوبة</span>
             </article>
@@ -1190,7 +1190,7 @@ function SchedulePage() {
               </span>
               <div>
                 <small>قاعات مستخدمة</small>
-                <strong>{roomCount}</strong>
+                <strong>{loading ? "..." : roomCount}</strong>
               </div>
               <span className="schedule-stat-note">هذا الأسبوع</span>
             </article>

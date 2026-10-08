@@ -132,17 +132,19 @@ export default function BranchOperations() {
     toast.success("تمت إضافة الحصة للمراجعة", { description: "الحصة الجديدة بانتظار اعتماد مدير الفرع محليًا." });
   };
 
-  return <RoleDashboardShell className="app-shell r02-operations-shell" showSessionLogout={false} roleCode="R02" roleLabel="مدير الفرع" scopeLevel="branch" scopeLabel="فرع مدينة نصر" tenantName="أكاديمية مدى" branchName="فرع مدينة نصر">
-    <BranchManagerSidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
-    <main className="main-panel"><header className="topbar"><div className="topbar-right"><button className="icon-button mobile-menu-button" aria-label="فتح القائمة" onClick={() => setMobileNavOpen(true)}><Menu size={21} /></button><div className="branch-select assigned-branch"><span className="branch-icon"><MapPin size={17} /></span><span>فرع مدينة نصر</span></div></div><div className="r02-ops-scope-pill"><ShieldCheck size={15} /> صلاحية مدير الفرع · فرع واحد</div></header>
-      <div className="workspace r02-ops-content"><div className="r02-preview-banner" role="note"><strong>PREVIEW / DEMO</strong> هذه الصفحة غير متصلة ببيانات الخادم؛ الأقسام والمدربون والجلسات والأفعال المعروضة محلية توضيحية ولا تُحفظ.</div><PageHeader className="welcome-row" copyClassName="welcome-copy" actionsClassName="welcome-actions" eyebrow={<span className="eyebrow"><i className="eyebrow-dot" /> تشغيل الفرع · R02</span>} title={VIEW_TITLES[view]} description={VIEW_DESCRIPTIONS[view]} actions={<span className="r02-ops-date"><Clock3 size={14} /> أسبوع التشغيل الحالي</span>} /><RoleScopeCard className="r02-ops-scope-card" /><div className="r02-ops-demo-note"><ShieldCheck size={14} /><strong>عرض محلي فقط:</strong> لا تستخدم الأرقام أو التغييرات هنا كحالة فعلية للفرع.</div>
-        {view === "departments" && <DepartmentsView departments={departments} trainers={filteredTrainers} query={query} setQuery={setQuery} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} onToggle={toggleTrainerStatus} onDepartmentChange={changeDepartment} onSchedule={() => selectView("schedule")} />}
-        {view === "trainers" && <TrainersView trainers={filteredTrainers} query={query} setQuery={setQuery} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} onToggle={toggleTrainerStatus} onDepartmentChange={changeDepartment} />}
-        {view === "schedule" && <ScheduleView sessions={filteredSessions} weekOffset={weekOffset} setWeekOffset={setWeekOffset} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} onAdd={() => setAddSessionOpen(true)} />}
-      </div>
-    </main>
-    {addSessionOpen && <SessionDialog value={newSession} departments={departments} trainers={trainers} onChange={setNewSession} onClose={() => setAddSessionOpen(false)} onSubmit={addSession} />}
-  </RoleDashboardShell>;
+  return (
+    <RoleDashboardShell className="app-shell r02-operations-shell" showSessionLogout={false} roleCode="R02" roleLabel="مدير الفرع" scopeLevel="branch" scopeLabel="فرع مدينة نصر" tenantName="أكاديمية مدى" branchName="فرع مدينة نصر">
+      <BranchManagerSidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+      <main className="main-panel"><header className="topbar"><div className="topbar-right"><button className="icon-button mobile-menu-button" aria-label="فتح القائمة" onClick={() => setMobileNavOpen(true)}><Menu size={21} /></button><div className="branch-select assigned-branch"><span className="branch-icon"><MapPin size={17} /></span><span>فرع مدينة نصر</span></div></div><div className="r02-ops-scope-pill"><ShieldCheck size={15} /> صلاحية مدير الفرع · فرع واحد</div></header>
+        <div className="workspace r02-ops-content"><div className="r02-preview-banner" role="note"><strong>PREVIEW / DEMO</strong> هذه الصفحة غير متصلة ببيانات الخادم؛ الأقسام والمدربون والجلسات والأفعال المعروضة محلية توضيحية ولا تُحفظ.</div><PageHeader className="welcome-row" copyClassName="welcome-copy" actionsClassName="welcome-actions" eyebrow={<span className="eyebrow"><i className="eyebrow-dot" /> تشغيل الفرع · R02</span>} title={VIEW_TITLES[view]} description={VIEW_DESCRIPTIONS[view]} actions={<span className="r02-ops-date"><Clock3 size={14} /> أسبوع التشغيل الحالي</span>} /><RoleScopeCard className="r02-ops-scope-card" /><div className="r02-ops-demo-note"><ShieldCheck size={14} /><strong>عرض محلي فقط:</strong> لا تستخدم الأرقام أو التغييرات هنا كحالة فعلية للفرع.</div>
+          {view === "departments" && <DepartmentsView departments={departments} trainers={filteredTrainers} query={query} setQuery={setQuery} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} onToggle={toggleTrainerStatus} onDepartmentChange={changeDepartment} onSchedule={() => selectView("schedule")} />}
+          {view === "trainers" && <TrainersView trainers={filteredTrainers} query={query} setQuery={setQuery} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} departments={departments} onToggle={toggleTrainerStatus} onDepartmentChange={changeDepartment} />}
+          {view === "schedule" && <ScheduleView sessions={filteredSessions} weekOffset={weekOffset} setWeekOffset={setWeekOffset} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} onAdd={() => setAddSessionOpen(true)} />}
+        </div>
+      </main>
+      {addSessionOpen && <SessionDialog value={newSession} departments={departments} trainers={trainers} onChange={setNewSession} onClose={() => setAddSessionOpen(false)} onSubmit={addSession} />}
+    </RoleDashboardShell>
+  );
 }
 
 const VIEW_TITLES: Record<OpsView, string> = { departments: "إدارة الأقسام والمدربين", trainers: "فريق المدربين في الفرع", schedule: "الجدول الأسبوعي للفرع" };

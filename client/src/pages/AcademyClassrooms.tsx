@@ -7,6 +7,7 @@ import PageHeader from "@/components/PageHeader";
 import R01AcademySidebar from "@/components/R01AcademySidebar";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { apiClient, type AcademyBranch, type AcademyClassroom, type ClassroomResource } from "@/lib/apiClient";
+import "./AcademyClassrooms.css";
 
 const STATUS_LABELS: Record<string, string> = { AVAILABLE: "متاحة", MAINTENANCE: "صيانة", INACTIVE: "موقوفة" };
 const STATUS_TONES: Record<string, string> = { AVAILABLE: "available", MAINTENANCE: "maintenance", INACTIVE: "inactive" };
@@ -104,7 +105,7 @@ export default function AcademyClassrooms() {
   };
   const retryResources = () => { if (resourceRoom) void openResources(resourceRoom); };
 
-  return <RoleDashboardShell className="app-shell academy-classrooms-shell" showSessionLogout={false} roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية">
+  return <RoleDashboardShell className="app-shell academy-classrooms-shell" showSessionLogout={false} roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية" demo={false}>
     <R01AcademySidebar activePath="/academy/classrooms" mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
     <main className="main-panel academy-classrooms-page" dir="rtl">
       <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel="كل فروع الأكاديمية" />

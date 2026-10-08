@@ -38,6 +38,7 @@ import BranchManagerSidebar from "@/components/BranchManagerSidebar";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import SharedStatusBadge from "@/components/StatusBadge";
+import SessionLogoutButton from "@/components/SessionLogoutButton";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient } from "@/lib/apiClient";
 import HomeLive from "./HomeLive";
