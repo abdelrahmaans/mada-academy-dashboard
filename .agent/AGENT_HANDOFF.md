@@ -1,6 +1,6 @@
 # Mada Academy — Agent Context
 
-**Current baseline:** `main` at `7377df2` (4 October 2026)
+**Current baseline:** `main` at `68581a2` (10 October 2026); current work is on `feat/legacy-role-shell-migration` / PR #96.
 **Repository:** `abdelrahmaans/mada-academy-dashboard`
 
 ## What this product is
@@ -36,7 +36,7 @@ Do not use old delivery history as current truth. The repository intentionally k
 | R04 Instructor | `/instructor-desk` | Assigned sessions/students |
 | R05 Secretary | `/secretary-desk` | Branch/scoped operations |
 | R06 Accountant | `/finance-desk` | Branch finance |
-| R07 Marketing Manager | `/marketing-desk` | Branch marketing; not fully live |
+| R07 Marketing Manager | `/marketing-desk` | Branch marketing; Leads live, campaigns/content not fully live |
 | R08 Parent/Guardian | `/family-portal` | Linked children only |
 | R09 Student | `/student-portal` | Own linked student account |
 
@@ -51,7 +51,7 @@ Route mapping and guards are in `client/src/App.tsx`; role home mapping is in `c
 - R08/R09 receive evaluation scores/notes only after publication.
 - LIVE screens must not silently show demo data.
 - Finance methods (cash, Visa, InstaPay, Vodafone Cash) are recorded external payments; the app does not process those payments.
-- Marketing is not fully API-backed LIVE yet.
+- Marketing Leads are API-backed LIVE; campaigns/content planning is not fully API-backed yet.
 - Never commit secrets, real passwords, tokens, OTPs, payment evidence, database dumps, or `.env` files.
 
 ## Where to look in code
@@ -70,9 +70,9 @@ Route mapping and guards are in `client/src/App.tsx`; role home mapping is in `c
 
 ## Current reality
 
-Completed vertical slices include authentication/JWT, role and scope guards, students, sessions, attendance, evaluations and publication, approvals, Finance invoice/payment/expense records, linked consumer reads, shared styling, and browser E2E.
+Completed vertical slices include authentication/JWT, role and scope guards, students, sessions, attendance, evaluations and publication, approvals, Finance invoice/payment/expense records, persisted Marketing Leads, linked consumer reads, shared styling, and browser E2E.
 
-Known boundaries are production secret/storage configuration, deployed staging smoke, backup/restore, real SMS delivery, password recovery, finer Finance pending states, and fully live Marketing APIs. These are documented in `PROJECT_STATUS.md` and `NEXT_PHASE_PLAN.md`.
+Known boundaries are production secret/storage configuration, deployed staging smoke, backup/restore, real SMS delivery, password recovery, finer Finance pending states, Marketing campaigns/content APIs, and legacy shell migration. These are documented in `PROJECT_STATUS.md` and `NEXT_PHASE_PLAN.md`.
 
 Angular is an independent parallel client; its shared UI, `/shared-components`, auth shell, R02 dashboard, and R03 Head Instructors dashboard are incremental parity work, not a full LIVE replacement. R03 is isolated under `features/head-instructors` with typed models, API/data orchestration, lazy route `/head-instructors`, signals/OnPush, parallel core requests, optional-source warnings, and no client-selected branch scope. React remains the source of truth until feature parity and acceptance are explicitly completed. See `ANGULAR_FRONTEND_GUIDE.md` for the component inventory, structure, signals/OnPush, API contracts, security boundaries, and parallel migration process. Sidebar navigation and route guards do not authorize requests, and Angular must not replace production deployment in this phase. The foundation is `feat/angular-foundation` / PR #79, auth is PR #80, R02 is `feat/angular-r02-dashboard`, and R03 is `feat/angular-r03-head-instructors`.
 

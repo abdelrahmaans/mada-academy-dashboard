@@ -1,8 +1,8 @@
 # خطة المرحلة القادمة — Mada Academy
 
-**تاريخ اللقطة:** 8 أكتوبر 2026
-**قاعدة العمل الحالية:** `main` عند `c2d9954`، وقد تم دمج PR #89 (R06-A) وPR #90 (R06-B) بنجاح.
-**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وAngular R06 parity وموجة التقسيم الأولى مغلقة. اختبارات frontend الحرجة، refresh-token reuse، فصل auth endpoints، وجرد R00 مع contract/tests مغلقة؛ وتظل private-storage/backup-restore/staging بوابات بيئية منفصلة. مصفوفة الأدوار النهائية موثقة في [ANGULAR_PARITY_MATRIX.md](../ANGULAR_PARITY_MATRIX.md).
+**تاريخ اللقطة:** 10 أكتوبر 2026
+**قاعدة العمل الحالية:** `main` عند `68581a2` بعد دمج PR #92 وPR #95؛ فرع المرحلة الحالية `feat/legacy-role-shell-migration` يحمل PR #96.
+**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وMarketing Leads live وموجة الإصلاح الأولى مغلقة. PR #96 ينقل R01/R02/R06 تدريجيًا إلى registry موحد للـnavigation والـhome paths. تظل private-storage/backup-restore/staging بوابات بيئية منفصلة. مصفوفة الأدوار النهائية موثقة في [ANGULAR_PARITY_MATRIX.md](../ANGULAR_PARITY_MATRIX.md).
 
 ## قرار التنفيذ الحالي
 
@@ -11,6 +11,7 @@
 3. **تم تنفيذ local browser/API E2E:** `pnpm e2e` يمر بـ **7/7** ويغطي R06/R08/R09 ودورة الفاتورة/الدفع/الإثبات.
 4. **تم تجهيز بيئة النشر داخل الريبو:** Dockerfile، production env template، staging smoke script، وrunbook.
 5. **حالة Angular الحالية:** أُغلقت R06-A وR06-B على `main`؛ شملت القراءة والعمليات المالية وإثباتات الدفع، مع اختبارات Angular وPlaywright وbuild ناجحة. بوابات Finance production (secret injection، private-storage smoke، backup/restore، وstaging smoke) تبقى منفصلة ولا تعتبر مكتملة محليًا.
+6. **توحيد shell/navigation:** registry الـrole أصبح مصدر labels وhome/back paths؛ PR #96 يطبق ذلك على sidebars R01/R02/R06 وتقارير LIVE، وتبقى Schedule/Secretary والـlegacy preview shells للموجة التالية.
 
 ## نتيجة acceptance الحالية
 
@@ -64,8 +65,9 @@
 2. **Backup/restore:** إنتاج دليل قابل لإعادة التحقق لاستعادة السجلات المالية، مع توثيق الملكية والنطاق وسلامة audit trail.
 3. **Staging acceptance:** تشغيل smoke tests المصادق عليها على deployment فعلي، بما في ذلك Finance وR08/R09 وtenant/branch isolation.
 4. **Distributed production gate:** استكمال shared-limiter/two-instance evidence قبل التوسع الأفقي؛ CORS وsingle-instance startup guard مطبقان ومختبران داخل الكود.
-5. **Product decisions:** اختيار مزود SMS وتنفيذ password recovery، مع إبقاء Marketing Desk R07 موثقًا كـPreview إلى أن يُعتمد قرار live API.
-6. **Repository hygiene:** مراجعة وإغلاق PRs القديمة التي أصبحت مكررة بعد الدمج، ثم إزالة الفروع البعيدة للميزات المدموجة بعد التأكد من عدم استخدامها.
+5. **Marketing:** Leads أصبحت live عبر `/api/v1/leads`; اختيار نموذج Backend للحملات وتقويم المحتوى هو الخطوة التالية قبل إزالة آخر Preview boundary.
+6. **Role shell migration:** إكمال نقل Schedule وReports preview وSecretary إلى الـshared shell والـregistry مع اختبارات back paths لكل role.
+7. **Repository hygiene:** PR #92 و#95 تم دمجهما؛ PR #76 و#74 تمت مراجعتهما وتُركا مفتوحين بسبب rebase/CI blockers، وPR #96 ينتظر checks.
 
 ## الهدف
 
