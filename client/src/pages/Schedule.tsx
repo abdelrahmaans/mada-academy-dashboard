@@ -26,7 +26,8 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import R03HeadInstructorsSidebar from "@/components/R03HeadInstructorsSidebar";
+import RoleDashboardShell from "@/components/RoleDashboardShell";
+import RoleSidebar from "@/components/RoleSidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
 import {
@@ -40,7 +41,7 @@ import {
   ScheduleDetailsDialog,
   ScheduleFormDialog,
 } from "@/components/ScheduleViews";
-import SessionLogoutButton from "@/components/SessionLogoutButton";
+import { getRoleDefinition } from "@/lib/roleNavigation";
 
 export type SessionStatus =
   | "scheduled"
@@ -925,100 +926,22 @@ function SchedulePage() {
     { key: "cancelled", label: "ملغاة" },
   ];
 
-  return (
-    <div className="app-shell" dir="rtl">
-      {me?.role === "R03_HEAD_INSTRUCTORS" ? <R03HeadInstructorsSidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} activePath="/schedule" /> : <>
-      {mobileNavOpen && (
-        <button
-          className="mobile-scrim"
-          aria-label="إغلاق القائمة"
-          onClick={() => setMobileNavOpen(false)}
-        />
-      )}
-      <aside className={`sidebar ${mobileNavOpen ? "sidebar-open" : ""}`}>
-        <div className="sidebar-top">
-          <BrandMark />
-          <button
-            className="icon-button sidebar-close"
-            aria-label="إغلاق القائمة"
-            onClick={() => setMobileNavOpen(false)}
-          >
-            <X size={19} />
-          </button>
-        </div>
-        <div className="academy-switcher">
-          <span className="academy-avatar">
-            <GraduationCap size={20} />
-          </span>
-          <span className="academy-meta">
-            <strong>أكاديمية مدى</strong>
-            <small>إدارة الأكاديمية</small>
-          </span>
-          <ChevronDown size={15} className="switcher-chevron" />
-        </div>
-        <div className="nav-caption">القائمة الرئيسية</div>
-        <nav className="primary-nav" aria-label="القائمة الرئيسية">
-          <button className="nav-link" onClick={() => navigate("/")}>
-            <LayoutDashboard size={19} />
-            <span>الرئيسية</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/students")}>
-            <Users size={19} />
-            <span>الطلاب</span>
-            <span className="nav-count">248</span>
-          </button>
-          <button className="nav-link active" aria-current="page">
-            <CalendarDays size={19} />
-            <span>الجدول</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/classes")}>
-            <BookOpen size={19} />
-            <span>الحصص والكورسات</span>
-          </button>
-          <button className="nav-link" onClick={() => comingSoon("المسابقات")}>
-            <Sparkles size={19} />
-            <span>المسابقات</span>
-          </button>
-        </nav>
-        <div className="nav-caption nav-caption-spaced">الإدارة</div>
-        <nav className="primary-nav" aria-label="قائمة الإدارة">
-          <button className="nav-link" onClick={() => navigate("/team")}>
-            <Users size={19} />
-            <span>الفريق والأدوار</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/approvals")}>
-            <CheckCircle2 size={19} />
-            <span>الموافقات</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/reports")}>
-            <Activity size={19} />
-            <span>التقارير والتحليلات</span>
-          </button>
-        </nav>
-        <div className="sidebar-spacer" />
-        <div className="sidebar-help">
-          <span className="help-icon">
-            <CircleHelp size={18} />
-          </span>
-          <div>
-            <strong>محتاج مساعدة؟</strong>
-            <span>مركز الدعم والإرشادات</span>
-          </div>
-          <ChevronLeft size={16} />
-        </div>
-        <div className="sidebar-bottom">
-          <button className="nav-link" onClick={() => comingSoon("الإعدادات")}>
-            <Settings size={19} />
-            <span>الإعدادات</span>
-          </button>
-          <SessionLogoutButton className="nav-link" iconSize={19} />
-        </div>
-        <div className="sidebar-version">
-          مدى لإدارة الأكاديميات <span>نسخة تجريبية</span>
-        </div>
-      </aside>
+  const roleCode = me?.role === "R03_HEAD_INSTRUCTORS" ? "R03" : me?.role === "R04_INSTRUCTOR" ? "R04" : me?.role === "R05_SECRETARY" ? "R05" : "R02";
+  const roleDefinition = getRoleDefinition(roleCode);
 
-      </>}
+  return (
+    <RoleDashboardShell
+      className="app-shell schedule-shell"
+      roleCode={roleCode}
+      roleLabel={me?.roleLabel || roleDefinition.label}
+      scopeLevel={roleDefinition.scopeLevel}
+      scopeLabel={roleDefinition.defaultScopeLabel}
+      tenantName={me?.academy?.name}
+      branchName={me?.branchId ? me.branches?.find(branchItem => branchItem.id === me.branchId)?.name : undefined}
+      demo={!liveMode}
+    >
+      <RoleSidebar roleCode={roleCode} roleLabel={me?.roleLabel || roleDefinition.label} mobileOpen={mobileNavOpen} onCloseMobile={() => setMobileNavOpen(false)} />
+
 
       <main className="main-panel">
         <header className="topbar">
@@ -1108,7 +1031,7 @@ function SchedulePage() {
 
         <div className="workspace schedule-workspace">
           <div className="students-breadcrumb">
-            <button onClick={() => navigate("/")}>الرئيسية</button>
+            <button onClick={() => navigate(roleDefinition.backPath)}>الرئيسية</button>
             <ChevronLeft size={13} />
             <span>الجدول</span>
           </div>
@@ -1270,7 +1193,7 @@ function SchedulePage() {
           onSubmit={handleSessionSubmit}
         />
       )}
-    </div>
+    </RoleDashboardShell>
   );
 }
 

@@ -26,6 +26,14 @@ describe("role navigation scopes", () => {
     expect(ROLE_DEFINITIONS.R07.scopeLevel).toBe("branch");
   });
 
+  it("keeps migrated schedule surfaces reachable from their role navigation", () => {
+    for (const roleCode of ["R02", "R03", "R04", "R05"] as const) {
+      expect(ROLE_DEFINITIONS[roleCode].navigation.map(item => item.path)).toContain("/schedule");
+    }
+    expect(getRoleBackPath("R02")).toBe("/");
+    expect(getRoleBackPath("R05")).toBe("/secretary-desk");
+  });
+
   it("exposes explicit R01 routes for academy-wide internal views", () => {
     expect(ROLE_DEFINITIONS.R01.navigation.map(item => item.path)).toEqual(expect.arrayContaining([
       "/academy-owner",

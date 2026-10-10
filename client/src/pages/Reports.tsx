@@ -31,7 +31,9 @@ import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient } from "@/lib/apiClient";
-import SessionLogoutButton from "@/components/SessionLogoutButton";
+import RoleDashboardShell from "@/components/RoleDashboardShell";
+import RoleSidebar from "@/components/RoleSidebar";
+import { getRoleBackPath } from "@/lib/roleNavigation";
 import ReportsLive from "./ReportsLive";
 
 type Branch = "مدينة نصر";
@@ -210,107 +212,17 @@ function ReportsPreview() {
     new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
 
   return (
-    <div className="app-shell" dir="rtl">
-      {mobileNavOpen && (
-        <button
-          className="mobile-scrim"
-          aria-label="إغلاق القائمة"
-          onClick={() => setMobileNavOpen(false)}
-        />
-      )}
-      <aside className={`sidebar ${mobileNavOpen ? "sidebar-open" : ""}`}>
-        <div className="sidebar-top">
-          <BrandMark />
-          <button
-            className="icon-button sidebar-close"
-            aria-label="إغلاق القائمة"
-            onClick={() => setMobileNavOpen(false)}
-          >
-            <X size={19} />
-          </button>
-        </div>
-        <div className="academy-switcher">
-          <span className="academy-avatar">
-            <GraduationCap size={20} />
-          </span>
-          <span className="academy-meta">
-            <strong>أكاديمية مدى</strong>
-            <small>إدارة الأكاديمية</small>
-          </span>
-          <ChevronDown size={15} className="switcher-chevron" />
-        </div>
-        <div className="nav-caption">القائمة الرئيسية</div>
-        <nav className="primary-nav" aria-label="القائمة الرئيسية">
-          <button className="nav-link" onClick={() => navigate("/")}>
-            <LayoutDashboard size={19} />
-            <span>الرئيسية</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/students")}>
-            <Users size={19} />
-            <span>الطلاب</span>
-            <span className="nav-count">248</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/schedule")}>
-            <CalendarDays size={19} />
-            <span>الجدول</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/classes")}>
-            <BookOpen size={19} />
-            <span>الحصص والكورسات</span>
-          </button>
-          <button
-            className="nav-link"
-            onClick={() => showComingSoon("المسابقات")}
-          >
-            <Sparkles size={19} />
-            <span>المسابقات</span>
-          </button>
-        </nav>
-        <div className="nav-caption nav-caption-spaced">الإدارة</div>
-        <nav className="primary-nav" aria-label="قائمة الإدارة">
-          <button className="nav-link" onClick={() => navigate("/finance")}>
-            <Wallet size={19} />
-            <span>المالية والتحصيل</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/team")}>
-            <UserCog size={19} />
-            <span>الفريق والأدوار</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/approvals")}>
-            <CheckCircle2 size={19} />
-            <span>الموافقات</span>
-          </button>
-          <button className="nav-link active" aria-current="page">
-            <Activity size={19} />
-            <span>التقارير والتحليلات</span>
-          </button>
-        </nav>
-        <div className="sidebar-spacer" />
-        <div className="sidebar-help">
-          <span className="help-icon">
-            <CircleHelp size={18} />
-          </span>
-          <div>
-            <strong>محتاج مساعدة؟</strong>
-            <span>مركز الدعم والإرشادات</span>
-          </div>
-          <ChevronLeft size={16} />
-        </div>
-        <div className="sidebar-bottom">
-          <button
-            className="nav-link"
-            onClick={() => showComingSoon("الإعدادات")}
-          >
-            <Settings size={19} />
-            <span>الإعدادات</span>
-          </button>
-          <SessionLogoutButton className="nav-link" iconSize={19} />
-        </div>
-        <div className="sidebar-version">
-          مدى لإدارة الأكاديميات <span>نسخة تجريبية</span>
-        </div>
-      </aside>
-
+    <RoleDashboardShell
+      className="app-shell reports-preview-shell"
+      roleCode="R02"
+      roleLabel="مدير الفرع"
+      scopeLevel="branch"
+      scopeLabel="فرع واحد · بيانات توضيحية"
+      tenantName="أكاديمية مدى"
+      branchName={branch}
+      demo
+    >
+      <RoleSidebar roleCode="R02" mobileOpen={mobileNavOpen} onCloseMobile={() => setMobileNavOpen(false)} />
       <main className="main-panel">
         <header className="topbar">
           <div className="topbar-right">
@@ -367,7 +279,7 @@ function ReportsPreview() {
 
         <div className="workspace reports-workspace">
           <div className="students-breadcrumb">
-            <button onClick={() => navigate("/")}>الرئيسية</button>
+            <button onClick={() => navigate(getRoleBackPath("R02"))}>الرئيسية</button>
             <ChevronLeft size={13} />
             <span>التقارير والتحليلات</span>
           </div>
@@ -649,7 +561,7 @@ function ReportsPreview() {
           </div>
         </div>
       </main>
-    </div>
+    </RoleDashboardShell>
   );
 }
 

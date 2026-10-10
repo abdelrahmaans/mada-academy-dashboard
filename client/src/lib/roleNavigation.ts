@@ -102,6 +102,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     backPath: "/instructor-desk",
     navigation: [
       { path: "/instructor-desk", label: "مكتب المدرب", purpose: "today, attendance, evaluation" },
+      { path: "/schedule", label: "جدول الجلسات", purpose: "assigned session schedule" },
     ],
   },
   R05: {

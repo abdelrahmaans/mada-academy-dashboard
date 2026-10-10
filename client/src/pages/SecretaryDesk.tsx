@@ -26,7 +26,8 @@ import FamilyProfileCard from "@/components/FamilyProfileCard";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
-import SessionLogoutButton from "@/components/SessionLogoutButton";
+import RoleSidebar from "@/components/RoleSidebar";
+import { getRoleBackPath } from "@/lib/roleNavigation";
 import SecretaryDeskLive from "./SecretaryDeskLive";
 import { DISCOUNTS, LEAD_LABELS, LEADS, OFFERINGS, type Lead, type LeadStatus, type Offering, OverviewView, FollowupsView, RegistrationView, OperationsView, NavButton, VIEW_COPY, VIEW_TITLES } from "@/components/SecretaryPreviewViews";
 
@@ -126,103 +127,7 @@ function SecretaryDeskPreview() {
       tenantName="أكاديمية مدى"
       branchName="فرع مدينة نصر"
     >
-      {mobileOpen && (
-        <button
-          className="mobile-scrim"
-          aria-label="إغلاق القائمة"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-      <aside className={`sidebar ${mobileOpen ? "sidebar-open" : ""}`}>
-        <div className="sidebar-top">
-          <button
-            className="secretary-desk-brand"
-            onClick={() => navigate("/secretary-desk")}
-          >
-            <strong>مدى</strong>
-            <small>خدمة العملاء والتسجيل · R05</small>
-          </button>
-          <button
-            className="icon-button sidebar-close"
-            aria-label="إغلاق القائمة"
-            onClick={() => setMobileOpen(false)}
-          >
-            <X size={19} />
-          </button>
-        </div>
-        <div className="academy-switcher">
-          <span className="academy-avatar">
-            <Users size={20} />
-          </span>
-          <span className="academy-meta">
-            <strong>أكاديمية مدى</strong>
-            <small>هبة محمود · مدينة نصر</small>
-          </span>
-        </div>
-        <div className="nav-caption">مساحة العمل</div>
-        <nav className="primary-nav">
-          <NavButton
-            active={view === "overview"}
-            onClick={() => selectView("overview")}
-            icon={<LayoutDashboard size={19} />}
-            label="ملخص اليوم"
-          />
-          <NavButton
-            active={view === "followups"}
-            onClick={() => selectView("followups")}
-            icon={<MessageCircle size={19} />}
-            label="Inbox المتابعة"
-            count={activeLeads.length}
-          />
-          <NavButton
-            active={view === "registration"}
-            onClick={() => selectView("registration")}
-            icon={<UserRoundPlus size={19} />}
-            label="التسجيلات"
-          />
-          <NavButton
-            active={view === "operations"}
-            onClick={() => selectView("operations")}
-            icon={<CalendarDays size={19} />}
-            label="مجموعات الفرع"
-          />
-        </nav>
-        <div className="nav-caption nav-caption-spaced">روابط أخرى</div>
-        <nav className="primary-nav">
-          <button
-            className="nav-link"
-            onClick={() => navigate("/academy-owner")}
-          >
-            <ShieldCheck size={19} />
-            <span>تصعيد للإدارة</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/students")}>
-            <Users size={19} />
-            <span>ملفات الطلاب</span>
-          </button>
-        </nav>
-        <div className="sidebar-spacer" />
-        <div className="sidebar-help">
-          <span className="help-icon">
-            <CircleHelp size={18} />
-          </span>
-          <div>
-            <strong>محتاج مساعدة؟</strong>
-            <span>إرشادات التسجيل والخصم</span>
-          </div>
-          <ChevronLeft size={16} />
-        </div>
-        <div className="sidebar-bottom">
-          <button
-            className="nav-link"
-            onClick={() => toast("الإعدادات قيد التجهيز")}
-          >
-            <Settings size={19} />
-            <span>الإعدادات</span>
-          </button>
-          <SessionLogoutButton className="nav-link" iconSize={19} />
-        </div>
-      </aside>
+      <RoleSidebar roleCode="R05" roleLabel="السكرتارية" mobileOpen={mobileOpen} onCloseMobile={() => setMobileOpen(false)} />
       <main className="main-panel">
         <header className="topbar">
           <div className="topbar-right">
