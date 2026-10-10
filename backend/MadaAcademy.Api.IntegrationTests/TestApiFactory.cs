@@ -14,7 +14,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace MadaAcademy.Api.IntegrationTests;
 
-public sealed class TestApiFactory(bool useInMemory, bool unconfigureSms = false, string? connectionString = null) : WebApplicationFactory<Program>
+public sealed class TestApiFactory(bool useInMemory, bool unconfigureSms = false, string? connectionString = null, Guid? publicLeadTenantId = null, Guid? publicLeadBranchId = null) : WebApplicationFactory<Program>
 {
     private readonly string _databaseName = $"mada-tests-{Guid.NewGuid():N}";
     private readonly string? _connectionString = connectionString;
@@ -22,6 +22,11 @@ public sealed class TestApiFactory(bool useInMemory, bool unconfigureSms = false
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+        builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["MADA_PUBLIC_LEAD_TENANT_ID"] = publicLeadTenantId?.ToString(),
+            ["MADA_PUBLIC_LEAD_BRANCH_ID"] = publicLeadBranchId?.ToString()
+        }));
         if (!useInMemory && !string.IsNullOrWhiteSpace(_connectionString))
         {
             builder.UseSetting("ConnectionStrings:Default", _connectionString);

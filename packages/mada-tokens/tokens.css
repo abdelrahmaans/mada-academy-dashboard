@@ -1,0 +1,22 @@
+:root {
+  --mada-brand-teal: #0d9488;
+  --mada-brand-teal-dark: #08776c;
+  --mada-brand-navy: #14243a;
+  --mada-brand-amber: #d49a2d;
+  --mada-ui-page: #f4f7fa;
+  --mada-ui-surface: #ffffff;
+  --mada-ui-border: #e8edf2;
+  --mada-ui-muted: #78879a;
+  --mada-ui-teal-soft: #e5f5f1;
+  --mada-ui-amber-soft: #fff4db;
+  --mada-ui-blue: #4f7ca2;
+  --mada-ui-violet: #7161ad;
+  --mada-font-ar: "Cairo", "Segoe UI", Tahoma, sans-serif;
+  --mada-font-en: "Inter", sans-serif;
+  --mada-radius-sm: 9px;
+  --mada-radius-md: 13px;
+  --mada-radius-lg: 15px;
+  --mada-radius-panel: 19px;
+  --mada-shadow-card: 0 6px 20px rgb(15 23 42 / 3.5%);
+  --mada-shadow-hover: 0 10px 26px rgb(15 23 42 / 7%);
+}

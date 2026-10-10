@@ -3,6 +3,7 @@ using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace MadaAcademy.Api.Modules.Operations;
 
@@ -10,6 +11,49 @@ public static class LeadEndpoints
 {
     public static IEndpointRouteBuilder MapMadaLeadEndpoints(this IEndpointRouteBuilder endpoints)
     {
+        endpoints.MapPost("/api/v1/public/leads", async Task<Results<Ok<ApiEnvelope<PublicLeadReceipt>>, ProblemHttpResult>> (
+            PublicLeadRequest request,
+            IConfiguration configuration,
+            MadaDbContext db,
+            CancellationToken cancellationToken) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.Name)) return Problem(400, "INVALID_NAME", "Name is required.");
+            if (string.IsNullOrWhiteSpace(request.Email) || !request.Email.Contains('@')) return Problem(400, "INVALID_EMAIL", "A valid email is required.");
+            if (string.IsNullOrWhiteSpace(request.Phone)) return Problem(400, "INVALID_PHONE", "Phone is required.");
+            if (request.Kind is not ("demo" or "registration")) return Problem(400, "INVALID_KIND", "Kind must be demo or registration.");
+            if (!Guid.TryParse(configuration["MADA_PUBLIC_LEAD_TENANT_ID"], out var tenantId) || !Guid.TryParse(configuration["MADA_PUBLIC_LEAD_BRANCH_ID"], out var branchId))
+                return Problem(503, "PUBLIC_LEAD_TARGET_NOT_CONFIGURED", "Public lead target is not configured.");
+            if (!await db.Branches.AnyAsync(branch => branch.Id == branchId && branch.TenantId == tenantId && branch.Status == "ACTIVE", cancellationToken))
+                return Problem(503, "PUBLIC_LEAD_TARGET_NOT_FOUND", "Public lead target is not available.");
+
+            var notes = string.Join(" | ", new[]
+            {
+                $"email:{request.Email.Trim()}",
+                $"kind:{request.Kind}",
+                string.IsNullOrWhiteSpace(request.Company) ? null : $"company:{request.Company.Trim()}",
+                string.IsNullOrWhiteSpace(request.TeamSize) ? null : $"team:{request.TeamSize.Trim()}",
+                string.IsNullOrWhiteSpace(request.TrainingNeed) ? null : $"need:{request.TrainingNeed.Trim()}",
+                string.IsNullOrWhiteSpace(request.Track) ? null : $"track:{request.Track.Trim()}",
+                string.IsNullOrWhiteSpace(request.Goal) ? null : $"goal:{request.Goal.Trim()}"
+            }.Where(value => value is not null));
+
+            var lead = new Lead
+            {
+                TenantId = tenantId,
+                BranchId = branchId,
+                ChildName = request.Name.Trim(),
+                ParentName = string.IsNullOrWhiteSpace(request.Company) ? request.Name.Trim() : request.Company.Trim(),
+                Phone = request.Phone.Trim(),
+                Channel = request.Kind == "demo" ? "LANDING_DEMO" : "LANDING_REGISTRATION",
+                Notes = notes.Length > 500 ? notes[..500] : notes,
+                Status = "NEW",
+                CreatedByUserId = null
+            };
+            db.Leads.Add(lead);
+            await db.SaveChangesAsync(cancellationToken);
+            return TypedResults.Ok(new ApiEnvelope<PublicLeadReceipt>(new PublicLeadReceipt(lead.Id, request.Kind)));
+        }).AllowAnonymous().RequireRateLimiting("public-lead");
+
         var group = endpoints.MapGroup("/api/v1").RequireAuthorization("staff");
 
         group.MapGet("/leads", async Task<Results<Ok<ApiEnvelope<LeadListResponse>>, ProblemHttpResult>> (
@@ -383,3 +427,5 @@ public sealed record UpdateLeadStatusRequest(string Status);
 public sealed record ConvertLeadRequest(Guid? CourseOfferingId, DateOnly? DateOfBirth, int? DiscountPercent, bool CreateInvoice = true);
 public sealed record DirectStudentRegistrationRequest(string FullName, string? Phone, Guid? BranchId, Guid? CourseOfferingId, DateOnly? DateOfBirth, int? DiscountPercent, bool CreateInvoice = true);
 public sealed record ConvertLeadResponse(Guid StudentId, Guid? LeadId, Guid? EnrollmentId, Guid? InvoiceId, string? InvoiceNumber, string StudentName);
+public sealed record PublicLeadRequest(string Kind, string Name, string Email, string Phone, string? Company, string? TeamSize, string? TrainingNeed, string? Track, string? Goal);
+public sealed record PublicLeadReceipt(Guid LeadId, string Kind);

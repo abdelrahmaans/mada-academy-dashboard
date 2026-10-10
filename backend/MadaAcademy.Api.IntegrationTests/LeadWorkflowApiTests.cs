@@ -11,6 +11,39 @@ namespace MadaAcademy.Api.IntegrationTests;
 public sealed class LeadWorkflowApiTests
 {
     [Fact]
+    public async Task PublicLandingLead_IsAcceptedWithoutStaffSession_AndStoredForMarketing()
+    {
+        var tenantId = Guid.NewGuid();
+        var branchId = Guid.NewGuid();
+        using var factory = new TestApiFactory(useInMemory: true, publicLeadTenantId: tenantId, publicLeadBranchId: branchId);
+        using var client = factory.CreateClient();
+        await TestData.CreateAccountAsync(factory, "R05_SECRETARY", tenantId, branchId);
+
+        var response = await client.PostAsJsonAsync("/api/v1/public/leads", new
+        {
+            kind = "demo",
+            name = "سارة أحمد",
+            email = "sara@example.com",
+            phone = "+201012345678",
+            company = "شركة تجريبية",
+            teamSize = "21–100",
+            trainingNeed = "جاهزية قادة الصف الأول"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var envelope = await response.Content.ReadFromJsonAsync<ApiEnvelope<PublicLeadReceipt>>();
+        Assert.NotNull(envelope);
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+        var lead = await db.Leads.SingleAsync(item => item.Id == envelope.Data.LeadId);
+        Assert.Equal(tenantId, lead.TenantId);
+        Assert.Equal(branchId, lead.BranchId);
+        Assert.Equal("LANDING_DEMO", lead.Channel);
+        Assert.NotNull(lead.Notes);
+        Assert.Contains("sara@example.com", lead.Notes);
+    }
+
+    [Fact]
     public async Task Secretary_CanListCreateUpdateAndConvertLeads()
     {
         using var factory = new TestApiFactory(useInMemory: true);
