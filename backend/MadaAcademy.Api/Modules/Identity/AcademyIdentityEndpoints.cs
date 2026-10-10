@@ -138,7 +138,7 @@ public static class AcademyIdentityEndpoints
                 tenantId,
                 branchId = membership.BranchId,
                 scopeLevel,
-                permissions = PermissionsFor(membership.RoleCode),
+                permissions = RoleCatalog.PermissionsFor(membership.RoleCode),
                 user = new { membership.UserAccount.Id, membership.UserAccount.DisplayName, membership.UserAccount.Email, membership.UserAccount.Phone },
                 academy = new { membership.Tenant.Id, membership.Tenant.Name, membership.Tenant.Slug, membership.Tenant.Status, membership.Tenant.PlanCode },
                 branches = accountType == "staff" ? branches : []
@@ -174,21 +174,6 @@ public static class AcademyIdentityEndpoints
 
     private static string NormalizeSlug(string value)
         => Regex.Replace(value.Trim().ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
-
-    private static string[] PermissionsFor(string role) => role switch
-    {
-        "R00_PLATFORM_ADMIN" => ["platform.read", "academy.create", "academy.read"],
-        "R01_ACADEMY_OWNER" => ["academy.read", "academy.update", "branch.read", "branch.create", "classrooms.manage", "staff.read", "staff.invite", "roles.read", "roles.manage", "finance.expenses.read", "finance.expenses.approve", "reports.read"],
-        "R02_BRANCH_MANAGER" => ["branch.read", "students.read", "students.create", "sessions.read", "sessions.create", "attendance.read", "attendance.write", "finance.summary.read", "finance.expenses.read", "finance.expenses.approve"],
-        "R03_HEAD_INSTRUCTORS" => ["branch.read", "sessions.read", "attendance.read", "attendance.write", "evaluations.write", "evaluations.review"],
-        "R04_INSTRUCTOR" => ["sessions.assigned.read", "attendance.read", "attendance.write", "evaluations.write"],
-        "R05_SECRETARY" => ["branch.read", "students.read", "students.create", "sessions.read", "staff.read", "invoices.read", "invoices.create", "payments.create", "payments.evidence.read", "payments.evidence.write"],
-        "R06_ACCOUNTANT" => ["branch.read", "students.read", "sessions.read", "finance.read", "invoices.read", "invoices.create", "payments.create", "payments.evidence.read", "payments.evidence.write", "finance.expenses.read", "finance.expenses.write", "finance.expenses.approve", "reports.read"],
-        "R07_MEDIA_MANAGER" => ["branch.read", "marketing.read", "marketing.write", "reports.read"],
-        "R08_PARENT" => ["consumer.students.read", "consumer.sessions.read", "consumer.evaluations.read"],
-        "R09_STUDENT" => ["consumer.self.read", "consumer.sessions.read", "consumer.evaluations.read"],
-        _ => []
-    };
 
     private static readonly Dictionary<string, string> RoleLabels = new()
     {

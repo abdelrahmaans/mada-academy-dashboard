@@ -28,4 +28,12 @@ public static class RoleCatalog
         .ToArray();
 
     public static RoleDefinition? Find(string code) => All.FirstOrDefault(role => string.Equals(role.Code, code, StringComparison.OrdinalIgnoreCase));
+
+    public static string[] PermissionsFor(string code) => Find(code)?.Permissions ?? code switch
+    {
+        "R00_PLATFORM_ADMIN" => ["platform.read", "academy.create", "academy.read"],
+        "R08_PARENT" => ["consumer.students.read", "consumer.sessions.read", "consumer.evaluations.read"],
+        "R09_STUDENT" => ["consumer.self.read", "consumer.sessions.read", "consumer.evaluations.read"],
+        _ => []
+    };
 }
