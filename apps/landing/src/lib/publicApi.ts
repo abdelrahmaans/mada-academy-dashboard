@@ -6,6 +6,10 @@ type PublicLeadInput = {
   name: string;
   email: string;
   phone: string;
+  academyName?: string;
+  branchCount?: string;
+  operationalNeed?: string;
+  /** Legacy fields remain accepted for existing preview links during the transition. */
   company?: string;
   teamSize?: string;
   trainingNeed?: string;

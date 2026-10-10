@@ -17,7 +17,7 @@ public sealed class LeadWorkflowApiTests
         var branchId = Guid.NewGuid();
         using var factory = new TestApiFactory(useInMemory: true, publicLeadTenantId: tenantId, publicLeadBranchId: branchId);
         using var client = factory.CreateClient();
-        await TestData.CreateAccountAsync(factory, "R05_SECRETARY", tenantId, branchId);
+        var secretary = await TestData.CreateAccountAsync(factory, "R05_SECRETARY", tenantId, branchId);
 
         var response = await client.PostAsJsonAsync("/api/v1/public/leads", new
         {
@@ -25,9 +25,9 @@ public sealed class LeadWorkflowApiTests
             name = "سارة أحمد",
             email = "sara@example.com",
             phone = "+201012345678",
-            company = "شركة تجريبية",
-            teamSize = "21–100",
-            trainingNeed = "جاهزية قادة الصف الأول"
+            academyName = "أكاديمية النور",
+            branchCount = "4–10 فروع",
+            operationalNeed = "متابعة الجداول والحضور بين الفروع"
         });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -38,9 +38,25 @@ public sealed class LeadWorkflowApiTests
         var lead = await db.Leads.SingleAsync(item => item.Id == envelope.Data.LeadId);
         Assert.Equal(tenantId, lead.TenantId);
         Assert.Equal(branchId, lead.BranchId);
+        Assert.Equal("سارة أحمد", lead.ChildName);
+        Assert.Equal("أكاديمية النور", lead.ParentName);
         Assert.Equal("LANDING_DEMO", lead.Channel);
         Assert.NotNull(lead.Notes);
         Assert.Contains("sara@example.com", lead.Notes);
+        Assert.Contains("branches:4–10 فروع", lead.Notes);
+        Assert.Contains("need:متابعة الجداول والحضور بين الفروع", lead.Notes);
+
+        TestData.Authenticate(client, await TestData.LoginAsync(client, secretary));
+        var statusResponse = await client.PatchAsJsonAsync($"/api/v1/leads/{lead.Id}/status", new { status = "REGISTERED" });
+        Assert.Equal(HttpStatusCode.BadRequest, statusResponse.StatusCode);
+        var convertResponse = await client.PostAsJsonAsync($"/api/v1/leads/{lead.Id}/convert", new
+        {
+            courseOfferingId = (Guid?)null,
+            dateOfBirth = (DateOnly?)new DateOnly(2016, 5, 20),
+            discountPercent = (int?)null
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, convertResponse.StatusCode);
+        Assert.Empty(await db.Students.Where(student => student.TenantId == tenantId).ToListAsync());
     }
 
     [Fact]
