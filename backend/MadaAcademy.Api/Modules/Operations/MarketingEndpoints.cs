@@ -15,7 +15,8 @@ public static class MarketingEndpoints
         group.MapGet("/campaigns", async Task<Results<Ok<ApiEnvelope<IReadOnlyList<CampaignItem>>>, ProblemHttpResult>>(
             ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken) =>
         {
-            if (!CanManage(user) || !TryGetScope(user, out var scope, out var error)) return error;
+            if (!CanManage(user)) return Problem(403, "MARKETING_FORBIDDEN", "Marketing access is not allowed for this role.");
+            if (!TryGetScope(user, out var scope, out var error)) return error;
             var campaigns = await db.MarketingCampaigns.AsNoTracking()
                 .Where(x => x.TenantId == scope.TenantId && (!scope.BranchId.HasValue || x.BranchId == scope.BranchId.Value))
                 .OrderByDescending(x => x.CreatedAt).ToListAsync(cancellationToken);
@@ -30,7 +31,8 @@ public static class MarketingEndpoints
         group.MapPost("/campaigns", async Task<Results<Ok<ApiEnvelope<CampaignItem>>, ProblemHttpResult>>(
             CreateCampaignRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken) =>
         {
-            if (!CanManage(user) || !TryGetScope(user, out var scope, out var error)) return error;
+            if (!CanManage(user)) return Problem(403, "MARKETING_FORBIDDEN", "Marketing access is not allowed for this role.");
+            if (!TryGetScope(user, out var scope, out var error)) return error;
             if (string.IsNullOrWhiteSpace(request.Name)) return Problem(400, "INVALID_CAMPAIGN_NAME", "Campaign name is required.");
             var branchId = request.BranchId ?? scope.BranchId;
             if (!branchId.HasValue || !await db.Branches.AnyAsync(x => x.Id == branchId.Value && x.TenantId == scope.TenantId && x.Status == "ACTIVE", cancellationToken)) return Problem(400, "BRANCH_REQUIRED", "A valid branch is required.");
@@ -42,7 +44,8 @@ public static class MarketingEndpoints
         group.MapPatch("/campaigns/{id:guid}/status", async Task<Results<Ok<ApiEnvelope<CampaignItem>>, ProblemHttpResult>>(
             Guid id, UpdateMarketingStatusRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken) =>
         {
-            if (!CanManage(user) || !TryGetScope(user, out var scope, out var error)) return error;
+            if (!CanManage(user)) return Problem(403, "MARKETING_FORBIDDEN", "Marketing access is not allowed for this role.");
+            if (!TryGetScope(user, out var scope, out var error)) return error;
             var item = await db.MarketingCampaigns.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == scope.TenantId && (!scope.BranchId.HasValue || x.BranchId == scope.BranchId.Value), cancellationToken);
             if (item is null) return Problem(404, "CAMPAIGN_NOT_FOUND", "Campaign not found in current scope.");
             var allowed = new[] { "DRAFT", "IN_REVIEW", "ACTIVE", "PAUSED", "COMPLETED" };
@@ -56,7 +59,8 @@ public static class MarketingEndpoints
         group.MapGet("/content", async Task<Results<Ok<ApiEnvelope<IReadOnlyList<ContentItem>>>, ProblemHttpResult>>(
             ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken) =>
         {
-            if (!CanManage(user) || !TryGetScope(user, out var scope, out var error)) return error;
+            if (!CanManage(user)) return Problem(403, "MARKETING_FORBIDDEN", "Marketing access is not allowed for this role.");
+            if (!TryGetScope(user, out var scope, out var error)) return error;
             var items = await db.MarketingContentItems.AsNoTracking().Where(x => x.TenantId == scope.TenantId && (!scope.BranchId.HasValue || x.BranchId == scope.BranchId.Value)).OrderBy(x => x.DueDate).ThenByDescending(x => x.CreatedAt).Select(x => new ContentItem(x.Id, x.BranchId, x.CampaignId, x.Title, x.ContentType, x.Platform, x.Status, x.DueDate, x.CreatedAt)).ToListAsync(cancellationToken);
             return TypedResults.Ok(new ApiEnvelope<IReadOnlyList<ContentItem>>(items));
         });
@@ -64,7 +68,8 @@ public static class MarketingEndpoints
         group.MapPost("/content", async Task<Results<Ok<ApiEnvelope<ContentItem>>, ProblemHttpResult>>(
             CreateContentRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken) =>
         {
-            if (!CanManage(user) || !TryGetScope(user, out var scope, out var error)) return error;
+            if (!CanManage(user)) return Problem(403, "MARKETING_FORBIDDEN", "Marketing access is not allowed for this role.");
+            if (!TryGetScope(user, out var scope, out var error)) return error;
             if (string.IsNullOrWhiteSpace(request.Title)) return Problem(400, "INVALID_CONTENT_TITLE", "Content title is required.");
             var branchId = request.BranchId ?? scope.BranchId;
             if (!branchId.HasValue || !await db.Branches.AnyAsync(x => x.Id == branchId.Value && x.TenantId == scope.TenantId && x.Status == "ACTIVE", cancellationToken)) return Problem(400, "BRANCH_REQUIRED", "A valid branch is required.");
@@ -77,7 +82,8 @@ public static class MarketingEndpoints
         group.MapPatch("/content/{id:guid}/status", async Task<Results<Ok<ApiEnvelope<ContentItem>>, ProblemHttpResult>>(
             Guid id, UpdateMarketingStatusRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken) =>
         {
-            if (!CanManage(user) || !TryGetScope(user, out var scope, out var error)) return error;
+            if (!CanManage(user)) return Problem(403, "MARKETING_FORBIDDEN", "Marketing access is not allowed for this role.");
+            if (!TryGetScope(user, out var scope, out var error)) return error;
             var item = await db.MarketingContentItems.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == scope.TenantId && (!scope.BranchId.HasValue || x.BranchId == scope.BranchId.Value), cancellationToken);
             if (item is null) return Problem(404, "CONTENT_NOT_FOUND", "Content item not found in current scope.");
             var allowed = new[] { "DRAFT", "IN_REVIEW", "APPROVED", "SCHEDULED", "PUBLISHED" };
