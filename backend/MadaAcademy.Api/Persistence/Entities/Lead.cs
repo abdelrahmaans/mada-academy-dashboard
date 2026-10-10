@@ -10,6 +10,7 @@ public sealed class Lead : EntityBase
     public string Channel { get; set; } = "WALK_IN";
     public string? Notes { get; set; }
     public string Status { get; set; } = "NEW";
+    public Guid? CampaignId { get; set; }
     public Guid? CourseOfferingId { get; set; }
     public Guid? ConvertedStudentId { get; set; }
     public Guid? CreatedByUserId { get; set; }

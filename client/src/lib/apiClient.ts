@@ -586,6 +586,12 @@ export const apiClient = {
   listLeads: () => request<LeadsResponse>("/leads"),
   createLead: (input: CreateLeadInput) => request<LeadRecord>("/leads", { method: "POST", body: JSON.stringify(input) }),
   updateLeadStatus: (id: string, status: string) => request<LeadRecord>(`/leads/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  listMarketingCampaigns: () => request<MarketingCampaignRecord[]>("/marketing/campaigns"),
+  createMarketingCampaign: (input: CreateMarketingCampaignInput) => request<MarketingCampaignRecord>("/marketing/campaigns", { method: "POST", body: JSON.stringify(input) }),
+  updateMarketingCampaignStatus: (id: string, status: string) => request<MarketingCampaignRecord>(`/marketing/campaigns/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  listMarketingContent: () => request<MarketingContentRecord[]>("/marketing/content"),
+  createMarketingContent: (input: CreateMarketingContentInput) => request<MarketingContentRecord>("/marketing/content", { method: "POST", body: JSON.stringify(input) }),
+  updateMarketingContentStatus: (id: string, status: string) => request<MarketingContentRecord>(`/marketing/content/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
   convertLead: (id: string, input: ConvertLeadInput) => request<ConvertLeadResult>(`/leads/${id}/convert`, { method: "POST", body: JSON.stringify(input) }),
   registerStudent: (input: DirectStudentInput) => request<ConvertLeadResult>("/students/register", { method: "POST", body: JSON.stringify(input) }),
   listSchedulingGroups: () => request<{ items: SchedulingGroupRecord[]; total: number }>("/scheduling/groups"),
@@ -622,6 +628,7 @@ export type LeadRecord = {
   parentName: string;
   phone: string;
   channel: string;
+  campaignId: string | null;
   notes: string | null;
   status: "NEW" | "CONTACTED" | "INTERESTED" | "REGISTERED" | "ARCHIVED";
   courseOfferingId: string | null;
@@ -645,7 +652,15 @@ export type CreateLeadInput = {
   notes?: string;
   courseOfferingId?: string;
   branchId?: string;
+  campaignId?: string;
 };
+
+export type MarketingCampaignStatus = "DRAFT" | "IN_REVIEW" | "ACTIVE" | "PAUSED" | "COMPLETED";
+export type MarketingContentStatus = "DRAFT" | "IN_REVIEW" | "APPROVED" | "SCHEDULED" | "PUBLISHED";
+export type MarketingCampaignRecord = { id: string; branchId: string; name: string; channel: string; status: MarketingCampaignStatus; budgetPiastres: number; leads: number; conversions: number; createdAt: string };
+export type MarketingContentRecord = { id: string; branchId: string; campaignId: string | null; title: string; contentType: string; platform: string; status: MarketingContentStatus; dueDate: string | null; createdAt: string };
+export type CreateMarketingCampaignInput = { name: string; channel: string; budgetPiastres?: number; branchId?: string; notes?: string };
+export type CreateMarketingContentInput = { title: string; contentType: string; platform: string; dueDate?: string; campaignId?: string; branchId?: string; notes?: string };
 
 export type ConvertLeadInput = {
   courseOfferingId?: string;

@@ -1,8 +1,8 @@
 # Mada Academy — Project Status
 
 **As of:** 10 October 2026
-**Verified Git state:** `main` at `68581a2` includes merged PR #92 (PostgreSQL integration isolation) and PR #95 (live Marketing Leads, role home/back contract, and storage/backup gate scripts); it is pushed to origin.
-**Current delivery PR:** [PR #96 — Refactor legacy role navigation onto shared registry](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/96) is open from `feat/legacy-role-shell-migration`; local validation is green, but merge is blocked by the failing `Vercel – client-angular` deployment check (6 other checks passed).
+**Verified Git state:** `main` is pushed to origin and includes merged PRs #92, #95, and #96. The current Marketing workflow changes are prepared locally for the next focused PR.
+**Current delivery:** the shared role registry and the migrated Schedule/Reports Preview/Secretary surfaces are merged. Remaining shell debt is limited to legacy live page wrappers that still render role-specific sidebar components and should be migrated in a follow-up slice.
 **Stack:** React + Vite + TypeScript; ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions.
 
 **Security follow-up:** [Issue #98 — rotate historical Supabase/PostgreSQL credentials](https://github.com/abdelrahmaans/mada-academy-dashboard/issues/98) tracks provider credential rotation, environment/log audit, optional Git history purge, and re-scanning. The current working tree is sanitized; rotation and history rewriting require explicit account/repository authorization and are not performed automatically.
@@ -26,7 +26,7 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 | **R04 Instructor** | Assigned sessions, attendance, evaluation drafts/submission, and relevant workflow actions are connected to APIs; loading/error/retry behavior is separated from unsupported analytics. | Broader instructor analytics and non-core surfaces are not all live. |
 | **R05 Secretary** | Student workflows, phone-based consumer lookup/linking, consumer invitations, and scoped invoice/payment operations exist; legacy Secretary route is guarded from LIVE sessions. | Production evidence/storage and deployed staging remain open; no broad `finance.write`. |
 | **R06 Accountant** | FinanceDesk is connected to scoped invoice/payment/expense/report APIs with role-aware loading, forbidden, and error states; local browser E2E passes. | Production evidence/storage and deployed staging remain open. |
-| **R07 Marketing Manager** | Branch scope is aligned and persisted Leads can be listed, created, filtered, measured, and status-updated through `/api/v1/leads`; Marketing uses the shared RoleSidebar. | Campaign/content planning still needs independent persisted Backend models; it must not be presented as fully live. |
+| **R07 Marketing Manager** | Branch-scoped Leads, Campaigns, and Content Items are now modeled as persisted PostgreSQL workflows with status changes and campaign lead/conversion metrics; the React desk uses the shared RoleSidebar and typed API client. | Migration and authenticated staging acceptance remain open; campaign/content publishing is workflow tracking, not direct social-channel publishing. |
 | **R08 Guardian** | Real linked children, scoped consumer operational data, published evaluations, and linked invoice reads; LIVE has explicit empty/error states without demo fallback, and invoice failure no longer hides linked children or sessions. | Evidence deployment and any additional finance UX remain outside the active P2 cycle. |
 | **R09 Student** | Self-scoped account/student relationship, consumer session data, published evaluations, and explicit LIVE empty/error states without demo fallback; student profile remains visible when session loading fails, with toast and retry feedback. | Broader learning/progress elements remain intentionally limited to persisted session data. |
 
@@ -55,7 +55,7 @@ The auditable R01/R03/R04 endpoint, role/scope, failure, empty-state, and previe
 - `pnpm test`: PASS — 55/55 across 8 frontend test files
 - `pnpm build`: PASS
 - الجولة الأولى من E2E: 6/7، وتم تعديل assertion العزل لقبول الرفض الصريح أو العودة الآمنة إلى login.
-- Marketing Leads أصبحت LIVE ومقاسة عبر API؛ الحملات وتقويم المحتوى ما زالا Preview حتى إضافة عقود Backend محفوظة.
+- Marketing Leads والحملات وتقويم المحتوى أصبحت workflows محفوظة ومقاسة عبر API؛ النشر الخارجي على القنوات الاجتماعية غير داخل النطاق.
 - Production storage/secrets/staging/backup-restore ما زالت مفتوحة؛ حالات Finance pending وsingle-flight مغطاة في الشريحة المدموجة.
 
 التفاصيل الكاملة في [UI_FLOW_REVIEW_STATUS.md](../docs/UI_FLOW_REVIEW_STATUS.md).
