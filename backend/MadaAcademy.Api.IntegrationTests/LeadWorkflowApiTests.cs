@@ -11,6 +11,55 @@ namespace MadaAcademy.Api.IntegrationTests;
 public sealed class LeadWorkflowApiTests
 {
     [Fact]
+    public async Task PublicLandingLead_IsAcceptedWithoutStaffSession_AndStoredForMarketing()
+    {
+        var tenantId = Guid.NewGuid();
+        var branchId = Guid.NewGuid();
+        using var factory = new TestApiFactory(useInMemory: true, publicLeadTenantId: tenantId, publicLeadBranchId: branchId);
+        using var client = factory.CreateClient();
+        var secretary = await TestData.CreateAccountAsync(factory, "R05_SECRETARY", tenantId, branchId);
+
+        var response = await client.PostAsJsonAsync("/api/v1/public/leads", new
+        {
+            kind = "demo",
+            name = "سارة أحمد",
+            email = "sara@example.com",
+            phone = "+201012345678",
+            academyName = "أكاديمية النور",
+            branchCount = "4–10 فروع",
+            operationalNeed = "متابعة الجداول والحضور بين الفروع"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var envelope = await response.Content.ReadFromJsonAsync<ApiEnvelope<PublicLeadReceipt>>();
+        Assert.NotNull(envelope);
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+        var lead = await db.Leads.SingleAsync(item => item.Id == envelope.Data.LeadId);
+        Assert.Equal(tenantId, lead.TenantId);
+        Assert.Equal(branchId, lead.BranchId);
+        Assert.Equal("سارة أحمد", lead.ChildName);
+        Assert.Equal("أكاديمية النور", lead.ParentName);
+        Assert.Equal("LANDING_DEMO", lead.Channel);
+        Assert.NotNull(lead.Notes);
+        Assert.Contains("sara@example.com", lead.Notes);
+        Assert.Contains("branches:4–10 فروع", lead.Notes);
+        Assert.Contains("need:متابعة الجداول والحضور بين الفروع", lead.Notes);
+
+        TestData.Authenticate(client, await TestData.LoginAsync(client, secretary));
+        var statusResponse = await client.PatchAsJsonAsync($"/api/v1/leads/{lead.Id}/status", new { status = "REGISTERED" });
+        Assert.Equal(HttpStatusCode.BadRequest, statusResponse.StatusCode);
+        var convertResponse = await client.PostAsJsonAsync($"/api/v1/leads/{lead.Id}/convert", new
+        {
+            courseOfferingId = (Guid?)null,
+            dateOfBirth = (DateOnly?)new DateOnly(2016, 5, 20),
+            discountPercent = (int?)null
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, convertResponse.StatusCode);
+        Assert.Empty(await db.Students.Where(student => student.TenantId == tenantId).ToListAsync());
+    }
+
+    [Fact]
     public async Task Secretary_CanListCreateUpdateAndConvertLeads()
     {
         using var factory = new TestApiFactory(useInMemory: true);

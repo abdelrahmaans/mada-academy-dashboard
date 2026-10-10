@@ -55,6 +55,15 @@ builder.Services.AddRateLimiter(options =>
             QueueLimit = 0,
             AutoReplenishment = true
         }));
+    options.AddPolicy("public-lead", context => RateLimitPartition.GetFixedWindowLimiter(
+        GetClientAddress(context),
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
 });
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {

@@ -70,7 +70,7 @@ jobs:
         run: pnpm e2e
 
       - name: Install Angular frontend dependencies
-        run: pnpm --dir client-angular install --frozen-lockfile
+        run: pnpm --dir client-angular install --frozen-lockfile --ignore-workspace
 
       - name: Run Angular R09 E2E suite
         run: pnpm e2e:angular-r09
@@ -121,7 +121,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Angular frontend dependencies
-        run: pnpm --dir client-angular install --frozen-lockfile
+        run: pnpm --dir client-angular install --frozen-lockfile --ignore-workspace
 
       - name: Restore backend dependencies
         run: dotnet restore backend/MadaAcademy.Api/MadaAcademy.Api.csproj

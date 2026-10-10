@@ -1,3 +1,5 @@
+@import "@mada/tokens/tokens.css";
+
 /* Mada Academy — shared visual system
  * Reference surface: Instructor workspace
  * Applied after index.css so role-specific legacy accents converge here.

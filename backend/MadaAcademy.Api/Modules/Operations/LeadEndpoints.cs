@@ -3,6 +3,7 @@ using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace MadaAcademy.Api.Modules.Operations;
 
@@ -10,6 +11,59 @@ public static class LeadEndpoints
 {
     public static IEndpointRouteBuilder MapMadaLeadEndpoints(this IEndpointRouteBuilder endpoints)
     {
+        endpoints.MapPost("/api/v1/public/leads", async Task<Results<Ok<ApiEnvelope<PublicLeadReceipt>>, ProblemHttpResult>> (
+            PublicLeadRequest request,
+            IConfiguration configuration,
+            MadaDbContext db,
+            CancellationToken cancellationToken) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.Name)) return Problem(400, "INVALID_NAME", "Name is required.");
+            if (string.IsNullOrWhiteSpace(request.Email) || !request.Email.Contains('@')) return Problem(400, "INVALID_EMAIL", "A valid email is required.");
+            if (string.IsNullOrWhiteSpace(request.Phone)) return Problem(400, "INVALID_PHONE", "Phone is required.");
+            if (request.Kind is not ("demo" or "registration")) return Problem(400, "INVALID_KIND", "Kind must be demo or registration.");
+            var academyName = request.AcademyName ?? request.Company;
+            var branchCount = request.BranchCount ?? request.TeamSize;
+            var operationalNeed = request.OperationalNeed ?? request.TrainingNeed;
+            if (request.Kind == "demo" && string.IsNullOrWhiteSpace(academyName)) return Problem(400, "ACADEMY_NAME_REQUIRED", "Academy name is required for a demo request.");
+            if (request.Kind == "demo" && string.IsNullOrWhiteSpace(branchCount)) return Problem(400, "BRANCH_COUNT_REQUIRED", "Branch count is required for a demo request.");
+            if (request.Kind == "demo" && string.IsNullOrWhiteSpace(operationalNeed)) return Problem(400, "OPERATIONAL_NEED_REQUIRED", "Operational need is required for a demo request.");
+            if (!Guid.TryParse(configuration["MADA_PUBLIC_LEAD_TENANT_ID"], out var tenantId) || !Guid.TryParse(configuration["MADA_PUBLIC_LEAD_BRANCH_ID"], out var branchId))
+                return Problem(503, "PUBLIC_LEAD_TARGET_NOT_CONFIGURED", "Public lead target is not configured.");
+            if (!await db.Branches.AnyAsync(branch => branch.Id == branchId && branch.TenantId == tenantId && branch.Status == "ACTIVE", cancellationToken))
+                return Problem(503, "PUBLIC_LEAD_TARGET_NOT_FOUND", "Public lead target is not available.");
+
+            var notes = string.Join(" | ", new[]
+            {
+                $"email:{request.Email.Trim()}",
+                $"kind:{request.Kind}",
+                request.Kind == "demo" && !string.IsNullOrWhiteSpace(academyName) ? $"academy:{academyName.Trim()}" : null,
+                request.Kind == "demo" && !string.IsNullOrWhiteSpace(branchCount) ? $"branches:{branchCount.Trim()}" : null,
+                request.Kind != "demo" && !string.IsNullOrWhiteSpace(request.Company) ? $"company:{request.Company.Trim()}" : null,
+                request.Kind != "demo" && !string.IsNullOrWhiteSpace(request.TeamSize) ? $"team:{request.TeamSize.Trim()}" : null,
+                string.IsNullOrWhiteSpace(operationalNeed) ? null : $"need:{operationalNeed.Trim()}",
+                string.IsNullOrWhiteSpace(request.Track) ? null : $"track:{request.Track.Trim()}",
+                string.IsNullOrWhiteSpace(request.Goal) ? null : $"goal:{request.Goal.Trim()}"
+            }.Where(value => value is not null));
+
+            var lead = new Lead
+            {
+                TenantId = tenantId,
+                BranchId = branchId,
+                ChildName = request.Name.Trim(),
+                ParentName = request.Kind == "demo" && !string.IsNullOrWhiteSpace(academyName)
+                    ? academyName.Trim()
+                    : string.IsNullOrWhiteSpace(request.Company) ? request.Name.Trim() : request.Company.Trim(),
+                Phone = request.Phone.Trim(),
+                Channel = request.Kind == "demo" ? "LANDING_DEMO" : "LANDING_REGISTRATION",
+                Notes = notes.Length > 500 ? notes[..500] : notes,
+                Status = "NEW",
+                CreatedByUserId = null
+            };
+            db.Leads.Add(lead);
+            await db.SaveChangesAsync(cancellationToken);
+            return TypedResults.Ok(new ApiEnvelope<PublicLeadReceipt>(new PublicLeadReceipt(lead.Id, request.Kind)));
+        }).AllowAnonymous().RequireRateLimiting("public-lead");
+
         var group = endpoints.MapGroup("/api/v1").RequireAuthorization("staff");
 
         group.MapGet("/leads", async Task<Results<Ok<ApiEnvelope<LeadListResponse>>, ProblemHttpResult>> (
@@ -130,6 +184,8 @@ public static class LeadEndpoints
             var newStatus = request.Status?.ToUpperInvariant();
             if (newStatus == null || !allowedStatuses.Contains(newStatus))
                 return Problem(400, "INVALID_STATUS", "Status must be NEW, CONTACTED, INTERESTED, REGISTERED, or ARCHIVED.");
+            if (newStatus == "REGISTERED" && string.Equals(lead.Channel, "LANDING_DEMO", StringComparison.OrdinalIgnoreCase))
+                return Problem(400, "DEMO_REQUEST_NOT_STUDENT", "A SaaS demo request cannot be marked as student registration.");
 
             lead.Status = newStatus;
             await db.SaveChangesAsync(cancellationToken);
@@ -168,6 +224,8 @@ public static class LeadEndpoints
             if (!TryGetScope(user, out var scope, out var scopeError)) return scopeError;
             var lead = await db.Leads.FirstOrDefaultAsync(l => l.Id == id && l.TenantId == scope.TenantId && (scope.BranchId == null || l.BranchId == scope.BranchId.Value), cancellationToken);
             if (lead is null) return Problem(404, "LEAD_NOT_FOUND", "Lead not found in current scope.");
+            if (string.Equals(lead.Channel, "LANDING_DEMO", StringComparison.OrdinalIgnoreCase))
+                return Problem(400, "DEMO_REQUEST_NOT_STUDENT", "A SaaS demo request cannot be converted into a student enrollment.");
 
             var courseOfferingId = request.CourseOfferingId ?? lead.CourseOfferingId;
             CourseOffering? offering = null;
@@ -389,3 +447,5 @@ public sealed record UpdateLeadStatusRequest(string Status);
 public sealed record ConvertLeadRequest(Guid? CourseOfferingId, DateOnly? DateOfBirth, int? DiscountPercent, bool CreateInvoice = true);
 public sealed record DirectStudentRegistrationRequest(string FullName, string? Phone, Guid? BranchId, Guid? CourseOfferingId, DateOnly? DateOfBirth, int? DiscountPercent, bool CreateInvoice = true);
 public sealed record ConvertLeadResponse(Guid StudentId, Guid? LeadId, Guid? EnrollmentId, Guid? InvoiceId, string? InvoiceNumber, string StudentName);
+public sealed record PublicLeadRequest(string Kind, string Name, string Email, string Phone, string? Company = null, string? TeamSize = null, string? TrainingNeed = null, string? Track = null, string? Goal = null, string? AcademyName = null, string? BranchCount = null, string? OperationalNeed = null);
+public sealed record PublicLeadReceipt(Guid LeadId, string Kind);
