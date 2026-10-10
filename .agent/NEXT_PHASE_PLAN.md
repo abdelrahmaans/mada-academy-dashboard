@@ -1,8 +1,8 @@
 # خطة المرحلة القادمة — Mada Academy
 
 **تاريخ اللقطة:** 10 أكتوبر 2026
-**قاعدة العمل الحالية:** `main` عند `68581a2` بعد دمج PR #92 وPR #95؛ فرع المرحلة الحالية `feat/legacy-role-shell-migration` يحمل PR #96.
-**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وMarketing Leads live وموجة الإصلاح الأولى مغلقة. PR #96 ينقل Schedule وReports Preview وSecretary Desk إلى registry موحد للـnavigation والـhome/back paths؛ التحقق المحلي 56/56 ناجح، لكن merge محجوب مؤقتًا بفشل deployment `Vercel – client-angular` بينما نجحت بقية checks. تظل private-storage/backup-restore/staging بوابات بيئية منفصلة. مصفوفة الأدوار النهائية موثقة في [ANGULAR_PARITY_MATRIX.md](../ANGULAR_PARITY_MATRIX.md).
+**قاعدة العمل الحالية:** `main` بعد دمج PRs #92 و#95 و#96؛ آخر حالة موثقة يجب أن تتطابق مع `git log` قبل كل تسليم.
+**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وMarketing workflow persistence مغلقة على مستوى الكود المحلي. تظل private-storage/backup-restore/staging بوابات بيئية منفصلة، وتبقى بعض wrappers القديمة للـsidebars موجة تنظيف لاحقة. مصفوفة الأدوار النهائية موثقة في [ANGULAR_PARITY_MATRIX.md](../ANGULAR_PARITY_MATRIX.md).
 
 ## قرار التنفيذ الحالي
 
@@ -11,7 +11,7 @@
 3. **تم تنفيذ local browser/API E2E:** `pnpm e2e` يمر بـ **7/7** ويغطي R06/R08/R09 ودورة الفاتورة/الدفع/الإثبات.
 4. **تم تجهيز بيئة النشر داخل الريبو:** Dockerfile، production env template، staging smoke script، وrunbook.
 5. **حالة Angular الحالية:** أُغلقت R06-A وR06-B على `main`؛ شملت القراءة والعمليات المالية وإثباتات الدفع، مع اختبارات Angular وPlaywright وbuild ناجحة. بوابات Finance production (secret injection، private-storage smoke، backup/restore، وstaging smoke) تبقى منفصلة ولا تعتبر مكتملة محليًا.
-6. **توحيد shell/navigation:** registry الـrole أصبح مصدر labels وhome/back paths؛ PR #96 يطبق ذلك على sidebars R01/R02/R06 وتقارير LIVE، وتبقى Schedule/Secretary والـlegacy preview shells للموجة التالية.
+6. **توحيد shell/navigation:** registry الـrole هو مصدر labels وhome/back paths؛ PR #96 نقل Schedule وReports Preview وSecretary Desk إلى الـshared shell. ما تبقى هو wrappers قديمة محددة في صفحات LIVE التي تحتاج إزالة sidebar الخاص بها.
 
 ## نتيجة acceptance الحالية
 
@@ -65,8 +65,8 @@
 2. **Backup/restore:** إنتاج دليل قابل لإعادة التحقق لاستعادة السجلات المالية، مع توثيق الملكية والنطاق وسلامة audit trail.
 3. **Staging acceptance:** تشغيل smoke tests المصادق عليها على deployment فعلي، بما في ذلك Finance وR08/R09 وtenant/branch isolation.
 4. **Distributed production gate:** استكمال shared-limiter/two-instance evidence قبل التوسع الأفقي؛ CORS وsingle-instance startup guard مطبقان ومختبران داخل الكود.
-5. **Marketing:** Leads أصبحت live عبر `/api/v1/leads`; اختيار نموذج Backend للحملات وتقويم المحتوى هو الخطوة التالية قبل إزالة آخر Preview boundary.
-6. **Role shell migration:** إكمال نقل Schedule وReports preview وSecretary إلى الـshared shell والـregistry مع اختبارات back paths لكل role.
+5. **Marketing:** Campaigns وContent Items أصبحت persisted عبر `/api/v1/marketing/*` مع metrics مرتبطة بالـLeads؛ المطلوب التالي هو migration/staging acceptance وليس إعادة Preview data.
+6. **Role shell migration:** إزالة آخر `R01AcademySidebar`/`R03HeadInstructorsSidebar` wrappers من صفحات LIVE والتحقق من كل role route/back path.
 7. **Repository hygiene:** PR #92 و#95 تم دمجهما؛ PR #76 و#74 تمت مراجعتهما وتُركا مفتوحين بسبب rebase/CI blockers، وPR #96 ينتظر checks.
 
 ## الهدف

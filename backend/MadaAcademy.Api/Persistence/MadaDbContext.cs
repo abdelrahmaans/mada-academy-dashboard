@@ -39,6 +39,8 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
     public DbSet<Expense> Expenses => Set<Expense>();
     public DbSet<ExpenseEvidence> ExpenseEvidences => Set<ExpenseEvidence>();
     public DbSet<Lead> Leads => Set<Lead>();
+    public DbSet<MarketingCampaign> MarketingCampaigns => Set<MarketingCampaign>();
+    public DbSet<MarketingContentItem> MarketingContentItems => Set<MarketingContentItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -318,12 +320,33 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
         modelBuilder.Entity<Lead>(entity =>
         {
             entity.HasIndex(x => new { x.TenantId, x.BranchId, x.Status });
+            entity.HasIndex(x => new { x.TenantId, x.CampaignId });
             entity.Property(x => x.ChildName).HasMaxLength(160).IsRequired();
             entity.Property(x => x.ParentName).HasMaxLength(160).IsRequired();
             entity.Property(x => x.Phone).HasMaxLength(32).IsRequired();
             entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
             entity.Property(x => x.Channel).HasMaxLength(32).IsRequired();
             entity.Property(x => x.Notes).HasMaxLength(500);
+        });
+        modelBuilder.Entity<MarketingCampaign>(entity =>
+        {
+            entity.HasIndex(x => new { x.TenantId, x.BranchId, x.Status });
+            entity.Property(x => x.Name).HasMaxLength(160).IsRequired();
+            entity.Property(x => x.Channel).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(24).IsRequired();
+            entity.Property(x => x.Notes).HasMaxLength(1000);
+            entity.HasOne<Branch>().WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<MarketingContentItem>(entity =>
+        {
+            entity.HasIndex(x => new { x.TenantId, x.BranchId, x.Status, x.DueDate });
+            entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.ContentType).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Platform).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(24).IsRequired();
+            entity.Property(x => x.Notes).HasMaxLength(1000);
+            entity.HasOne<Branch>().WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<MarketingCampaign>().WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

@@ -32,6 +32,7 @@ public static class LeadEndpoints
                     lead.ParentName,
                     lead.Phone,
                     lead.Channel,
+                    lead.CampaignId,
                     lead.Notes,
                     lead.Status,
                     lead.CourseOfferingId,
@@ -65,6 +66,8 @@ public static class LeadEndpoints
                 branchId = defaultBranch;
             }
             if (branchId == null) return Problem(400, "BRANCH_REQUIRED", "A valid branch is required.");
+            if (request.CampaignId.HasValue && !await db.MarketingCampaigns.AnyAsync(x => x.Id == request.CampaignId.Value && x.TenantId == scope.TenantId && x.BranchId == branchId.Value, cancellationToken))
+                return Problem(400, "CAMPAIGN_NOT_FOUND", "Campaign not found in the selected branch.");
 
             Guid.TryParse(user.FindFirstValue("sub"), out var actorId);
 
@@ -76,6 +79,7 @@ public static class LeadEndpoints
                 ParentName = request.ParentName.Trim(),
                 Phone = request.Phone.Trim(),
                 Channel = request.Channel?.Trim() ?? "WALK_IN",
+                CampaignId = request.CampaignId,
                 Notes = request.Notes?.Trim(),
                 Status = "NEW",
                 CourseOfferingId = request.CourseOfferingId,
@@ -100,6 +104,7 @@ public static class LeadEndpoints
                 lead.ParentName,
                 lead.Phone,
                 lead.Channel,
+                lead.CampaignId,
                 lead.Notes,
                 lead.Status,
                 lead.CourseOfferingId,
@@ -144,6 +149,7 @@ public static class LeadEndpoints
                 lead.ParentName,
                 lead.Phone,
                 lead.Channel,
+                lead.CampaignId,
                 lead.Notes,
                 lead.Status,
                 lead.CourseOfferingId,
@@ -377,8 +383,8 @@ public static class LeadEndpoints
 }
 
 public sealed record LeadListResponse(IReadOnlyList<LeadItem> Items, int Total, int Overdue, int Active);
-public sealed record LeadItem(Guid Id, Guid BranchId, string ChildName, string ParentName, string Phone, string Channel, string? Notes, string Status, Guid? CourseOfferingId, string? CourseName, Guid? ConvertedStudentId, DateTimeOffset CreatedAt);
-public sealed record CreateLeadRequest(string ChildName, string ParentName, string Phone, string? Channel, string? Notes, Guid? CourseOfferingId, Guid? BranchId);
+public sealed record LeadItem(Guid Id, Guid BranchId, string ChildName, string ParentName, string Phone, string Channel, Guid? CampaignId, string? Notes, string Status, Guid? CourseOfferingId, string? CourseName, Guid? ConvertedStudentId, DateTimeOffset CreatedAt);
+public sealed record CreateLeadRequest(string ChildName, string ParentName, string Phone, string? Channel, string? Notes, Guid? CourseOfferingId, Guid? BranchId, Guid? CampaignId);
 public sealed record UpdateLeadStatusRequest(string Status);
 public sealed record ConvertLeadRequest(Guid? CourseOfferingId, DateOnly? DateOfBirth, int? DiscountPercent, bool CreateInvoice = true);
 public sealed record DirectStudentRegistrationRequest(string FullName, string? Phone, Guid? BranchId, Guid? CourseOfferingId, DateOnly? DateOfBirth, int? DiscountPercent, bool CreateInvoice = true);

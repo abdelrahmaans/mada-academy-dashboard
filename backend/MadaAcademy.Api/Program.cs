@@ -121,6 +121,7 @@ app.MapMadaSessionWorkflowEndpoints();
 app.MapGroupSupervisionEndpoints();
 app.MapMadaOperationalEndpoints();
 app.MapMadaLeadEndpoints();
+app.MapMadaMarketingEndpoints();
 app.MapMadaFinanceEndpoints();
 app.MapMadaExecutiveDashboardEndpoints();
 app.MapMadaInvoiceCorrectionEndpoints();
