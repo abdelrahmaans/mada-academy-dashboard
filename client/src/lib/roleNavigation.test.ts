@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ROLE_DEFINITIONS } from "./roleNavigation";
+import { ROLE_DEFINITIONS, getRoleBackPath, getRoleHomePath } from "./roleNavigation";
 
 describe("role navigation scopes", () => {
   it("keeps the head-instructors role branch-scoped", () => {
@@ -13,6 +13,13 @@ describe("role navigation scopes", () => {
       "/schedule",
     ]);
     expect(ROLE_DEFINITIONS.R03.navigation.map(item => item.path)).not.toContain("/finance-desk");
+  });
+
+  it("keeps home and back paths aligned with the role registry", () => {
+    for (const definition of Object.values(ROLE_DEFINITIONS)) {
+      expect(getRoleHomePath(definition.code)).toBe(definition.homePath);
+      expect(getRoleBackPath(definition.code)).toBe(definition.backPath);
+    }
   });
 
   it("keeps the media-manager role branch-scoped", () => {

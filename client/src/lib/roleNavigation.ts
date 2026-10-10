@@ -17,6 +17,7 @@ export type RoleDefinition = {
   scopeLevel: RoleScopeLevel;
   defaultScopeLabel: string;
   homePath: string;
+  backPath: string;
   navigation: readonly RoleNavigationItem[];
 };
 
@@ -32,6 +33,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     scopeLevel: "platform",
     defaultScopeLabel: "كل الأكاديميات · metadata فقط",
     homePath: "/platform-console",
+    backPath: "/platform-console",
     navigation: [
       { path: "/platform-console", label: "مركز المنصة", purpose: "tenants, plans, support" },
     ],
@@ -43,6 +45,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     scopeLevel: "tenant",
     defaultScopeLabel: "كل فروع الأكاديمية",
     homePath: "/executive-dashboard",
+    backPath: "/executive-dashboard",
     navigation: [
       { path: "/executive-dashboard", label: "اللوحة التنفيذية", purpose: "academy rollup and decisions" },
       { path: "/academy-owner", label: "نظرة عامة", purpose: "academy overview" },
@@ -62,6 +65,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     scopeLevel: "branch",
     defaultScopeLabel: "فرع واحد",
     homePath: "/",
+    backPath: "/",
     navigation: [
       { path: "/", label: "ملخص التشغيل", purpose: "daily branch decisions" },
       { path: "/students", label: "الطلاب", purpose: "branch student records" },
@@ -81,6 +85,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     scopeLevel: "branch",
     defaultScopeLabel: "فرع واحد · فريق المدربين والجلسات التابعة",
     homePath: "/head-instructors",
+    backPath: "/head-instructors",
     navigation: [
       { path: "/head-instructors", label: "ملخص الفريق", purpose: "branch-scoped evaluation review and team overview" },
       { path: "/academic-programs", label: "البرامج الأكاديمية", purpose: "curriculum and progress review" },
@@ -94,6 +99,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     scopeLevel: "assigned",
     defaultScopeLabel: "الجلسات والطلاب المسندون",
     homePath: "/instructor-desk",
+    backPath: "/instructor-desk",
     navigation: [
       { path: "/instructor-desk", label: "مكتب المدرب", purpose: "today, attendance, evaluation" },
     ],
@@ -105,6 +111,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     scopeLevel: "branch",
     defaultScopeLabel: "التسجيلات والـleads داخل الفرع",
     homePath: "/secretary-desk",
+    backPath: "/secretary-desk",
     navigation: [
       { path: "/secretary-desk", label: "مكتب الخدمة", purpose: "lead to enrollment" },
       { path: "/finance-desk", label: "التحصيل والفواتير", purpose: "branch-scoped collections and payments" },
@@ -119,6 +126,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     scopeLevel: "branch",
     defaultScopeLabel: "المالية داخل الفروع المصرح بها",
     homePath: "/finance-desk",
+    backPath: "/finance-desk",
     navigation: [
       { path: "/finance-desk", label: "المكتب المالي", purpose: "collections, expenses, reports" },
       { path: "/approvals", label: "الموافقات", purpose: "finance decisions" },
@@ -131,6 +139,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     scopeLevel: "branch",
     defaultScopeLabel: "فرع واحد · المحتوى والحملات والـmarketing leads",
     homePath: "/marketing-desk",
+    backPath: "/marketing-desk",
     navigation: [
       { path: "/marketing-desk", label: "مكتب التسويق", purpose: "campaigns, content, leads" },
     ],
@@ -142,6 +151,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     scopeLevel: "family",
     defaultScopeLabel: "الأطفال المرتبطون فقط",
     homePath: "/family-portal",
+    backPath: "/family-portal",
     navigation: [
       { path: "/family-portal", label: "بوابة الأسرة", purpose: "children, attendance, evaluations, invoices" },
     ],
@@ -153,6 +163,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     scopeLevel: "self",
     defaultScopeLabel: "حساب الطالب فقط",
     homePath: "/student-portal",
+    backPath: "/student-portal",
     navigation: [
       { path: "/student-portal", label: "مساحة الطالب", purpose: "learning, sessions, achievements" },
     ],
@@ -161,4 +172,12 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
 
 export function getRoleDefinition(roleCode: RoleCode) {
   return ROLE_DEFINITIONS[roleCode];
+}
+
+export function getRoleHomePath(roleCode: RoleCode) {
+  return ROLE_DEFINITIONS[roleCode].homePath;
+}
+
+export function getRoleBackPath(roleCode: RoleCode) {
+  return ROLE_DEFINITIONS[roleCode].backPath;
 }

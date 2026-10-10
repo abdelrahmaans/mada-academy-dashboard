@@ -128,6 +128,7 @@ export default function RoleDashboardShell({
           data-role-label={roleDefinition.label}
           data-identity-kind={identityKind}
           data-role-home={roleDefinition.homePath}
+          data-role-back={roleDefinition.backPath}
           data-scope-level={scopeLevel}
         >
           {showSessionLogout && <SessionLogoutButton />}
