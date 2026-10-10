@@ -2,7 +2,7 @@
 
 **As of:** 10 October 2026
 **Verified Git state:** `main` at `68581a2` includes merged PR #92 (PostgreSQL integration isolation) and PR #95 (live Marketing Leads, role home/back contract, and storage/backup gate scripts); it is pushed to origin.
-**Current delivery PR:** [PR #96 — Refactor legacy role navigation onto shared registry](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/96) is open from `feat/legacy-role-shell-migration` and awaiting GitHub checks.
+**Current delivery PR:** [PR #96 — Refactor legacy role navigation onto shared registry](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/96) is open from `feat/legacy-role-shell-migration`; local validation is green, but merge is blocked by the failing `Vercel – client-angular` deployment check (6 other checks passed).
 **Stack:** React + Vite + TypeScript; ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions.
 
 ## Parallel Angular client — foundation and shared UI (non-LIVE)

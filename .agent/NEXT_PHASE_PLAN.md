@@ -2,7 +2,7 @@
 
 **تاريخ اللقطة:** 10 أكتوبر 2026
 **قاعدة العمل الحالية:** `main` عند `68581a2` بعد دمج PR #92 وPR #95؛ فرع المرحلة الحالية `feat/legacy-role-shell-migration` يحمل PR #96.
-**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وMarketing Leads live وموجة الإصلاح الأولى مغلقة. PR #96 ينقل R01/R02/R06 تدريجيًا إلى registry موحد للـnavigation والـhome paths. تظل private-storage/backup-restore/staging بوابات بيئية منفصلة. مصفوفة الأدوار النهائية موثقة في [ANGULAR_PARITY_MATRIX.md](../ANGULAR_PARITY_MATRIX.md).
+**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وMarketing Leads live وموجة الإصلاح الأولى مغلقة. PR #96 ينقل Schedule وReports Preview وSecretary Desk إلى registry موحد للـnavigation والـhome/back paths؛ التحقق المحلي 56/56 ناجح، لكن merge محجوب مؤقتًا بفشل deployment `Vercel – client-angular` بينما نجحت بقية checks. تظل private-storage/backup-restore/staging بوابات بيئية منفصلة. مصفوفة الأدوار النهائية موثقة في [ANGULAR_PARITY_MATRIX.md](../ANGULAR_PARITY_MATRIX.md).
 
 ## قرار التنفيذ الحالي
 
