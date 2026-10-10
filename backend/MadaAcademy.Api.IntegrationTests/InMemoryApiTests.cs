@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using MadaAcademy.Api.Auth;
+using MadaAcademy.Api.Modules.Identity;
 using MadaAcademy.Api.Modules.Scheduling;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,6 +29,26 @@ public sealed class InMemoryApiTests
         var account = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
         var response = await client.PostAsJsonAsync("/api/v1/auth/login", new { phone = account.Phone, password = "wrong-password", accountType = "staff" });
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task MeEndpoint_ExposesTheCanonicalPermissionsForEveryStaffRole()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+
+        foreach (var role in RoleCatalog.All.Select(item => item.Code))
+        {
+            using var client = factory.CreateClient();
+            var account = await TestData.CreateAccountAsync(factory, role);
+            TestData.Authenticate(client, await TestData.LoginAsync(client, account));
+
+            using var response = await client.GetAsync("/api/v1/me");
+            response.EnsureSuccessStatusCode();
+            using var document = await response.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("The /me response is empty.");
+            var actual = document.RootElement.GetProperty("data").GetProperty("permissions").EnumerateArray().Select(item => item.GetString()).ToArray();
+
+            Assert.Equal(RoleCatalog.PermissionsFor(role), actual);
+        }
     }
 
     [Fact]
