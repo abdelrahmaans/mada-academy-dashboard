@@ -8,6 +8,7 @@ import BranchManagerSidebar from "@/components/BranchManagerSidebar";
 import R01AcademySidebar from "@/components/R01AcademySidebar";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { apiClient, type AuthMe, type FinanceReport, type OperationalReport } from "@/lib/apiClient";
+import { getRoleHomePath } from "@/lib/roleNavigation";
 import "./ReportsLive.css";
 
 export default function ReportsLive({ me }: { me: AuthMe }) {
@@ -101,7 +102,7 @@ export default function ReportsLive({ me }: { me: AuthMe }) {
             <div className="reports-live-table-heading"><div><h2>{isOwner ? "تفصيل الفروع" : "حركة الفرع"}</h2><p>{scopeLabel} · البيانات مجمعة من الفواتير والمدفوعات والمصروفات المعتمدة</p></div><span>{report.branches.length} {isOwner ? "فروع" : "فرع"}</span></div>
             {report.branches.length === 0 ? <div className="reports-live-empty">لا توجد حركات مالية مسجلة ضمن هذا النطاق حتى الآن.</div> : <div className="reports-live-table-wrap"><table><thead><tr><th>الفرع</th><th>عدد الفواتير</th><th>التحصيل</th><th>مصروفات معتمدة</th><th>الصافي</th></tr></thead><tbody>{report.branches.map(branch => <tr key={branch.branchId}><td><strong>{branch.branchName}</strong></td><td>{new Intl.NumberFormat("ar-EG").format(branch.invoiceCount)}</td><td>{money(branch.collectedPiastres)}</td><td>{money(branch.approvedExpensesPiastres)}</td><td><strong>{money(branch.netPiastres)}</strong></td></tr>)}</tbody></table></div>}
           </section>
-          <section className="reports-live-actions" aria-label="روابط تشغيلية"><button onClick={() => navigate(isOwner ? "/executive-dashboard" : me.role === "R06_ACCOUNTANT" ? "/finance-desk" : "/")}><Activity size={17} /><span>العودة إلى لوحة الدور</span><ArrowLeft size={15} /></button><button onClick={() => navigate("/approvals")}><Wallet size={17} /><span>مراجعة طلبات المصروفات</span><ArrowLeft size={15} /></button></section>
+          <section className="reports-live-actions" aria-label="روابط تشغيلية"><button onClick={() => navigate(getRoleHomePath(roleCode))}><Activity size={17} /><span>العودة إلى لوحة الدور</span><ArrowLeft size={15} /></button><button onClick={() => navigate("/approvals")}><Wallet size={17} /><span>مراجعة طلبات المصروفات</span><ArrowLeft size={15} /></button></section>
         </>}
       </div>
     </main>

@@ -3,22 +3,28 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import "./R01AcademySidebar.css";
 import "./AcademyManagement.css";
+import { getRoleDefinition } from "@/lib/roleNavigation";
 
 type Props = { activePath: string; mobileOpen: boolean; onClose: () => void };
 
 type Item = { path: string; label: string; icon: typeof LayoutDashboard };
 
-const R01_ITEMS: Item[] = [
-  { path: "/executive-dashboard", label: "اللوحة التنفيذية", icon: LayoutDashboard },
-  { path: "/academy-owner", label: "نظرة عامة", icon: Building2 },
-  { path: "/academy-owner/branches", label: "الفروع والأداء", icon: Building2 },
-  { path: "/academy-owner/tickets", label: "مركز التذاكر", icon: CircleHelp },
-  { path: "/academy-owner/reports", label: "التقارير المجمعة", icon: BarChart3 },
-  { path: "/academy/branches", label: "إدارة الفروع", icon: Building2 },
-  { path: "/academy/classrooms", label: "القاعات الدراسية", icon: GraduationCap },
-  { path: "/academy/roles", label: "المستخدمون والصلاحيات", icon: Users },
-  { path: "/reports", label: "التقارير التشغيلية", icon: BarChart3 },
-];
+const R01_ICON_BY_PATH: Record<string, Item["icon"]> = {
+  "/executive-dashboard": LayoutDashboard,
+  "/academy-owner": Building2,
+  "/academy-owner/branches": Building2,
+  "/academy-owner/tickets": CircleHelp,
+  "/academy-owner/reports": BarChart3,
+  "/academy/branches": Building2,
+  "/academy/classrooms": GraduationCap,
+  "/academy/roles": Users,
+  "/reports": BarChart3,
+};
+const R01_ITEMS: Item[] = getRoleDefinition("R01").navigation.map(item => ({
+  path: item.path,
+  label: item.label,
+  icon: R01_ICON_BY_PATH[item.path] ?? LayoutDashboard,
+}));
 
 export function R01MobileMenuButton({ onOpen }: { onOpen: () => void }) {
   return <button type="button" className="icon-button mobile-menu-button" aria-label="فتح القائمة" onClick={onOpen}><Menu size={21} /></button>;

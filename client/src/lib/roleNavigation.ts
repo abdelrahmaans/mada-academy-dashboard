@@ -130,6 +130,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     navigation: [
       { path: "/finance-desk", label: "المكتب المالي", purpose: "collections, expenses, reports" },
       { path: "/approvals", label: "الموافقات", purpose: "finance decisions" },
+      { path: "/reports", label: "التقارير", purpose: "finance and operational read-only reports" },
     ],
   },
   R07: {
