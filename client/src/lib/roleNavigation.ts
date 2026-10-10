@@ -102,6 +102,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     backPath: "/instructor-desk",
     navigation: [
       { path: "/instructor-desk", label: "مكتب المدرب", purpose: "today, attendance, evaluation" },
+      { path: "/schedule", label: "جدول الجلسات", purpose: "assigned session schedule" },
     ],
   },
   R05: {
@@ -130,6 +131,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     navigation: [
       { path: "/finance-desk", label: "المكتب المالي", purpose: "collections, expenses, reports" },
       { path: "/approvals", label: "الموافقات", purpose: "finance decisions" },
+      { path: "/reports", label: "التقارير", purpose: "finance and operational read-only reports" },
     ],
   },
   R07: {
