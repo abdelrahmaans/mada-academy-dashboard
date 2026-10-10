@@ -21,7 +21,7 @@ Keep this package and lockfile isolated from the React root. Root `pnpm check/te
 
 ## Vercel deployment
 
-The Vercel project for this client must use `client-angular` as its **Root Directory**. The root `../vercel.json` belongs to the React/Vite application and must not be used for this project. The package-local [`vercel.json`](./vercel.json) defines the Angular build, using `pnpm install --frozen-lockfile`, `pnpm build`, and `dist/mada-academy-angular` as the output directory. SPA rewrites are kept in that package-local configuration.
+The Vercel project for this client must use `client-angular` as its **Root Directory**. The root `../vercel.json` belongs to the React/Vite application and must not be used for this project. The package-local [`vercel.json`](./vercel.json) defines the Angular build, using `pnpm install --frozen-lockfile`, `pnpm build`, and `dist/mada-academy-angular/browser` as the output directory produced by Angular's application builder. SPA rewrites are kept in that package-local configuration.
 
 From the repository root, the R09 E2E suite runs with `pnpm e2e:angular-r09`; it requires the .NET SDK and Chromium.
 
