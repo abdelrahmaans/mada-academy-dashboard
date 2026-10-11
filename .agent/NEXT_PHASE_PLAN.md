@@ -71,7 +71,7 @@
 
 ### Product implementation slice — academy onboarding and enrollment metering
 
-1. **Bulk import contract:** **Student Preview + Commit implemented** with scope checks, duplicate detection, row-level errors, durable previewId/SHA-256 hash, stale-data validation, and audit/idempotency guards. Next: CSV source identity/expiry, then guardians/staff/branches/groups.
+1. **Bulk import contract:** **Student JSON/CSV Preview + Commit implemented** with scope checks, duplicate detection, row-level errors, durable previewId/SHA-256 hash, raw CSV source identity, 24-hour expiry, stale-data validation, and audit/idempotency guards. Next: apply the same CSV source contract to branches/staff/guardians/groups/enrollments, in dependency order.
 2. **Trial workspace:** real-data trial with tenant isolation, plan limits visible but non-destructive during trial, and explicit conversion to paid.
 3. **Active student meter:** **partially implemented** in Executive Dashboard and Operational Reports; remaining work is plan-limit evaluation and an explicit billing meter contract.
 4. **Branch/staff plan limits:** introduce plan limits for active branches and staff/instructors, with clear non-destructive warnings before enforcement.

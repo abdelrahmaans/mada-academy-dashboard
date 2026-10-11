@@ -10,6 +10,47 @@ namespace MadaAcademy.Api.IntegrationTests;
 public sealed class BulkImportApiTests
 {
     [Fact]
+    public async Task Secretary_CanPreviewCsv_AndCommitOnlyWithMatchingSourceFileIdentity()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        var secretary = await TestData.CreateAccountAsync(factory, "R05_SECRETARY");
+        using var client = factory.CreateClient();
+        TestData.Authenticate(client, await TestData.LoginAsync(client, secretary));
+        const string csv = "fullName,dateOfBirth,branchId\nCSV Imported Student,2012-03-04,\n";
+        using var form = new MultipartFormDataContent();
+        using var content = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes(csv));
+        content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/csv");
+        form.Add(content, "file", "students.csv");
+
+        using var previewResponse = await client.PostAsync("/api/v1/imports/students/csv/preview", form);
+        Assert.Equal(HttpStatusCode.OK, previewResponse.StatusCode);
+        using var previewJson = await previewResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("CSV preview response is empty.");
+        var data = previewJson.RootElement.GetProperty("data");
+        var previewId = data.GetProperty("previewId").GetGuid();
+        var previewHash = data.GetProperty("previewHash").GetString()!;
+        var source = data.GetProperty("sourceFile");
+        Assert.Equal("students.csv", source.GetProperty("name").GetString());
+        Assert.Equal(System.Text.Encoding.UTF8.GetByteCount(csv), source.GetProperty("size").GetInt64());
+        Assert.True(source.GetProperty("expiresAt").GetDateTimeOffset() > DateTimeOffset.UtcNow);
+
+        using var mismatch = await client.PostAsJsonAsync("/api/v1/imports/students/commit", new
+        {
+            previewId,
+            previewHash,
+            sourceFile = new { name = "renamed.csv", size = source.GetProperty("size").GetInt64(), hash = source.GetProperty("hash").GetString(), uploadedAt = source.GetProperty("uploadedAt").GetDateTimeOffset(), expiresAt = source.GetProperty("expiresAt").GetDateTimeOffset() }
+        });
+        Assert.Equal(HttpStatusCode.Conflict, mismatch.StatusCode);
+
+        using var commit = await client.PostAsJsonAsync("/api/v1/imports/students/commit", new
+        {
+            previewId,
+            previewHash,
+            sourceFile = new { name = source.GetProperty("name").GetString(), size = source.GetProperty("size").GetInt64(), hash = source.GetProperty("hash").GetString(), uploadedAt = source.GetProperty("uploadedAt").GetDateTimeOffset(), expiresAt = source.GetProperty("expiresAt").GetDateTimeOffset() }
+        });
+        Assert.Equal(HttpStatusCode.OK, commit.StatusCode);
+    }
+
+    [Fact]
     public async Task Secretary_CanPreviewAndCommitStudents_WithPreviewHash()
     {
         using var factory = new TestApiFactory(useInMemory: true);

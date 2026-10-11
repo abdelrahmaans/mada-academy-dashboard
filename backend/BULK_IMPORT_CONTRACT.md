@@ -54,7 +54,26 @@
 - يمنع إعادة اعتماد نفس `previewId` باستخدام `PREVIEW_ALREADY_COMMITTED`.
 - لا ينشئ أو يعدل guardians/staff/groups بعد؛ هذه مراحل منفصلة بنفس نمط preview ثم commit.
 
-تم تنفيذ commit الطلاب بالـ`previewId` والـ`previewHash`. عندما ينتقل الإدخال من JSON rows إلى CSV upload، سنضيف source-file identity وexpiry للـpreview.
+### `POST /api/v1/imports/students/csv/preview`
+
+يقبل `multipart/form-data` بالحقل `file` فقط، وبحد أقصى 5 MB وامتداد `.csv`. الأعمدة المطلوبة:
+
+```csv
+fullName,dateOfBirth,branchId
+Ali Hassan,2014-05-12,
+```
+
+قواعد هوية الملف:
+
+- `sourceFile.name` هو اسم الملف بعد إزالة أي path.
+- `sourceFile.size` هو الحجم بالـbytes.
+- `sourceFile.hash` هو SHA-256 لمحتوى الملف الخام بصيغة lowercase hex.
+- `sourceFile.uploadedAt` و`sourceFile.expiresAt` يحددان نافذة صلاحية قدرها 24 ساعة.
+- الـPreview يحفظ هوية الملف داخل audit durable؛ لا تعتمد عملية commit على وجود الملف في ذاكرة التطبيق.
+- عند commit لPreview مصدره CSV يجب إرسال `sourceFile` نفسه؛ تغيير الاسم أو الحجم أو الـhash يؤدي إلى `SOURCE_FILE_MISMATCH`.
+- بعد `expiresAt` يرفض النظام الاعتماد بـ`PREVIEW_EXPIRED` ويجب رفع الملف من جديد.
+
+تم تنفيذ commit الطلاب بالـ`previewId` والـ`previewHash` وCSV source identity/expiry. ستستخدم guardians/staff/branches/groups نفس العقد مع schema خاص بكل قسم.
 
 سيكون لكل صف قرار واضح:
 
