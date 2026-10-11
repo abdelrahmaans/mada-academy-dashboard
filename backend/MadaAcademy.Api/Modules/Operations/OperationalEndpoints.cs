@@ -131,7 +131,7 @@ public static class OperationalEndpoints
             MadaDbContext db,
             CancellationToken cancellationToken) =>
         {
-            if (!CanWriteAttendance(user))
+            if (!CanWriteAttendance(user) && !user.IsInRole("R03_HEAD_INSTRUCTORS"))
                 return Problem(403, "ATTENDANCE_WRITE_FORBIDDEN", "Only assigned instructors or branch managers can record attendance.");
             var records = request.Records;
             if (records is null || records.Count == 0)
@@ -145,6 +145,8 @@ public static class OperationalEndpoints
 
             if (!CanAccessAttendanceSession(user, session) && !await HasSupervisionAccess(db, user, session, requireAttendance: true, cancellationToken))
                 return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
+            if (!CanWriteAttendance(user))
+                return Problem(403, "ATTENDANCE_WRITE_FORBIDDEN", "Only assigned instructors or branch managers can record attendance.");
             if (session.Status is "CANCELLED" or "COMPLETED")
                 return Problem(409, "SESSION_NOT_EDITABLE", "Attendance can only be recorded for an active scheduled session.");
 
