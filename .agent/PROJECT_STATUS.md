@@ -88,6 +88,7 @@ Follow-up fixes prepared after PR #41: analytics is now loaded only when both op
 - Group-full conversion now supports `WAITLISTED` enrollment without issuing an enrollment invoice; promotion to `ACTIVE` remains the next implementation slice.
 - Waitlist promotion is now implemented through the scoped activation endpoint with capacity re-check and `STUDENT_ENROLLMENT_ACTIVATED` audit evidence; it does not create an invoice yet.
 - Executive and operational student metrics now count distinct students with an `ACTIVE` enrollment instead of all student records.
+- Bulk Import Preview is now available for student rows with tenant/branch scope checks, batch duplicate detection, existing-record review, row-level errors, and no-write `PREVIEW_ONLY` semantics. Commit/write and guardian/staff/group phases remain separate.
 - The living product reference is [BUSINESS_PRODUCT_DIRECTION_2026-10-11.md](../docs/BUSINESS_PRODUCT_DIRECTION_2026-10-11.md).
 
 ### Phase 1 authorization contract — completed locally on `chore/phase1-authorization-contracts`

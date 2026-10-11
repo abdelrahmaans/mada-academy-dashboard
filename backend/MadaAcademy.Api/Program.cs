@@ -129,6 +129,7 @@ app.MapMadaClassroomSchedulingEndpoints();
 app.MapMadaSessionWorkflowEndpoints();
 app.MapGroupSupervisionEndpoints();
 app.MapMadaOperationalEndpoints();
+app.MapMadaBulkImportEndpoints();
 app.MapMadaLeadEndpoints();
 app.MapMadaMarketingEndpoints();
 app.MapMadaFinanceEndpoints();
@@ -159,7 +160,7 @@ app.MapGet("/api/v1/dashboard/summary", async (HttpContext context, MadaDbContex
     var branchId = Guid.TryParse(context.User.FindFirstValue("branchId"), out var parsedBranchId) ? parsedBranchId : (Guid?)null;
     if (hasBranchScope && !branchId.HasValue) return Results.Forbid();
     var scopedBranchId = branchId.GetValueOrDefault();
-    var students = db.Students.Where(x => x.TenantId == tenantId && (!hasBranchScope || x.BranchId == scopedBranchId));
+    var students = db.Students.Where(x => x.TenantId == tenantId && x.Status == "ACTIVE" && (!hasBranchScope || x.BranchId == scopedBranchId) && db.StudentEnrollments.Any(enrollment => enrollment.StudentId == x.Id && enrollment.Status == "ACTIVE"));
     var enrollments = db.StudentEnrollments.Where(x => x.StudentId != Guid.Empty).Join(students, x => x.StudentId, x => x.Id, (enrollment, _) => enrollment);
     var sessions = db.AcademySessions.Where(x => x.TenantId == tenantId && (!hasBranchScope || x.BranchId == scopedBranchId));
     var upcoming = await sessions.Where(x => x.StartAt > DateTimeOffset.UtcNow && x.Status != "CANCELLED").OrderBy(x => x.StartAt).Take(5).Select(x => new { x.Id, x.SessionNumber, x.StartAt, x.Status }).ToListAsync(cancellationToken);
