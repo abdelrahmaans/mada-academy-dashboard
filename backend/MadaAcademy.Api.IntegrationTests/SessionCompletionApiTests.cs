@@ -117,7 +117,7 @@ public sealed class SessionCompletionApiTests
                 CourseOfferingId = session.CourseOfferingId!.Value,
                 Status = "ACTIVE",
                 CanReadAttendance = true,
-                CanReviewEvaluations = true
+                CanReadEvaluations = true
             });
             await db.SaveChangesAsync();
         }
