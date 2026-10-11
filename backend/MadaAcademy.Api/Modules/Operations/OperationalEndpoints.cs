@@ -46,6 +46,7 @@ public static class OperationalEndpoints
         operations.MapPut("/students/{studentId:guid}", UpdateStudentAsync);
         operations.MapGet("/students/{studentId:guid}/enrollments", ListStudentEnrollmentsAsync);
         operations.MapPost("/students/{studentId:guid}/enrollments", CreateStudentEnrollmentAsync);
+        operations.MapPost("/students/{studentId:guid}/enrollments/{enrollmentId:guid}/activate", ActivateWaitlistedEnrollmentAsync);
         operations.MapDelete("/students/{studentId:guid}/enrollments/{enrollmentId:guid}", CancelStudentEnrollmentAsync);
 
         operations.MapGet("/sessions", async Task<Results<Ok<ApiEnvelope<SessionListResponse>>, ProblemHttpResult>> (
@@ -116,7 +117,7 @@ public static class OperationalEndpoints
             var session = await FindScopedSession(db, sessionId, scope, cancellationToken);
             if (session is null) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
 
-            if (!user.IsInRole("R02_BRANCH_MANAGER") && !IsAssignedInstructor(user, session) && !await HasSupervisionAccess(db, user, session, requireAttendance: true, cancellationToken)) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
+            if (!CanAccessAttendanceSession(user, session) && !await HasSupervisionAccess(db, user, session, requireAttendance: true, cancellationToken)) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
 
             var rows = await LoadAttendance(db, session, cancellationToken);
             return TypedResults.Ok(new ApiEnvelope<AttendanceResponse>(
@@ -130,8 +131,8 @@ public static class OperationalEndpoints
             MadaDbContext db,
             CancellationToken cancellationToken) =>
         {
-            if (!CanWriteAttendance(user))
-                return Problem(403, "ATTENDANCE_WRITE_FORBIDDEN", "Only instructors or branch managers can record attendance.");
+            if (!CanWriteAttendance(user) && !user.IsInRole("R03_HEAD_INSTRUCTORS"))
+                return Problem(403, "ATTENDANCE_WRITE_FORBIDDEN", "Only assigned instructors or branch managers can record attendance.");
             var records = request.Records;
             if (records is null || records.Count == 0)
                 return Problem(400, "ATTENDANCE_REQUIRED", "At least one attendance record is required.");
@@ -142,7 +143,12 @@ public static class OperationalEndpoints
             var session = await FindScopedSession(db, sessionId, scope, cancellationToken);
             if (session is null) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
 
-            if (!user.IsInRole("R02_BRANCH_MANAGER") && !IsAssignedInstructor(user, session)) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
+            if (!CanAccessAttendanceSession(user, session) && !await HasSupervisionAccess(db, user, session, requireAttendance: true, cancellationToken))
+                return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
+            if (user.IsInRole("R04_INSTRUCTOR") && !IsAssignedInstructor(user, session))
+                return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
+            if (!CanWriteAttendance(user))
+                return Problem(403, "ATTENDANCE_WRITE_FORBIDDEN", "Only assigned instructors or branch managers can record attendance.");
             if (session.Status is "CANCELLED" or "COMPLETED")
                 return Problem(409, "SESSION_NOT_EDITABLE", "Attendance can only be recorded for an active scheduled session.");
 
@@ -335,6 +341,44 @@ public static class OperationalEndpoints
         return Results.NoContent();
     }
 
+    private static async Task<IResult> ActivateWaitlistedEnrollmentAsync(Guid studentId, Guid enrollmentId, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!CanManageStudents(user)) return Problem(403, "STUDENT_WRITE_FORBIDDEN", "The current role cannot manage student enrollments.");
+        if (!TryGetScope(user, out var scope, out var scopeError)) return scopeError;
+        if (!scope.BranchId.HasValue) return Problem(403, "BRANCH_SCOPE_REQUIRED", "A branch scope is required for this operation.");
+
+        var enrollment = await (from item in db.StudentEnrollments
+                                join student in db.Students on item.StudentId equals student.Id
+                                join offering in db.CourseOfferings on item.CourseOfferingId equals offering.Id
+                                where item.Id == enrollmentId && item.StudentId == studentId && item.Status == "WAITLISTED"
+                                    && student.TenantId == scope.TenantId && student.BranchId == scope.BranchId.Value
+                                    && offering.TenantId == scope.TenantId && offering.BranchId == scope.BranchId.Value
+                                    && offering.Status != "ARCHIVED" && offering.Status != "CANCELLED"
+                                select new { Enrollment = item, Offering = offering }).SingleOrDefaultAsync(cancellationToken);
+        if (enrollment is null) return Problem(404, "WAITLISTED_ENROLLMENT_NOT_FOUND", "The waitlisted enrollment was not found in the current branch.");
+
+        var activeCount = await db.StudentEnrollments.CountAsync(item => item.CourseOfferingId == enrollment.Offering.Id && item.Status == "ACTIVE", cancellationToken);
+        if (activeCount >= enrollment.Offering.MaxStudents) return Conflict("GROUP_CAPACITY_REACHED", "The selected group still has no available seat.");
+
+        var actorId = Actor(user);
+        if (!actorId.HasValue) return Problem(403, "ACTOR_REQUIRED", "The authenticated staff identity is missing.");
+        enrollment.Enrollment.Status = "ACTIVE";
+        enrollment.Enrollment.UpdatedAt = DateTimeOffset.UtcNow;
+        db.AuditEvents.Add(new AuditEvent
+        {
+            ActorUserId = actorId,
+            TenantId = scope.TenantId,
+            BranchId = scope.BranchId,
+            Action = "STUDENT_ENROLLMENT_ACTIVATED",
+            TargetType = "STUDENT_ENROLLMENT",
+            TargetId = enrollment.Enrollment.Id.ToString(),
+            MetadataJson = JsonSerializer.Serialize(new { studentId, courseOfferingId = enrollment.Offering.Id, from = "WAITLISTED", to = "ACTIVE" })
+        });
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Results.Ok(new { data = new { enrollmentId, studentId, courseOfferingId = enrollment.Offering.Id, status = enrollment.Enrollment.Status, activeEnrollmentCount = activeCount + 1 } });
+    }
+
     private static async Task<List<SessionDetails>> ProjectSessionsAsync(
         MadaDbContext db,
         IQueryable<AcademySession> query,
@@ -388,8 +432,12 @@ public static class OperationalEndpoints
             (scope.BranchId == null || session.BranchId == scope.BranchId.Value), cancellationToken);
 
     private static bool IsAssignedInstructor(ClaimsPrincipal user, AcademySession session) =>
+        user.IsInRole("R04_INSTRUCTOR") &&
         Guid.TryParse(user.FindFirstValue("sub"), out var actorId) &&
         (session.InstructorId == actorId || session.SubstituteInstructorId == actorId);
+
+    private static bool CanAccessAttendanceSession(ClaimsPrincipal user, AcademySession session) =>
+        user.IsInRole("R02_BRANCH_MANAGER") || IsAssignedInstructor(user, session);
 
     private static async Task<bool> HasSupervisionAccess(MadaDbContext db, ClaimsPrincipal user, AcademySession session, bool requireAttendance, CancellationToken cancellationToken)
     {

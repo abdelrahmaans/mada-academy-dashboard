@@ -2,7 +2,15 @@
 
 **تاريخ اللقطة:** 10 أكتوبر 2026
 **قاعدة العمل الحالية:** `main` بعد دمج PRs #92 و#95 و#96؛ آخر حالة موثقة يجب أن تتطابق مع `git log` قبل كل تسليم.
-**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وMarketing workflow persistence مغلقة على مستوى الكود المحلي. تظل private-storage/backup-restore/staging بوابات بيئية منفصلة، وتبقى بعض wrappers القديمة للـsidebars موجة تنظيف لاحقة. مصفوفة الأدوار النهائية موثقة في [ANGULAR_PARITY_MATRIX.md](../ANGULAR_PARITY_MATRIX.md).
+**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وMarketing workflow persistence وPhase 1 authorization contract مغلقة على مستوى الكود المحلي. تظل private-storage/backup-restore/staging بوابات بيئية منفصلة، وتبقى بعض wrappers القديمة للـsidebars موجة تنظيف لاحقة. مصفوفة الأدوار النهائية موثقة في [ANGULAR_PARITY_MATRIX.md](../ANGULAR_PARITY_MATRIX.md).
+
+## Phase 1 authorization contract — result
+
+- R03 is read-only for attendance and can read only active supervision assignments with attendance access; it has no `attendance.write` permission.
+- R04 attendance remains limited to assigned/substitute sessions; completion remains instructor-only.
+- R05 finance tests explicitly protect the boundary between invoice/payment operations and accountant-only finance operations.
+- Role navigation tests now verify that every registered home/navigation path exists and that finance navigation is limited to R05/R06.
+- Frontend checks passed locally; backend integration execution remains a CI requirement because the current sandbox has no .NET SDK.
 
 ## قرار التنفيذ الحالي
 
@@ -60,6 +68,15 @@
 - لا تشمل المرحلة الدفع الإلكتروني المباشر أو تغيير backend أو تفعيل تخزين إنتاجي؛ التخزين الخاص وstaging smoke بوابات منفصلة.
 
 ## الأعمال التالية بعد إغلاق R06-B
+
+### Product implementation slice — academy onboarding and enrollment metering
+
+1. **Bulk import contract:** **Preview slice implemented for students** with scope checks, duplicate detection, row-level errors, and no-write semantics. Next: previewId/hash, commit endpoint, then guardians/staff/branches/groups.
+2. **Trial workspace:** real-data trial with tenant isolation, plan limits visible but non-destructive during trial, and explicit conversion to paid.
+3. **Active student meter:** **partially implemented** in Executive Dashboard and Operational Reports; remaining work is plan-limit evaluation and an explicit billing meter contract.
+4. **Branch/staff plan limits:** introduce plan limits for active branches and staff/instructors, with clear non-destructive warnings before enforcement.
+5. **Waitlist promotion:** **implemented without billing** through the scoped activation endpoint; next step is invoice activation/creation policy after finance approval.
+6. **Academy segment onboarding:** seed templates and onboarding copy for Programming, Robotics, STEM, Languages, on-site, and online delivery.
 
 1. **Private storage:** حقن الأسرار في بيئة staging وتشغيل authenticated storage smoke test؛ الأدلة المحلية ليست بديلًا عن ذلك.
 2. **Backup/restore:** إنتاج دليل قابل لإعادة التحقق لاستعادة السجلات المالية، مع توثيق الملكية والنطاق وسلامة audit trail.

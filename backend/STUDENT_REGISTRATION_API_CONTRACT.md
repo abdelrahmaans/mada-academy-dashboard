@@ -69,6 +69,12 @@ The server verifies:
 
 The operation emits `STUDENT_ENROLLED`.
 
+### `POST /api/v1/students/{studentId}/enrollments/{enrollmentId}/activate`
+
+Allowed roles: `R02_BRANCH_MANAGER`, `R05_SECRETARY`.
+
+This endpoint promotes a `WAITLISTED` enrollment after a seat becomes available. The server re-checks tenant/branch ownership, offering state, and current active capacity before changing the enrollment to `ACTIVE`. It emits `STUDENT_ENROLLMENT_ACTIVATED` and returns the new active enrollment count. It does not create an enrollment invoice; billing activation remains a separate finance decision in the MVP.
+
 ### `DELETE /api/v1/students/{studentId}/enrollments/{enrollmentId}`
 
 Allowed roles: `R02_BRANCH_MANAGER`, `R05_SECRETARY`. This is a reversible business-state transition to `CANCELLED`, not a hard delete, and emits `STUDENT_ENROLLMENT_CANCELLED`.
@@ -77,6 +83,7 @@ Allowed roles: `R02_BRANCH_MANAGER`, `R05_SECRETARY`. This is a reversible busin
 
 - `403 STUDENT_WRITE_FORBIDDEN` / `STUDENT_ENROLLMENT_READ_FORBIDDEN`
 - `404 STUDENT_NOT_FOUND`, `GROUP_NOT_FOUND`, or `ENROLLMENT_NOT_FOUND`
+- `404 WAITLISTED_ENROLLMENT_NOT_FOUND`
 - `409 STUDENT_ALREADY_ENROLLED` or `GROUP_CAPACITY_REACHED`
 - `422` validation responses for invalid names, dates, or prices
 

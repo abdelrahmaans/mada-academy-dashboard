@@ -86,4 +86,51 @@ public sealed class StudentRegistrationApiTests
         using var enrollmentResponse = await client.GetAsync($"/api/v1/students/{hiddenStudentId}/enrollments");
         Assert.Equal(HttpStatusCode.NotFound, enrollmentResponse.StatusCode);
     }
+
+    [Fact]
+    public async Task Secretary_CanActivateWaitlistedEnrollment_WhenCapacityOpens()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        var secretary = await TestData.CreateAccountAsync(factory, "R05_SECRETARY");
+        var activeStudentId = Guid.NewGuid();
+        var waitlistedStudentId = Guid.NewGuid();
+        var offeringId = Guid.NewGuid();
+        var waitlistedEnrollmentId = Guid.NewGuid();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            var template = new CourseTemplate { TenantId = secretary.TenantId, Name = "Full Group", Status = "ACTIVE", TotalSessions = 8, SessionDurationHours = 1.5m, BasePricePiastres = 40_000 };
+            var classroomId = Guid.NewGuid();
+            db.CourseTemplates.Add(template);
+            db.Classrooms.Add(new Classroom { Id = classroomId, BranchId = secretary.BranchId, Name = "Room B", Capacity = 1 });
+            db.CourseOfferings.Add(new CourseOffering { Id = offeringId, TenantId = secretary.TenantId, BranchId = secretary.BranchId, CourseTemplateId = template.Id, InstructorId = secretary.UserId, ClassroomId = classroomId, StartDate = DateOnly.FromDateTime(DateTime.UtcNow), EndDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)), Status = "ACTIVE", MaxStudents = 1 });
+            db.Students.AddRange(
+                new Student { Id = activeStudentId, TenantId = secretary.TenantId, BranchId = secretary.BranchId, FullName = "Active Student" },
+                new Student { Id = waitlistedStudentId, TenantId = secretary.TenantId, BranchId = secretary.BranchId, FullName = "Waiting Student" });
+            db.StudentEnrollments.AddRange(
+                new StudentEnrollment { StudentId = activeStudentId, CourseOfferingId = offeringId, FinalPricePiastres = 40_000, Status = "ACTIVE" },
+                new StudentEnrollment { Id = waitlistedEnrollmentId, StudentId = waitlistedStudentId, CourseOfferingId = offeringId, FinalPricePiastres = 40_000, Status = "WAITLISTED" });
+            await db.SaveChangesAsync();
+        }
+
+        using var client = factory.CreateClient();
+        TestData.Authenticate(client, await TestData.LoginAsync(client, secretary));
+        using var blockedResponse = await client.PostAsync($"/api/v1/students/{waitlistedStudentId}/enrollments/{waitlistedEnrollmentId}/activate", null);
+        Assert.Equal(HttpStatusCode.Conflict, blockedResponse.StatusCode);
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            var activeEnrollment = await db.StudentEnrollments.SingleAsync(item => item.StudentId == activeStudentId);
+            activeEnrollment.Status = "CANCELLED";
+            await db.SaveChangesAsync();
+        }
+
+        using var activateResponse = await client.PostAsync($"/api/v1/students/{waitlistedStudentId}/enrollments/{waitlistedEnrollmentId}/activate", null);
+        Assert.Equal(HttpStatusCode.OK, activateResponse.StatusCode);
+        using var verifyScope = factory.Services.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<MadaDbContext>();
+        Assert.Equal("ACTIVE", (await verifyDb.StudentEnrollments.FindAsync(waitlistedEnrollmentId))!.Status);
+        Assert.True(await verifyDb.AuditEvents.AnyAsync(item => item.Action == "STUDENT_ENROLLMENT_ACTIVATED" && item.TargetId == waitlistedEnrollmentId.ToString()));
+    }
 }

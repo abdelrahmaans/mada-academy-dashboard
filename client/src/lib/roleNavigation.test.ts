@@ -50,4 +50,33 @@ describe("role navigation scopes", () => {
     expect(ROLE_DEFINITIONS.R02.navigation.map(item => item.path)).not.toContain("/finance");
     expect(ROLE_DEFINITIONS.R02.navigation.map(item => item.path)).not.toContain("/finance-desk");
   });
+
+  it("keeps every registered navigation path on an application route", () => {
+    const appPaths = new Set([
+      "/", "/students", "/classes", "/schedule", "/secretary-desk", "/finance-desk",
+      "/marketing-desk", "/team", "/branch-operations", "/supervision-assignments", "/approvals",
+      "/reports", "/instructor-desk", "/head-instructors", "/academic-programs", "/academy-owner",
+      "/academy-owner/branches", "/academy-owner/tickets", "/academy-owner/reports", "/executive-dashboard",
+      "/platform-console", "/family-portal", "/student-portal", "/academy/branches", "/academy/classrooms",
+      "/academy/roles",
+    ]);
+
+    for (const definition of Object.values(ROLE_DEFINITIONS)) {
+      expect(appPaths.has(definition.homePath), `${definition.code} home path ${definition.homePath}`).toBe(true);
+      for (const item of definition.navigation) {
+        expect(appPaths.has(item.path), `${definition.code} navigation path ${item.path}`).toBe(true);
+      }
+    }
+  });
+
+  it("keeps sensitive finance navigation limited to finance roles", () => {
+    for (const definition of Object.values(ROLE_DEFINITIONS)) {
+      const paths = definition.navigation.map(item => item.path);
+      if (definition.code === "R05" || definition.code === "R06") {
+        expect(paths).toContain("/finance-desk");
+      } else {
+        expect(paths).not.toContain("/finance-desk");
+      }
+    }
+  });
 });

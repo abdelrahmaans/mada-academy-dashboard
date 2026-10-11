@@ -44,6 +44,7 @@ const STATUS_LABELS: Record<string, string> = {
   CONTACTED: "تم التواصل",
   INTERESTED: "مهتم بالحجز",
   REGISTERED: "مسجل رسميًا",
+  WAITLISTED: "قائمة انتظار",
   ARCHIVED: "مؤرشف",
 };
 
@@ -172,9 +173,10 @@ export default function SecretaryDeskLive() {
         courseOfferingId: convertData.courseOfferingId || undefined,
         discountPercent: Number(convertData.discountPercent) || 0,
         createInvoice: convertData.createInvoice,
+        joinWaitlistIfFull: true,
       });
-      toast.success(`تم تحويل ${result.studentName} إلى طالب مسجل بنجاح!`, {
-        description: result.invoiceNumber ? `رقم الفاتورة الصادرة: ${result.invoiceNumber}` : undefined,
+      toast.success(result.enrollmentStatus === "WAITLISTED" ? `تمت إضافة ${result.studentName} إلى قائمة الانتظار` : `تم تحويل ${result.studentName} إلى طالب مسجل بنجاح!`, {
+        description: result.invoiceNumber ? `رقم الفاتورة الصادرة: ${result.invoiceNumber}` : result.enrollmentStatus === "WAITLISTED" ? "سيتم تفعيل التسجيل عند توفر مكان في الجروب." : undefined,
       });
       setConvertModalOpen(false);
       setConvertingLead(null);
@@ -354,6 +356,7 @@ export default function SecretaryDeskLive() {
                   <option value="CONTACTED">تم التواصل</option>
                   <option value="INTERESTED">مهتم بالحجز</option>
                   <option value="REGISTERED">مسجل رسميًا ({registeredCount})</option>
+                  <option value="WAITLISTED">قائمة الانتظار</option>
                   <option value="ARCHIVED">مؤرشف</option>
                 </select>
               </div>
@@ -413,6 +416,8 @@ export default function SecretaryDeskLive() {
                             status={
                               lead.status === "REGISTERED"
                                 ? "success"
+                                : lead.status === "WAITLISTED"
+                                ? "info"
                                 : lead.status === "INTERESTED"
                                 ? "info"
                                 : lead.status === "CONTACTED"

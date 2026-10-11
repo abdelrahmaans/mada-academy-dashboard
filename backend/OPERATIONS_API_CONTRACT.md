@@ -9,8 +9,8 @@ All endpoints below require a valid staff JWT. `tenantId` and `branchId` are alw
 - Tenant-scoped staff see records for their tenant.
 - Branch-scoped staff see records for their branch only.
 - A record outside the authenticated scope is not returned.
-- `R02_BRANCH_MANAGER`, `R03_HEAD_INSTRUCTORS`, and `R04_INSTRUCTOR` may write attendance.
-- Other staff roles may read attendance but receive `403 ATTENDANCE_WRITE_FORBIDDEN` on writes.
+- `R02_BRANCH_MANAGER` and assigned `R04_INSTRUCTOR` may write attendance. R03 is read-only and can read attendance only for active supervision assignments with attendance access; R04 access is limited to assigned or substitute sessions.
+- Other staff roles, including R03, receive `403 ATTENDANCE_WRITE_FORBIDDEN` on writes.
 
 ## Endpoints
 

@@ -97,6 +97,41 @@ public sealed class SessionCompletionApiTests
         Assert.Equal(HttpStatusCode.Forbidden, (await managerClient.PostAsync($"/api/v1/sessions/{sessionId}/complete", content: null)).StatusCode);
     }
 
+    [Fact]
+    public async Task HeadInstructor_IsReadOnlyForAnActiveSupervisionAssignment()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        var supervisor = await TestData.CreateAccountAsync(factory, "R03_HEAD_INSTRUCTORS");
+        var unassignedSupervisor = await TestData.CreateAccountAsync(factory, "R03_HEAD_INSTRUCTORS", supervisor.TenantId, supervisor.BranchId);
+        var (sessionId, studentId) = await SeedSessionAsync(factory, supervisor, marked: false, ended: false);
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            var session = await db.AcademySessions.SingleAsync(item => item.Id == sessionId);
+            db.GroupSupervisionAssignments.Add(new GroupSupervisionAssignment
+            {
+                TenantId = supervisor.TenantId,
+                BranchId = supervisor.BranchId,
+                SupervisorUserId = supervisor.UserId,
+                CourseOfferingId = session.CourseOfferingId!.Value,
+                Status = "ACTIVE",
+                CanReadAttendance = true,
+                CanReadEvaluations = true
+            });
+            await db.SaveChangesAsync();
+        }
+
+        using var assignedClient = factory.CreateClient();
+        TestData.Authenticate(assignedClient, await TestData.LoginAsync(assignedClient, supervisor));
+        Assert.Equal(HttpStatusCode.OK, (await assignedClient.GetAsync($"/api/v1/sessions/{sessionId}/attendance")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await assignedClient.PutAsJsonAsync($"/api/v1/sessions/{sessionId}/attendance", new { records = new[] { new { studentId, status = "PRESENT" } } })).StatusCode);
+
+        using var unassignedClient = factory.CreateClient();
+        TestData.Authenticate(unassignedClient, await TestData.LoginAsync(unassignedClient, unassignedSupervisor));
+        Assert.Equal(HttpStatusCode.NotFound, (await unassignedClient.PutAsJsonAsync($"/api/v1/sessions/{sessionId}/attendance", new { records = new[] { new { studentId, status = "ABSENT" } } })).StatusCode);
+    }
+
     private static async Task<(Guid SessionId, Guid StudentId)> SeedSessionAsync(TestApiFactory factory, TestAccount instructor, bool marked, bool ended)
     {
         var studentId = Guid.NewGuid();
