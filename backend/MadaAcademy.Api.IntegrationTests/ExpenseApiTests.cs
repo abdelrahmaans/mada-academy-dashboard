@@ -117,6 +117,29 @@ public sealed class ExpenseApiTests
     }
 
     [Fact]
+    public async Task ExpenseEvidence_WhenStorageUnavailable_Returns503WithoutPersistingEvidence()
+    {
+        using var factory = new TestApiFactory(useInMemory: true, unavailableStorage: true);
+        using var client = factory.CreateClient();
+        var account = await TestData.CreateAccountAsync(factory, "R06_ACCOUNTANT");
+        var expenseId = await SeedExpenseAsync(factory, account.TenantId, account.BranchId, "Storage failure expense");
+        TestData.Authenticate(client, await TestData.LoginAsync(client, account));
+
+        using var upload = new MultipartFormDataContent();
+        var content = new ByteArrayContent("fake-png-content"u8.ToArray());
+        content.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+        upload.Add(content, "file", "receipt.png");
+        var response = await client.PostAsync($"/api/v1/finance/expenses/{expenseId}/evidence", upload);
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Contains("PRIVATE_STORAGE_UNAVAILABLE", await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+        Assert.Empty(await db.ExpenseEvidences.Where(x => x.ExpenseId == expenseId).ToListAsync());
+        Assert.Empty(await db.AuditEvents.Where(x => x.TargetType == "EXPENSE" && x.TargetId == expenseId.ToString() && x.Action == "EXPENSE_EVIDENCE_ATTACHED").ToListAsync());
+    }
+
+    [Fact]
     public async Task ExpenseEvidence_IsValidatedAndScoped()
     {
         using var factory = new TestApiFactory(useInMemory: true);

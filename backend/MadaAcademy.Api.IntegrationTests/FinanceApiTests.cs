@@ -154,6 +154,33 @@ public sealed class FinanceApiTests
     }
 
     [Fact]
+    public async Task PaymentEvidence_WhenStorageUnavailable_Returns503WithoutPersistingEvidence()
+    {
+        using var factory = new TestApiFactory(useInMemory: true, unavailableStorage: true);
+        using var client = factory.CreateClient();
+        var account = await TestData.CreateAccountAsync(factory, "R06_ACCOUNTANT");
+        var invoiceId = await SeedInvoiceAsync(factory, account.TenantId, account.BranchId, "Storage failure student", 5_000);
+        TestData.Authenticate(client, await TestData.LoginAsync(client, account));
+        var paymentResponse = await client.PostAsJsonAsync($"/api/v1/finance/invoices/{invoiceId}/payments", new { amountPiastres = 5_000, method = "CASH" });
+        Assert.Equal(HttpStatusCode.Created, paymentResponse.StatusCode);
+        var paymentJson = await paymentResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Payment response missing.");
+        var paymentId = paymentJson.RootElement.GetProperty("data").GetProperty("payment").GetProperty("id").GetGuid();
+
+        using var upload = new MultipartFormDataContent();
+        var content = new ByteArrayContent("fake-png-content"u8.ToArray());
+        content.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+        upload.Add(content, "file", "receipt.png");
+        var response = await client.PostAsync($"/api/v1/finance/payments/{paymentId}/evidence", upload);
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Contains("PRIVATE_STORAGE_UNAVAILABLE", await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+        Assert.Empty(await db.PaymentEvidences.Where(x => x.PaymentTransactionId == paymentId).ToListAsync());
+        Assert.Empty(await db.AuditEvents.Where(x => x.TargetType == "PAYMENT" && x.TargetId == paymentId.ToString() && x.Action == "PAYMENT_EVIDENCE_ATTACHED").ToListAsync());
+    }
+
+    [Fact]
     public async Task PaymentEvidence_IsValidatedAndOnlyScopedUsersCanDownloadIt()
     {
         using var factory = new TestApiFactory(useInMemory: true);

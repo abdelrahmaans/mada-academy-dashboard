@@ -67,6 +67,19 @@ PARENT_PASSWORD='<staging parent password>' \
 
 The script checks health, staff login, `/me`, staff finance invoices, and optionally linked parent invoices. It does not print credentials or tokens.
 
+For the real private-evidence smoke, use a staging payment that has no evidence yet and a non-sensitive PDF/JPG/PNG fixture:
+
+```bash
+API_BASE_URL=https://<api-host>/api/v1 \
+STAFF_PHONE='<staging staff phone>' \
+STAFF_PASSWORD='<staging staff password>' \
+PAYMENT_ID='<staging payment id>' \
+EVIDENCE_FILE=./fixtures/staging-receipt.png \
+./scripts/staging-smoke.sh
+```
+
+The optional path uploads through the authenticated API, downloads through the same API, compares bytes, and checks the response `Content-Type`. It does not expose the storage bucket URL or service-role key.
+
 ## 5. Frontend acceptance
 
 Set `VITE_API_URL=https://<api-host>/api/v1`, deploy the frontend, and run:
