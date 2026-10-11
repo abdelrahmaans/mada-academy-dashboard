@@ -89,6 +89,7 @@ Follow-up fixes prepared after PR #41: analytics is now loaded only when both op
 - Waitlist promotion is now implemented through the scoped activation endpoint with capacity re-check and `STUDENT_ENROLLMENT_ACTIVATED` audit evidence; it does not create an invoice yet.
 - Executive and operational student metrics now count distinct students with an `ACTIVE` enrollment instead of all student records.
 - Bulk Import Preview and student Commit are now available with tenant/branch scope checks, durable `previewId`/SHA-256 hash validation, stale-data recheck, row-level review blocking, idempotent double-commit protection, and audit evidence. Guardian/staff/group phases remain separate.
+- Student CSV Preview is now available through multipart upload with raw-file SHA-256 identity, sanitized filename, byte size, durable 24-hour expiry, source-file matching at commit, and CSV parser/integration coverage. The same source identity contract remains to be applied to guardian, staff, branch, group, and enrollment import slices.
 - The living product reference is [BUSINESS_PRODUCT_DIRECTION_2026-10-11.md](../docs/BUSINESS_PRODUCT_DIRECTION_2026-10-11.md).
 
 ### Phase 1 authorization contract — completed locally on `chore/phase1-authorization-contracts`
