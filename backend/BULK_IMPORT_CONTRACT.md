@@ -33,10 +33,28 @@
 - الصف الصحيح يظهر `CREATE`.
 - الاستجابة تحتوي على `createCount` و`reviewCount` وأخطاء كل صف.
 - `mode = PREVIEW_ONLY` تعني أن العملية لم تكتب أي student أو account أو link.
+- الاستجابة تحتوي على `previewId` عشوائي و`previewHash` SHA-256 للصفوف canonicalized.
 
-## قواعد الـcommit القادمة
+### `POST /api/v1/imports/students/commit`
 
-الـcommit سيكون endpoint منفصلًا، وسيحتاج العميل إلى إرسال `previewId` أو hash للملف الناتج عن الـPreview حتى لا يتم اعتماد ملف تغير بعد مراجعته.
+```json
+{
+  "previewId": "guid",
+  "previewHash": "sha256-lowercase-hex"
+}
+```
+
+الـcommit:
+
+- يقرأ الـPreview المخزن durable داخل سجل audit خاص بالـimport؛ لا يعتمد على ذاكرة العملية.
+- يرفض `PREVIEW_HASH_MISMATCH` إذا تم تغيير الـhash أو إرسال preview غير تابع لنفس الأكاديمية.
+- يرفض `PREVIEW_REQUIRES_REVIEW` إذا كان أي صف في المعاينة يحتاج مراجعة.
+- يعيد فحص الفروع والتكرار الحالي قبل أي كتابة، ويرفض `PREVIEW_STALE` إذا تغيرت البيانات منذ المعاينة.
+- ينشئ الطلاب ثم يسجل `BULK_IMPORT_STUDENT_COMMITTED`.
+- يمنع إعادة اعتماد نفس `previewId` باستخدام `PREVIEW_ALREADY_COMMITTED`.
+- لا ينشئ أو يعدل guardians/staff/groups بعد؛ هذه مراحل منفصلة بنفس نمط preview ثم commit.
+
+تم تنفيذ commit الطلاب بالـ`previewId` والـ`previewHash`. عندما ينتقل الإدخال من JSON rows إلى CSV upload، سنضيف source-file identity وexpiry للـpreview.
 
 سيكون لكل صف قرار واضح:
 
