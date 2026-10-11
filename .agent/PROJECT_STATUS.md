@@ -91,6 +91,7 @@ Follow-up fixes prepared after PR #41: analytics is now loaded only when both op
 - Bulk Import Preview and student Commit are now available with tenant/branch scope checks, durable `previewId`/SHA-256 hash validation, stale-data recheck, row-level review blocking, idempotent double-commit protection, and audit evidence. Guardian/staff/group phases remain separate.
 - Student CSV Preview is now available through multipart upload with raw-file SHA-256 identity, sanitized filename, byte size, durable 24-hour expiry, source-file matching at commit, and CSV parser/integration coverage. The same source identity contract remains to be applied to guardian, staff, branch, group, and enrollment import slices.
 - Branch CSV Preview + Commit is now implemented behind academy-owner scope with code normalization, duplicate/review blocking, durable source identity, 24-hour expiry, stale-code recheck, and audit evidence; CI review is pending before it becomes part of main.
+- Staff CSV Preview + Commit and Guardian/Guardian Link CSV Preview + Commit are implemented as the next slices. Staff uses invitation-first onboarding and never imports or stores a password; both slices use source identity, 24-hour expiry, stale-data checks, review blocking, idempotency, and audit evidence. CI review is pending.
 - The living product reference is [BUSINESS_PRODUCT_DIRECTION_2026-10-11.md](../docs/BUSINESS_PRODUCT_DIRECTION_2026-10-11.md).
 
 ### Phase 1 authorization contract — completed locally on `chore/phase1-authorization-contracts`
