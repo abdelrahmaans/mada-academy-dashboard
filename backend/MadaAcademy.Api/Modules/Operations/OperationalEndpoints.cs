@@ -145,6 +145,8 @@ public static class OperationalEndpoints
 
             if (!CanAccessAttendanceSession(user, session) && !await HasSupervisionAccess(db, user, session, requireAttendance: true, cancellationToken))
                 return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
+            if (user.IsInRole("R04_INSTRUCTOR") && !IsAssignedInstructor(user, session))
+                return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
             if (!CanWriteAttendance(user))
                 return Problem(403, "ATTENDANCE_WRITE_FORBIDDEN", "Only assigned instructors or branch managers can record attendance.");
             if (session.Status is "CANCELLED" or "COMPLETED")
