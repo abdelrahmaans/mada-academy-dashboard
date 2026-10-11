@@ -71,7 +71,7 @@
 
 ### Product implementation slice — academy onboarding and enrollment metering
 
-1. **Bulk import contract:** Student, Branch, Staff, and Guardian CSV Preview + Commit are merged. **Course Template and Group CSV Preview + Commit are implemented pending CI review;** after this slice, implement Enrollments CSV with ACTIVE/WAITLISTED capacity rules.
+1. **Bulk import contract:** Student, Branch, Staff, Guardian, Course Template, and Group CSV Preview + Commit are merged. **Enrollment CSV Preview + Commit is implemented pending CI review;** it applies ordered ACTIVE/WAITLISTED capacity rules and creates no invoices. Next, add integration coverage and operational UX for import results and waitlist promotion.
 2. **Trial workspace:** real-data trial with tenant isolation, plan limits visible but non-destructive during trial, and explicit conversion to paid.
 3. **Active student meter:** **partially implemented** in Executive Dashboard and Operational Reports; remaining work is plan-limit evaluation and an explicit billing meter contract.
 4. **Branch/staff plan limits:** introduce plan limits for active branches and staff/instructors, with clear non-destructive warnings before enforcement.
