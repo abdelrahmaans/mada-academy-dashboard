@@ -180,10 +180,10 @@ public static class LeadEndpoints
             var lead = await db.Leads.FirstOrDefaultAsync(l => l.Id == id && l.TenantId == scope.TenantId && (scope.BranchId == null || l.BranchId == scope.BranchId.Value), cancellationToken);
             if (lead is null) return Problem(404, "LEAD_NOT_FOUND", "Lead not found in current scope.");
 
-            var allowedStatuses = new[] { "NEW", "CONTACTED", "INTERESTED", "REGISTERED", "ARCHIVED" };
+            var allowedStatuses = new[] { "NEW", "CONTACTED", "INTERESTED", "REGISTERED", "WAITLISTED", "ARCHIVED" };
             var newStatus = request.Status?.ToUpperInvariant();
             if (newStatus == null || !allowedStatuses.Contains(newStatus))
-                return Problem(400, "INVALID_STATUS", "Status must be NEW, CONTACTED, INTERESTED, REGISTERED, or ARCHIVED.");
+                return Problem(400, "INVALID_STATUS", "Status must be NEW, CONTACTED, INTERESTED, WAITLISTED, REGISTERED, or ARCHIVED.");
             if (newStatus == "REGISTERED" && string.Equals(lead.Channel, "LANDING_DEMO", StringComparison.OrdinalIgnoreCase))
                 return Problem(400, "DEMO_REQUEST_NOT_STUDENT", "A SaaS demo request cannot be marked as student registration.");
 
@@ -230,6 +230,7 @@ public static class LeadEndpoints
             var courseOfferingId = request.CourseOfferingId ?? lead.CourseOfferingId;
             CourseOffering? offering = null;
             CourseTemplate? template = null;
+            var waitlisted = false;
 
             if (courseOfferingId.HasValue)
             {
@@ -238,7 +239,8 @@ public static class LeadEndpoints
 
                 template = await db.CourseTemplates.FirstOrDefaultAsync(t => t.Id == offering.CourseTemplateId, cancellationToken);
                 var enrolledCount = await db.StudentEnrollments.CountAsync(e => e.CourseOfferingId == offering.Id && e.Status == "ACTIVE", cancellationToken);
-                if (enrolledCount >= offering.MaxStudents)
+                waitlisted = enrolledCount >= offering.MaxStudents;
+                if (waitlisted && !request.JoinWaitlistIfFull)
                     return Problem(400, "GROUP_FULL", "Selected course group has reached maximum capacity.");
             }
 
@@ -266,11 +268,11 @@ public static class LeadEndpoints
                     StudentId = student.Id,
                     CourseOfferingId = offering.Id,
                     FinalPricePiastres = finalPrice,
-                    Status = "ACTIVE"
+                    Status = waitlisted ? "WAITLISTED" : "ACTIVE"
                 };
                 db.StudentEnrollments.Add(enrollment);
 
-                if (request.CreateInvoice)
+                if (request.CreateInvoice && !waitlisted)
                 {
                     var count = await db.Invoices.CountAsync(i => i.TenantId == scope.TenantId, cancellationToken);
                     var branch = await db.Branches.FindAsync([lead.BranchId], cancellationToken);
@@ -301,7 +303,7 @@ public static class LeadEndpoints
                 }
             }
 
-            lead.Status = "REGISTERED";
+            lead.Status = waitlisted ? "WAITLISTED" : "REGISTERED";
             lead.ConvertedStudentId = student.Id;
 
             await db.SaveChangesAsync(cancellationToken);
@@ -312,7 +314,8 @@ public static class LeadEndpoints
                 enrollment?.Id,
                 invoice?.Id,
                 invoice?.InvoiceNumber,
-                student.FullName)));
+                student.FullName,
+                enrollment?.Status ?? "ACTIVE")));
         });
 
         group.MapPost("/students/register", async Task<Results<Ok<ApiEnvelope<ConvertLeadResponse>>, ProblemHttpResult>> (
@@ -334,6 +337,7 @@ public static class LeadEndpoints
 
             CourseOffering? offering = null;
             CourseTemplate? template = null;
+            var waitlisted = false;
 
             if (request.CourseOfferingId.HasValue)
             {
@@ -342,7 +346,8 @@ public static class LeadEndpoints
 
                 template = await db.CourseTemplates.FirstOrDefaultAsync(t => t.Id == offering.CourseTemplateId, cancellationToken);
                 var enrolledCount = await db.StudentEnrollments.CountAsync(e => e.CourseOfferingId == offering.Id && e.Status == "ACTIVE", cancellationToken);
-                if (enrolledCount >= offering.MaxStudents)
+                waitlisted = enrolledCount >= offering.MaxStudents;
+                if (waitlisted && !request.JoinWaitlistIfFull)
                     return Problem(400, "GROUP_FULL", "Selected course group has reached maximum capacity.");
             }
 
@@ -370,11 +375,11 @@ public static class LeadEndpoints
                     StudentId = student.Id,
                     CourseOfferingId = offering.Id,
                     FinalPricePiastres = finalPrice,
-                    Status = "ACTIVE"
+                    Status = waitlisted ? "WAITLISTED" : "ACTIVE"
                 };
                 db.StudentEnrollments.Add(enrollment);
 
-                if (request.CreateInvoice)
+                if (request.CreateInvoice && !waitlisted)
                 {
                     var count = await db.Invoices.CountAsync(i => i.TenantId == scope.TenantId, cancellationToken);
                     var branch = await db.Branches.FindAsync([branchId.Value], cancellationToken);
@@ -413,7 +418,8 @@ public static class LeadEndpoints
                 enrollment?.Id,
                 invoice?.Id,
                 invoice?.InvoiceNumber,
-                student.FullName)));
+                student.FullName,
+                enrollment?.Status ?? "ACTIVE")));
         });
 
         return endpoints;
@@ -444,8 +450,8 @@ public sealed record LeadListResponse(IReadOnlyList<LeadItem> Items, int Total, 
 public sealed record LeadItem(Guid Id, Guid BranchId, string ChildName, string ParentName, string Phone, string Channel, Guid? CampaignId, string? Notes, string Status, Guid? CourseOfferingId, string? CourseName, Guid? ConvertedStudentId, DateTimeOffset CreatedAt);
 public sealed record CreateLeadRequest(string ChildName, string ParentName, string Phone, string? Channel, string? Notes, Guid? CourseOfferingId, Guid? BranchId, Guid? CampaignId);
 public sealed record UpdateLeadStatusRequest(string Status);
-public sealed record ConvertLeadRequest(Guid? CourseOfferingId, DateOnly? DateOfBirth, int? DiscountPercent, bool CreateInvoice = true);
-public sealed record DirectStudentRegistrationRequest(string FullName, string? Phone, Guid? BranchId, Guid? CourseOfferingId, DateOnly? DateOfBirth, int? DiscountPercent, bool CreateInvoice = true);
-public sealed record ConvertLeadResponse(Guid StudentId, Guid? LeadId, Guid? EnrollmentId, Guid? InvoiceId, string? InvoiceNumber, string StudentName);
+public sealed record ConvertLeadRequest(Guid? CourseOfferingId, DateOnly? DateOfBirth, int? DiscountPercent, bool CreateInvoice = true, bool JoinWaitlistIfFull = true);
+public sealed record DirectStudentRegistrationRequest(string FullName, string? Phone, Guid? BranchId, Guid? CourseOfferingId, DateOnly? DateOfBirth, int? DiscountPercent, bool CreateInvoice = true, bool JoinWaitlistIfFull = true);
+public sealed record ConvertLeadResponse(Guid StudentId, Guid? LeadId, Guid? EnrollmentId, Guid? InvoiceId, string? InvoiceNumber, string StudentName, string EnrollmentStatus);
 public sealed record PublicLeadRequest(string Kind, string Name, string Email, string Phone, string? Company = null, string? TeamSize = null, string? TrainingNeed = null, string? Track = null, string? Goal = null, string? AcademyName = null, string? BranchCount = null, string? OperationalNeed = null);
 public sealed record PublicLeadReceipt(Guid LeadId, string Kind);

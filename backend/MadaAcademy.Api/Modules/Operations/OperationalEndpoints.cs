@@ -116,7 +116,7 @@ public static class OperationalEndpoints
             var session = await FindScopedSession(db, sessionId, scope, cancellationToken);
             if (session is null) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
 
-            if (!user.IsInRole("R02_BRANCH_MANAGER") && !IsAssignedInstructor(user, session) && !await HasSupervisionAccess(db, user, session, requireAttendance: true, cancellationToken)) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
+            if (!CanAccessAttendanceSession(user, session) && !await HasSupervisionAccess(db, user, session, requireAttendance: true, cancellationToken)) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
 
             var rows = await LoadAttendance(db, session, cancellationToken);
             return TypedResults.Ok(new ApiEnvelope<AttendanceResponse>(
@@ -131,7 +131,7 @@ public static class OperationalEndpoints
             CancellationToken cancellationToken) =>
         {
             if (!CanWriteAttendance(user))
-                return Problem(403, "ATTENDANCE_WRITE_FORBIDDEN", "Only instructors or branch managers can record attendance.");
+                return Problem(403, "ATTENDANCE_WRITE_FORBIDDEN", "Only assigned instructors or branch managers can record attendance.");
             var records = request.Records;
             if (records is null || records.Count == 0)
                 return Problem(400, "ATTENDANCE_REQUIRED", "At least one attendance record is required.");
@@ -142,7 +142,8 @@ public static class OperationalEndpoints
             var session = await FindScopedSession(db, sessionId, scope, cancellationToken);
             if (session is null) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
 
-            if (!user.IsInRole("R02_BRANCH_MANAGER") && !IsAssignedInstructor(user, session)) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
+            if (!CanAccessAttendanceSession(user, session) && !await HasSupervisionAccess(db, user, session, requireAttendance: true, cancellationToken))
+                return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
             if (session.Status is "CANCELLED" or "COMPLETED")
                 return Problem(409, "SESSION_NOT_EDITABLE", "Attendance can only be recorded for an active scheduled session.");
 
@@ -388,8 +389,12 @@ public static class OperationalEndpoints
             (scope.BranchId == null || session.BranchId == scope.BranchId.Value), cancellationToken);
 
     private static bool IsAssignedInstructor(ClaimsPrincipal user, AcademySession session) =>
+        user.IsInRole("R04_INSTRUCTOR") &&
         Guid.TryParse(user.FindFirstValue("sub"), out var actorId) &&
         (session.InstructorId == actorId || session.SubstituteInstructorId == actorId);
+
+    private static bool CanAccessAttendanceSession(ClaimsPrincipal user, AcademySession session) =>
+        user.IsInRole("R02_BRANCH_MANAGER") || IsAssignedInstructor(user, session);
 
     private static async Task<bool> HasSupervisionAccess(MadaDbContext db, ClaimsPrincipal user, AcademySession session, bool requireAttendance, CancellationToken cancellationToken)
     {

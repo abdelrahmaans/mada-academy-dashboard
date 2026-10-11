@@ -303,6 +303,7 @@ public sealed class FinanceApiTests
         var secretaryMe = await secretaryClient.GetStringAsync("/api/v1/me");
         Assert.Contains("invoices.create", secretaryMe, StringComparison.Ordinal);
         Assert.Contains("payments.create", secretaryMe, StringComparison.Ordinal);
+        Assert.DoesNotContain("finance.write", secretaryMe, StringComparison.Ordinal);
         Assert.DoesNotContain("finance.expenses.read", secretaryMe, StringComparison.Ordinal);
         Assert.DoesNotContain("reports.read", secretaryMe, StringComparison.Ordinal);
         var accountantMe = await accountantClient.GetStringAsync("/api/v1/me");

@@ -79,6 +79,24 @@ Follow-up fixes prepared after PR #41: analytics is now loaded only when both op
 
 ## Next milestone and open issues
 
+### Product direction — academy SaaS and enrollment metering
+
+- The product decision is now monthly multi-academy SaaS for children's Programming/Robotics/STEM/Languages academies and similar branch/group/instructor businesses.
+- Subscription packaging counts active students, branches, and staff/instructors; guardians and students are not staff seats.
+- An active student means a student with an `ACTIVE` enrollment in a current group. Waitlisted, completed, held, historical-only, and marketing-only records do not count.
+- Trial uses the academy's real imported data with full product access, then requires an explicit paid conversion; it is not a Demo-data-only trial.
+- Group-full conversion now supports `WAITLISTED` enrollment without issuing an enrollment invoice; promotion to `ACTIVE` remains the next implementation slice.
+- The living product reference is [BUSINESS_PRODUCT_DIRECTION_2026-10-11.md](../docs/BUSINESS_PRODUCT_DIRECTION_2026-10-11.md).
+
+### Phase 1 authorization contract — completed locally on `chore/phase1-authorization-contracts`
+
+- Resolved the R03 attendance contract: R03 is read-only, limited to active supervision assignments with attendance access; R04 remains limited to assigned/substitute sessions for writes.
+- Added integration coverage for assigned R03 read access and denied R03 attendance writes.
+- Strengthened R05 finance boundary coverage: R05 may create invoices/payments but never receives generic `finance.write` or accountant-only expense/report permissions.
+- Added route-registry contract coverage for role home paths, navigation paths, and finance navigation boundaries.
+- Local frontend validation passed: Vitest **58/58**, `pnpm check`, `pnpm build`, and `git diff --check`.
+- Backend integration tests were not runnable in the current sandbox because the .NET SDK is unavailable; they must run in CI/GitHub before merge.
+
 The P1/P2 consumer acceptance, Finance local acceptance, first page-decomposition wave, frontend scope/finance tests, refresh-token reuse test, auth module extraction, R00 follow-ups, and the single-instance limiter guard are complete. Production-readiness evidence remains open: a shared limiter with two-instance/load evidence before horizontal scaling, private-bucket upload/download smoke, durable object backup/restore, and deployed API/frontend staging acceptance.
 
 Open implementation blockers and product debt:

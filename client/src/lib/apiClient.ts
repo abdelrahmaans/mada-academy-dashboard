@@ -632,7 +632,7 @@ export type LeadRecord = {
   channel: string;
   campaignId: string | null;
   notes: string | null;
-  status: "NEW" | "CONTACTED" | "INTERESTED" | "REGISTERED" | "ARCHIVED";
+  status: "NEW" | "CONTACTED" | "INTERESTED" | "REGISTERED" | "WAITLISTED" | "ARCHIVED";
   courseOfferingId: string | null;
   courseName: string | null;
   convertedStudentId: string | null;
@@ -669,6 +669,7 @@ export type ConvertLeadInput = {
   dateOfBirth?: string;
   discountPercent?: number;
   createInvoice?: boolean;
+  joinWaitlistIfFull?: boolean;
 };
 
 export type DirectStudentInput = {
@@ -679,6 +680,7 @@ export type DirectStudentInput = {
   dateOfBirth?: string;
   discountPercent?: number;
   createInvoice?: boolean;
+  joinWaitlistIfFull?: boolean;
 };
 
 export type ConvertLeadResult = {
@@ -688,4 +690,5 @@ export type ConvertLeadResult = {
   invoiceId?: string;
   invoiceNumber?: string;
   studentName: string;
+  enrollmentStatus: "ACTIVE" | "WAITLISTED";
 };
