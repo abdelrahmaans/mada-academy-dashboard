@@ -125,6 +125,7 @@ app.MapMadaRoleEndpoints();
 app.MapMadaBranchEndpoints();
 app.MapMadaBranchBulkImportEndpoints();
 app.MapMadaStaffGuardianBulkImportEndpoints();
+app.MapMadaCourseGroupBulkImportEndpoints();
 app.MapMadaClassroomEndpoints();
 app.MapMadaClassroomResourceEndpoints();
 app.MapMadaClassroomSchedulingEndpoints();
