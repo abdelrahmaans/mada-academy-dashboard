@@ -29,9 +29,11 @@ public static class BulkImportEndpoints
     private static async Task<IResult> PreviewStudentsAsync(StudentImportPreviewRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken) =>
         await CreatePreviewAsync(request.Rows, null, user, db, cancellationToken);
 
-    private static async Task<IResult> PreviewStudentsCsvAsync(IFormFile? file, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    private static async Task<IResult> PreviewStudentsCsvAsync(HttpRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
     {
         if (!CanImport(user)) return ImportForbidden();
+        var form = await request.ReadFormAsync(cancellationToken);
+        var file = form.Files.GetFile("file");
         if (file is null || file.Length == 0) return Results.ValidationProblem(new Dictionary<string, string[]> { ["file"] = ["A non-empty CSV file is required."] });
         if (file.Length > MaxCsvBytes) return Results.ValidationProblem(new Dictionary<string, string[]> { ["file"] = [$"CSV files are limited to {MaxCsvBytes / (1024 * 1024)} MB."] });
         if (!string.Equals(Path.GetExtension(file.FileName), ".csv", StringComparison.OrdinalIgnoreCase)) return Results.ValidationProblem(new Dictionary<string, string[]> { ["file"] = ["Only .csv files are accepted."] });
