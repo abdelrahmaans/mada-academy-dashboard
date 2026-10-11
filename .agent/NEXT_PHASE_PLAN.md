@@ -73,9 +73,9 @@
 
 1. **Bulk import contract:** real academy data import for students, guardians, staff/instructors, branches, and groups with preview, duplicate detection, error report, and explicit create/update semantics.
 2. **Trial workspace:** real-data trial with tenant isolation, plan limits visible but non-destructive during trial, and explicit conversion to paid.
-3. **Active student meter:** count distinct students with `ACTIVE` enrollment in a current group; exclude waitlisted, completed, on-hold, historical-only, and lead-only records.
+3. **Active student meter:** **partially implemented** in Executive Dashboard and Operational Reports; remaining work is plan-limit evaluation and an explicit billing meter contract.
 4. **Branch/staff plan limits:** introduce plan limits for active branches and staff/instructors, with clear non-destructive warnings before enforcement.
-5. **Waitlist promotion:** promote `WAITLISTED` enrollment to `ACTIVE` when a group seat opens, then create or activate the related invoice according to policy.
+5. **Waitlist promotion:** **implemented without billing** through the scoped activation endpoint; next step is invoice activation/creation policy after finance approval.
 6. **Academy segment onboarding:** seed templates and onboarding copy for Programming, Robotics, STEM, Languages, on-site, and online delivery.
 
 1. **Private storage:** حقن الأسرار في بيئة staging وتشغيل authenticated storage smoke test؛ الأدلة المحلية ليست بديلًا عن ذلك.

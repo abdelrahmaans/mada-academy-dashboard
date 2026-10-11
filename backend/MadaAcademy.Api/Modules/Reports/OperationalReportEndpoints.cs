@@ -58,7 +58,8 @@ public static class OperationalReportEndpoints
         if (effectiveBranch.HasValue && !await db.Branches.AnyAsync(x => x.Id == effectiveBranch && x.TenantId == tenantId, cancellationToken)) return NotFound();
 
         var students = db.Students.AsNoTracking()
-            .Where(x => x.TenantId == tenantId && x.Status == "ACTIVE" && (!effectiveBranch.HasValue || x.BranchId == effectiveBranch));
+            .Where(x => x.TenantId == tenantId && x.Status == "ACTIVE" && (!effectiveBranch.HasValue || x.BranchId == effectiveBranch))
+            .Where(x => db.StudentEnrollments.Any(enrollment => enrollment.StudentId == x.Id && enrollment.Status == "ACTIVE"));
         var studentIds = students.Select(x => x.Id);
         var enrollments = db.StudentEnrollments.AsNoTracking()
             .Where(x => x.Status == "ACTIVE" && studentIds.Contains(x.StudentId));

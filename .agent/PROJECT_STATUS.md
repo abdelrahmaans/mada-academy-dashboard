@@ -86,6 +86,8 @@ Follow-up fixes prepared after PR #41: analytics is now loaded only when both op
 - An active student means a student with an `ACTIVE` enrollment in a current group. Waitlisted, completed, held, historical-only, and marketing-only records do not count.
 - Trial uses the academy's real imported data with full product access, then requires an explicit paid conversion; it is not a Demo-data-only trial.
 - Group-full conversion now supports `WAITLISTED` enrollment without issuing an enrollment invoice; promotion to `ACTIVE` remains the next implementation slice.
+- Waitlist promotion is now implemented through the scoped activation endpoint with capacity re-check and `STUDENT_ENROLLMENT_ACTIVATED` audit evidence; it does not create an invoice yet.
+- Executive and operational student metrics now count distinct students with an `ACTIVE` enrollment instead of all student records.
 - The living product reference is [BUSINESS_PRODUCT_DIRECTION_2026-10-11.md](../docs/BUSINESS_PRODUCT_DIRECTION_2026-10-11.md).
 
 ### Phase 1 authorization contract — completed locally on `chore/phase1-authorization-contracts`

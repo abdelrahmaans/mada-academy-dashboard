@@ -46,6 +46,7 @@ public static class OperationalEndpoints
         operations.MapPut("/students/{studentId:guid}", UpdateStudentAsync);
         operations.MapGet("/students/{studentId:guid}/enrollments", ListStudentEnrollmentsAsync);
         operations.MapPost("/students/{studentId:guid}/enrollments", CreateStudentEnrollmentAsync);
+        operations.MapPost("/students/{studentId:guid}/enrollments/{enrollmentId:guid}/activate", ActivateWaitlistedEnrollmentAsync);
         operations.MapDelete("/students/{studentId:guid}/enrollments/{enrollmentId:guid}", CancelStudentEnrollmentAsync);
 
         operations.MapGet("/sessions", async Task<Results<Ok<ApiEnvelope<SessionListResponse>>, ProblemHttpResult>> (
@@ -334,6 +335,44 @@ public static class OperationalEndpoints
         db.AuditEvents.Add(new AuditEvent { ActorUserId = actorId, TenantId = scope.TenantId, BranchId = scope.BranchId, Action = "STUDENT_ENROLLMENT_CANCELLED", TargetType = "STUDENT_ENROLLMENT", TargetId = enrollment.Id.ToString(), MetadataJson = JsonSerializer.Serialize(new { studentId, enrollment.CourseOfferingId }) });
         await db.SaveChangesAsync(cancellationToken);
         return Results.NoContent();
+    }
+
+    private static async Task<IResult> ActivateWaitlistedEnrollmentAsync(Guid studentId, Guid enrollmentId, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!CanManageStudents(user)) return Problem(403, "STUDENT_WRITE_FORBIDDEN", "The current role cannot manage student enrollments.");
+        if (!TryGetScope(user, out var scope, out var scopeError)) return scopeError;
+        if (!scope.BranchId.HasValue) return Problem(403, "BRANCH_SCOPE_REQUIRED", "A branch scope is required for this operation.");
+
+        var enrollment = await (from item in db.StudentEnrollments
+                                join student in db.Students on item.StudentId equals student.Id
+                                join offering in db.CourseOfferings on item.CourseOfferingId equals offering.Id
+                                where item.Id == enrollmentId && item.StudentId == studentId && item.Status == "WAITLISTED"
+                                    && student.TenantId == scope.TenantId && student.BranchId == scope.BranchId.Value
+                                    && offering.TenantId == scope.TenantId && offering.BranchId == scope.BranchId.Value
+                                    && offering.Status != "ARCHIVED" && offering.Status != "CANCELLED"
+                                select new { Enrollment = item, Offering = offering }).SingleOrDefaultAsync(cancellationToken);
+        if (enrollment is null) return Problem(404, "WAITLISTED_ENROLLMENT_NOT_FOUND", "The waitlisted enrollment was not found in the current branch.");
+
+        var activeCount = await db.StudentEnrollments.CountAsync(item => item.CourseOfferingId == enrollment.Offering.Id && item.Status == "ACTIVE", cancellationToken);
+        if (activeCount >= enrollment.Offering.MaxStudents) return Conflict("GROUP_CAPACITY_REACHED", "The selected group still has no available seat.");
+
+        var actorId = Actor(user);
+        if (!actorId.HasValue) return Problem(403, "ACTOR_REQUIRED", "The authenticated staff identity is missing.");
+        enrollment.Enrollment.Status = "ACTIVE";
+        enrollment.Enrollment.UpdatedAt = DateTimeOffset.UtcNow;
+        db.AuditEvents.Add(new AuditEvent
+        {
+            ActorUserId = actorId,
+            TenantId = scope.TenantId,
+            BranchId = scope.BranchId,
+            Action = "STUDENT_ENROLLMENT_ACTIVATED",
+            TargetType = "STUDENT_ENROLLMENT",
+            TargetId = enrollment.Enrollment.Id.ToString(),
+            MetadataJson = JsonSerializer.Serialize(new { studentId, courseOfferingId = enrollment.Offering.Id, from = "WAITLISTED", to = "ACTIVE" })
+        });
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Results.Ok(new { data = new { enrollmentId, studentId, courseOfferingId = enrollment.Offering.Id, status = enrollment.Enrollment.Status, activeEnrollmentCount = activeCount + 1 } });
     }
 
     private static async Task<List<SessionDetails>> ProjectSessionsAsync(

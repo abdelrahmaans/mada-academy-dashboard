@@ -12,6 +12,7 @@ const STATUS_LABEL: Record<LeadRecord["status"], string> = {
   CONTACTED: "تم التواصل",
   INTERESTED: "مهتم",
   REGISTERED: "تم التسجيل",
+  WAITLISTED: "قائمة انتظار",
   ARCHIVED: "مؤرشف",
 };
 
@@ -20,6 +21,7 @@ const STATUS_TONE: Record<LeadRecord["status"], string> = {
   CONTACTED: "contacted",
   INTERESTED: "interested",
   REGISTERED: "enrolled",
+  WAITLISTED: "waitlisted",
   ARCHIVED: "archived",
 };
 

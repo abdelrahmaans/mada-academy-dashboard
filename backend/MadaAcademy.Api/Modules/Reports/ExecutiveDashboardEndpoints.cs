@@ -60,7 +60,9 @@ public static class ExecutiveDashboardEndpoints
         var enrollments = await db.StudentEnrollments.AsNoTracking()
             .Join(db.Students.AsNoTracking(), enrollment => enrollment.StudentId, student => student.Id, (enrollment, student) => new { enrollment, student })
             .Where(item => item.student.TenantId == tenantId && branchIds.Contains(item.student.BranchId) && item.student.Status == "ACTIVE" && item.enrollment.Status == "ACTIVE")
-            .GroupBy(item => item.student.BranchId)
+            .Select(item => new { item.student.BranchId, item.enrollment.StudentId })
+            .Distinct()
+            .GroupBy(item => item.BranchId)
             .Select(group => new { BranchId = group.Key, Count = group.Count() })
             .ToDictionaryAsync(item => item.BranchId, item => item.Count, cancellationToken);
 

@@ -597,6 +597,7 @@ export const apiClient = {
   convertLead: (id: string, input: ConvertLeadInput) => request<ConvertLeadResult>(`/leads/${id}/convert`, { method: "POST", body: JSON.stringify(input) }),
   registerStudent: (input: DirectStudentInput) => request<ConvertLeadResult>("/students/register", { method: "POST", body: JSON.stringify(input) }),
   listSchedulingGroups: () => request<{ items: SchedulingGroupRecord[]; total: number }>("/scheduling/groups"),
+  activateWaitlistedEnrollment: (studentId: string, enrollmentId: string) => request<ActivateEnrollmentResult>(`/students/${studentId}/enrollments/${enrollmentId}/activate`, { method: "POST" }),
   logout: async () => {
     const refreshToken = localStorage.getItem(REFRESH_KEY);
     if (refreshToken && accessToken) await request<void>("/auth/logout", { method: "POST", body: JSON.stringify({ refreshToken }) }, false).catch(() => undefined);
@@ -691,4 +692,12 @@ export type ConvertLeadResult = {
   invoiceNumber?: string;
   studentName: string;
   enrollmentStatus: "ACTIVE" | "WAITLISTED";
+};
+
+export type ActivateEnrollmentResult = {
+  enrollmentId: string;
+  studentId: string;
+  courseOfferingId: string;
+  status: "ACTIVE";
+  activeEnrollmentCount: number;
 };
