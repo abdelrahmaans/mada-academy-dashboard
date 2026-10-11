@@ -1,8 +1,9 @@
 # Mada Academy — Project Status
 
-**As of:** 10 October 2026
-**Verified Git state:** `main` is pushed to origin and includes merged PRs #92, #95, and #96. The current Marketing workflow changes are prepared locally for the next focused PR.
-**Current delivery:** the shared role registry and the migrated Schedule/Reports Preview/Secretary surfaces are merged. Remaining shell debt is limited to legacy live page wrappers that still render role-specific sidebar components and should be migrated in a follow-up slice.
+**As of:** 11 October 2026
+**Verified Git state:** `main` is pushed to origin at `8132c0b` and has no local changes or open PRs. The latest merged delivery is PR #106; the current merged sequence is PRs #99–#106.
+**Current delivery:** the SaaS onboarding bulk-import chain is merged through Enrollments: students, branches, staff, guardians/links, course templates, groups/sessions, and enrollments with ACTIVE/WAITLISTED capacity assignment. The next work is operational UX/integration coverage for import results and waitlist promotion, followed by trial/metering limits.
+**Canonical quick snapshot:** [`docs/REPOSITORY_CURRENT_STATE.md`](../docs/REPOSITORY_CURRENT_STATE.md).
 **Stack:** React + Vite + TypeScript; ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions.
 
 **Security follow-up:** [Issue #98 — rotate historical Supabase/PostgreSQL credentials](https://github.com/abdelrahmaans/mada-academy-dashboard/issues/98) tracks provider credential rotation, environment/log audit, optional Git history purge, and re-scanning. The current working tree is sanitized; rotation and history rewriting require explicit account/repository authorization and are not performed automatically.
@@ -41,7 +42,7 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 
 ## CI and verified baseline
 
-The current merged baseline includes PR #88 for Angular R08 plus PRs #89 and #90 for Angular Finance R06. Their CI passed the relevant Angular Playwright, critical Playwright, Frontend Checks, and Vercel checks. R06/R08/R09 acceptance covers scoped access, published evaluations where applicable, partial failures, and no-Demo LIVE behavior. No real deployment secrets are stored in Git.
+The current merged baseline includes the earlier Angular/Finance acceptance work plus PRs #99–#106. PRs #104, #105, and #106 passed Backend Integration, Playwright, Angular R08 Playwright, and Vercel checks before merge. No real deployment secrets are stored in Git. The Sandbox does not provide the .NET SDK, so backend validation is performed by GitHub CI.
 
 ## LIVE acceptance evidence — 4 October 2026
 
@@ -88,12 +89,11 @@ Follow-up fixes prepared after PR #41: analytics is now loaded only when both op
 - Group-full conversion now supports `WAITLISTED` enrollment without issuing an enrollment invoice; promotion to `ACTIVE` remains the next implementation slice.
 - Waitlist promotion is now implemented through the scoped activation endpoint with capacity re-check and `STUDENT_ENROLLMENT_ACTIVATED` audit evidence; it does not create an invoice yet.
 - Executive and operational student metrics now count distinct students with an `ACTIVE` enrollment instead of all student records.
-- Bulk Import Preview and student Commit are now available with tenant/branch scope checks, durable `previewId`/SHA-256 hash validation, stale-data recheck, row-level review blocking, idempotent double-commit protection, and audit evidence. Guardian/staff/group phases remain separate.
-- Student CSV Preview is now available through multipart upload with raw-file SHA-256 identity, sanitized filename, byte size, durable 24-hour expiry, source-file matching at commit, and CSV parser/integration coverage. The same source identity contract remains to be applied to guardian, staff, branch, group, and enrollment import slices.
-- Branch CSV Preview + Commit is now implemented behind academy-owner scope with code normalization, duplicate/review blocking, durable source identity, 24-hour expiry, stale-code recheck, and audit evidence; CI review is pending before it becomes part of main.
-- Staff CSV Preview + Commit and Guardian/Guardian Link CSV Preview + Commit are implemented as the next slices. Staff uses invitation-first onboarding and never imports or stores a password; both slices use source identity, 24-hour expiry, stale-data checks, review blocking, idempotency, and audit evidence. CI review is pending.
-- Course Template and Group CSV Preview + Commit are implemented as the next scheduling slice. Template imports create DRAFT templates; group imports validate dependencies and generate CourseOfferings plus scheduled AcademySessions. Both use source identity, 24-hour expiry, stale checks, review blocking, idempotency, and audit evidence. CI review is pending.
-- Enrollment CSV Preview + Commit is implemented as the next slice. It evaluates rows in CSV order, assigns ACTIVE until group capacity is reached, assigns later valid rows WAITLISTED, creates no invoices, and rejects stale capacity/dependency changes at commit. Source identity, 24-hour expiry, review blocking, idempotency, and audit evidence are included; CI review is pending.
+- Bulk Import is now merged through PRs #101–#106. The chain covers student, branch, staff, guardian/link, course-template, group/session, and enrollment CSV Preview + Commit contracts.
+- Every merged CSV slice uses tenant/branch scope checks, durable `previewId`/SHA-256 validation, sanitized source-file identity, 24-hour expiry, stale-data recheck, row-level review blocking, idempotent double-commit protection, and audit evidence.
+- Staff import is invitation-first: it creates `INVITED` staff and invitation hashes without accepting or storing passwords. Guardian import creates parent accounts and `GuardianStudentLink` records.
+- Group import creates `CourseOffering` and generated `AcademySession` rows. Enrollment import evaluates rows in CSV order, assigns `ACTIVE` until capacity, assigns later valid rows `WAITLISTED`, creates no invoices, and rejects capacity/dependency changes at commit.
+- Latest merged contracts: [BULK_IMPORT_CONTRACT.md](../backend/BULK_IMPORT_CONTRACT.md), [STAFF_GUARDIAN_BULK_IMPORT_CONTRACT.md](../backend/STAFF_GUARDIAN_BULK_IMPORT_CONTRACT.md), [COURSE_GROUP_BULK_IMPORT_CONTRACT.md](../backend/COURSE_GROUP_BULK_IMPORT_CONTRACT.md), and [ENROLLMENT_BULK_IMPORT_CONTRACT.md](../backend/ENROLLMENT_BULK_IMPORT_CONTRACT.md).
 - The living product reference is [BUSINESS_PRODUCT_DIRECTION_2026-10-11.md](../docs/BUSINESS_PRODUCT_DIRECTION_2026-10-11.md).
 
 ### Phase 1 authorization contract — completed locally on `chore/phase1-authorization-contracts`

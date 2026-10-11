@@ -1,6 +1,6 @@
 # Mada Academy — Agent Context
 
-**Current baseline:** `main` includes merged PRs #92, #95, and #96 (10 October 2026); current uncommitted work adds persisted Marketing Campaigns/Content Items and Lead attribution.
+**Current baseline:** `main` is clean and pushed at `8132c0b` (11 October 2026), with PRs #99–#106 merged and no open PRs. The SaaS onboarding bulk-import chain is complete through Enrollment CSV: students, branches, invitation-first staff, guardians/links, course templates, groups/sessions, and ACTIVE/WAITLISTED enrollments.
 **Repository:** `abdelrahmaans/mada-academy-dashboard`
 
 ## What this product is
@@ -70,7 +70,7 @@ Route mapping and guards are in `client/src/App.tsx`; role home mapping is in `c
 
 ## Current reality
 
-Completed vertical slices include authentication/JWT, role and scope guards, students, sessions, attendance, evaluations and publication, approvals, Finance invoice/payment/expense records, persisted Marketing Leads, linked consumer reads, shared styling, and browser E2E.
+Completed vertical slices include authentication/JWT, role and scope guards, students, sessions, attendance, evaluations and publication, approvals, Finance invoice/payment/expense records, persisted Marketing Leads, linked consumer reads, shared styling, browser E2E, and the merged bulk-import chain through enrollments. CSV imports share previewId/hash, source-file identity, 24-hour expiry, stale-data checks, review blocking, idempotency, and audit evidence. Enrollment CSV assigns ACTIVE until group capacity and WAITLISTED afterward without creating invoices.
 
 Known boundaries are production secret/storage configuration, deployed staging smoke, backup/restore, real SMS delivery, password recovery, finer Finance pending states, and remaining legacy shell wrappers. Phase 1 authorization contracts are now aligned locally, including read-only scoped R03 supervision and R05 finance boundaries. These are documented in `PROJECT_STATUS.md` and `NEXT_PHASE_PLAN.md`.
 
@@ -94,10 +94,10 @@ Use a disposable PostgreSQL database for integration tests. Never point tests at
 
 ## Safe Agent workflow
 
-1. Read this file, `PROJECT_STATUS.md`, and `NEXT_PHASE_PLAN.md`.
+1. Read `../docs/REPOSITORY_CURRENT_STATE.md`, this file, `PROJECT_STATUS.md`, and `NEXT_PHASE_PLAN.md`; their current snapshots override older historical paragraphs.
 2. Inspect the relevant contract, endpoint, entity, frontend client, page, and test together.
 3. Preserve current scope/security and visual conventions.
 4. Add tests for behavior and authorization changes.
 5. Run the validation commands.
 6. Work on a focused branch and open a PR against `main`.
-7. Update only current status/plan files when the truth changes.
+7. Update only current status/plan files when the truth changes, and keep the relevant `backend/*_CONTRACT.md` in sync with behavior.

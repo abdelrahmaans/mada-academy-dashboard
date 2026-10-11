@@ -1,8 +1,9 @@
 # خطة المرحلة القادمة — Mada Academy
 
-**تاريخ اللقطة:** 10 أكتوبر 2026
-**قاعدة العمل الحالية:** `main` بعد دمج PRs #92 و#95 و#96؛ آخر حالة موثقة يجب أن تتطابق مع `git log` قبل كل تسليم.
-**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وMarketing workflow persistence وPhase 1 authorization contract مغلقة على مستوى الكود المحلي. تظل private-storage/backup-restore/staging بوابات بيئية منفصلة، وتبقى بعض wrappers القديمة للـsidebars موجة تنظيف لاحقة. مصفوفة الأدوار النهائية موثقة في [ANGULAR_PARITY_MATRIX.md](../ANGULAR_PARITY_MATRIX.md).
+**تاريخ اللقطة:** 11 أكتوبر 2026
+**قاعدة العمل الحالية:** `main` عند `8132c0b` بعد دمج PRs #99–#106؛ لا توجد تغييرات محلية ولا PRs مفتوحة. أي agent يبدأ من `main` ويقرأ هذا الملف و`PROJECT_STATUS.md` باعتبارهما مصدر الحقيقة الحالي.
+**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وMarketing persistence وPhase 1 authorization وSaaS onboarding bulk-import chain مغلقة على مستوى الكود المدموج. تظل private-storage/backup-restore/staging بوابات بيئية منفصلة، وتبقى بعض wrappers القديمة للـsidebars موجة تنظيف لاحقة. مصفوفة الأدوار النهائية موثقة في [ANGULAR_PARITY_MATRIX.md](../ANGULAR_PARITY_MATRIX.md).
+**Quick snapshot:** [`docs/REPOSITORY_CURRENT_STATE.md`](../docs/REPOSITORY_CURRENT_STATE.md).
 
 ## Phase 1 authorization contract — result
 
@@ -71,7 +72,7 @@
 
 ### Product implementation slice — academy onboarding and enrollment metering
 
-1. **Bulk import contract:** Student, Branch, Staff, Guardian, Course Template, and Group CSV Preview + Commit are merged. **Enrollment CSV Preview + Commit is implemented pending CI review;** it applies ordered ACTIVE/WAITLISTED capacity rules and creates no invoices. Next, add integration coverage and operational UX for import results and waitlist promotion.
+1. **Bulk import contract — merged through PR #106:** Student, Branch, Staff, Guardian/Guardian Link, Course Template, Group/Session, and Enrollment CSV Preview + Commit are all on `main`. Enrollment assigns ordered `ACTIVE`/`WAITLISTED` statuses by capacity, creates no invoices, and rejects stale capacity changes. Next: add integration coverage and operational UX for import result review and waitlist promotion.
 2. **Trial workspace:** real-data trial with tenant isolation, plan limits visible but non-destructive during trial, and explicit conversion to paid.
 3. **Active student meter:** **partially implemented** in Executive Dashboard and Operational Reports; remaining work is plan-limit evaluation and an explicit billing meter contract.
 4. **Branch/staff plan limits:** introduce plan limits for active branches and staff/instructors, with clear non-destructive warnings before enforcement.
@@ -84,7 +85,7 @@
 4. **Distributed production gate:** استكمال shared-limiter/two-instance evidence قبل التوسع الأفقي؛ CORS وsingle-instance startup guard مطبقان ومختبران داخل الكود.
 5. **Marketing:** Campaigns وContent Items أصبحت persisted عبر `/api/v1/marketing/*` مع metrics مرتبطة بالـLeads؛ المطلوب التالي هو migration/staging acceptance وليس إعادة Preview data.
 6. **Role shell migration:** إزالة آخر `R01AcademySidebar`/`R03HeadInstructorsSidebar` wrappers من صفحات LIVE والتحقق من كل role route/back path.
-7. **Repository hygiene:** PR #92 و#95 تم دمجهما؛ PR #76 و#74 تمت مراجعتهما وتُركا مفتوحين بسبب rebase/CI blockers، وPR #96 ينتظر checks.
+7. **Repository hygiene:** `main` is clean and pushed at `8132c0b`; PRs #99–#106 are merged and there are no open PRs. Before starting new work, verify `git status`, `git log`, and `gh pr list --state open`.
 
 ## الهدف
 
