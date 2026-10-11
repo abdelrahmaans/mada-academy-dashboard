@@ -637,10 +637,13 @@ namespace MadaAcademy.Api.Persistence.Migrations
                     b.Property<Guid>("BranchId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("CanDecideEvaluations")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("CanReadAttendance")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("CanReviewEvaluations")
+                    b.Property<bool>("CanReadEvaluations")
                         .HasColumnType("boolean");
 
                     b.Property<Guid>("CourseOfferingId")

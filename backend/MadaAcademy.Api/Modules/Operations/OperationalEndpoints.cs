@@ -65,7 +65,8 @@ public static class OperationalEndpoints
                 .Where(session => scope.BranchId == null || session.BranchId == scope.BranchId.Value);
 
             if (user.IsInRole("R04_INSTRUCTOR") && Guid.TryParse(user.FindFirstValue("sub"), out var instructorId))
-                query = query.Where(session => session.InstructorId == instructorId || session.SubstituteInstructorId == instructorId);
+                query = query.Where(session => session.InstructorId == instructorId || session.SubstituteInstructorId == instructorId ||
+                    (session.CourseOfferingId.HasValue && db.GroupSupervisionAssignments.Any(assignment => assignment.TenantId == scope.TenantId && assignment.BranchId == session.BranchId && assignment.CourseOfferingId == session.CourseOfferingId.Value && assignment.SupervisorUserId == instructorId && assignment.Status == "ACTIVE" && assignment.CanReadAttendance && (!assignment.StartsAt.HasValue || assignment.StartsAt <= DateTimeOffset.UtcNow) && (!assignment.EndsAt.HasValue || assignment.EndsAt > DateTimeOffset.UtcNow))));
             if (user.IsInRole("R03_HEAD_INSTRUCTORS") && Guid.TryParse(user.FindFirstValue("sub"), out var supervisorId))
                 query = query.Where(session => session.CourseOfferingId.HasValue && db.GroupSupervisionAssignments.Any(assignment => assignment.TenantId == scope.TenantId && assignment.BranchId == session.BranchId && assignment.CourseOfferingId == session.CourseOfferingId.Value && assignment.SupervisorUserId == supervisorId && assignment.Status == "ACTIVE" && assignment.CanReadAttendance && (!assignment.StartsAt.HasValue || assignment.StartsAt <= DateTimeOffset.UtcNow) && (!assignment.EndsAt.HasValue || assignment.EndsAt > DateTimeOffset.UtcNow)));
             if (from.HasValue) query = query.Where(session => session.EndAt >= from.Value);
@@ -93,10 +94,11 @@ public static class OperationalEndpoints
             if (user.IsInRole("R04_INSTRUCTOR"))
             {
                 if (!Guid.TryParse(user.FindFirstValue("sub"), out var instructorId)) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
-                scopedSessions = scopedSessions.Where(item => item.InstructorId == instructorId || item.SubstituteInstructorId == instructorId);
+                scopedSessions = scopedSessions.Where(item => item.InstructorId == instructorId || item.SubstituteInstructorId == instructorId ||
+                    (item.CourseOfferingId.HasValue && db.GroupSupervisionAssignments.Any(assignment => assignment.TenantId == scope.TenantId && assignment.BranchId == item.BranchId && assignment.CourseOfferingId == item.CourseOfferingId.Value && assignment.SupervisorUserId == instructorId && assignment.Status == "ACTIVE" && assignment.CanReadAttendance && (!assignment.StartsAt.HasValue || assignment.StartsAt <= DateTimeOffset.UtcNow) && (!assignment.EndsAt.HasValue || assignment.EndsAt > DateTimeOffset.UtcNow))));
             }
             if (user.IsInRole("R03_HEAD_INSTRUCTORS") && Guid.TryParse(user.FindFirstValue("sub"), out var supervisorId))
-                scopedSessions = scopedSessions.Where(item => item.CourseOfferingId.HasValue && db.GroupSupervisionAssignments.Any(assignment => assignment.TenantId == scope.TenantId && assignment.BranchId == item.BranchId && assignment.CourseOfferingId == item.CourseOfferingId.Value && assignment.SupervisorUserId == supervisorId && assignment.Status == "ACTIVE" && (!assignment.StartsAt.HasValue || assignment.StartsAt <= DateTimeOffset.UtcNow) && (!assignment.EndsAt.HasValue || assignment.EndsAt > DateTimeOffset.UtcNow)));
+                scopedSessions = scopedSessions.Where(item => item.CourseOfferingId.HasValue && db.GroupSupervisionAssignments.Any(assignment => assignment.TenantId == scope.TenantId && assignment.BranchId == item.BranchId && assignment.CourseOfferingId == item.CourseOfferingId.Value && assignment.SupervisorUserId == supervisorId && assignment.Status == "ACTIVE" && assignment.CanReadAttendance && (!assignment.StartsAt.HasValue || assignment.StartsAt <= DateTimeOffset.UtcNow) && (!assignment.EndsAt.HasValue || assignment.EndsAt > DateTimeOffset.UtcNow)));
             var session = (await ProjectSessionsAsync(db, scopedSessions, cancellationToken)).SingleOrDefault();
 
             return session is null
@@ -114,7 +116,7 @@ public static class OperationalEndpoints
             var session = await FindScopedSession(db, sessionId, scope, cancellationToken);
             if (session is null) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
 
-            if (!IsAssignedInstructor(user, session) && !await HasSupervisionAccess(db, user, session, requireAttendance: true, cancellationToken)) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
+            if (!user.IsInRole("R02_BRANCH_MANAGER") && !IsAssignedInstructor(user, session) && !await HasSupervisionAccess(db, user, session, requireAttendance: true, cancellationToken)) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
 
             var rows = await LoadAttendance(db, session, cancellationToken);
             return TypedResults.Ok(new ApiEnvelope<AttendanceResponse>(
@@ -129,7 +131,7 @@ public static class OperationalEndpoints
             CancellationToken cancellationToken) =>
         {
             if (!CanWriteAttendance(user))
-                return Problem(403, "ATTENDANCE_WRITE_FORBIDDEN", "Only instructors, head instructors, or branch managers can record attendance.");
+                return Problem(403, "ATTENDANCE_WRITE_FORBIDDEN", "Only instructors or branch managers can record attendance.");
             var records = request.Records;
             if (records is null || records.Count == 0)
                 return Problem(400, "ATTENDANCE_REQUIRED", "At least one attendance record is required.");
@@ -140,7 +142,7 @@ public static class OperationalEndpoints
             var session = await FindScopedSession(db, sessionId, scope, cancellationToken);
             if (session is null) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
 
-            if (!IsAssignedInstructor(user, session)) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
+            if (!user.IsInRole("R02_BRANCH_MANAGER") && !IsAssignedInstructor(user, session)) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
             if (session.Status is "CANCELLED" or "COMPLETED")
                 return Problem(409, "SESSION_NOT_EDITABLE", "Attendance can only be recorded for an active scheduled session.");
 
@@ -376,7 +378,8 @@ public static class OperationalEndpoints
             instructorNames.GetValueOrDefault(session.InstructorId),
             classroomNames.GetValueOrDefault(session.ClassroomId),
             branchNames.GetValueOrDefault(session.BranchId),
-            session.CourseOfferingId.HasValue ? courseNames.GetValueOrDefault(session.CourseOfferingId.Value) : null)).ToList();
+            session.CourseOfferingId.HasValue ? courseNames.GetValueOrDefault(session.CourseOfferingId.Value) : null,
+            session.SubstituteInstructorId)).ToList();
     }
 
     private static async Task<AcademySession?> FindScopedSession(MadaDbContext db, Guid sessionId, Scope scope, CancellationToken cancellationToken) =>
@@ -385,13 +388,12 @@ public static class OperationalEndpoints
             (scope.BranchId == null || session.BranchId == scope.BranchId.Value), cancellationToken);
 
     private static bool IsAssignedInstructor(ClaimsPrincipal user, AcademySession session) =>
-        !user.IsInRole("R04_INSTRUCTOR") ||
-        (Guid.TryParse(user.FindFirstValue("sub"), out var actorId) &&
-         (session.InstructorId == actorId || session.SubstituteInstructorId == actorId));
+        Guid.TryParse(user.FindFirstValue("sub"), out var actorId) &&
+        (session.InstructorId == actorId || session.SubstituteInstructorId == actorId);
 
     private static async Task<bool> HasSupervisionAccess(MadaDbContext db, ClaimsPrincipal user, AcademySession session, bool requireAttendance, CancellationToken cancellationToken)
     {
-        if (!user.IsInRole("R03_HEAD_INSTRUCTORS") || !session.CourseOfferingId.HasValue || !Guid.TryParse(user.FindFirstValue("sub"), out var supervisorId)) return false;
+        if ((!user.IsInRole("R03_HEAD_INSTRUCTORS") && !user.IsInRole("R04_INSTRUCTOR")) || !session.CourseOfferingId.HasValue || !Guid.TryParse(user.FindFirstValue("sub"), out var supervisorId)) return false;
         return await db.GroupSupervisionAssignments.AnyAsync(item => item.TenantId == session.TenantId && item.BranchId == session.BranchId && item.CourseOfferingId == session.CourseOfferingId.Value && item.SupervisorUserId == supervisorId && item.Status == "ACTIVE" && (!requireAttendance || item.CanReadAttendance) && (!item.StartsAt.HasValue || item.StartsAt <= DateTimeOffset.UtcNow) && (!item.EndsAt.HasValue || item.EndsAt > DateTimeOffset.UtcNow), cancellationToken);
     }
 
@@ -457,7 +459,7 @@ public sealed record UpdateStudentRequest(string? FullName, DateOnly? DateOfBirt
 public sealed record StudentEnrollmentItem(Guid Id, Guid CourseOfferingId, string? CourseName, DateOnly StartDate, DateOnly EndDate, int FinalPricePiastres, string Status, int MaxStudents, int ActiveEnrollmentCount);
 public sealed record CreateStudentEnrollmentRequest(Guid CourseOfferingId, int FinalPricePiastres);
 public sealed record SessionListResponse(IReadOnlyList<SessionDetails> Items, int Total, string ScopeLevel, Guid? BranchId);
-public sealed record SessionDetails(Guid Id, Guid BranchId, Guid? CourseOfferingId, int SessionNumber, DateTimeOffset StartAt, DateTimeOffset EndAt, Guid InstructorId, Guid ClassroomId, string Type, string Status, string? Notes, DateTimeOffset? CompletedAt, string? InstructorName = null, string? ClassroomName = null, string? BranchName = null, string? CourseName = null);
+public sealed record SessionDetails(Guid Id, Guid BranchId, Guid? CourseOfferingId, int SessionNumber, DateTimeOffset StartAt, DateTimeOffset EndAt, Guid InstructorId, Guid ClassroomId, string Type, string Status, string? Notes, DateTimeOffset? CompletedAt, string? InstructorName = null, string? ClassroomName = null, string? BranchName = null, string? CourseName = null, Guid? SubstituteInstructorId = null);
 public sealed record AttendanceResponse(Guid SessionId, string SessionStatus, IReadOnlyList<AttendanceItem> Items, int Total);
 public sealed record AttendanceItem(Guid StudentId, string StudentName, string Status, int? LateMinutes, DateTimeOffset? UpdatedAt);
 public sealed record AttendanceUpsertRequest(IReadOnlyList<AttendanceRecordRequest>? Records);

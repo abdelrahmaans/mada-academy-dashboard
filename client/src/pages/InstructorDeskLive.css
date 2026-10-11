@@ -79,6 +79,10 @@
   background: #e9f6f2;
   color: #156c62;
 }
+.r04-live-tabs button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .r04-live-tabs b {
   display: grid;
   place-items: center;
@@ -161,6 +165,61 @@
   font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.r04-live-supervision-label {
+  color: #24776c !important;
+  font-weight: 750;
+}
+.r04-live-supervision-list {
+  display: grid;
+  gap: 9px;
+}
+.r04-live-supervision-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 13px;
+  border: 1px solid #e7eeeb;
+  border-radius: 12px;
+  background: #fbfdfc;
+}
+.r04-live-supervision-main {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.r04-live-supervision-main > strong {
+  color: #293d47;
+  font-size: 12px;
+}
+.r04-live-supervision-main > small {
+  color: #7d8a91;
+  font-size: 10px;
+}
+.r04-live-supervision-permissions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.r04-live-supervision-permissions span {
+  border: 1px solid #d7eae3;
+  border-radius: 16px;
+  background: #eef8f4;
+  color: #276d61;
+  padding: 4px 8px;
+  font-size: 9px;
+  font-weight: 750;
+}
+.r04-live-supervision-note {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #dcebe5;
+  border-radius: 9px;
+  background: #f4faf7;
+  color: #416d62;
+  font-size: 10px;
+  line-height: 1.6;
 }
 .r04-live-status {
   flex: 0 0 auto;
@@ -485,6 +544,10 @@
   }
   .r04-live-session {
     align-items: flex-start;
+  }
+  .r04-live-supervision-card {
+    align-items: stretch;
+    flex-direction: column;
   }
   .r04-live-status {
     font-size: 8px;

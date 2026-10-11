@@ -6,8 +6,9 @@ public sealed class GroupSupervisionAssignment : EntityBase
     public Guid BranchId { get; set; }
     public Guid SupervisorUserId { get; set; }
     public Guid CourseOfferingId { get; set; }
-    public bool CanReadAttendance { get; set; } = true;
-    public bool CanReviewEvaluations { get; set; } = true;
+    public bool CanReadAttendance { get; set; }
+    public bool CanReadEvaluations { get; set; }
+    public bool CanDecideEvaluations { get; set; }
     public DateTimeOffset? StartsAt { get; set; }
     public DateTimeOffset? EndsAt { get; set; }
     public string Status { get; set; } = "ACTIVE";
