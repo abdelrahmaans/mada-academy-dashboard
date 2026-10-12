@@ -1,6 +1,6 @@
 # Mada Academy — Agent Context
 
-**Current baseline:** `main` is clean and pushed to `origin/main` (12 October 2026), with PRs #99–#108 merged and no open PRs. Verify the current commit with `git rev-parse --short origin/main`; do not hard-code a merge hash in handoff text. The SaaS onboarding bulk-import chain is complete through Enrollment CSV: students, branches, invitation-first staff, guardians/links, course templates, groups/sessions, and ACTIVE/WAITLISTED enrollments.
+**Current baseline:** `main` is clean and pushed to `origin/main` (12 October 2026), with the SaaS onboarding bulk-import chain merged through the functional Enrollment CSV milestone and no open PRs. Verify the current commit with `git rev-parse --short origin/main`; do not hard-code a merge hash or a changing documentation PR range in handoff text. The chain covers students, branches, invitation-first staff, guardians/links, course templates, groups/sessions, and ACTIVE/WAITLISTED enrollments.
 **Repository:** `abdelrahmaans/mada-academy-dashboard`
 
 ## What this product is
