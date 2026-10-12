@@ -1,6 +1,6 @@
 # Mada Academy — Agent Context
 
-**Current baseline:** `main` is clean and pushed at `8132c0b` (11 October 2026), with PRs #99–#106 merged and no open PRs. The SaaS onboarding bulk-import chain is complete through Enrollment CSV: students, branches, invitation-first staff, guardians/links, course templates, groups/sessions, and ACTIVE/WAITLISTED enrollments.
+**Current baseline:** `main` is clean and pushed at `6cf15bb` (11 October 2026), with PRs #99–#107 merged and no open PRs. The SaaS onboarding bulk-import chain is complete through Enrollment CSV: students, branches, invitation-first staff, guardians/links, course templates, groups/sessions, and ACTIVE/WAITLISTED enrollments.
 **Repository:** `abdelrahmaans/mada-academy-dashboard`
 
 ## What this product is

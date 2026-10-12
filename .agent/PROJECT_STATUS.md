@@ -1,7 +1,7 @@
 # Mada Academy — Project Status
 
 **As of:** 11 October 2026
-**Verified Git state:** `main` is pushed to origin at `8132c0b` and has no local changes or open PRs. The latest merged delivery is PR #106; the current merged sequence is PRs #99–#106.
+**Verified Git state:** `main` is pushed to origin at `6cf15bb` and has no local changes or open PRs. The latest merged delivery is PR #107; the current merged sequence is PRs #99–#107.
 **Current delivery:** the SaaS onboarding bulk-import chain is merged through Enrollments: students, branches, staff, guardians/links, course templates, groups/sessions, and enrollments with ACTIVE/WAITLISTED capacity assignment. The next work is operational UX/integration coverage for import results and waitlist promotion, followed by trial/metering limits.
 **Canonical quick snapshot:** [`docs/REPOSITORY_CURRENT_STATE.md`](../docs/REPOSITORY_CURRENT_STATE.md).
 **Stack:** React + Vite + TypeScript; ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions.
