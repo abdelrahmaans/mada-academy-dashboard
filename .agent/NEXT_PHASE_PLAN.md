@@ -1,7 +1,7 @@
 # خطة المرحلة القادمة — Mada Academy
 
 **تاريخ اللقطة:** 11 أكتوبر 2026
-**قاعدة العمل الحالية:** `main` عند `6cf15bb` بعد دمج PRs #99–#107؛ لا توجد تغييرات محلية ولا PRs مفتوحة. أي agent يبدأ من `main` ويقرأ هذا الملف و`PROJECT_STATUS.md` باعتبارهما مصدر الحقيقة الحالي.
+**قاعدة العمل الحالية:** `main` clean ومرفوع إلى `origin/main` بعد دمج PRs #99–#108؛ لا توجد تغييرات محلية ولا PRs مفتوحة. أي agent يبدأ من `main` ويقرأ هذا الملف و`PROJECT_STATUS.md`، ويتحقق من commit الحالي عبر `git rev-parse --short origin/main` بدل الاعتماد على hash ثابت.
 **الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وMarketing persistence وPhase 1 authorization وSaaS onboarding bulk-import chain مغلقة على مستوى الكود المدموج. تظل private-storage/backup-restore/staging بوابات بيئية منفصلة، وتبقى بعض wrappers القديمة للـsidebars موجة تنظيف لاحقة. مصفوفة الأدوار النهائية موثقة في [ANGULAR_PARITY_MATRIX.md](../ANGULAR_PARITY_MATRIX.md).
 **Quick snapshot:** [`docs/REPOSITORY_CURRENT_STATE.md`](../docs/REPOSITORY_CURRENT_STATE.md).
 
@@ -85,7 +85,7 @@
 4. **Distributed production gate:** استكمال shared-limiter/two-instance evidence قبل التوسع الأفقي؛ CORS وsingle-instance startup guard مطبقان ومختبران داخل الكود.
 5. **Marketing:** Campaigns وContent Items أصبحت persisted عبر `/api/v1/marketing/*` مع metrics مرتبطة بالـLeads؛ المطلوب التالي هو migration/staging acceptance وليس إعادة Preview data.
 6. **Role shell migration:** إزالة آخر `R01AcademySidebar`/`R03HeadInstructorsSidebar` wrappers من صفحات LIVE والتحقق من كل role route/back path.
-7. **Repository hygiene:** `main` is clean and pushed at `6cf15bb`; PRs #99–#107 are merged and there are no open PRs. Before starting new work, verify `git status`, `git log`, and `gh pr list --state open`.
+7. **Repository hygiene:** `main` is clean and pushed; PRs #99–#108 are merged and there are no open PRs. Before starting new work, verify `git status`, `git log`, `git rev-parse --short origin/main`, and `gh pr list --state open`.
 
 ## الهدف
 
