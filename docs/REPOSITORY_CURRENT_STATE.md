@@ -11,7 +11,7 @@ Read this file first, then read [`PROJECT_STATUS.md`](../.agent/PROJECT_STATUS.m
 
 ## Git and PR state
 
-`main` is clean, pushed to `origin/main`, and has no open PRs. The latest documentation delivery is PR #108; the SaaS onboarding delivery is merged as PRs #99–#106. PRs #104, #105, and #106 passed Backend Integration, Playwright, Angular R08 Playwright, and Vercel checks before merge. Because every merge creates a new commit, this file intentionally does not hard-code a commit hash.
+`main` is clean, pushed to `origin/main`, and has no open PRs. The SaaS onboarding functional delivery is merged through PR #106; the current-state documentation is synchronized on top. PRs #104, #105, and #106 passed Backend Integration, Playwright, Angular R08 Playwright, and Vercel checks before merge. Because every merge creates a new commit, this file intentionally does not hard-code a commit hash or a changing documentation PR range.
 
 | Area | Merged state |
 |---|---|
