@@ -2,7 +2,7 @@
 
 **Snapshot:** 11 October 2026  
 **Canonical branch:** `main`  
-**Verified commit:** `6cf15bb`  
+**Verified commit:** dynamic — run `git rev-parse --short origin/main`  
 **Repository:** `abdelrahmaans/mada-academy-dashboard`
 
 ## How to start work
@@ -11,7 +11,7 @@ Read this file first, then read [`PROJECT_STATUS.md`](../.agent/PROJECT_STATUS.m
 
 ## Git and PR state
 
-`main` is clean, pushed to `origin/main`, and has no open PRs. The latest documentation delivery is PR #107; the SaaS onboarding delivery is merged as PRs #99–#106. PRs #104, #105, and #106 passed Backend Integration, Playwright, Angular R08 Playwright, and Vercel checks before merge.
+`main` is clean, pushed to `origin/main`, and has no open PRs. The latest documentation delivery is PR #108; the SaaS onboarding delivery is merged as PRs #99–#106. PRs #104, #105, and #106 passed Backend Integration, Playwright, Angular R08 Playwright, and Vercel checks before merge. Because every merge creates a new commit, this file intentionally does not hard-code a commit hash.
 
 | Area | Merged state |
 |---|---|
