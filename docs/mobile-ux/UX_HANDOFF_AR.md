@@ -1,9 +1,10 @@
 # Mada Mobile — UI/UX Handoff (R04 Instructor)
 
-**الإصدار:** 0.1 — اتجاه جاهز لبدء التنفيذ والمراجعة
+**الإصدار:** 0.2 — اتجاه جاهز للتنفيذ والمراجعة
 **النطاق المفترض:** نسخة الموبايل الأولى للمدرب R04، Android وiOS، عربية افتراضيًا وRTL.
 **مصدر الحقيقة:** API الحالي في `backend/MadaAcademy.Api/`، وليس البيانات الظاهرة في الصور التجريبية.
 **ملاحظة:** الصور نماذج شكلية وليست تطبيقًا عاملًا؛ الأسماء والمواعيد والأعداد فيها أمثلة فقط. المواصفات والسلوك أدناه هي المرجع عند التنفيذ.
+**قواعد التنفيذ الملزمة:** [قواعد تأسيس تطبيق الموبايل](MOBILE_FOUNDATION_RULES_AR.md) — الخطوط، التوكنز، البنية، المصادقة، وصلاحيات الأدوار.
 
 ## 1. قرار التصميم
 
@@ -21,13 +22,13 @@
 
 ## 2. خريطة التنقل
 
-| الوجهة | الغرض | المدخل الرئيسي |
-|---|---|---|
-| **الرئيسية** | أعلى أولوية الآن، ثم المهمة التالية، ثم تحديث واحد مختصر | أول تبويب بعد تسجيل الدخول |
-| **الجدول** | جلسات اليوم والأيام القادمة بترتيب زمني | تبويب الجدول أو رابط من المهمة |
-| **المهام** | إجراءات تنتظر المدرب، مع فصل «مطلوب مني» عن «تمت» | تبويب المهام أو زر المهمة |
-| **حسابي** | الملف الشخصي، إعدادات اللغة/المساعدة، تسجيل الخروج | تبويب الحساب |
-| **التنبيهات** | تحديثات النظام غير المقروءة؛ كل تنبيه يفتح وجهته | أيقونة الجرس في رأس الشاشة |
+| الوجهة        | الغرض                                                    | المدخل الرئيسي                 |
+| ------------- | -------------------------------------------------------- | ------------------------------ |
+| **الرئيسية**  | أعلى أولوية الآن، ثم المهمة التالية، ثم تحديث واحد مختصر | أول تبويب بعد تسجيل الدخول     |
+| **الجدول**    | جلسات اليوم والأيام القادمة بترتيب زمني                  | تبويب الجدول أو رابط من المهمة |
+| **المهام**    | إجراءات تنتظر المدرب، مع فصل «مطلوب مني» عن «تمت»        | تبويب المهام أو زر المهمة      |
+| **حسابي**     | الملف الشخصي، إعدادات اللغة/المساعدة، تسجيل الخروج       | تبويب الحساب                   |
+| **التنبيهات** | تحديثات النظام غير المقروءة؛ كل تنبيه يفتح وجهته         | أيقونة الجرس في رأس الشاشة     |
 
 لا نجعل التنبيهات تبويبًا خامسًا ولا نكرر بطاقة التنبيه نفسها كأنها مهمة. كل الشاشات تستخدم زر رجوع أصليًا داخل التدفقات.
 
@@ -38,6 +39,7 @@
 - رقم الهاتف وكلمة المرور، مع إظهار/إخفاء كلمة المرور.
 - حالات: فارغ، تحقق محلي، إرسال جارٍ، بيانات غير صحيحة، حساب مقفل/محاولات كثيرة، انقطاع شبكة.
 - لا نظهر مسار OTP أو «نسيت كلمة المرور» كوظيفة جاهزة: SMS الإنتاجي واستعادة كلمة المرور غير مكتملين حاليًا.
+- النسخة الحالية ترسل `accountType: "staff"` داخليًا؛ لا تعرض اختيارًا للدور. هذا نوع دخول وليس role.
 - بعد النجاح: `GET /api/v1/me` ثم توجيه المستخدم حسب الدور؛ في هذا الإصدار يجب أن يكون R04.
 
 ### 3.2 الرئيسية — الأولويات
@@ -90,21 +92,22 @@
 
 استخدم توكنز مدى الموجودة في `packages/mada-tokens/tokens.css` كمرجع رسمي:
 
-| Token | القيمة |
-|---|---|
-| Teal | `#0D9488` |
-| Teal dark | `#08776C` |
-| Navy | `#14243A` |
-| Amber | `#D49A2D` |
-| Page | `#F4F7FA` |
-| Surface | `#FFFFFF` |
-| Border | `#E8EDF2` |
-| Muted | `#78879A` |
-| Soft teal | `#E5F5F1` |
-| Soft amber | `#FFF4DB` |
-| Arabic font reference | Cairo، مع fallback للنظام |
+| Token                      | القيمة                                                |
+| -------------------------- | ----------------------------------------------------- |
+| Teal                       | `#0D9488`                                             |
+| Teal dark                  | `#08776C`                                             |
+| Navy                       | `#14243A`                                             |
+| Amber                      | `#D49A2D`                                             |
+| Page                       | `#F4F7FA`                                             |
+| Surface                    | `#FFFFFF`                                             |
+| Border                     | `#E8EDF2`                                             |
+| Muted                      | `#78879A`                                             |
+| Soft teal                  | `#E5F5F1`                                             |
+| Soft amber                 | `#FFF4DB`                                             |
+| Arabic font                | Cairo بأوزان 400/500/600/700/800، محليًا داخل التطبيق |
+| Latin and technical values | Inter بأوزان 400/500/600/700/800، محليًا داخل التطبيق |
 
-استخدم إيقاعًا ثابتًا للمسافات (مضاعفات 4/8)، زوايا 9–19px بحسب نوع العنصر، وحدودًا خفيفة بدل الظلال الثقيلة. في React Native نمثل القيم في TypeScript؛ لا نستورد CSS الخاص بالويب.
+استخدم إيقاعًا ثابتًا للمسافات (مضاعفات 4/8)، زوايا 9–19px بحسب نوع العنصر، وحدودًا خفيفة بدل الظلال الثقيلة. في React Native نمثل القيم في TypeScript؛ لا نستورد CSS الخاص بالويب. تُحمّل عائلات الخطوط المحلية قبل عرض المسارات، وتستخدم كل النصوص `MadaText` حتى لا تختلف الأوزان بين iOS وAndroid أو عن الويب.
 
 ### مكتبة مكونات Native الأولية
 
@@ -121,18 +124,18 @@
 
 ## 5. خريطة الربط بالـAPI الحالي
 
-| تجربة المستخدم | الطلب الحالي |
-|---|---|
-| دخول الموظف | `POST /api/v1/auth/login` مع `accountType: "staff"` |
-| تجديد الجلسة | `POST /api/v1/auth/refresh` |
-| ملف المستخدم/الدور | `GET /api/v1/me` |
-| جلسات ضمن مدى زمني | `GET /api/v1/sessions?from=...&to=...` |
-| تفاصيل جلسة | `GET /api/v1/sessions/{sessionId}` |
-| قراءة الحضور | `GET /api/v1/sessions/{sessionId}/attendance` |
-| حفظ الحضور | `PUT /api/v1/sessions/{sessionId}/attendance` |
-| قراءة/حفظ التقييم | `GET/PUT /api/v1/scheduling/sessions/{sessionId}/evaluations` |
+| تجربة المستخدم         | الطلب الحالي                                                      |
+| ---------------------- | ----------------------------------------------------------------- |
+| دخول الموظف            | `POST /api/v1/auth/login` مع `accountType: "staff"`               |
+| تجديد الجلسة           | `POST /api/v1/auth/refresh`                                       |
+| ملف المستخدم/الدور     | `GET /api/v1/me`                                                  |
+| جلسات ضمن مدى زمني     | `GET /api/v1/sessions?from=...&to=...`                            |
+| تفاصيل جلسة            | `GET /api/v1/sessions/{sessionId}`                                |
+| قراءة الحضور           | `GET /api/v1/sessions/{sessionId}/attendance`                     |
+| حفظ الحضور             | `PUT /api/v1/sessions/{sessionId}/attendance`                     |
+| قراءة/حفظ التقييم      | `GET/PUT /api/v1/scheduling/sessions/{sessionId}/evaluations`     |
 | إرسال التقييم للمراجعة | `POST /api/v1/scheduling/sessions/{sessionId}/evaluations/submit` |
-| التنبيهات | `GET/POST /api/v1/scheduling/notifications...` |
+| التنبيهات              | `GET/POST /api/v1/scheduling/notifications...`                    |
 
 عميل Mobile موحد يضيف `Authorization: Bearer`, يفك غلاف الاستجابة `data`, يوحّد أخطاء `401/403/409/422/5xx`، ويجرب refresh مرة واحدة مع single-flight عند الطلبات المتزامنة. Access token في الذاكرة قدر الإمكان؛ refresh token في `expo-secure-store`. لا نخزن كلمات مرور أو tokens في logs أو `AsyncStorage` غير المشفر. الـAPI يشتق tenant/branch/permissions من الهوية ولا نرسلها كسلطة من العميل.
 
@@ -142,32 +145,26 @@
 
 ```text
 apps/mobile/
-├── app/
-│   ├── _layout.tsx
-│   ├── index.tsx
-│   ├── (auth)/login.tsx
-│   ├── (tabs)/_layout.tsx
-│   ├── (tabs)/index.tsx
-│   ├── (tabs)/schedule.tsx
-│   ├── (tabs)/tasks.tsx
-│   ├── (tabs)/profile.tsx
-│   └── sessions/[sessionId]/attendance.tsx
 ├── src/
-│   ├── api/{client,auth,sessions,notifications}.ts
-│   ├── features/{auth,home,schedule,attendance,evaluations,tasks}/
-│   ├── components/
-│   ├── providers/{AuthProvider,QueryProvider}.tsx
-│   ├── storage/secureTokenStore.ts
-│   ├── theme/tokens.ts
-│   └── utils/{dates,rtl}.ts
+│   ├── app/                 # Expo Router routes/layouts، رفيعة
+│   ├── api/                 # API client typed ومعالجة الأخطاء
+│   ├── auth/                # AuthProvider والهوية والتخزين الآمن
+│   ├── authorization/       # Role catalog وسياسات route/permission
+│   ├── components/          # MadaText وAppUi ومكونات Native مشتركة
+│   ├── theme/               # tokens.ts وfonts.ts والطباعة
+│   └── features/            # تُضاف وحدات النطاق عند تنفيذها
+│       ├── instructor-home/
+│       ├── schedule/
+│       ├── attendance/
+│       ├── evaluations/
+│       └── notifications/
 ├── assets/
-├── app.config.ts
-├── eas.json
+├── app.json
 ├── package.json
 └── tsconfig.json
 ```
 
-`client/` يظل واجهة React للويب، و`client-angular/` يظل عميلًا موازيًا، و`backend/` يظل ASP.NET Core. يمكن مشاركة DTOs مستقرة لاحقًا في حزمة typed مشتركة؛ لا نربط الإقلاع الأول بمشاركة مكونات UI أو CSS.
+هذا هو الهيكل المعتمد الحالي؛ `src/features/` تتوسع مع تنفيذ تدفق حي ولا تُستخدم كملفات شكلية. `client/` يظل واجهة React للويب، و`client-angular/` يظل عميلًا موازيًا، و`backend/` يظل ASP.NET Core. يمكن مشاركة DTOs مستقرة لاحقًا في حزمة typed مشتركة؛ لا نشارك مكونات DOM أو CSS مع React Native.
 
 ## 7. خطوات التنفيذ المقترحة
 
@@ -190,6 +187,7 @@ apps/mobile/
 - التقييم يستخدم عقد الدرجة الواحدة والملاحظة، ويمر عبر مراجعة رئيس المدربين قبل النشر.
 - كل شاشة لها Loading / Empty / Error / Forbidden / Retry حيث ينطبق.
 - Arabic RTL واختبارات شاشة صغيرة وVoiceOver/TalkBack وأهداف لمس واضحة.
+- Cairo/Inter والأوزان والـRTL متسقة مع الويب على Android وiOS، ولا يظهر fallback مؤقت لخط النظام بعد تحميل التطبيق.
 - تحقق `pnpm --filter @mada/mobile typecheck` واختبارات الوحدة؛ واختبارات API/الصلاحيات عبر اختبارات .NET/CI القائمة.
 
 ## 9. النماذج المرئية

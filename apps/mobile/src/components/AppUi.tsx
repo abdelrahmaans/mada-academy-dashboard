@@ -4,13 +4,13 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
   type StyleProp,
   type ViewStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { mada } from "../theme/tokens";
+import { MadaText as Text } from "./MadaText";
 
 export function AppPage({
   children,
@@ -185,10 +185,11 @@ const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
     borderColor: mada.color.border,
-    borderRadius: mada.radius.large,
+    borderRadius: mada.radius.panel,
     backgroundColor: mada.color.surface,
     padding: mada.space.lg,
     gap: mada.space.md,
+    ...mada.shadow.card,
   },
   button: {
     minHeight: 50,

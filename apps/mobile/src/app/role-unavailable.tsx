@@ -1,7 +1,8 @@
 import { Redirect } from "expo-router";
-import { StyleSheet, Text } from "react-native";
+import { StyleSheet } from "react-native";
 import { useAuth } from "../auth/AuthProvider";
 import { getRoleDefinition } from "../authorization/roles";
+import { MadaText as Text } from "../components/MadaText";
 import {
   AppPage,
   MadaCard,

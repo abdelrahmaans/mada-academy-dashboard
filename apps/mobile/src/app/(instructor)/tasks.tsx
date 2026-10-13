@@ -1,48 +1,26 @@
-import { StyleSheet, Text, View } from "react-native";
-import { useAuth } from "../../auth/AuthProvider";
-import { hasPermission } from "../../authorization/routeAccess";
+import { StyleSheet, View } from "react-native";
 import { RouteGuard } from "../../components/RouteGuard";
-import {
-  AppPage,
-  MadaCard,
-  MessageCard,
-  PageHeading,
-} from "../../components/AppUi";
+import { AppPage, MadaCard, PageHeading } from "../../components/AppUi";
+import { MadaText as Text } from "../../components/MadaText";
 import { mada } from "../../theme/tokens";
 
 function TasksScreen() {
-  const { identity } = useAuth();
-  if (!identity) return null;
-  const capabilities = [
-    { key: "attendance.write", label: "إكمال حضور الجلسة" },
-    { key: "evaluations.write", label: "كتابة تقييمات الطلاب" },
-  ].filter(item => hasPermission(identity, item.key));
-
   return (
     <AppPage>
       <PageHeading
-        eyebrow="إجراءات تحتاجها"
+        eyebrow="مساحة المدرب"
         title="المهام"
-        subtitle="نعرض هنا إجراءات الدور فقط؛ التحديثات المعلوماتية تبقى منفصلة عن المهام."
+        subtitle="الإجراءات التي تحتاج إلى استكمال ستظهر هنا."
       />
-      <MessageCard
-        title="مصدر المهام لم يُربط بعد"
-        detail="لا ينشئ الخادم حاليًا endpoint موحدًا لقائمة الأولويات. سنربط المهام بمصادرها قبل عرض أعداد أو بطاقات فعلية."
-      />
-      <MadaCard>
-        <Text style={styles.title}>إمكانات دورك الحالية</Text>
-        {capabilities.length ? (
-          capabilities.map(item => (
-            <View key={item.key} style={styles.row}>
-              <Text style={styles.check}>✓</Text>
-              <Text style={styles.label}>{item.label}</Text>
-            </View>
-          ))
-        ) : (
-          <Text style={styles.empty}>
-            لا يملك الدور الحالي صلاحيات كتابة مهام الحضور أو التقييم.
-          </Text>
-        )}
+      <MadaCard style={styles.emptyCard}>
+        <View style={styles.emptyMark} accessible={false}>
+          <Text style={styles.emptyMarkText}>✓</Text>
+        </View>
+        <Text style={styles.title}>لسه ما فيش مهام محمّلة</Text>
+        <Text style={styles.copy}>
+          هنعرِض مهام الحضور والتقييم من مصدرها الفعلي لما يتوفر. مش هنعرض
+          أعدادًا أو حالات افتراضية.
+        </Text>
       </MadaCard>
     </AppPage>
   );
@@ -57,29 +35,26 @@ export default function InstructorTasksRoute() {
 }
 
 const styles = StyleSheet.create({
+  emptyCard: { alignItems: "flex-end", paddingVertical: mada.space.xl },
+  emptyMark: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: mada.color.tealSoft,
+  },
+  emptyMarkText: { color: mada.color.teal, fontSize: 24, fontWeight: "700" },
   title: {
     color: mada.color.navy,
     fontSize: mada.type.body,
     fontWeight: "800",
     textAlign: "right",
   },
-  row: {
-    minHeight: 44,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: mada.space.md,
-    borderBottomWidth: 1,
-    borderBottomColor: mada.color.border,
-  },
-  check: { color: mada.color.teal, fontSize: 18, fontWeight: "900" },
-  label: {
-    color: mada.color.navy,
-    fontSize: mada.type.caption,
-    textAlign: "right",
-  },
-  empty: {
+  copy: {
     color: mada.color.muted,
     fontSize: mada.type.caption,
+    lineHeight: 22,
     textAlign: "right",
   },
 });

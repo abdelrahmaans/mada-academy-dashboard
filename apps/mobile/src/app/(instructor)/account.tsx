@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Alert, StyleSheet, Text } from "react-native";
+import { Alert, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../auth/AuthProvider";
 import { getRoleDefinition } from "../../authorization/roles";
+import { MadaText as Text } from "../../components/MadaText";
 import { RouteGuard } from "../../components/RouteGuard";
 import {
   AppPage,
@@ -98,7 +99,12 @@ function InfoRow({
   return (
     <Text style={[styles.infoRow, !last ? styles.rowBorder : null]}>
       <Text style={styles.infoLabel}>{label} </Text>
-      <Text style={[styles.infoValue, ltr ? styles.ltr : null]}>{value}</Text>
+      <Text
+        family={ltr ? "latin" : "arabic"}
+        style={[styles.infoValue, ltr ? styles.ltr : null]}
+      >
+        {value}
+      </Text>
     </Text>
   );
 }

@@ -1,6 +1,7 @@
 import { Redirect, Tabs } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import type { ColorValue } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LoadingScreen } from "../../components/AppUi";
 import { useAuth } from "../../auth/AuthProvider";
 import { getVisibleMobileTabs } from "../../authorization/routeAccess";
@@ -20,6 +21,7 @@ const icons = {
 
 export default function InstructorTabsLayout() {
   const { status, identity } = useAuth();
+  const insets = useSafeAreaInsets();
   if (status === "loading") return <LoadingScreen />;
   if (!identity || status === "anonymous") return <Redirect href="/login" />;
   if (identity.role !== INSTRUCTOR_ROLE)
@@ -44,13 +46,19 @@ export default function InstructorTabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        tabBarShowLabel: true,
         tabBarActiveTintColor: mada.color.teal,
         tabBarInactiveTintColor: mada.color.muted,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "700" },
+        tabBarLabelStyle: {
+          fontFamily: mada.fontFamily.arabic.bold,
+          fontSize: 12,
+          lineHeight: 18,
+          fontWeight: "700",
+        },
         tabBarStyle: {
-          height: 64,
-          paddingTop: 6,
-          paddingBottom: 6,
+          height: 76 + insets.bottom,
+          paddingTop: 4,
+          paddingBottom: insets.bottom + 6,
           backgroundColor: mada.color.surface,
           borderTopColor: mada.color.border,
         },

@@ -15,7 +15,8 @@ import {
 } from "../authorization/routeAccess";
 import { getRoleDefinition } from "../authorization/roles";
 import { mada } from "../theme/tokens";
-import { Text, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
+import { MadaText as Text } from "./MadaText";
 
 export function RouteGuard({
   route,

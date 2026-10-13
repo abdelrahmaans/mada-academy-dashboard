@@ -1,5 +1,6 @@
 import { Link, Stack } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { MadaText as Text } from "../components/MadaText";
 import { mada } from "../theme/tokens";
 
 export default function NotFoundScreen() {
@@ -41,6 +42,7 @@ const styles = StyleSheet.create({
   link: {
     marginTop: mada.space.xl,
     color: mada.color.teal,
+    fontFamily: mada.fontFamily.arabic.bold,
     fontSize: mada.type.body,
     fontWeight: "700",
   },

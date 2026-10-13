@@ -9,6 +9,7 @@ This folder contains product, API-adjacent, acceptance, security, finance, deplo
 - **Operations and release:** `PRE_PRODUCTION_RUNBOOK.md`, `FINANCE_RELEASE_GATE.md`, `CONSUMER_STAGING_SMOKE_TEST.md`, `DISTRIBUTED_RATE_LIMIT_DECISION.md`
 - **Role inventory and UX:** `R00_PLATFORM_ADMIN_INVENTORY.md`, `UI_UX_AUDIT_NOTES.md`, `UI_UX_AUDIT_ROLES_2026-10-05.md`
 - **Mobile UX handoff:** [`mobile-ux/UX_HANDOFF_AR.md`](mobile-ux/UX_HANDOFF_AR.md) — R04 mobile navigation, screen behavior, visual tokens, API mapping, and implementation sequence.
+- **Mobile foundation rules:** [`mobile-ux/MOBILE_FOUNDATION_RULES_AR.md`](mobile-ux/MOBILE_FOUNDATION_RULES_AR.md) — binding Cairo/Inter typography, design-token parity, code structure, auth/RBAC, data honesty, and acceptance rules.
 - **Mobile app starter:** [`../apps/mobile/README.md`](../apps/mobile/README.md) — Expo workspace commands, role/auth rules, and SDK references.
 
 ## Rules
