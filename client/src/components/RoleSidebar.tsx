@@ -27,7 +27,7 @@ import {
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { getRoleDefinition } from "@/lib/roleNavigation";
+import { getAuthorizedNavigation, getRoleDefinition } from "@/lib/roleNavigation";
 import type { RoleCode } from "@/contexts/RoleScopeContext";
 import SessionLogoutButton from "./SessionLogoutButton";
 
@@ -120,6 +120,10 @@ export default function RoleSidebar({
   const [location, navigate] = useLocation();
   const { me } = useAuth();
   const roleDef = useMemo(() => getRoleDefinition(roleCode), [roleCode]);
+  const authorizedNavigation = useMemo(
+    () => getAuthorizedNavigation(roleCode, me?.permissions),
+    [roleCode, me?.permissions]
+  );
   const AvatarIcon = ROLE_AVATAR_ICONS[roleCode] ?? GraduationCap;
 
   const resolvedTenantName = me?.academy?.name ?? tenantName ?? "أكاديمية مدى";
@@ -164,7 +168,7 @@ export default function RoleSidebar({
 
       <div className="nav-caption">القائمة الرئيسية</div>
       <nav className="primary-nav" aria-label="القائمة الرئيسية">
-        {roleDef.navigation.map(item => {
+        {authorizedNavigation.map(item => {
           const Icon = ICON_BY_PATH[item.path] ?? LayoutDashboard;
           const active = isItemActive(item.path);
           return (

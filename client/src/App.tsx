@@ -46,19 +46,29 @@ function ProtectedAcademyBootstrap() {
 }
 
 function ProtectedAcademyRoles() {
-  return <ProtectedRoute roles={["R01_ACADEMY_OWNER"]} permission="roles.manage"><AcademyRoles /></ProtectedRoute>;
+  return <ProtectedRoute roles={["R01_ACADEMY_OWNER"]} anyOfPermissions={["roles.read", "roles.manage"]}><AcademyRoles /></ProtectedRoute>;
 }
 
 function ProtectedAcademyBranches() {
-  return <ProtectedRoute roles={["R01_ACADEMY_OWNER"]} permission="branch.create"><AcademyBranches /></ProtectedRoute>;
+  return <ProtectedRoute roles={["R01_ACADEMY_OWNER"]} anyOfPermissions={["branch.read", "branch.create"]}><AcademyBranches /></ProtectedRoute>;
 }
 
 function ProtectedAcademyClassrooms() {
   return <ProtectedRoute roles={["R01_ACADEMY_OWNER"]} permission="classrooms.manage"><AcademyClassrooms /></ProtectedRoute>;
 }
 
-function Guard({ children, roles, permission }: { children: ReactNode; roles?: string[]; permission?: string }) {
-  return <ProtectedRoute roles={roles} permission={permission}>{children}</ProtectedRoute>;
+function Guard({
+  children,
+  roles,
+  permission,
+  anyOfPermissions,
+}: {
+  children: ReactNode;
+  roles?: readonly string[] | string[];
+  permission?: string;
+  anyOfPermissions?: readonly string[] | string[];
+}) {
+  return <ProtectedRoute roles={roles} permission={permission} anyOfPermissions={anyOfPermissions}>{children}</ProtectedRoute>;
 }
 
 const APP_ROUTES = [
@@ -69,32 +79,32 @@ const APP_ROUTES = [
   ["/academy/roles", ProtectedAcademyRoles],
   ["/academy/branches", ProtectedAcademyBranches],
   ["/academy/classrooms", ProtectedAcademyClassrooms],
-  ["/", () => <Guard roles={["R02_BRANCH_MANAGER"]}><Home /></Guard>],
-  ["/students", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R05_SECRETARY"]}><Students /></Guard>],
-  ["/classes", () => <Guard roles={["R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS"]}><Classes /></Guard>],
-  ["/schedule", () => <Guard roles={["R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS", "R04_INSTRUCTOR", "R05_SECRETARY"]}><Schedule /></Guard>],
+  ["/", () => <Guard roles={["R02_BRANCH_MANAGER"]} permission="branch.read"><Home /></Guard>],
+  ["/students", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R05_SECRETARY"]} anyOfPermissions={["students.read", "students.create"]}><Students /></Guard>],
+  ["/classes", () => <Guard roles={["R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS"]} permission="sessions.read"><Classes /></Guard>],
+  ["/schedule", () => <Guard roles={["R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS", "R04_INSTRUCTOR", "R05_SECRETARY"]} anyOfPermissions={["sessions.read", "sessions.assigned.read"]}><Schedule /></Guard>],
   ["/secretary", () => <Guard roles={["R05_SECRETARY"]}><Redirect to="/secretary-desk" /></Guard>],
-  ["/secretary-desk", () => <Guard roles={["R05_SECRETARY"]}><SecretaryDesk /></Guard>],
+  ["/secretary-desk", () => <Guard roles={["R05_SECRETARY"]} permission="branch.read"><SecretaryDesk /></Guard>],
   ["/finance", () => <Guard roles={["R05_SECRETARY", "R06_ACCOUNTANT"]}><FinanceRedirect /></Guard>],
-  ["/finance-desk", () => <Guard roles={["R05_SECRETARY", "R06_ACCOUNTANT"]}><FinanceDesk /></Guard>],
+  ["/finance-desk", () => <Guard roles={["R05_SECRETARY", "R06_ACCOUNTANT"]} anyOfPermissions={["finance.read", "invoices.read", "payments.create", "finance.expenses.read"]}><FinanceDesk /></Guard>],
   ["/marketing-desk", () => <Guard roles={["R07_MEDIA_MANAGER"]} permission="marketing.read"><MarketingDesk /></Guard>],
-  ["/team", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS"]}><Team /></Guard>],
-  ["/branch-operations", () => <Guard roles={["R02_BRANCH_MANAGER"]}><BranchOperations /></Guard>],
-  ["/supervision-assignments", () => <Guard roles={["R02_BRANCH_MANAGER"]}><SupervisionAssignments /></Guard>],
-  ["/approvals", () => <Guard roles={["R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS", "R05_SECRETARY", "R06_ACCOUNTANT"]}><Approvals /></Guard>],
-  ["/reports", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R06_ACCOUNTANT"]}><Reports /></Guard>],
+  ["/team", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS"]} anyOfPermissions={["staff.read", "branch.read"]}><Team /></Guard>],
+  ["/branch-operations", () => <Guard roles={["R02_BRANCH_MANAGER"]} permission="branch.read"><BranchOperations /></Guard>],
+  ["/supervision-assignments", () => <Guard roles={["R02_BRANCH_MANAGER"]} permission="branch.read"><SupervisionAssignments /></Guard>],
+  ["/approvals", () => <Guard roles={["R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS", "R05_SECRETARY", "R06_ACCOUNTANT"]} anyOfPermissions={["sessions.create", "evaluations.review", "finance.expenses.approve"]}><Approvals /></Guard>],
+  ["/reports", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R06_ACCOUNTANT"]} anyOfPermissions={["reports.read", "finance.summary.read"]}><Reports /></Guard>],
   ["/instructor", () => <Guard roles={["R04_INSTRUCTOR"]}><Redirect to="/instructor-desk" /></Guard>],
-  ["/instructor-desk", () => <Guard roles={["R04_INSTRUCTOR"]}><InstructorDesk /></Guard>],
-  ["/head-instructors", () => <Guard roles={["R03_HEAD_INSTRUCTORS"]}><HeadInstructors /></Guard>],
-  ["/academic-programs", () => <Guard roles={["R03_HEAD_INSTRUCTORS"]}><AcademicPrograms /></Guard>],
-  ["/academy-owner", () => <Guard roles={["R01_ACADEMY_OWNER"]}><AcademyOwner /></Guard>],
-  ["/academy-owner/branches", () => <Guard roles={["R01_ACADEMY_OWNER"]}><AcademyOwner /></Guard>],
-  ["/academy-owner/tickets", () => <Guard roles={["R01_ACADEMY_OWNER"]}><AcademyOwner /></Guard>],
-  ["/academy-owner/reports", () => <Guard roles={["R01_ACADEMY_OWNER"]}><AcademyOwner /></Guard>],
-  ["/executive-dashboard", () => <Guard roles={["R01_ACADEMY_OWNER"]}><ExecutiveDashboard /></Guard>],
-  ["/platform-console", () => <Guard roles={["R00_PLATFORM_ADMIN"]}><PlatformConsole /></Guard>],
-  ["/family-portal", () => <Guard roles={["R08_PARENT"]}><FamilyPortal /></Guard>],
-  ["/student-portal", () => <Guard roles={["R09_STUDENT"]}><StudentPortal /></Guard>],
+  ["/instructor-desk", () => <Guard roles={["R04_INSTRUCTOR"]} anyOfPermissions={["sessions.assigned.read", "attendance.write", "evaluations.write"]}><InstructorDesk /></Guard>],
+  ["/head-instructors", () => <Guard roles={["R03_HEAD_INSTRUCTORS"]} permission="branch.read"><HeadInstructors /></Guard>],
+  ["/academic-programs", () => <Guard roles={["R03_HEAD_INSTRUCTORS"]} permission="branch.read"><AcademicPrograms /></Guard>],
+  ["/academy-owner", () => <Guard roles={["R01_ACADEMY_OWNER"]} permission="academy.read"><AcademyOwner /></Guard>],
+  ["/academy-owner/branches", () => <Guard roles={["R01_ACADEMY_OWNER"]} permission="branch.read"><AcademyOwner /></Guard>],
+  ["/academy-owner/tickets", () => <Guard roles={["R01_ACADEMY_OWNER"]} permission="academy.read"><AcademyOwner /></Guard>],
+  ["/academy-owner/reports", () => <Guard roles={["R01_ACADEMY_OWNER"]} permission="reports.read"><AcademyOwner /></Guard>],
+  ["/executive-dashboard", () => <Guard roles={["R01_ACADEMY_OWNER"]} permission="academy.read"><ExecutiveDashboard /></Guard>],
+  ["/platform-console", () => <Guard roles={["R00_PLATFORM_ADMIN"]} permission="platform.read"><PlatformConsole /></Guard>],
+  ["/family-portal", () => <Guard roles={["R08_PARENT"]} permission="consumer.students.read"><FamilyPortal /></Guard>],
+  ["/student-portal", () => <Guard roles={["R09_STUDENT"]} permission="consumer.self.read"><StudentPortal /></Guard>],
 ] as const;
 
 function Router() {
