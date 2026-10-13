@@ -56,6 +56,29 @@ describe("mobile route authorization", () => {
     });
     expect(canAccessMobileRoute(headInstructor, "home")).toBe(false);
     expect(canAccessMobileRoute(headInstructor, "tasks")).toBe(false);
+    expect(canAccessMobileRoute(headInstructor, "attendance")).toBe(false);
+    expect(canAccessMobileRoute(headInstructor, "evaluations")).toBe(false);
+  });
+
+  it("requires the precise read and write keys for the operational detail routes", () => {
+    expect(canAccessMobileRoute(identity(), "attendance")).toBe(true);
+    expect(canAccessMobileRoute(identity(), "evaluations")).toBe(true);
+    expect(
+      canAccessMobileRoute(
+        identity({
+          permissions: ["sessions.assigned.read", "attendance.read"],
+        }),
+        "evaluations"
+      )
+    ).toBe(false);
+    expect(
+      canAccessMobileRoute(
+        identity({
+          permissions: ["sessions.assigned.read", "evaluations.write"],
+        }),
+        "attendance"
+      )
+    ).toBe(false);
   });
 
   it("fails closed for consumer, unsupported, and accountType/role mismatches", () => {

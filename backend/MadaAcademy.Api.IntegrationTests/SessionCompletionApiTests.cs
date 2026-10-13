@@ -129,7 +129,7 @@ public sealed class SessionCompletionApiTests
 
         using var unassignedClient = factory.CreateClient();
         TestData.Authenticate(unassignedClient, await TestData.LoginAsync(unassignedClient, unassignedSupervisor));
-        Assert.Equal(HttpStatusCode.NotFound, (await unassignedClient.PutAsJsonAsync($"/api/v1/sessions/{sessionId}/attendance", new { records = new[] { new { studentId, status = "ABSENT" } } })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await unassignedClient.PutAsJsonAsync($"/api/v1/sessions/{sessionId}/attendance", new { records = new[] { new { studentId, status = "ABSENT" } } })).StatusCode);
     }
 
     private static async Task<(Guid SessionId, Guid StudentId)> SeedSessionAsync(TestApiFactory factory, TestAccount instructor, bool marked, bool ended)

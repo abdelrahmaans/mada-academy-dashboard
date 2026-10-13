@@ -75,6 +75,7 @@ public sealed class GroupSupervisionApiTests
         Assert.Equal(0, sessionsJson.RootElement.GetProperty("data").GetProperty("total").GetInt32());
         Assert.Equal(HttpStatusCode.NotFound, (await supervisorClient.GetAsync($"/api/v1/sessions/{sessionId}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await supervisorClient.GetAsync($"/api/v1/sessions/{sessionId}/attendance")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await supervisorClient.PutAsJsonAsync($"/api/v1/sessions/{sessionId}/attendance", new { records = new[] { new { studentId, status = "ABSENT" } } })).StatusCode);
         using var reviewQueue = await supervisorClient.GetAsync("/api/v1/scheduling/evaluation-reviews");
         Assert.Equal(HttpStatusCode.OK, reviewQueue.StatusCode);
         using var reviewQueueJson = await reviewQueue.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Review queue response missing.");
@@ -138,7 +139,7 @@ public sealed class GroupSupervisionApiTests
 
         using var managerClient = factory.CreateClient();
         TestData.Authenticate(managerClient, await TestData.LoginAsync(managerClient, manager));
-        var grant = await managerClient.PostAsJsonAsync("/api/v1/supervision/assignments", new { supervisorUserId = supervisor.UserId, courseOfferingId = supervisedGroupId, canReadAttendance = true, canReadEvaluations = false, canDecideEvaluations = false });
+        var grant = await managerClient.PostAsJsonAsync("/api/v1/supervision/assignments", new { supervisorUserId = supervisor.UserId, courseOfferingId = supervisedGroupId, canReadAttendance = true, canReadEvaluations = true, canDecideEvaluations = false });
         Assert.Equal(HttpStatusCode.OK, grant.StatusCode);
         using var grantJson = await grant.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Grant response missing.");
         var assignmentId = grantJson.RootElement.GetProperty("data").GetProperty("assignmentId").GetGuid();
@@ -152,7 +153,7 @@ public sealed class GroupSupervisionApiTests
         Assert.Single(assignedGroups.EnumerateArray());
         Assert.Equal(supervisedGroupId, assignedGroups[0].GetProperty("groupId").GetGuid());
         Assert.True(assignedGroups[0].GetProperty("canReadAttendance").GetBoolean());
-        Assert.False(assignedGroups[0].GetProperty("canReadEvaluations").GetBoolean());
+        Assert.True(assignedGroups[0].GetProperty("canReadEvaluations").GetBoolean());
         Assert.False(assignedGroups[0].GetProperty("canDecideEvaluations").GetBoolean());
 
         using var sessions = await supervisorClient.GetAsync("/api/v1/sessions");
@@ -172,6 +173,8 @@ public sealed class GroupSupervisionApiTests
         Assert.Equal(HttpStatusCode.NotFound, attemptedWrite.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await supervisorClient.PostAsync($"/api/v1/sessions/{supervisedSessionId}/complete", content: null)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await supervisorClient.GetAsync("/api/v1/scheduling/groups")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await supervisorClient.GetAsync("/api/v1/scheduling/evaluation-reviews")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await supervisorClient.GetAsync("/api/v1/scheduling/evaluation-status-summary")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await supervisorClient.GetAsync("/api/v1/supervision/branch-groups")).StatusCode);
 
         using (var scope = factory.Services.CreateScope())

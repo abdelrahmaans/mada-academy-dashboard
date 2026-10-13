@@ -1,5 +1,6 @@
 using System.Data;
 using System.Security.Claims;
+using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -304,7 +305,7 @@ public static class SessionWorkflowEndpoints
 
     private static async Task<IResult> UpsertEvaluationsAsync(Guid sessionId, EvaluationBatchRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
     {
-        if (!IsInstructor(user) || !Scope(user, out var tenantId, out var branchScope) || !branchScope.HasValue) return Forbidden("EVALUATION_WRITE_FORBIDDEN");
+        if (!RolePermissionAuthorization.HasPermission(user, "evaluations.write") || !IsInstructor(user) || !Scope(user, out var tenantId, out var branchScope) || !branchScope.HasValue) return Forbidden("EVALUATION_WRITE_FORBIDDEN");
         var actorId = Actor(user); if (!actorId.HasValue) return Forbidden("ACTOR_REQUIRED");
         var session = await db.AcademySessions.SingleOrDefaultAsync(item => item.Id == sessionId && item.TenantId == tenantId && (!branchScope.HasValue || item.BranchId == branchScope.Value) && (item.InstructorId == actorId.Value || item.SubstituteInstructorId == actorId.Value), cancellationToken);
         if (session is null) return NotFound("SESSION_NOT_FOUND");
@@ -332,7 +333,7 @@ public static class SessionWorkflowEndpoints
 
     private static async Task<IResult> ListSessionEvaluationsAsync(Guid sessionId, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
     {
-        if (!IsInstructor(user) || !Scope(user, out var tenantId, out var branchScope) || !branchScope.HasValue) return Forbidden("EVALUATION_READ_FORBIDDEN");
+        if (!RolePermissionAuthorization.HasPermission(user, "evaluations.write") || !IsInstructor(user) || !Scope(user, out var tenantId, out var branchScope) || !branchScope.HasValue) return Forbidden("EVALUATION_READ_FORBIDDEN");
         var actorId = Actor(user); if (!actorId.HasValue) return Forbidden("ACTOR_REQUIRED");
         var session = await db.AcademySessions.SingleOrDefaultAsync(item => item.Id == sessionId && item.TenantId == tenantId && (!branchScope.HasValue || item.BranchId == branchScope.Value) && (item.InstructorId == actorId.Value || item.SubstituteInstructorId == actorId.Value), cancellationToken);
         if (session is null) return NotFound("SESSION_NOT_FOUND");
@@ -349,7 +350,7 @@ public static class SessionWorkflowEndpoints
 
     private static async Task<IResult> SubmitEvaluationsAsync(Guid sessionId, EvaluationSubmissionRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
     {
-        if (!IsInstructor(user) || !Scope(user, out var tenantId, out var branchScope) || !branchScope.HasValue) return Forbidden("EVALUATION_SUBMIT_FORBIDDEN");
+        if (!RolePermissionAuthorization.HasPermission(user, "evaluations.write") || !IsInstructor(user) || !Scope(user, out var tenantId, out var branchScope) || !branchScope.HasValue) return Forbidden("EVALUATION_SUBMIT_FORBIDDEN");
         var actorId = Actor(user); if (!actorId.HasValue) return Forbidden("ACTOR_REQUIRED");
         var session = await db.AcademySessions.SingleOrDefaultAsync(item => item.Id == sessionId && item.TenantId == tenantId && (!branchScope.HasValue || item.BranchId == branchScope.Value) && (item.InstructorId == actorId.Value || item.SubstituteInstructorId == actorId.Value), cancellationToken);
         if (session is null) return NotFound("SESSION_NOT_FOUND");
@@ -382,7 +383,6 @@ public static class SessionWorkflowEndpoints
     private static async Task<IResult> ListEvaluationReviewsAsync(ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
     {
         if (!CanAccessEvaluationReviews(user) || !Scope(user, out var tenantId, out var branchScope) || !branchScope.HasValue) return Forbidden("EVALUATION_REVIEW_FORBIDDEN");
-        if (user.IsInRole("R04_INSTRUCTOR") && !await HasEvaluationQueueAccessAsync(user, db, tenantId, branchScope.Value, cancellationToken)) return Forbidden("EVALUATION_REVIEW_FORBIDDEN");
         var items = await (from evaluation in db.SessionEvaluations.AsNoTracking()
                            join session in db.AcademySessions.AsNoTracking() on evaluation.SessionId equals session.Id
                            join student in db.Students.AsNoTracking() on evaluation.StudentId equals student.Id
@@ -406,7 +406,6 @@ public static class SessionWorkflowEndpoints
     {
         if (!CanAccessEvaluationReviews(user) || !Scope(user, out var tenantId, out var branchScope) || !branchScope.HasValue)
             return Forbidden("EVALUATION_REVIEW_FORBIDDEN");
-        if (user.IsInRole("R04_INSTRUCTOR") && !await HasEvaluationQueueAccessAsync(user, db, tenantId, branchScope.Value, cancellationToken)) return Forbidden("EVALUATION_REVIEW_FORBIDDEN");
 
         var grouped = await (from evaluation in db.SessionEvaluations.AsNoTracking()
                              join session in db.AcademySessions.AsNoTracking() on evaluation.SessionId equals session.Id
@@ -487,14 +486,9 @@ public static class SessionWorkflowEndpoints
     private static bool Scope(ClaimsPrincipal user, out Guid tenantId, out Guid? branchId) { var ok = Guid.TryParse(user.FindFirstValue("tenantId"), out tenantId); branchId = Guid.TryParse(user.FindFirstValue("branchId"), out var parsed) ? parsed : null; return ok; }
     private static Guid? Actor(ClaimsPrincipal user) => Guid.TryParse(user.FindFirstValue("sub"), out var id) ? id : null;
     private static bool IsInstructor(ClaimsPrincipal user) => user.IsInRole("R04_INSTRUCTOR") || user.IsInRole("R03_HEAD_INSTRUCTORS");
-    private static bool CanAccessEvaluationReviews(ClaimsPrincipal user) => user.IsInRole("R03_HEAD_INSTRUCTORS") || user.IsInRole("R04_INSTRUCTOR");
-    private static async Task<bool> HasEvaluationQueueAccessAsync(ClaimsPrincipal user, MadaDbContext db, Guid tenantId, Guid branchId, CancellationToken token)
-    {
-        var actorId = Actor(user);
-        if (!actorId.HasValue) return false;
-        var now = DateTimeOffset.UtcNow;
-        return await db.GroupSupervisionAssignments.AnyAsync(item => item.TenantId == tenantId && item.BranchId == branchId && item.SupervisorUserId == actorId.Value && item.Status == "ACTIVE" && (item.CanReadEvaluations || item.CanDecideEvaluations) && (!item.StartsAt.HasValue || item.StartsAt <= now) && (!item.EndsAt.HasValue || item.EndsAt > now), token);
-    }
+    private static bool CanAccessEvaluationReviews(ClaimsPrincipal user) =>
+        user.IsInRole("R03_HEAD_INSTRUCTORS") &&
+        RolePermissionAuthorization.HasPermission(user, "evaluations.review");
     private static bool CanManageScheduling(ClaimsPrincipal user) => user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER");
     private static bool CanReadScheduling(ClaimsPrincipal user) => CanManageScheduling(user) || user.IsInRole("R03_HEAD_INSTRUCTORS") || user.IsInRole("R05_SECRETARY");
     private static bool CanDecide(ClaimsPrincipal user) => user.IsInRole("R00_PLATFORM_ADMIN") || user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R03_HEAD_INSTRUCTORS");

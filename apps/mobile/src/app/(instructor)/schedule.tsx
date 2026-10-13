@@ -1,36 +1,66 @@
-import { StyleSheet, View } from "react-native";
-import { SymbolView } from "expo-symbols";
+import { useRouter } from "expo-router";
+import { useAuth } from "../../auth/AuthProvider";
+import { canAccessMobileRoute } from "../../authorization/routeAccess";
+import { AppPage, PageHeading } from "../../components/AppUi";
 import { RouteGuard } from "../../components/RouteGuard";
-import { AppPage, MadaCard, PageHeading } from "../../components/AppUi";
-import { MadaText as Text } from "../../components/MadaText";
-import { mada } from "../../theme/tokens";
+import { SessionCard } from "../../features/sessions/SessionCard";
+import { SessionListState } from "../../features/sessions/SessionListState";
+import { useAssignedSessions } from "../../features/sessions/useAssignedSessions";
+import { canWriteEvaluations } from "../../features/sessions/sessionAccess";
 
 function ScheduleScreen() {
+  const { sessions, loading, error, refresh } = useAssignedSessions();
+  const { identity } = useAuth();
+  const router = useRouter();
+
   return (
     <AppPage>
       <PageHeading
         eyebrow="الجلسات المسندة إليك"
         title="الجدول"
-        subtitle="جلساتك مرتبة حسب اليوم والوقت."
+        subtitle="بيانات الجلسات تُحمّل مباشرة من الخادم، ويُعاد تحديثها عند الرجوع إلى الشاشة."
       />
-      <MadaCard style={styles.emptyCard}>
-        <View style={styles.calendarMark} accessible={false}>
-          <SymbolView
-            name={{
-              ios: "calendar",
-              android: "calendar_month",
-              web: "calendar_month",
-            }}
-            tintColor={mada.color.teal}
-            size={23}
-          />
-        </View>
-        <Text style={styles.title}>جدولك هيظهر هنا</Text>
-        <Text style={styles.copy}>
-          عند ربط الجلسات المسندة من الخادم، هتظهر مواعيدك هنا من غير جلسات أو
-          أوقات تجريبية.
-        </Text>
-      </MadaCard>
+      <SessionListState
+        loading={loading}
+        error={error}
+        empty={!sessions.length}
+        onRetry={() => void refresh()}
+      />
+      {!loading && !error
+        ? sessions.map(session => {
+            const actions = [];
+            if (identity && canAccessMobileRoute(identity, "attendance")) {
+              actions.push({
+                title: "الحضور",
+                accessibilityLabel: `فتح حضور ${session.courseName ?? `الجلسة ${session.sessionNumber}`}`,
+                onPress: () =>
+                  router.push({
+                    pathname: "/(instructor)/attendance",
+                    params: { sessionId: session.id },
+                  }),
+              });
+            }
+            if (identity && canWriteEvaluations(identity, session)) {
+              actions.push({
+                title: "التقييمات",
+                accessibilityLabel: `فتح تقييمات ${session.courseName ?? `الجلسة ${session.sessionNumber}`}`,
+                onPress: () =>
+                  router.push({
+                    pathname: "/(instructor)/evaluations",
+                    params: { sessionId: session.id },
+                  }),
+                secondary: true,
+              });
+            }
+            return (
+              <SessionCard
+                key={session.id}
+                session={session}
+                actions={actions}
+              />
+            );
+          })
+        : null}
     </AppPage>
   );
 }
@@ -42,27 +72,3 @@ export default function InstructorScheduleRoute() {
     </RouteGuard>
   );
 }
-
-const styles = StyleSheet.create({
-  emptyCard: { alignItems: "flex-end", paddingVertical: mada.space.xl },
-  calendarMark: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: mada.color.tealSoft,
-  },
-  title: {
-    color: mada.color.navy,
-    fontSize: mada.type.body,
-    fontWeight: "800",
-    textAlign: "right",
-  },
-  copy: {
-    color: mada.color.muted,
-    fontSize: mada.type.caption,
-    lineHeight: 22,
-    textAlign: "right",
-  },
-});

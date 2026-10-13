@@ -14,6 +14,99 @@ export class ApiRequestError extends Error {
 
 type RequestOptions = { authenticated?: boolean; retryAfterRefresh?: boolean };
 
+export type SessionRecord = {
+  id: string;
+  branchId: string;
+  courseOfferingId: string | null;
+  sessionNumber: number;
+  startAt: string;
+  endAt: string;
+  instructorId: string;
+  classroomId: string;
+  type: string;
+  status: string;
+  notes: string | null;
+  completedAt: string | null;
+  instructorName?: string | null;
+  classroomName?: string | null;
+  branchName?: string | null;
+  courseName?: string | null;
+  substituteInstructorId?: string | null;
+};
+
+export type SessionListResponse = {
+  items: SessionRecord[];
+  total: number;
+  scopeLevel: string;
+  branchId: string | null;
+};
+
+export type AttendanceStatus =
+  | "PRESENT"
+  | "LATE"
+  | "ABSENT"
+  | "EXCUSED"
+  | "UNMARKED";
+
+export type AttendanceItem = {
+  studentId: string;
+  studentName: string;
+  status: AttendanceStatus;
+  lateMinutes: number | null;
+  updatedAt: string | null;
+};
+
+export type AttendanceResponse = {
+  sessionId: string;
+  sessionStatus: string;
+  items: AttendanceItem[];
+  total: number;
+};
+
+export type AttendanceRecordInput = {
+  studentId: string;
+  status: Exclude<AttendanceStatus, "UNMARKED">;
+  lateMinutes?: number | null;
+};
+
+export type EvaluationStatus =
+  | "DRAFT"
+  | "SUBMITTED"
+  | "CHANGES_REQUESTED"
+  | "PUBLISHED";
+
+export type SessionEvaluationRecord = {
+  studentId: string;
+  score: number | null;
+  notes: string | null;
+  status: EvaluationStatus;
+  reviewNote: string | null;
+  submittedAt: string | null;
+  reviewedAt: string | null;
+};
+
+export type SessionEvaluationListResponse = {
+  sessionId: string;
+  items: SessionEvaluationRecord[];
+  total: number;
+};
+
+export type NotificationRecord = {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  targetType: string | null;
+  targetId: string | null;
+  isRead: boolean;
+  createdAt: string;
+};
+
+export type NotificationListResponse = {
+  items: NotificationRecord[];
+  total: number;
+};
+
 function apiBaseUrl() {
   const value = process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/$/, "");
   if (!value) {
@@ -176,6 +269,62 @@ export const apiClient = {
     return tokens;
   },
   me: () => request<AuthIdentity>("/me"),
+  listSessions: (
+    params: { from?: string; to?: string; status?: string } = {}
+  ) => {
+    const query = new URLSearchParams();
+    if (params.from) query.set("from", params.from);
+    if (params.to) query.set("to", params.to);
+    if (params.status) query.set("status", params.status);
+    const queryString = query.toString();
+    const suffix = queryString ? `?${queryString}` : "";
+    return request<SessionListResponse>(`/sessions${suffix}`);
+  },
+  getSession: (sessionId: string) =>
+    request<SessionRecord>(`/sessions/${encodeURIComponent(sessionId)}`),
+  getSessionAttendance: (sessionId: string) =>
+    request<AttendanceResponse>(
+      `/sessions/${encodeURIComponent(sessionId)}/attendance`
+    ),
+  upsertSessionAttendance: (
+    sessionId: string,
+    records: AttendanceRecordInput[]
+  ) =>
+    request<AttendanceResponse>(
+      `/sessions/${encodeURIComponent(sessionId)}/attendance`,
+      { method: "PUT", body: JSON.stringify({ records }) }
+    ),
+  listSessionEvaluations: (sessionId: string) =>
+    request<SessionEvaluationListResponse>(
+      `/scheduling/sessions/${encodeURIComponent(sessionId)}/evaluations`
+    ),
+  saveSessionEvaluations: (
+    sessionId: string,
+    items: { studentId: string; score: number | null; notes: string }[]
+  ) =>
+    request<{ sessionId: string; saved: number }>(
+      `/scheduling/sessions/${encodeURIComponent(sessionId)}/evaluations`,
+      { method: "PUT", body: JSON.stringify({ items }) }
+    ),
+  submitSessionEvaluations: (sessionId: string, studentIds: string[]) =>
+    request<{ sessionId: string; submitted: number; status: string }>(
+      `/scheduling/sessions/${encodeURIComponent(sessionId)}/evaluations/submit`,
+      { method: "POST", body: JSON.stringify({ studentIds }) }
+    ),
+  completeSession: (sessionId: string) =>
+    request<{ sessionId: string; status: string; completedAt: string }>(
+      `/sessions/${encodeURIComponent(sessionId)}/complete`,
+      { method: "POST" }
+    ),
+  listNotifications: (unreadOnly = false) =>
+    request<NotificationListResponse>(
+      `/scheduling/notifications?unreadOnly=${unreadOnly}`
+    ),
+  markNotificationRead: (notificationId: string) =>
+    request<void>(
+      `/scheduling/notifications/${encodeURIComponent(notificationId)}/read`,
+      { method: "POST" }
+    ),
   logout: async (): Promise<boolean> => {
     let serverRevoked = false;
     try {

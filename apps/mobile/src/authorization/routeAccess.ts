@@ -1,7 +1,13 @@
 import type { AuthIdentity } from "../auth/types";
 import { INSTRUCTOR_ROLE, isAccountTypeCompatible } from "./roles";
 
-export type MobileRoute = "home" | "schedule" | "tasks" | "account";
+export type MobileRoute =
+  | "home"
+  | "schedule"
+  | "tasks"
+  | "account"
+  | "attendance"
+  | "evaluations";
 
 export type MobileTab = {
   route: MobileRoute;
@@ -34,6 +40,14 @@ const ROUTE_POLICIES: Record<
     anyPermissions: ["attendance.write", "evaluations.write"],
   },
   account: { roles: [INSTRUCTOR_ROLE] },
+  attendance: {
+    roles: [INSTRUCTOR_ROLE],
+    allPermissions: ["attendance.read"],
+  },
+  evaluations: {
+    roles: [INSTRUCTOR_ROLE],
+    allPermissions: ["evaluations.write"],
+  },
 };
 
 const TAB_DEFINITIONS: readonly MobileTab[] = [

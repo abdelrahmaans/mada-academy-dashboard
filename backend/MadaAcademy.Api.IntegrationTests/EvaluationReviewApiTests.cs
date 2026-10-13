@@ -73,6 +73,9 @@ public sealed class EvaluationReviewApiTests
 
         using var reviewerClient = factory.CreateClient();
         TestData.Authenticate(reviewerClient, await TestData.LoginAsync(reviewerClient, reviewer));
+        Assert.Equal(HttpStatusCode.Forbidden, (await reviewerClient.GetAsync($"/api/v1/scheduling/sessions/{sessionId}/evaluations")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await reviewerClient.PutAsJsonAsync($"/api/v1/scheduling/sessions/{sessionId}/evaluations", new { items = new[] { new { studentId, score = 90, notes = "R03 must not edit instructor evaluations." } } })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await reviewerClient.PostAsJsonAsync($"/api/v1/scheduling/sessions/{sessionId}/evaluations/submit", new { studentIds = new[] { studentId } })).StatusCode);
         using var queueResponse = await reviewerClient.GetAsync("/api/v1/scheduling/evaluation-reviews");
         Assert.Equal(HttpStatusCode.OK, queueResponse.StatusCode);
         using var queueJson = await queueResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Review queue response is empty.");
@@ -143,7 +146,7 @@ public sealed class EvaluationReviewApiTests
     }
 
     [Fact]
-    public async Task AssignedR04DecisionAccessIsLimitedToExplicitlyAssignedGroups()
+    public async Task R04CannotReviewEvaluationQueueEvenWithDecisionAssignment()
     {
         using var factory = new TestApiFactory(useInMemory: true);
         var manager = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
@@ -154,11 +157,13 @@ public sealed class EvaluationReviewApiTests
         var (assignedSessionId, assignedStudentId) = await SeedSessionAsync(factory, manager.TenantId, manager.BranchId, firstInstructor.UserId, "Assigned Evaluation Child", "Assigned Robotics", true);
         var (unassignedSessionId, _) = await SeedSessionAsync(factory, manager.TenantId, manager.BranchId, secondInstructor.UserId, "Hidden Evaluation Child", "Unassigned Robotics", true);
         Guid assignedOfferingId;
+        Guid assignedEvaluationId;
         Guid unassignedEvaluationId;
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
             assignedOfferingId = await db.AcademySessions.Where(item => item.Id == assignedSessionId).Select(item => item.CourseOfferingId!.Value).SingleAsync();
+            assignedEvaluationId = await db.SessionEvaluations.Where(item => item.SessionId == assignedSessionId && item.StudentId == assignedStudentId).Select(item => item.Id).SingleAsync();
             unassignedEvaluationId = await db.SessionEvaluations.Where(item => item.SessionId == unassignedSessionId).Select(item => item.Id).SingleAsync();
             db.GroupSupervisionAssignments.Add(new GroupSupervisionAssignment
             {
@@ -186,21 +191,10 @@ public sealed class EvaluationReviewApiTests
         Assert.Equal(0, (await sessionsResponse.Content.ReadFromJsonAsync<JsonDocument>())!.RootElement.GetProperty("data").GetProperty("total").GetInt32());
         Assert.Equal(HttpStatusCode.NotFound, (await reviewerClient.GetAsync($"/api/v1/sessions/{assignedSessionId}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await reviewerClient.GetAsync($"/api/v1/sessions/{assignedSessionId}/attendance")).StatusCode);
-        using var queueResponse = await reviewerClient.GetAsync("/api/v1/scheduling/evaluation-reviews");
-        Assert.Equal(HttpStatusCode.OK, queueResponse.StatusCode);
-        using var queueJson = await queueResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Review queue response missing.");
-        var queueItems = queueJson.RootElement.GetProperty("data").GetProperty("items");
-        Assert.Single(queueItems.EnumerateArray());
-        Assert.Equal(assignedStudentId, queueItems[0].GetProperty("studentId").GetGuid());
-        Assert.True(queueItems[0].GetProperty("canDecide").GetBoolean());
-        var assignedEvaluationId = queueItems[0].GetProperty("id").GetGuid();
-
-        using var summaryResponse = await reviewerClient.GetAsync("/api/v1/scheduling/evaluation-status-summary");
-        Assert.Equal(HttpStatusCode.OK, summaryResponse.StatusCode);
-        using var summaryJson = await summaryResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Review summary missing.");
-        Assert.Equal(1, summaryJson.RootElement.GetProperty("data").GetProperty("counts").GetProperty("SUBMITTED").GetInt32());
-        Assert.Equal(HttpStatusCode.NotFound, (await reviewerClient.PostAsJsonAsync($"/api/v1/scheduling/evaluation-reviews/{unassignedEvaluationId}/decision", new { decision = "PUBLISH" })).StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await reviewerClient.PostAsJsonAsync($"/api/v1/scheduling/evaluation-reviews/{assignedEvaluationId}/decision", new { decision = "PUBLISH" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await reviewerClient.GetAsync("/api/v1/scheduling/evaluation-reviews")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await reviewerClient.GetAsync("/api/v1/scheduling/evaluation-status-summary")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await reviewerClient.PostAsJsonAsync($"/api/v1/scheduling/evaluation-reviews/{assignedEvaluationId}/decision", new { decision = "PUBLISH" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await reviewerClient.PostAsJsonAsync($"/api/v1/scheduling/evaluation-reviews/{unassignedEvaluationId}/decision", new { decision = "PUBLISH" })).StatusCode);
 
         using var unassignedClient = factory.CreateClient();
         TestData.Authenticate(unassignedClient, await TestData.LoginAsync(unassignedClient, unassignedInstructor));
@@ -209,7 +203,7 @@ public sealed class EvaluationReviewApiTests
     }
 
     [Fact]
-    public async Task AssignedR04ReadOnlyEvaluationAccessCannotDecide()
+    public async Task R04CannotReadReviewQueueEvenWithReadOnlyEvaluationAssignment()
     {
         using var factory = new TestApiFactory(useInMemory: true);
         var manager = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
@@ -236,18 +230,12 @@ public sealed class EvaluationReviewApiTests
 
         using var readerClient = factory.CreateClient();
         TestData.Authenticate(readerClient, await TestData.LoginAsync(readerClient, reader));
-        using var queueResponse = await readerClient.GetAsync("/api/v1/scheduling/evaluation-reviews");
-        Assert.Equal(HttpStatusCode.OK, queueResponse.StatusCode);
-        using var queueJson = await queueResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Read-only review queue response missing.");
-        var queueItems = queueJson.RootElement.GetProperty("data").GetProperty("items");
-        Assert.Single(queueItems.EnumerateArray());
-        Assert.Equal(studentId, queueItems[0].GetProperty("studentId").GetGuid());
-        Assert.False(queueItems[0].GetProperty("canDecide").GetBoolean());
-        using var summaryResponse = await readerClient.GetAsync("/api/v1/scheduling/evaluation-status-summary");
-        Assert.Equal(HttpStatusCode.OK, summaryResponse.StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await readerClient.PostAsJsonAsync($"/api/v1/scheduling/evaluation-reviews/{queueItems[0].GetProperty("id").GetGuid()}/decision", new { decision = "PUBLISH" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await readerClient.GetAsync("/api/v1/scheduling/evaluation-reviews")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await readerClient.GetAsync("/api/v1/scheduling/evaluation-status-summary")).StatusCode);
         using var dbScope = factory.Services.CreateScope();
         var dbCheck = dbScope.ServiceProvider.GetRequiredService<MadaDbContext>();
+        var evaluationId = await dbCheck.SessionEvaluations.Where(item => item.SessionId == sessionId && item.StudentId == studentId).Select(item => item.Id).SingleAsync();
+        Assert.Equal(HttpStatusCode.Forbidden, (await readerClient.PostAsJsonAsync($"/api/v1/scheduling/evaluation-reviews/{evaluationId}/decision", new { decision = "PUBLISH" })).StatusCode);
         Assert.Equal("SUBMITTED", await dbCheck.SessionEvaluations.Where(item => item.SessionId == sessionId && item.StudentId == studentId).Select(item => item.Status).SingleAsync());
     }
 

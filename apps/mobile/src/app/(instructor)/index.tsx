@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useAuth } from "../../auth/AuthProvider";
@@ -5,18 +6,86 @@ import {
   canAccessMobileRoute,
   hasPermission,
 } from "../../authorization/routeAccess";
-import { RouteGuard } from "../../components/RouteGuard";
-import { AppPage, MadaCard } from "../../components/AppUi";
+import {
+  AppPage,
+  MadaCard,
+  MessageCard,
+  PrimaryButton,
+} from "../../components/AppUi";
 import { MadaText as Text } from "../../components/MadaText";
+import { RouteGuard } from "../../components/RouteGuard";
+import { useAssignedSessions } from "../../features/sessions/useAssignedSessions";
+import { canWriteEvaluations } from "../../features/sessions/sessionAccess";
 import { mada } from "../../theme/tokens";
 
 function InstructorHome() {
   const { identity } = useAuth();
   const router = useRouter();
+  const { sessions, loading, error, refresh, asOf } = useAssignedSessions();
+  const now = asOf;
+  const prioritySession = useMemo(() => {
+    const eligible = sessions.filter(
+      session => session.status.toUpperCase() !== "CANCELLED"
+    );
+    return (
+      eligible.find(
+        session =>
+          Date.parse(session.startAt) <= now && Date.parse(session.endAt) >= now
+      ) ??
+      eligible.find(session => Date.parse(session.startAt) > now) ??
+      [...eligible].reverse()[0] ??
+      null
+    );
+  }, [now, sessions]);
   if (!identity) return null;
 
   const name = identity.user?.displayName?.trim() || "المدرب";
   const initial = [...name][0] ?? "م";
+  const assignedForPriority = prioritySession
+    ? canWriteEvaluations(identity, prioritySession)
+    : false;
+  const priorityEnded = prioritySession
+    ? Date.parse(prioritySession.endAt) < now
+    : false;
+  const priorityTitle = prioritySession
+    ? prioritySession.courseName?.trim() ||
+      `الجلسة ${prioritySession.sessionNumber}`
+    : null;
+
+  const openPriority = () => {
+    if (!prioritySession) {
+      router.push("/(instructor)/schedule");
+      return;
+    }
+    if (
+      priorityEnded &&
+      assignedForPriority &&
+      hasPermission(identity, "evaluations.write")
+    ) {
+      router.push({
+        pathname: "/(instructor)/evaluations",
+        params: { sessionId: prioritySession.id },
+      });
+      return;
+    }
+    if (canAccessMobileRoute(identity, "attendance")) {
+      router.push({
+        pathname: "/(instructor)/attendance",
+        params: { sessionId: prioritySession.id },
+      });
+    } else {
+      router.push("/(instructor)/schedule");
+    }
+  };
+
+  const formatTime = (value: string) =>
+    new Intl.DateTimeFormat("ar-EG", {
+      weekday: "long",
+      day: "numeric",
+      month: "short",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(new Date(value));
 
   return (
     <AppPage contentStyle={styles.page}>
@@ -43,74 +112,126 @@ function InstructorHome() {
 
       <View style={styles.greeting}>
         <Text accessibilityRole="header" style={styles.greetingTitle}>
-          صباح الخير، {name}
+          أهلًا، {name}
         </Text>
-        <Text style={styles.greetingSubtitle}>دي أهم حاجة محتاجة انتباهك</Text>
+        <Text style={styles.greetingSubtitle}>
+          أولوية يومك من الجلسات المسندة فعليًا
+        </Text>
       </View>
 
       <MadaCard style={styles.priorityCard}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionLabel}>مهمتك الآن</Text>
           <View style={styles.statusPill}>
-            <Text style={styles.statusText}>بانتظار البيانات الحية</Text>
+            <Text style={styles.statusText}>
+              {loading ? "جارٍ التحديث" : "بيانات الخادم"}
+            </Text>
           </View>
         </View>
-        <Text style={styles.priorityTitle}>أولويتك اليومية هتظهر هنا</Text>
-        <Text style={styles.bodyCopy}>
-          هنعرِض الجلسة أو الإجراء المؤكد من الخادم فقط، من غير جلسات أو أعداد
-          تجريبية.
-        </Text>
-        {canAccessMobileRoute(identity, "schedule") ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push("/(instructor)/schedule")}
-            style={({ pressed }) => [
-              styles.primaryAction,
-              pressed ? styles.pressed : null,
-            ]}
-          >
-            <Text style={styles.primaryActionText}>فتح الجدول</Text>
-            <Text family="latin" style={styles.actionArrow} accessible={false}>
-              ‹
+        {loading ? (
+          <MessageCard
+            title="جارٍ تحميل الجلسات"
+            detail="يتم جلب الجلسات المسندة دون بيانات تجريبية."
+          />
+        ) : error ? (
+          <MessageCard
+            title="تعذر تحميل الأولوية"
+            detail={error}
+            tone="error"
+            action={
+              <PrimaryButton
+                title="إعادة المحاولة"
+                onPress={() => void refresh()}
+                secondary
+              />
+            }
+          />
+        ) : prioritySession ? (
+          <>
+            <Text style={styles.priorityTitle}>{priorityTitle}</Text>
+            <Text style={styles.bodyCopy}>
+              {formatTime(prioritySession.startAt)}
             </Text>
-          </Pressable>
-        ) : null}
+            {prioritySession.classroomName ? (
+              <Text style={styles.bodyCopy}>
+                المكان: {prioritySession.classroomName}
+              </Text>
+            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={
+                priorityEnded ? "فتح تقييمات الجلسة" : "فتح حضور الجلسة"
+              }
+              onPress={openPriority}
+              style={({ pressed }) => [
+                styles.primaryAction,
+                pressed ? styles.pressed : null,
+              ]}
+            >
+              <Text style={styles.primaryActionText}>
+                {priorityEnded && assignedForPriority
+                  ? "فتح التقييمات"
+                  : "فتح الحضور"}
+              </Text>
+              <Text
+                family="latin"
+                style={styles.actionArrow}
+                accessible={false}
+              >
+                ‹
+              </Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <Text style={styles.priorityTitle}>لا توجد جلسات قريبة</Text>
+            <Text style={styles.bodyCopy}>
+              لم يُرجع الخادم جلسة مسندة خلال الفترة الحالية.
+            </Text>
+            {canAccessMobileRoute(identity, "schedule") ? (
+              <PrimaryButton
+                title="عرض الجدول"
+                onPress={() => router.push("/(instructor)/schedule")}
+              />
+            ) : null}
+          </>
+        )}
       </MadaCard>
 
-      {hasPermission(identity, "evaluations.write") ? (
-        <View style={styles.nextSection}>
-          <Text style={styles.sectionTitle}>بعدها</Text>
-          <MadaCard style={styles.nextCard}>
-            <View style={styles.nextIcon} accessible={false}>
-              <Text style={styles.nextIconText}>✓</Text>
-            </View>
-            <View style={styles.nextCopy}>
-              <Text style={styles.nextTitle}>التقييمات المستحقة</Text>
-              <Text style={styles.nextDescription}>
-                هتظهر هنا لما تتوفر قائمة فعلية من الـAPI.
-              </Text>
-            </View>
-            {canAccessMobileRoute(identity, "tasks") ? (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="عرض المهام"
-                onPress={() => router.push("/(instructor)/tasks")}
-                style={({ pressed }) => [
-                  styles.secondaryAction,
-                  pressed ? styles.pressed : null,
-                ]}
-              >
-                <Text style={styles.secondaryActionText}>المهام</Text>
-              </Pressable>
-            ) : null}
-          </MadaCard>
-        </View>
-      ) : null}
+      <View style={styles.nextSection}>
+        <Text style={styles.sectionTitle}>إجراءات الجلسات</Text>
+        <MadaCard style={styles.nextCard}>
+          <View style={styles.nextIcon} accessible={false}>
+            <Text style={styles.nextIconText}>✓</Text>
+          </View>
+          <View style={styles.nextCopy}>
+            <Text style={styles.nextTitle}>الحضور والتقييم</Text>
+            <Text style={styles.nextDescription}>
+              افتح قائمة الجلسات المسندة للوصول إلى الإجراء المناسب. الحالات لا
+              تُوسم كمستحقة قبل تأكيدها من الخادم.
+            </Text>
+          </View>
+          {canAccessMobileRoute(identity, "tasks") ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="عرض إجراءات الجلسات"
+              onPress={() => router.push("/(instructor)/tasks")}
+              style={({ pressed }) => [
+                styles.secondaryAction,
+                pressed ? styles.pressed : null,
+              ]}
+            >
+              <Text style={styles.secondaryActionText}>عرض</Text>
+            </Pressable>
+          ) : null}
+        </MadaCard>
+      </View>
 
       <View style={styles.updateNote}>
         <Text style={styles.updateTitle}>التحديثات</Text>
         <Text style={styles.updateCopy}>
-          إشعارات الجلسات هتظهر هنا بعد ربط مصدرها؛ ما فيش تحديثات مفترضة.
+          لا يظهر التطبيق تنبيهًا أو عددًا إلا بعد ربط مصدر إشعارات مؤكد؛
+          الإشعارات ليست بديلًا عن قائمة المهام.
         </Text>
       </View>
     </AppPage>
@@ -257,7 +378,7 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   secondaryAction: {
-    minHeight: 40,
+    minHeight: 44,
     paddingHorizontal: mada.space.md,
     borderWidth: 1,
     borderColor: mada.color.border,

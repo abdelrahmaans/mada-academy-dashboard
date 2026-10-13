@@ -78,6 +78,8 @@ export default function InstructorTabsLayout() {
         name="account"
         options={options("account", "حسابي", "account")}
       />
+      <Tabs.Screen name="attendance" options={{ href: null }} />
+      <Tabs.Screen name="evaluations" options={{ href: null }} />
     </Tabs>
   );
 }
