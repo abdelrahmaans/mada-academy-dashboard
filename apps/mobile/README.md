@@ -29,7 +29,7 @@ The UI is Arabic-first and applies RTL direction in the screen layout. For SDK 5
 - `src/authorization/`: canonical role catalog, permission predicates, and route policy.
 - `src/components/`: shared native layouts, `MadaText`, state, button, and route-guard components.
 - `src/theme/`: Mada tokens, local font assets, and typography family mapping.
-- `src/features/`: add domain modules here as workflows are implemented (home priorities, schedule, attendance, evaluations, notifications).
+- `src/features/`: domain modules include `sessions/` for live sessions, attendance, and evaluations; add notifications UI and other flows here when implemented.
 
 ## Visual contract
 
@@ -37,7 +37,7 @@ The UI is Arabic-first and applies RTL direction in the screen layout. For SDK 5
 
 Arabic uses locally bundled Cairo; Latin text and technical identifiers use Inter. `src/app/_layout.tsx` loads the font assets before rendering the navigation tree. All interface copy uses `src/components/MadaText.tsx`, which maps text weight to the corresponding font face. Use `MadaText` rather than importing React Native `Text` directly. Keep Arabic layouts RTL and set phone numbers, IDs, and other LTR values explicitly to Inter.
 
-Home follows the agreed priority-first pattern: current action, next action, then a concise update summary when real data exists. Do not put permission diagnostics on Home. Use only confirmed backend data; the current home and task surfaces are honest scaffolds until their API sources are wired and must not imply that sample sessions or counts are live.
+Home, Schedule, and Tasks now use live `GET /sessions` data within a bounded date window. Home highlights a nearby session and the actions permitted for it; Tasks lists available session actions but is not a backend-confirmed task queue. Do not invent due-work counts or notification badges. Attendance and Evaluations use their typed backend contracts, with the backend remaining authoritative for permission and assignment checks.
 
 ## Authentication and role rules
 
@@ -58,6 +58,12 @@ pnpm check
 pnpm build
 pnpm --filter @mada/mobile exec expo install --check
 ```
+
+## EAS build profiles
+
+`eas.json` defines three profiles: `development` builds an internal custom development client, `preview` builds an internal Android APK, and `production` builds store-ready artifacts with remotely managed build numbers. The development profile uses `expo-dev-client`.
+
+Before the first EAS build, link this app to the intended Expo project so its real project ID is added to `expo.extra.eas.projectId`. Set `EXPO_PUBLIC_API_URL` in the matching EAS `development`, `preview`, or `production` environment. This value is embedded in the client and must point to the correct reachable API, but must never contain credentials or server secrets. No Expo project ID, EAS credential, or staging API URL is configured in this repository yet; do not start a cloud build until those are set and verified. Production signing/submission and official launcher branding remain separate release prerequisites.
 
 After navigation, typography, or native-module changes, export both platforms and review RTL and font loading:
 
