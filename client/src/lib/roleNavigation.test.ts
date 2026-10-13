@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { ROLE_DEFINITIONS, getRoleBackPath, getRoleHomePath } from "./roleNavigation";
+import {
+  ROLE_DEFINITIONS,
+  getAuthorizedNavigation,
+  getRoleBackPath,
+  getRoleHomePath,
+  isNavigationItemAllowed,
+} from "./roleNavigation";
 
 describe("role navigation scopes", () => {
   it("keeps the head-instructors role branch-scoped", () => {
@@ -58,7 +64,7 @@ describe("role navigation scopes", () => {
       "/reports", "/instructor-desk", "/head-instructors", "/academic-programs", "/academy-owner",
       "/academy-owner/branches", "/academy-owner/tickets", "/academy-owner/reports", "/executive-dashboard",
       "/platform-console", "/family-portal", "/student-portal", "/academy/branches", "/academy/classrooms",
-      "/academy/roles",
+      "/academy/roles", "/academy/audit-trail",
     ]);
 
     for (const definition of Object.values(ROLE_DEFINITIONS)) {
@@ -78,5 +84,20 @@ describe("role navigation scopes", () => {
         expect(paths).not.toContain("/finance-desk");
       }
     }
+  });
+
+  it("filters navigation dynamically when permissions are missing", () => {
+    // Secretary with only branch.read and students.read (no finance permissions)
+    const limitedSecretaryNav = getAuthorizedNavigation("R05", ["branch.read", "students.read"]);
+    const paths = limitedSecretaryNav.map(item => item.path);
+    expect(paths).toContain("/secretary-desk");
+    expect(paths).toContain("/students");
+    expect(paths).not.toContain("/finance-desk");
+  });
+
+  it("retains all navigation items when all required permissions are granted", () => {
+    const allRolePerms = ["branch.read", "invoices.read", "students.read", "sessions.read"];
+    const fullSecretaryNav = getAuthorizedNavigation("R05", allRolePerms);
+    expect(fullSecretaryNav.length).toBe(ROLE_DEFINITIONS.R05.navigation.length);
   });
 });

@@ -12,6 +12,8 @@ public static class ExecutiveDashboardEndpoints
             .RequireAuthorization("academy-owner");
         endpoints.MapGet("/api/v1/academy/executive-activity", GetActivityAsync)
             .RequireAuthorization("academy-owner");
+        endpoints.MapGet("/api/v1/academy/audit-events", GetAuditEventsAsync)
+            .RequireAuthorization("academy-owner");
         return endpoints;
     }
 
@@ -248,6 +250,90 @@ public static class ExecutiveDashboardEndpoints
 
         var items = auditEvents.Concat(decisions).OrderByDescending(item => item.OccurredAt).Take(100).ToArray();
         return Results.Ok(new { data = new { tenantId, items, total = items.Length } });
+    }
+
+    private static async Task<IResult> GetAuditEventsAsync(
+        ClaimsPrincipal principal,
+        MadaDbContext db,
+        DateOnly? from,
+        DateOnly? to,
+        string? action,
+        string? targetType,
+        Guid? branchId,
+        int? page,
+        int? pageSize,
+        CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(principal.FindFirstValue("tenantId"), out var tenantId))
+            return Results.Problem(statusCode: 403, title: "Missing academy scope", extensions: new Dictionary<string, object?> { ["code"] = "MISSING_ACADEMY_SCOPE" });
+        if (from.HasValue && to.HasValue && from.Value > to.Value)
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["dateRange"] = ["from cannot be after to."] });
+        if (to == DateOnly.MaxValue)
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["to"] = ["to must be earlier than the maximum supported date."] });
+        if (branchId.HasValue && !await db.Branches.AnyAsync(item => item.Id == branchId.Value && item.TenantId == tenantId, cancellationToken))
+            return Results.NotFound(new { error = new { code = "BRANCH_NOT_FOUND", message = "The requested branch was not found in the current academy." } });
+
+        var currentPage = Math.Max(1, page ?? 1);
+        var currentPageSize = Math.Clamp(pageSize ?? 50, 1, 200);
+
+        var fromUtc = from.HasValue ? StartOfDay(from.Value) : (DateTimeOffset?)null;
+        var toUtcExclusive = to.HasValue ? StartOfDay(to.Value.AddDays(1)) : (DateTimeOffset?)null;
+
+        var query = db.AuditEvents.AsNoTracking()
+            .Where(item => item.TenantId == tenantId);
+
+        if (branchId.HasValue)
+            query = query.Where(item => !item.BranchId.HasValue || item.BranchId == branchId.Value);
+
+        if (!string.IsNullOrWhiteSpace(action))
+            query = query.Where(item => item.Action == action.Trim());
+
+        if (!string.IsNullOrWhiteSpace(targetType))
+            query = query.Where(item => item.TargetType == targetType.Trim());
+
+        if (fromUtc.HasValue)
+            query = query.Where(item => item.CreatedAt >= fromUtc.Value);
+
+        if (toUtcExclusive.HasValue)
+            query = query.Where(item => item.CreatedAt < toUtcExclusive.Value);
+
+        var total = await query.CountAsync(cancellationToken);
+
+        var items = await query
+            .OrderByDescending(item => item.CreatedAt)
+            .Skip((currentPage - 1) * currentPageSize)
+            .Take(currentPageSize)
+            .Select(x => new
+            {
+                id = x.Id,
+                action = x.Action,
+                targetType = x.TargetType,
+                targetId = x.TargetId,
+                tenantId = x.TenantId,
+                branchId = x.BranchId,
+                actorUserId = x.ActorUserId,
+                actorName = x.ActorUserId == null ? null : db.UserAccounts.Where(u => u.Id == x.ActorUserId).Select(u => u.DisplayName).FirstOrDefault(),
+                reason = x.Reason,
+                metadataJson = x.MetadataJson,
+                ipAddress = x.IpAddress,
+                createdAt = x.CreatedAt
+            })
+            .ToListAsync(cancellationToken);
+
+        var totalPages = (int)Math.Ceiling((double)total / currentPageSize);
+
+        return Results.Ok(new
+        {
+            data = new
+            {
+                tenantId,
+                items,
+                total,
+                page = currentPage,
+                pageSize = currentPageSize,
+                totalPages
+            }
+        });
     }
 
     private static DateTimeOffset StartOfDay(DateOnly date)

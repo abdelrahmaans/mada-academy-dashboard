@@ -1,5 +1,6 @@
 using System.Net.Mail;
 using System.Security.Claims;
+using System.Text.Json;
 using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
@@ -12,16 +13,158 @@ public static class RoleEndpoints
     public static IEndpointRouteBuilder MapMadaRoleEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var api = endpoints.MapGroup("/api/v1/academy").RequireAuthorization("academy-owner");
-        api.MapGet("/roles", GetRoles);
+        api.MapGet("/roles", GetRolesAsync);
+        api.MapPut("/roles/{roleCode}/permissions", UpdateRolePermissionsAsync);
+        api.MapDelete("/roles/{roleCode}/permissions", ResetRolePermissionsAsync);
         api.MapGet("/members", GetMembersAsync);
         api.MapPost("/members", AddMemberAsync);
         api.MapPut("/members/{membershipId:guid}/role", ChangeRoleAsync);
+        api.MapPut("/members/{membershipId:guid}/permissions", UpdateMemberPermissionsAsync);
+        api.MapDelete("/members/{membershipId:guid}/permissions", ResetMemberPermissionsAsync);
         api.MapPatch("/members/{membershipId:guid}/status", ChangeStatusAsync);
         return endpoints;
     }
 
-    private static IResult GetRoles()
-        => Results.Ok(new { data = new { roles = RoleCatalog.All, permissions = RoleCatalog.PermissionCatalog } });
+    private static async Task<IResult> GetRolesAsync(
+        MadaDbContext db,
+        ClaimsPrincipal principal,
+        CancellationToken cancellationToken)
+    {
+        if (!TryTenant(principal, out var tenantId)) return ScopeError();
+
+        var overrides = await db.TenantRoleOverrides.AsNoTracking()
+            .Where(x => x.TenantId == tenantId)
+            .ToDictionaryAsync(x => x.RoleCode, x => x.PermissionsJson, StringComparer.OrdinalIgnoreCase, cancellationToken);
+
+        var roles = RoleCatalog.All.Select(role =>
+        {
+            var isCustomized = overrides.TryGetValue(role.Code, out var overrideJson);
+            var effective = RoleCatalog.ResolveEffectivePermissions(role.Code, null, overrideJson);
+            return new
+            {
+                code = role.Code,
+                label = role.Label,
+                scopeLevel = role.ScopeLevel,
+                description = role.Description,
+                permissions = effective,
+                defaultPermissions = role.Permissions,
+                isCustomized,
+                assignableByAcademyOwner = role.AssignableByAcademyOwner
+            };
+        }).ToArray();
+
+        return Results.Ok(new
+        {
+            data = new
+            {
+                roles,
+                permissions = RoleCatalog.PermissionCatalog,
+                permissionDetails = RoleCatalog.PermissionDetails
+            }
+        });
+    }
+
+    private static async Task<IResult> UpdateRolePermissionsAsync(
+        string roleCode,
+        UpdatePermissionsRequest request,
+        MadaDbContext db,
+        ClaimsPrincipal principal,
+        CancellationToken cancellationToken)
+    {
+        if (!TryTenant(principal, out var tenantId)) return ScopeError();
+        var role = RoleCatalog.Find(roleCode);
+        if (role is null) return Results.NotFound(new { error = new { code = "ROLE_NOT_FOUND", message = "Role was not found." } });
+        if (!role.AssignableByAcademyOwner)
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["roleCode"] = ["Academy owner permissions cannot be altered."] });
+
+        var allowed = RoleCatalog.PermissionCatalog.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var sanitized = (request.Permissions ?? [])
+            .Where(p => allowed.Contains(p))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var json = JsonSerializer.Serialize(sanitized);
+        var existing = await db.TenantRoleOverrides
+            .FirstOrDefaultAsync(x => x.TenantId == tenantId && x.RoleCode == role.Code, cancellationToken);
+
+        if (existing is null)
+        {
+            db.TenantRoleOverrides.Add(new TenantRoleOverride
+            {
+                TenantId = tenantId,
+                RoleCode = role.Code,
+                PermissionsJson = json
+            });
+        }
+        else
+        {
+            existing.PermissionsJson = json;
+            existing.UpdatedAt = DateTimeOffset.UtcNow;
+        }
+
+        db.Add(new AuditEvent
+        {
+            ActorUserId = ActorId(principal),
+            TenantId = tenantId,
+            Action = "ROLE_PERMISSIONS_UPDATED",
+            TargetType = "ROLE",
+            TargetId = role.Code,
+            MetadataJson = $"{{\"role\":\"{role.Code}\",\"count\":{sanitized.Length}}}"
+        });
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Results.Ok(new
+        {
+            data = new
+            {
+                roleCode = role.Code,
+                permissions = sanitized,
+                defaultPermissions = role.Permissions,
+                isCustomized = true
+            }
+        });
+    }
+
+    private static async Task<IResult> ResetRolePermissionsAsync(
+        string roleCode,
+        MadaDbContext db,
+        ClaimsPrincipal principal,
+        CancellationToken cancellationToken)
+    {
+        if (!TryTenant(principal, out var tenantId)) return ScopeError();
+        var role = RoleCatalog.Find(roleCode);
+        if (role is null) return Results.NotFound(new { error = new { code = "ROLE_NOT_FOUND", message = "Role was not found." } });
+
+        var existing = await db.TenantRoleOverrides
+            .FirstOrDefaultAsync(x => x.TenantId == tenantId && x.RoleCode == role.Code, cancellationToken);
+
+        if (existing is not null)
+        {
+            db.TenantRoleOverrides.Remove(existing);
+            db.Add(new AuditEvent
+            {
+                ActorUserId = ActorId(principal),
+                TenantId = tenantId,
+                Action = "ROLE_PERMISSIONS_RESET",
+                TargetType = "ROLE",
+                TargetId = role.Code,
+                MetadataJson = $"{{\"role\":\"{role.Code}\"}}"
+            });
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return Results.Ok(new
+        {
+            data = new
+            {
+                roleCode = role.Code,
+                permissions = role.Permissions,
+                defaultPermissions = role.Permissions,
+                isCustomized = false
+            }
+        });
+    }
 
     private static async Task<IResult> GetMembersAsync(
         MadaDbContext db,
@@ -29,13 +172,31 @@ public static class RoleEndpoints
         CancellationToken cancellationToken)
     {
         if (!TryTenant(principal, out var tenantId)) return ScopeError();
+
+        var overrides = await db.TenantRoleOverrides.AsNoTracking()
+            .Where(x => x.TenantId == tenantId)
+            .ToDictionaryAsync(x => x.RoleCode, x => x.PermissionsJson, StringComparer.OrdinalIgnoreCase, cancellationToken);
+
         var members = await db.Memberships.AsNoTracking()
             .Include(item => item.UserAccount)
             .Include(item => item.Branch)
             .Where(item => item.TenantId == tenantId && item.Status != "REVOKED" && item.UserAccount != null)
             .OrderBy(item => item.RoleCode)
             .ThenBy(item => item.UserAccount!.DisplayName)
-            .Select(item => new
+            .ToListAsync(cancellationToken);
+
+        var items = members.Select(item =>
+        {
+            overrides.TryGetValue(item.RoleCode, out var overrideJson);
+            var effective = RoleCatalog.ResolveEffectivePermissions(item.RoleCode, item.CustomPermissionsJson, overrideJson);
+            string[]? custom = null;
+            if (!string.IsNullOrWhiteSpace(item.CustomPermissionsJson))
+            {
+                try { custom = JsonSerializer.Deserialize<string[]>(item.CustomPermissionsJson); }
+                catch { }
+            }
+
+            return new
             {
                 membershipId = item.Id,
                 userId = item.UserAccountId,
@@ -46,10 +207,14 @@ public static class RoleEndpoints
                 roleCode = item.RoleCode,
                 scopeLevel = item.ScopeLevel,
                 membershipStatus = item.Status,
-                branch = item.Branch == null ? null : new { item.Branch.Id, item.Branch.Name, item.Branch.Code }
-            })
-            .ToListAsync(cancellationToken);
-        return Results.Ok(new { data = new { items = members, total = members.Count, tenantId } });
+                branch = item.Branch == null ? null : new { item.Branch.Id, item.Branch.Name, item.Branch.Code },
+                customPermissions = custom,
+                effectivePermissions = effective,
+                hasCustomPermissions = custom is not null
+            };
+        }).ToList();
+
+        return Results.Ok(new { data = new { items, total = items.Count, tenantId } });
     }
 
     private static async Task<IResult> AddMemberAsync(
@@ -128,6 +293,91 @@ public static class RoleEndpoints
         return Results.Ok(new { data = new { membershipId = membership.Id, roleCode = membership.RoleCode, scopeLevel = membership.ScopeLevel, branch = branch == null ? null : new { branch.Id, branch.Name, branch.Code } } });
     }
 
+    private static async Task<IResult> UpdateMemberPermissionsAsync(
+        Guid membershipId,
+        UpdatePermissionsRequest request,
+        MadaDbContext db,
+        ClaimsPrincipal principal,
+        CancellationToken cancellationToken)
+    {
+        if (!TryTenant(principal, out var tenantId)) return ScopeError();
+        var membership = await db.Memberships.Include(item => item.UserAccount)
+            .SingleOrDefaultAsync(item => item.Id == membershipId && item.TenantId == tenantId, cancellationToken);
+        if (membership?.UserAccount is null)
+            return Results.NotFound(new { error = new { code = "MEMBERSHIP_NOT_FOUND", message = "Member was not found in this academy." } });
+        if (membership.UserAccountId == ActorId(principal))
+            return Results.Conflict(new { error = new { code = "CANNOT_CHANGE_SELF", message = "You cannot override your own academy owner permissions." } });
+
+        var allowed = RoleCatalog.PermissionCatalog.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var sanitized = (request.Permissions ?? [])
+            .Where(p => allowed.Contains(p))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        membership.CustomPermissionsJson = JsonSerializer.Serialize(sanitized);
+        db.Add(new AuditEvent
+        {
+            ActorUserId = ActorId(principal),
+            TenantId = tenantId,
+            Action = "MEMBER_PERMISSIONS_UPDATED",
+            TargetType = "MEMBERSHIP",
+            TargetId = membership.Id.ToString(),
+            MetadataJson = $"{{\"membershipId\":\"{membership.Id}\",\"count\":{sanitized.Length}}}"
+        });
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Results.Ok(new
+        {
+            data = new
+            {
+                membershipId = membership.Id,
+                customPermissions = sanitized,
+                effectivePermissions = sanitized,
+                hasCustomPermissions = true
+            }
+        });
+    }
+
+    private static async Task<IResult> ResetMemberPermissionsAsync(
+        Guid membershipId,
+        MadaDbContext db,
+        ClaimsPrincipal principal,
+        CancellationToken cancellationToken)
+    {
+        if (!TryTenant(principal, out var tenantId)) return ScopeError();
+        var membership = await db.Memberships.Include(item => item.UserAccount)
+            .SingleOrDefaultAsync(item => item.Id == membershipId && item.TenantId == tenantId, cancellationToken);
+        if (membership?.UserAccount is null)
+            return Results.NotFound(new { error = new { code = "MEMBERSHIP_NOT_FOUND", message = "Member was not found in this academy." } });
+
+        membership.CustomPermissionsJson = null;
+        db.Add(new AuditEvent
+        {
+            ActorUserId = ActorId(principal),
+            TenantId = tenantId,
+            Action = "MEMBER_PERMISSIONS_RESET",
+            TargetType = "MEMBERSHIP",
+            TargetId = membership.Id.ToString(),
+            MetadataJson = $"{{\"membershipId\":\"{membership.Id}\"}}"
+        });
+        await db.SaveChangesAsync(cancellationToken);
+
+        var tenantOverride = await db.TenantRoleOverrides.AsNoTracking()
+            .FirstOrDefaultAsync(item => item.TenantId == tenantId && item.RoleCode == membership.RoleCode, cancellationToken);
+        var effective = RoleCatalog.ResolveEffectivePermissions(membership.RoleCode, null, tenantOverride?.PermissionsJson);
+
+        return Results.Ok(new
+        {
+            data = new
+            {
+                membershipId = membership.Id,
+                customPermissions = (string[]?)null,
+                effectivePermissions = effective,
+                hasCustomPermissions = false
+            }
+        });
+    }
+
     private static async Task<IResult> ChangeStatusAsync(
         Guid membershipId,
         ChangeStatusRequest request,
@@ -142,7 +392,14 @@ public static class RoleEndpoints
         if (membership?.UserAccount is null) return Results.NotFound(new { error = new { code = "MEMBERSHIP_NOT_FOUND", message = "Member was not found in this academy." } });
         if (membership.UserAccountId == ActorId(principal)) return Results.Conflict(new { error = new { code = "CANNOT_CHANGE_SELF", message = "You cannot suspend or revoke your own account." } });
         membership.Status = request.Status;
-        if (request.Status == "SUSPENDED") membership.UserAccount.Status = "SUSPENDED";
+        if (request.Status == "SUSPENDED")
+        {
+            membership.UserAccount.Status = "SUSPENDED";
+            var sessions = await db.RefreshSessions
+                .Where(s => s.UserAccountId == membership.UserAccountId && s.RevokedAt == null)
+                .ToListAsync(cancellationToken);
+            foreach (var s in sessions) s.RevokedAt = DateTimeOffset.UtcNow;
+        }
         if (request.Status == "ACTIVE" && membership.UserAccount.Status == "SUSPENDED") membership.UserAccount.Status = "ACTIVE";
         db.Add(new AuditEvent { ActorUserId = ActorId(principal), TenantId = tenantId, Action = "MEMBER_STATUS_CHANGED", TargetType = "MEMBERSHIP", TargetId = membership.Id.ToString(), MetadataJson = $"{{\"status\":\"{request.Status}\",\"userId\":\"{membership.UserAccountId}\"}}" });
         await db.SaveChangesAsync(cancellationToken);
@@ -164,3 +421,4 @@ public static class RoleEndpoints
 public sealed record AddMemberRequest(string FullName, string Email, string Phone, string Password, string RoleCode, Guid? BranchId);
 public sealed record ChangeRoleRequest(string RoleCode, Guid? BranchId);
 public sealed record ChangeStatusRequest(string Status);
+public sealed record UpdatePermissionsRequest(string[]? Permissions);

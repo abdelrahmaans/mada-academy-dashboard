@@ -4,6 +4,8 @@ import { Link, useLocation } from "wouter";
 import { ROLE_DEFINITIONS, type RoleDefinition } from "@/lib/roleNavigation";
 import type { RoleCode } from "@/contexts/RoleScopeContext";
 
+import { useAuth } from "@/contexts/AuthContext";
+
 const ROLE_ORDER: RoleCode[] = ["R00", "R01", "R02", "R03", "R04", "R05", "R06", "R07", "R08", "R09"];
 const ANGULAR_PREVIEW_URL = "https://4300-ikmfmvmdte3kxlh25o9sc-ec94301a.sg2.manus.computer";
 const GROUPS = [
@@ -12,10 +14,14 @@ const GROUPS = [
   { title: "طبقة التسويق والمستهلك", description: "الحملات والأسرة والطالب", roles: ["R07", "R08", "R09"] as RoleCode[] },
 ];
 
-function RoleCard({ role }: { role: RoleDefinition }) {
+function RoleCard({ role, isCurrentRole }: { role: RoleDefinition; isCurrentRole: boolean }) {
   return (
-    <article className="workspace-role-card">
-      <div className="workspace-role-card-head"><span className={`workspace-role-code ${role.identityKind}`}>{role.code}</span><span className="workspace-role-kind">{role.identityKind === "staff" ? "Staff" : "Consumer"}</span></div>
+    <article className={`workspace-role-card ${isCurrentRole ? "active-current-role" : ""}`}>
+      <div className="workspace-role-card-head">
+        <span className={`workspace-role-code ${role.identityKind}`}>{role.code}</span>
+        {isCurrentRole && <span className="workspace-current-badge">دورك الحالي</span>}
+        <span className="workspace-role-kind">{role.identityKind === "staff" ? "Staff" : "Consumer"}</span>
+      </div>
       <h3>{role.label}</h3><p>{role.defaultScopeLabel}</p>
       <div className="workspace-role-scope"><ShieldCheck size={13} /> {role.scopeLevel}</div>
       <Link href={role.homePath} className="workspace-role-open">افتح المساحة <ArrowUpLeft size={15} /></Link>
@@ -39,12 +45,15 @@ function DemoRolePlayground() {
 }
 
 export default function WorkspaceHub() {
+  const { me } = useAuth();
+  const currentRoleCode = me?.role.match(/^R\d+/)?.[0] ?? "";
+
   return (
     <main className="workspace-hub" dir="rtl">
       <header className="workspace-hub-hero"><div><span className="workspace-hub-kicker"><Layers3 size={14} /> Mada Academy Workspace</span><h1>غرفة متابعة كل الأدوار</h1><p>راجع أسطح R00–R09 ونطاقاتها التعريفية؛ تسجيل الدخول والـAPI يعملان في المسارات المتصلة، بينما بقية الواجهات تظل في وضع المعاينة.</p></div><div className="workspace-hub-summary"><strong>R00 → R09</strong><span>10 Role surfaces</span><a className="workspace-engine-link" href={ANGULAR_PREVIEW_URL} target="_blank" rel="noreferrer"><ExternalLink size={13} /> جرّب Angular Preview</a></div></header>
       <section className="workspace-hub-howto"><div><Users size={17} /><strong>طريقة الاستخدام</strong></div><p>اختار الدور لمعاينة واجهته، أو استخدم تسجيل الدخول الفعلي. بطاقة الدور وروابطها للتنقل فقط؛ الصلاحيات الحقيقية يفرضها الباك إند.</p><Link href="/platform/academies/new" className="workspace-bootstrap-link"><Building2 size={14} /> إنشاء أكاديمية جديدة</Link></section>
       <DemoRolePlayground />
-      <section className="workspace-tree" aria-label="شجرة الأدوار">{GROUPS.map(group => <div className="workspace-group" key={group.title}><div className="workspace-group-heading"><div><h2>{group.title}</h2><p>{group.description}</p></div><span>{group.roles.length} roles</span></div><div className="workspace-role-grid">{group.roles.map(code => <RoleCard key={code} role={ROLE_DEFINITIONS[code]} />)}</div></div>)}</section>
+      <section className="workspace-tree" aria-label="شجرة الأدوار">{GROUPS.map(group => <div className="workspace-group" key={group.title}><div className="workspace-group-heading"><div><h2>{group.title}</h2><p>{group.description}</p></div><span>{group.roles.length} roles</span></div><div className="workspace-role-grid">{group.roles.map(code => <RoleCard key={code} role={ROLE_DEFINITIONS[code]} isCurrentRole={currentRoleCode === code} />)}</div></div>)}</section>
       <footer className="workspace-hub-footer"><span>اختيار الدور للمعاينة فقط؛ JWT وصلاحيات الـAPI هي مصدر الحقيقة عند تسجيل الدخول.</span><span className="workspace-engine-footer"><a href={ANGULAR_PREVIEW_URL} target="_blank" rel="noreferrer">فتح نسخة Angular</a><Link href="/">العودة لملخص التشغيل <ArrowUpLeft size={13} /></Link></span></footer>
     </main>
   );

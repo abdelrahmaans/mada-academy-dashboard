@@ -120,6 +120,17 @@ public static class AcademyIdentityEndpoints
         if (membership?.UserAccount is null || membership.Tenant is null)
             return Results.Problem(statusCode: 403, title: "Active membership not found", extensions: new Dictionary<string, object?> { ["code"] = "ACTIVE_MEMBERSHIP_NOT_FOUND" });
 
+        if (membership.UserAccount.Status == "SUSPENDED" || membership.Status == "SUSPENDED")
+            return Results.Problem(statusCode: 403, title: "Account is suspended", extensions: new Dictionary<string, object?> { ["code"] = "ACCOUNT_SUSPENDED" });
+
+        var tenantOverride = await db.TenantRoleOverrides.AsNoTracking()
+            .FirstOrDefaultAsync(item => item.TenantId == tenantId && item.RoleCode == membership.RoleCode, cancellationToken);
+
+        var effectivePermissions = RoleCatalog.ResolveEffectivePermissions(
+            membership.RoleCode,
+            membership.CustomPermissionsJson,
+            tenantOverride?.PermissionsJson);
+
         var scopeLevel = membership.ScopeLevel;
         var branchesQuery = db.Branches.AsNoTracking().Where(item => item.TenantId == tenantId && item.Status == "ACTIVE");
         if (membership.BranchId.HasValue) branchesQuery = branchesQuery.Where(item => item.Id == membership.BranchId.Value);
@@ -138,7 +149,7 @@ public static class AcademyIdentityEndpoints
                 tenantId,
                 branchId = membership.BranchId,
                 scopeLevel,
-                permissions = RoleCatalog.PermissionsFor(membership.RoleCode),
+                permissions = effectivePermissions,
                 user = new { membership.UserAccount.Id, membership.UserAccount.DisplayName, membership.UserAccount.Email, membership.UserAccount.Phone },
                 academy = new { membership.Tenant.Id, membership.Tenant.Name, membership.Tenant.Slug, membership.Tenant.Status, membership.Tenant.PlanCode },
                 branches = accountType == "staff" ? branches : []

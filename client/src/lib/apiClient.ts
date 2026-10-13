@@ -20,6 +20,28 @@ export type PlatformActivityResponse = { items: PlatformActivity[]; total: numbe
 export type PlatformMember = { membershipId: string; userId: string; name: string | null; maskedEmail: string | null; maskedPhone: string; roleCode: string; membershipStatus: string; userStatus: string; lastLoginAt: string | null; activeSessions: number; lastSessionAt: string | null; branch: { id: string; name: string; code: string } | null };
 export type PlatformRole = { code: string; label: string; scope: string; permissions: string[]; assignmentMode: string; canSelfAssign: boolean };
 export type ExecutiveActivityItem = { id: string; source: "AUDIT" | "DECISION"; action: string; targetType: string; targetId: string; branchId: string | null; actorUserId: string | null; actorName: string | null; occurredAt: string; reason: string | null; state: string | null };
+export type AcademyAuditEventItem = {
+  id: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  tenantId: string;
+  branchId: string | null;
+  actorUserId: string | null;
+  actorName: string | null;
+  reason: string | null;
+  metadataJson: string | null;
+  ipAddress: string | null;
+  createdAt: string;
+};
+export type AcademyAuditEventsResponse = {
+  items: AcademyAuditEventItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  tenantId: string;
+};
 export type ExecutiveBranchOption = { id: string; name: string; code: string; status: string };
 export type ExecutiveMetrics = {
   activeStudents: number;
@@ -68,12 +90,21 @@ export type BootstrapAcademyResponse = {
   nextStep: "OWNER_LOGIN_REQUIRED" | string;
 };
 
+export type PermissionDetail = {
+  code: string;
+  label: string;
+  category: string;
+  description: string;
+};
+
 export type AcademyRoleDefinition = {
   code: string;
   label: string;
   scopeLevel: string;
   description: string;
   permissions: string[];
+  defaultPermissions?: string[];
+  isCustomized?: boolean;
   assignableByAcademyOwner: boolean;
 };
 
@@ -88,9 +119,16 @@ export type AcademyMember = {
   scopeLevel: string;
   membershipStatus: string;
   branch: { id: string; name: string; code: string } | null;
+  customPermissions?: string[] | null;
+  effectivePermissions?: string[];
+  hasCustomPermissions?: boolean;
 };
 
-export type AcademyRolesResponse = { roles: AcademyRoleDefinition[]; permissions: string[] };
+export type AcademyRolesResponse = {
+  roles: AcademyRoleDefinition[];
+  permissions: string[];
+  permissionDetails?: PermissionDetail[];
+};
 export type AcademyMembersResponse = { items: AcademyMember[]; total: number; tenantId: string };
 export type AcademyBranch = {
   id: string;
@@ -487,6 +525,14 @@ export const apiClient = {
     request<{ membershipId: string; roleCode: string; scopeLevel: string; branch: AcademyMember["branch"] }>(`/academy/members/${membershipId}/role`, { method: "PUT", body: JSON.stringify(input) }),
   changeAcademyMemberStatus: (membershipId: string, status: "ACTIVE" | "SUSPENDED" | "REVOKED") =>
     request<{ membershipId: string; status: string; userStatus: string }>(`/academy/members/${membershipId}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  updateRolePermissions: (roleCode: string, permissions: string[]) =>
+    request<{ roleCode: string; permissions: string[]; defaultPermissions: string[]; isCustomized: boolean }>(`/academy/roles/${roleCode}/permissions`, { method: "PUT", body: JSON.stringify({ permissions }) }),
+  resetRolePermissions: (roleCode: string) =>
+    request<{ roleCode: string; permissions: string[]; defaultPermissions: string[]; isCustomized: boolean }>(`/academy/roles/${roleCode}/permissions`, { method: "DELETE" }),
+  updateMemberPermissions: (membershipId: string, permissions: string[]) =>
+    request<{ membershipId: string; customPermissions: string[]; effectivePermissions: string[]; hasCustomPermissions: boolean }>(`/academy/members/${membershipId}/permissions`, { method: "PUT", body: JSON.stringify({ permissions }) }),
+  resetMemberPermissions: (membershipId: string) =>
+    request<{ membershipId: string; customPermissions: null; effectivePermissions: string[]; hasCustomPermissions: boolean }>(`/academy/members/${membershipId}/permissions`, { method: "DELETE" }),
   dashboardSummary: () => request<DashboardSummary>("/dashboard/summary"),
   executiveSummary: (params: { from?: string; to?: string; branchId?: string } = {}) => {
     const query = new URLSearchParams();
@@ -503,6 +549,18 @@ export const apiClient = {
     if (params.branchId) query.set("branchId", params.branchId);
     const suffix = query.toString() ? `?${query.toString()}` : "";
     return request<{ items: ExecutiveActivityItem[]; total: number; tenantId: string }>(`/academy/executive-activity${suffix}`);
+  },
+  auditEvents: (params: { from?: string; to?: string; action?: string; targetType?: string; branchId?: string; page?: number; pageSize?: number } = {}) => {
+    const query = new URLSearchParams();
+    if (params.from) query.set("from", params.from);
+    if (params.to) query.set("to", params.to);
+    if (params.action) query.set("action", params.action);
+    if (params.targetType) query.set("targetType", params.targetType);
+    if (params.branchId) query.set("branchId", params.branchId);
+    if (params.page) query.set("page", String(params.page));
+    if (params.pageSize) query.set("pageSize", String(params.pageSize));
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return request<AcademyAuditEventsResponse>(`/academy/audit-events${suffix}`);
   },
   listStudents: () => request<StudentListResponse>("/students"),
   consumerStudents: () => request<ConsumerStudentsResponse>("/consumer/me/students"),

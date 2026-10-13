@@ -51,6 +51,7 @@ public sealed class Membership : EntityBase
     public required string RoleCode { get; set; }
     public string ScopeLevel { get; set; } = "TENANT";
     public string Status { get; set; } = "ACTIVE";
+    public string? CustomPermissionsJson { get; set; }
     public UserAccount? UserAccount { get; set; }
     public Tenant? Tenant { get; set; }
     public Branch? Branch { get; set; }
@@ -97,4 +98,12 @@ public sealed class RefreshSession : EntityBase
     public DateTimeOffset? RevokedAt { get; set; }
     public string? IpAddress { get; set; }
     public UserAccount? UserAccount { get; set; }
+}
+
+public sealed class TenantRoleOverride : EntityBase
+{
+    public Guid TenantId { get; set; }
+    public required string RoleCode { get; set; }
+    public required string PermissionsJson { get; set; }
+    public Tenant? Tenant { get; set; }
 }

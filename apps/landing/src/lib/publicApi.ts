@@ -1,5 +1,6 @@
-const API_BASE = (import.meta.env.VITE_API_URL || "http://127.0.0.1:4191/api/v1").replace(/\/$/, "");
-export const DASHBOARD_URL = import.meta.env.VITE_DASHBOARD_URL || "/login";
+const API_BASE = (import.meta.env.VITE_API_URL || "https://academy-dashboard.runasp.net/api/v1").replace(/\/$/, "");
+export const DASHBOARD_URL = import.meta.env.VITE_DASHBOARD_URL || "http://localhost:3000/login";
+export const DASHBOARD_LIVE_DEMO = import.meta.env.VITE_DASHBOARD_LIVE_DEMO || "http://localhost:3000/executive-live";
 
 type PublicLeadInput = {
   kind: "demo" | "registration";
