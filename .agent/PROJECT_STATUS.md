@@ -1,8 +1,8 @@
 # Mada Academy — Project Status
 
-**As of:** 11 October 2026
-**Verified Git state:** `main` is clean, pushed to `origin/main`, and has no local changes or open PRs. The latest functional delivery is PR #106 (Enrollments CSV); subsequent commits are documentation synchronization only. Verify the live commit with `git rev-parse --short origin/main` rather than copying a stale hash into documentation.
-**Current delivery:** the SaaS onboarding bulk-import chain is merged through Enrollments: students, branches, staff, guardians/links, course templates, groups/sessions, and enrollments with ACTIVE/WAITLISTED capacity assignment. The next work is operational UX/integration coverage for import results and waitlist promotion, followed by trial/metering limits.
+**As of:** 13 October 2026
+**Verified Git state:** `main` is clean, pushed to `origin/main`, and has no local changes or open PRs. The latest functional delivery is PR #112 (`feat/dynamic-permissions-engine`), which established the dynamic tenant permissions engine, granular route guards, enterprise audit trail indexing/endpoint, and modern landing page redesign. Verify the live commit with `git rev-parse --short origin/main` rather than copying a stale hash into documentation.
+**Current delivery:** full dynamic permissions customization (role and member overrides with active session revocation), fine-grained route guards and dynamic sidebar filtering, compound database indexing on audit/decision records, academy-scoped audit events endpoint (`GET /api/v1/academy/audit-events`) and dashboard UI (`/academy/audit-trail`), and landing page redesign (`apps/landing`).
 **Canonical quick snapshot:** [`docs/REPOSITORY_CURRENT_STATE.md`](../docs/REPOSITORY_CURRENT_STATE.md).
 **Stack:** React + Vite + TypeScript; ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions.
 
@@ -14,15 +14,15 @@ An isolated `client-angular/` workspace has Angular 21.2, standalone routing, st
 
 ## Executive summary
 
-Mada has moved beyond a static prototype: authentication, scoped operational APIs, consumer account links, session/evaluation workflows, finance APIs, and operational reports are persisted and tested. The **Finance code/local acceptance slice is complete**; production readiness still requires private-storage secret injection, authenticated storage smoke test, durable backup/restore evidence, and deployed staging acceptance. Production SMS is intentionally unconfigured and password recovery is missing.
+Mada has moved beyond a static prototype: authentication, scoped operational APIs, consumer account links, session/evaluation workflows, finance APIs, dynamic permissions matrix, granular route guards, enterprise audit trails, and operational reports are persisted and tested. The **Dynamic Permissions and Governance slice is complete**; production readiness requires live staging/Vercel deployment setup, private-storage secret injection, durable backup/restore evidence, and deployed staging acceptance. Production SMS is intentionally unconfigured and password recovery is missing.
 
 ## Role-by-role state
 
 | Role | What is implemented | Important gaps / truth to preserve |
 |---|---|---|
 | **R00 Platform Admin** | Live platform support inventory is documented in [R00_PLATFORM_ADMIN_INVENTORY.md](../docs/R00_PLATFORM_ADMIN_INVENTORY.md): overview, academy list/bootstrap, status support, masked member search, membership/session support, roles, and tenant/platform audit reads. Backend policy, tenant-paired lookups, reason requirements, audit writes, explicit response-shape privacy assertions, and LIVE no-demo behavior are implemented and tested. Bootstrap contract is aligned with password-based owner onboarding, and unsupported archive permission advertisement was removed. | Full platform administration is not supported: archive/delete, billing, and detailed student/finance/consumer support remain unavailable. |
-| **R01 Academy Owner** | Academy bootstrap, tenant-level identity/member/role, branch and classroom foundations exist; LIVE route is guarded from the old demo page, academy roles preserve members/permissions when branch lookup fails, classroom/resource management preserves useful data on partial failures, the executive dashboard gives toast/error feedback for report and audit loading, and the global interceptor now covers 401, 403, and 5xx with automated tests. | Local acceptance evidence is documented; deployed staging acceptance remains open. |
-| **R02 Branch Manager** | Branch-scoped student/session/classroom and approval operations are available across implemented backend slices; `/branch-operations` now routes authenticated R02 users to the live dashboard instead of the legacy demo, and approvals/classes/schedule remain visible when optional endpoints are forbidden. | Some non-core branch panels remain outside the current P2 slice. |
+| **R01 Academy Owner** | Academy bootstrap, tenant-level identity/member/role, dynamic permissions engine (role and member overrides with instant session revocation), interactive permissions matrix UI (`AcademyRoles.tsx`), compound indexing and full audit trail endpoint + UI (`AcademyAuditTrail.tsx`), branch and classroom management exist; LIVE routes are guarded, and navigation dynamically adapts to assigned permissions. | Local acceptance evidence is verified; deployed staging acceptance remains open. |
+| **R02 Branch Manager** | Branch-scoped student/session/classroom and approval operations are available across implemented backend slices; `/branch-operations` routes authenticated R02 users to the live dashboard, navigation items are filtered by permissions, and approvals/classes/schedule remain visible when optional endpoints are forbidden. | Some non-core branch panels remain outside the current P2 slice. |
 | **R03 Head Instructors** | Branch-scoped evaluation review queue; publish or request changes; dashboard avoids demo evaluation samples in LIVE evaluation surfaces, keeps core team/group/session data visible when optional endpoints fail, and preserves groups or sessions when one Academic Programs read fails. | Unsupported mastery/checkpoint analytics remain explicitly outside the LIVE contract. |
 | **R04 Instructor** | Assigned sessions, attendance, evaluation drafts/submission, and relevant workflow actions are connected to APIs; loading/error/retry behavior is separated from unsupported analytics. | Broader instructor analytics and non-core surfaces are not all live. |
 | **R05 Secretary** | Student workflows, phone-based consumer lookup/linking, consumer invitations, and scoped invoice/payment operations exist; legacy Secretary route is guarded from LIVE sessions. | Production evidence/storage and deployed staging remain open; no broad `finance.write`. |
@@ -34,6 +34,7 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 ## Live backend and identity
 
 - JWT authentication supports access/refresh, refresh rotation, logout, and tenant/role/branch claims.
+- Dynamic permissions engine supports tenant role overrides and member-level overrides with instant suspension and session revocation.
 - Operational APIs cover students, sessions, attendance, scheduling/group generation, approvals, and conflict checks.
 - Consumer identity supports phone search and linking for existing accounts, plus invitation/acceptance endpoints for parent/student accounts.
 - Invitations use random one-time OTPs, expiry/attempt limits, and hashed/HMAC-protected secret material; the real SMS delivery provider is not configured.
@@ -42,21 +43,26 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 
 ## CI and verified baseline
 
-The current merged baseline includes the earlier Angular/Finance acceptance work plus PRs #99–#106. PRs #104, #105, and #106 passed Backend Integration, Playwright, Angular R08 Playwright, and Vercel checks before merge. No real deployment secrets are stored in Git. The Sandbox does not provide the .NET SDK, so backend validation is performed by GitHub CI.
+The current merged baseline includes PR #112. All tests pass with 100% success rate:
+- `dotnet test`: 100/100 passed (Backend Integration tests).
+- `pnpm test`: 63/63 passed (Frontend Vitest tests).
+- `pnpm check`: passed (0 TypeScript errors).
+- `@mada/landing build`: passed (9.5s).
+No real deployment secrets are stored in Git.
 
-## LIVE acceptance evidence — 4 October 2026
+## LIVE acceptance evidence — 13 October 2026
 
 The auditable R01/R03/R04 endpoint, role/scope, failure, empty-state, and preview-boundary checklist is maintained in [LIVE_ACCEPTANCE_EVIDENCE.md](../docs/LIVE_ACCEPTANCE_EVIDENCE.md). It documents local evidence only; staging and production acceptance are separate gates.
 
-## UI / Flow / Architecture review — 4 October 2026
+## UI / Flow / Architecture review — 13 October 2026
 
-تمت مراجعة R00–R09. أُضيفت route guards صريحة حسب الدور، حماية للـworkspace والأسطح التشغيلية، فصل LIVE/DEMO في الأغلفة الحية، stylesheet مشترك RTL/responsive، تصميم Academy Bootstrap، وE2E للـanonymous redirect والعزل والخروج.
+تمت مراجعة R00–R09 والصلاحيات الديناميكية. أُضيفت route guards صريحة حسب الدور والصلاحيات (`permission` و `anyOfPermissions`)، حماية للـworkspace والأسطح التشغيلية، فلترة القوائم الجانبية، شاشة 403 عربية، تمييز الدور الحالي في `WorkspaceHub`، وسجل تدقيق الأكاديمية التفاعلي.
 
-- `pnpm check`: PASS
-- `pnpm test`: PASS — 55/55 across 8 frontend test files
+- `pnpm check`: PASS (0 errors)
+- `pnpm test`: PASS — 63/63 across 8 frontend test files
+- `dotnet test`: PASS — 100/100 backend integration tests
 - `pnpm build`: PASS
-- الجولة الأولى من E2E: 6/7، وتم تعديل assertion العزل لقبول الرفض الصريح أو العودة الآمنة إلى login.
-- Marketing Leads والحملات وتقويم المحتوى أصبحت workflows محفوظة ومقاسة عبر API؛ النشر الخارجي على القنوات الاجتماعية غير داخل النطاق.
+- `@mada/landing build`: PASS
 - Production storage/secrets/staging/backup-restore ما زالت مفتوحة؛ حالات Finance pending وsingle-flight مغطاة في الشريحة المدموجة.
 
 التفاصيل الكاملة في [UI_FLOW_REVIEW_STATUS.md](../docs/UI_FLOW_REVIEW_STATUS.md).

@@ -1,6 +1,6 @@
 # Mada Academy — Repository Current State
 
-**Snapshot:** 11 October 2026  
+**Snapshot:** 13 October 2026  
 **Canonical branch:** `main`  
 **Verified commit:** dynamic — run `git rev-parse --short origin/main`  
 **Repository:** `abdelrahmaans/mada-academy-dashboard`
@@ -11,10 +11,14 @@ Read this file first, then read [`PROJECT_STATUS.md`](../.agent/PROJECT_STATUS.m
 
 ## Git and PR state
 
-`main` is clean, pushed to `origin/main`, and has no open PRs. The SaaS onboarding functional delivery is merged through PR #106; the current-state documentation is synchronized on top. PRs #104, #105, and #106 passed Backend Integration, Playwright, Angular R08 Playwright, and Vercel checks before merge. Because every merge creates a new commit, this file intentionally does not hard-code a commit hash or a changing documentation PR range.
+`main` is clean, pushed to `origin/main`, and has no open PRs. The latest architectural and governance milestone is merged through PR #112 (`feat/dynamic-permissions-engine`); the current-state documentation is synchronized on top. All backend and frontend suites pass with 100% test coverage. Because every merge creates a new commit, this file intentionally does not hard-code a commit hash or a changing documentation PR range.
 
 | Area | Merged state |
 |---|---|
+| Dynamic permissions engine | Tenant role overrides (`TenantRoleOverrides`), custom membership permissions (`CustomPermissionsJson`), instant suspension with active session revocation, and interactive permissions matrix UI (`AcademyRoles.tsx`) |
+| Granular route & navigation guards | Route-level permission bindings (`permission`, `anyOfPermissions`), dynamic sidebar menu filtering (`getAuthorizedNavigation`), Arabic 403 access-denied UI, active workspace indicators (`WorkspaceHub.tsx`) |
+| Governance indexing & audit trail | Compound DB indexing on `AuditEvent` and `ApprovalRequest` (`20261013140000_AddAuditEventIndexes`), academy audit endpoint (`GET /api/v1/academy/audit-events`), and full interactive audit trail dashboard (`/academy/audit-trail`, `AcademyAuditTrail.tsx`) |
+| Modern landing page & brand alignment | High-aesthetic brand alignment in `apps/landing`, interactive components (Hero, Capabilities, Audience, SystemPreview, Workflow, DemoForm modal, Footer), build verified |
 | Product workflow | Persisted Marketing Leads/Campaigns/Content Items and conversion metrics |
 | Student/branch onboarding | Student, Branch, Staff, and Guardian/Guardian Link CSV Preview + Commit |
 | Staff onboarding | Invitation-first; creates `INVITED` staff and invitation hashes; no passwords imported or stored |
@@ -33,19 +37,19 @@ Relevant contracts:
 - [`STAFF_GUARDIAN_BULK_IMPORT_CONTRACT.md`](../backend/STAFF_GUARDIAN_BULK_IMPORT_CONTRACT.md)
 - [`COURSE_GROUP_BULK_IMPORT_CONTRACT.md`](../backend/COURSE_GROUP_BULK_IMPORT_CONTRACT.md)
 - [`ENROLLMENT_BULK_IMPORT_CONTRACT.md`](../backend/ENROLLMENT_BULK_IMPORT_CONTRACT.md)
+- [`ROLES_PERMISSIONS_API_CONTRACT.md`](../backend/ROLES_PERMISSIONS_API_CONTRACT.md)
 
 ## Current next plan
 
-1. Add backend integration coverage for the full CSV chain, especially ordered capacity assignment, stale capacity rejection, duplicate protection, and branch scope.
-2. Add operational UX for Preview row review, Commit results, created IDs, ACTIVE/WAITLISTED counts, and waitlist promotion visibility.
-3. Implement the SaaS trial workspace using real academy data with non-destructive plan limits.
-4. Complete active-student, branch, and staff/instructor metering contracts and warning states before paid enforcement.
-5. Keep production-only gates separate: private storage/secrets, backup/restore evidence, authenticated staging smoke, real SMS, password recovery, and distributed rate limiting.
+1. Configure Vercel production deployment routing for both dashboard client (`/`) and landing page (`apps/landing`).
+2. Run database migration verification against the live Supabase PostgreSQL staging/production database.
+3. Validate end-to-end multi-role real simulation and onboarding testing across all role workspaces.
+4. Keep production-only gates separate: private storage/secrets, backup/restore evidence, authenticated staging smoke, real SMS, password recovery, and distributed rate limiting.
 
 ## Validation baseline
 
-- `pnpm test`: 58/58.
-- `pnpm check`: passed.
-- `git diff --check`: passed on the latest slices.
-- Backend Integration, Playwright, Angular R08 Playwright, and Vercel checks passed for PR #106.
-- The Sandbox does not include the .NET SDK; backend validation is therefore confirmed through GitHub CI.
+- `dotnet test`: 100/100 passed (Backend Integration tests).
+- `pnpm test`: 63/63 passed (Frontend Vitest tests).
+- `pnpm check`: passed (0 TypeScript errors).
+- `@mada/landing build`: passed.
+- `git diff --check`: passed.

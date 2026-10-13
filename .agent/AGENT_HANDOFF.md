@@ -1,6 +1,6 @@
 # Mada Academy — Agent Context
 
-**Current baseline:** `main` is clean and pushed to `origin/main` (12 October 2026), with the SaaS onboarding bulk-import chain merged through the functional Enrollment CSV milestone and no open PRs. Verify the current commit with `git rev-parse --short origin/main`; do not hard-code a merge hash or a changing documentation PR range in handoff text. The chain covers students, branches, invitation-first staff, guardians/links, course templates, groups/sessions, and ACTIVE/WAITLISTED enrollments.
+**Current baseline:** `main` is clean and pushed to `origin/main` (13 October 2026), with the dynamic permissions engine, granular route guards, governance indexing, academy audit trail dashboard, and modern landing page redesign merged through PR #112. Verify the current commit with `git rev-parse --short origin/main`; do not hard-code a merge hash or a changing documentation PR range in handoff text.
 **Repository:** `abdelrahmaans/mada-academy-dashboard`
 
 ## What this product is

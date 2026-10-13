@@ -1,28 +1,25 @@
 # خطة المرحلة القادمة — Mada Academy
 
-**تاريخ اللقطة:** 11 أكتوبر 2026
-**قاعدة العمل الحالية:** `main` clean ومرفوع إلى `origin/main`، وآخر functional milestone هو PR #106؛ توثيق الحالة مدموج بعده، ولا توجد تغييرات محلية ولا PRs مفتوحة. أي agent يبدأ من `main` ويقرأ هذا الملف و`PROJECT_STATUS.md`، ويتحقق من commit الحالي عبر `git rev-parse --short origin/main` بدل الاعتماد على hash ثابت.
-**الحالة:** P1/P2 consumer acceptance وFinance code/local acceptance وMarketing persistence وPhase 1 authorization وSaaS onboarding bulk-import chain مغلقة على مستوى الكود المدموج. تظل private-storage/backup-restore/staging بوابات بيئية منفصلة، وتبقى بعض wrappers القديمة للـsidebars موجة تنظيف لاحقة. مصفوفة الأدوار النهائية موثقة في [ANGULAR_PARITY_MATRIX.md](../ANGULAR_PARITY_MATRIX.md).
+**تاريخ اللقطة:** 13 أكتوبر 2026
+**قاعدة العمل الحالية:** `main` clean ومرفوع إلى `origin/main`، وآخر functional milestone هو PR #112 (`feat/dynamic-permissions-engine`)؛ توثيق الحالة مدموج ومحدث بالكامل على `main`، ولا توجد تغييرات محلية ولا PRs مفتوحة. أي agent يبدأ من `main` ويقرأ هذا الملف و`PROJECT_STATUS.md`، ويتحقق من commit الحالي عبر `git rev-parse --short origin/main` بدل الاعتماد على hash ثابت.
+**الحالة:** Dynamic permissions engine وGranular route/navigation guards وGovernance database indexing وسجل تدقيق الأكاديمية (`AcademyAuditTrail`) وإعادة تصميم صفحة الهبوط الفاخرة (`apps/landing`) مدموجة بنجاح ومغلقة بالكامل باختبارات 100/100 backend و63/63 frontend. تظل private-storage/backup-restore/production deployment بوابات المرحلة القادمة.
 **Quick snapshot:** [`docs/REPOSITORY_CURRENT_STATE.md`](../docs/REPOSITORY_CURRENT_STATE.md).
 
-## Phase 1 authorization contract — result
+## Phase 2 governance & dynamic permissions contract — result
 
-- R03 is read-only for attendance and can read only active supervision assignments with attendance access; it has no `attendance.write` permission.
-- R04 attendance remains limited to assigned/substitute sessions; completion remains instructor-only.
-- R05 finance tests explicitly protect the boundary between invoice/payment operations and accountant-only finance operations.
-- Role navigation tests now verify that every registered home/navigation path exists and that finance navigation is limited to R05/R06.
-- Frontend checks passed locally; backend integration execution remains a CI requirement because the current sandbox has no .NET SDK.
+- محرك الصلاحيات الديناميكي: يدعم تخصيص الصلاحيات لكل دور (`TenantRoleOverrides`) ولكل مستخدم/عضوية (`CustomPermissionsJson`) مع الإلغاء الفوري وإبطال الجلسات النشطة.
+- حراس المسارات والقوائم: تم تطبيق فحص الصلاحيات الدقيق (`permission` و `anyOfPermissions`) مع فلترة القوائم الجانبية ديناميكياً وشاشة 403 عربية صريحة.
+- فهرسة قواعد البيانات للحوكمة: فهارس مركبة على `AuditEvent` و `ApprovalRequest` مع قيود أطوال الأعمدة وترحيل EF Core (`20261013140000_AddAuditEventIndexes`).
+- سجل الحوكمة والتدقيق: واجهة مستخدم تفاعلية لمالك الأكاديمية (`/academy/audit-trail`) مع دعم الفلترة والترقيم والبحث واستعراض Metadata JSON.
+- صفحة الهبوط: تصميم عصري فاخر بهوية متكاملة في `apps/landing` يربط عروض النظام الحقيقية ببيانات الأكاديمية والنموذج التجريبي.
 
 ## قرار التنفيذ الحالي
 
-1. **تم إغلاق شريحة P2 source acceptance:** تقارير التشغيل، عزل النطاق، حماية LIVE، وحالات R08/R09 الجزئية مثبتة؛ أُغلق R08 عبر PR #88 وأصبح R09 مغلقًا ضمن خط الدمج السابق.
-2. **تم دمج P1 core journey:** الـseeder repairable، وحسابات R04/R08/R09 وروابطهم واختبارات الرحلة موجودة في `main`.
-3. **تم تنفيذ local browser/API E2E:** `pnpm e2e` يمر بـ **7/7** ويغطي R06/R08/R09 ودورة الفاتورة/الدفع/الإثبات.
-4. **تم تجهيز بيئة النشر داخل الريبو:** Dockerfile، production env template، staging smoke script، وrunbook.
-5. **حالة Angular الحالية:** أُغلقت R06-A وR06-B على `main`؛ شملت القراءة والعمليات المالية وإثباتات الدفع، مع اختبارات Angular وPlaywright وbuild ناجحة. بوابات Finance production (secret injection، private-storage smoke، backup/restore، وstaging smoke) تبقى منفصلة ولا تعتبر مكتملة محليًا.
-6. **توحيد shell/navigation:** registry الـrole هو مصدر labels وhome/back paths؛ PR #96 نقل Schedule وReports Preview وSecretary Desk إلى الـshared shell. ما تبقى هو wrappers قديمة محددة في صفحات LIVE التي تحتاج إزالة sidebar الخاص بها.
-
-## نتيجة acceptance الحالية
+1. **تم دمج PR #112 بالكامل:** تم التحقق من كافة الاختبارات وتأكيد سلامة البناء (Build Pass) وتحديث فهارس قاعدة البيانات.
+2. **التركيز القادم (Production Deployment & Staging):**
+   - إعدادات Vercel Monorepo لربط صفحة الهبوط (`apps/landing`) مع الداشبورد (`client`).
+   - التحقق من تطبيق الترحيلات على قاعدة بيانات الإنتاج (Supabase PostgreSQL).
+   - إجراء محاكاة تشغيلية حية لكافة الأدوار التسعة (R00 - R09) في بيئة الإنتاج المجهزة.
 
 - R01/R02: تم منع فتح مسارات demo القديمة عند وجود جلسة LIVE.
 - R03/R04/R05: مسارات Head Instructors، Instructor، وSecretary تستخدم LIVE أو تُحوّل إلى الـdesk الحي عند وجود جلسة.
