@@ -9,6 +9,7 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
     public DbSet<Branch> Branches => Set<Branch>();
     public DbSet<UserAccount> UserAccounts => Set<UserAccount>();
     public DbSet<Membership> Memberships => Set<Membership>();
+    public DbSet<TenantRoleOverride> TenantRoleOverrides => Set<TenantRoleOverride>();
     public DbSet<GroupSupervisionAssignment> GroupSupervisionAssignments => Set<GroupSupervisionAssignment>();
     public DbSet<Invitation> Invitations => Set<Invitation>();
     public DbSet<ConsumerInvitation> ConsumerInvitations => Set<ConsumerInvitation>();
@@ -83,6 +84,14 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
             entity.HasOne(x => x.UserAccount).WithMany(x => x.Memberships).HasForeignKey(x => x.UserAccountId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.Tenant).WithMany(x => x.Memberships).HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.Branch).WithMany(x => x.Memberships).HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TenantRoleOverride>(entity =>
+        {
+            entity.HasIndex(x => new { x.TenantId, x.RoleCode }).IsUnique();
+            entity.Property(x => x.RoleCode).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.PermissionsJson).IsRequired();
+            entity.HasOne(x => x.Tenant).WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<GroupSupervisionAssignment>(entity =>

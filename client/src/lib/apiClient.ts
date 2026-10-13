@@ -68,12 +68,21 @@ export type BootstrapAcademyResponse = {
   nextStep: "OWNER_LOGIN_REQUIRED" | string;
 };
 
+export type PermissionDetail = {
+  code: string;
+  label: string;
+  category: string;
+  description: string;
+};
+
 export type AcademyRoleDefinition = {
   code: string;
   label: string;
   scopeLevel: string;
   description: string;
   permissions: string[];
+  defaultPermissions?: string[];
+  isCustomized?: boolean;
   assignableByAcademyOwner: boolean;
 };
 
@@ -88,9 +97,16 @@ export type AcademyMember = {
   scopeLevel: string;
   membershipStatus: string;
   branch: { id: string; name: string; code: string } | null;
+  customPermissions?: string[] | null;
+  effectivePermissions?: string[];
+  hasCustomPermissions?: boolean;
 };
 
-export type AcademyRolesResponse = { roles: AcademyRoleDefinition[]; permissions: string[] };
+export type AcademyRolesResponse = {
+  roles: AcademyRoleDefinition[];
+  permissions: string[];
+  permissionDetails?: PermissionDetail[];
+};
 export type AcademyMembersResponse = { items: AcademyMember[]; total: number; tenantId: string };
 export type AcademyBranch = {
   id: string;
@@ -487,6 +503,14 @@ export const apiClient = {
     request<{ membershipId: string; roleCode: string; scopeLevel: string; branch: AcademyMember["branch"] }>(`/academy/members/${membershipId}/role`, { method: "PUT", body: JSON.stringify(input) }),
   changeAcademyMemberStatus: (membershipId: string, status: "ACTIVE" | "SUSPENDED" | "REVOKED") =>
     request<{ membershipId: string; status: string; userStatus: string }>(`/academy/members/${membershipId}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  updateRolePermissions: (roleCode: string, permissions: string[]) =>
+    request<{ roleCode: string; permissions: string[]; defaultPermissions: string[]; isCustomized: boolean }>(`/academy/roles/${roleCode}/permissions`, { method: "PUT", body: JSON.stringify({ permissions }) }),
+  resetRolePermissions: (roleCode: string) =>
+    request<{ roleCode: string; permissions: string[]; defaultPermissions: string[]; isCustomized: boolean }>(`/academy/roles/${roleCode}/permissions`, { method: "DELETE" }),
+  updateMemberPermissions: (membershipId: string, permissions: string[]) =>
+    request<{ membershipId: string; customPermissions: string[]; effectivePermissions: string[]; hasCustomPermissions: boolean }>(`/academy/members/${membershipId}/permissions`, { method: "PUT", body: JSON.stringify({ permissions }) }),
+  resetMemberPermissions: (membershipId: string) =>
+    request<{ membershipId: string; customPermissions: null; effectivePermissions: string[]; hasCustomPermissions: boolean }>(`/academy/members/${membershipId}/permissions`, { method: "DELETE" }),
   dashboardSummary: () => request<DashboardSummary>("/dashboard/summary"),
   executiveSummary: (params: { from?: string; to?: string; branchId?: string } = {}) => {
     const query = new URLSearchParams();

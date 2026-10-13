@@ -74,4 +74,48 @@ Authorization: Bearer <R01 token>
 { "status": "SUSPENDED" }
 ```
 
-Allowed statuses: `ACTIVE`, `SUSPENDED`, `REVOKED`. Every role and status mutation creates an `AuditEvent`.
+Allowed statuses: `ACTIVE`, `SUSPENDED`, `REVOKED`. Every role and status mutation creates an `AuditEvent`. Suspended users have all active sessions revoked immediately and are denied access to `/me` and all protected endpoints with 401 Unauthorized.
+
+## Customize role permissions for academy
+
+```http
+PUT /api/v1/academy/roles/{roleCode}/permissions
+Authorization: Bearer <R01 token>
+```
+
+```json
+{
+  "permissions": ["students.read", "sessions.read", "attendance.read", "attendance.write"]
+}
+```
+
+Academy owners cannot alter their own `R01_ACADEMY_OWNER` permissions to prevent locking themselves out.
+
+## Reset role permissions to system defaults
+
+```http
+DELETE /api/v1/academy/roles/{roleCode}/permissions
+Authorization: Bearer <R01 token>
+```
+
+## Customize individual member permissions
+
+```http
+PUT /api/v1/academy/members/{membershipId}/permissions
+Authorization: Bearer <R01 token>
+```
+
+```json
+{
+  "permissions": ["students.read", "marketing.read"]
+}
+```
+
+Overrides the role defaults specifically for this member without modifying other members with the same role.
+
+## Reset individual member permissions to role defaults
+
+```http
+DELETE /api/v1/academy/members/{membershipId}/permissions
+Authorization: Bearer <R01 token>
+```
