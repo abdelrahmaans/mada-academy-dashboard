@@ -64,7 +64,7 @@ describe("role navigation scopes", () => {
       "/reports", "/instructor-desk", "/head-instructors", "/academic-programs", "/academy-owner",
       "/academy-owner/branches", "/academy-owner/tickets", "/academy-owner/reports", "/executive-dashboard",
       "/platform-console", "/family-portal", "/student-portal", "/academy/branches", "/academy/classrooms",
-      "/academy/roles",
+      "/academy/roles", "/academy/audit-trail",
     ]);
 
     for (const definition of Object.values(ROLE_DEFINITIONS)) {

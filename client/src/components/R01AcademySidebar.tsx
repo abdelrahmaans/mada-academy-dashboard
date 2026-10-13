@@ -1,4 +1,4 @@
-import { BarChart3, BookOpen, Building2, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, CircleHelp, GraduationCap, LayoutDashboard, LogOut, Menu, Settings, ShieldCheck, Users, Wallet, X } from "lucide-react";
+import { Activity, BarChart3, BookOpen, Building2, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, CircleHelp, GraduationCap, LayoutDashboard, LogOut, Menu, Settings, ShieldCheck, Users, Wallet, X } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import "./R01AcademySidebar.css";
@@ -19,6 +19,7 @@ const R01_ICON_BY_PATH: Record<string, Item["icon"]> = {
   "/academy/branches": Building2,
   "/academy/classrooms": GraduationCap,
   "/academy/roles": Users,
+  "/academy/audit-trail": Activity,
   "/reports": BarChart3,
 };
 

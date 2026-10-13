@@ -36,6 +36,7 @@ const ConsumerInvitationAccept = lazy(() => import("./pages/ConsumerInvitationAc
 const AcademyRoles = lazy(() => import("./pages/AcademyRoles"));
 const AcademyBranches = lazy(() => import("./pages/AcademyBranches"));
 const AcademyClassrooms = lazy(() => import("./pages/AcademyClassrooms"));
+const AcademyAuditTrail = lazy(() => import("./pages/AcademyAuditTrail"));
 
 function FinanceRedirect() {
   return <Redirect to="/finance-desk" />;
@@ -55,6 +56,10 @@ function ProtectedAcademyBranches() {
 
 function ProtectedAcademyClassrooms() {
   return <ProtectedRoute roles={["R01_ACADEMY_OWNER"]} permission="classrooms.manage"><AcademyClassrooms /></ProtectedRoute>;
+}
+
+function ProtectedAcademyAuditTrail() {
+  return <ProtectedRoute roles={["R01_ACADEMY_OWNER"]} permission="reports.read"><AcademyAuditTrail /></ProtectedRoute>;
 }
 
 function Guard({
@@ -79,6 +84,7 @@ const APP_ROUTES = [
   ["/academy/roles", ProtectedAcademyRoles],
   ["/academy/branches", ProtectedAcademyBranches],
   ["/academy/classrooms", ProtectedAcademyClassrooms],
+  ["/academy/audit-trail", ProtectedAcademyAuditTrail],
   ["/", () => <Guard roles={["R02_BRANCH_MANAGER"]} permission="branch.read"><Home /></Guard>],
   ["/students", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R05_SECRETARY"]} anyOfPermissions={["students.read", "students.create"]}><Students /></Guard>],
   ["/classes", () => <Guard roles={["R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS"]} permission="sessions.read"><Classes /></Guard>],
