@@ -173,6 +173,89 @@ public sealed class ExecutiveDashboardApiTests
         Assert.DoesNotContain(document.RootElement.ToString(), "MetadataJson", StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task ExecutiveAuditEvents_EnforcesAcademyOwnerAndTenantIsolationWithPaginationAndFilters()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var client = factory.CreateClient();
+        var owner = await TestData.CreateAccountAsync(factory, "R01_ACADEMY_OWNER");
+        var foreignOwner = await TestData.CreateAccountAsync(factory, "R01_ACADEMY_OWNER");
+        var branchManager = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
+
+        var event1Id = Guid.NewGuid();
+        var event2Id = Guid.NewGuid();
+        var foreignEventId = Guid.NewGuid();
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            db.AuditEvents.AddRange(
+                new AuditEvent
+                {
+                    Id = event1Id,
+                    TenantId = owner.TenantId,
+                    BranchId = owner.BranchId,
+                    ActorUserId = owner.UserId,
+                    Action = "STUDENT_ENROLLED",
+                    TargetType = "STUDENT_ENROLLMENT",
+                    TargetId = Guid.NewGuid().ToString(),
+                    Reason = "Direct registration",
+                    MetadataJson = "{\"test\":true}"
+                },
+                new AuditEvent
+                {
+                    Id = event2Id,
+                    TenantId = owner.TenantId,
+                    ActorUserId = owner.UserId,
+                    Action = "BRANCH_CREATED",
+                    TargetType = "BRANCH",
+                    TargetId = Guid.NewGuid().ToString(),
+                    Reason = "Expansion"
+                },
+                new AuditEvent
+                {
+                    Id = foreignEventId,
+                    TenantId = foreignOwner.TenantId,
+                    ActorUserId = foreignOwner.UserId,
+                    Action = "STUDENT_ENROLLED",
+                    TargetType = "STUDENT_ENROLLMENT",
+                    TargetId = Guid.NewGuid().ToString(),
+                    Reason = "Foreign tenant event"
+                });
+            await db.SaveChangesAsync();
+        }
+
+        // Branch manager forbidden
+        TestData.Authenticate(client, await TestData.LoginAsync(client, branchManager));
+        var forbiddenRes = await client.GetAsync("/api/v1/academy/audit-events");
+        Assert.Equal(HttpStatusCode.Forbidden, forbiddenRes.StatusCode);
+
+        // Academy owner can view and paginate
+        TestData.Authenticate(client, await TestData.LoginAsync(client, owner));
+        var successRes = await client.GetAsync("/api/v1/academy/audit-events?page=1&pageSize=1");
+        Assert.Equal(HttpStatusCode.OK, successRes.StatusCode);
+
+        using var doc = await successRes.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Audit events response is empty.");
+        var data = doc.RootElement.GetProperty("data");
+        Assert.Equal(2, data.GetProperty("total").GetInt32());
+        Assert.Equal(2, data.GetProperty("totalPages").GetInt32());
+        Assert.Equal(1, data.GetProperty("page").GetInt32());
+        Assert.Equal(1, data.GetProperty("pageSize").GetInt32());
+
+        var items = data.GetProperty("items").EnumerateArray().ToArray();
+        Assert.Single(items);
+        Assert.DoesNotContain(items, x => x.GetProperty("id").GetGuid() == foreignEventId);
+
+        // Action filter
+        var filteredRes = await client.GetAsync("/api/v1/academy/audit-events?action=BRANCH_CREATED");
+        Assert.Equal(HttpStatusCode.OK, filteredRes.StatusCode);
+        using var filteredDoc = await filteredRes.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException("Filtered response is empty.");
+        var filteredItems = filteredDoc.RootElement.GetProperty("data").GetProperty("items").EnumerateArray().ToArray();
+        Assert.Single(filteredItems);
+        Assert.Equal(event2Id, filteredItems[0].GetProperty("id").GetGuid());
+        Assert.Equal("BRANCH_CREATED", filteredItems[0].GetProperty("action").GetString());
+    }
+
     private static DateTimeOffset StartOfDay(DateOnly date)
         => new(date.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
 }

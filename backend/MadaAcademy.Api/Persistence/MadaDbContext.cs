@@ -357,5 +357,29 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
             entity.HasOne<Branch>().WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<MarketingCampaign>().WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.SetNull);
         });
+
+        modelBuilder.Entity<AuditEvent>(entity =>
+        {
+            entity.HasIndex(x => new { x.TenantId, x.CreatedAt });
+            entity.HasIndex(x => new { x.TenantId, x.Action, x.CreatedAt });
+            entity.HasIndex(x => new { x.TargetType, x.TargetId });
+            entity.Property(x => x.Action).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.TargetType).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.TargetId).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.Reason).HasMaxLength(1000);
+            entity.Property(x => x.IpAddress).HasMaxLength(64);
+        });
+
+        modelBuilder.Entity<ApprovalRequest>(entity =>
+        {
+            entity.HasIndex(x => new { x.TenantId, x.BranchId, x.State });
+            entity.HasIndex(x => new { x.TenantId, x.RequestType, x.State, x.CreatedAt });
+            entity.Property(x => x.RequestType).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.TargetType).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.TargetId).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.SubmittedByRole).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.State).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Reason).HasMaxLength(1000);
+        });
     }
 }
