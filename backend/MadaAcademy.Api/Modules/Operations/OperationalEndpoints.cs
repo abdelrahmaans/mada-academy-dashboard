@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -58,6 +59,9 @@ public static class OperationalEndpoints
             CancellationToken cancellationToken) =>
         {
             if (!TryGetScope(user, out var scope, out var scopeError)) return scopeError;
+            if (!RolePermissionAuthorization.HasPermission(user, "sessions.read") &&
+                !RolePermissionAuthorization.HasPermission(user, "sessions.assigned.read"))
+                return Problem(403, "SESSIONS_READ_FORBIDDEN", "The current role cannot read sessions.");
             if (from.HasValue && to.HasValue && from > to)
                 return Problem(400, "INVALID_DATE_RANGE", "The from date must be before the to date.");
 
@@ -87,6 +91,9 @@ public static class OperationalEndpoints
             CancellationToken cancellationToken) =>
         {
             if (!TryGetScope(user, out var scope, out var scopeError)) return scopeError;
+            if (!RolePermissionAuthorization.HasPermission(user, "sessions.read") &&
+                !RolePermissionAuthorization.HasPermission(user, "sessions.assigned.read"))
+                return Problem(403, "SESSIONS_READ_FORBIDDEN", "The current role cannot read sessions.");
 
             var scopedSessions = db.AcademySessions.AsNoTracking()
                 .Where(item => item.Id == sessionId)
@@ -113,6 +120,8 @@ public static class OperationalEndpoints
             MadaDbContext db,
             CancellationToken cancellationToken) =>
         {
+            if (!RolePermissionAuthorization.HasPermission(user, "attendance.read"))
+                return Problem(403, "ATTENDANCE_READ_FORBIDDEN", "The current role cannot read attendance.");
             if (!TryGetScope(user, out var scope, out var scopeError)) return scopeError;
             var session = await FindScopedSession(db, sessionId, scope, cancellationToken);
             if (session is null) return Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.");
@@ -131,7 +140,7 @@ public static class OperationalEndpoints
             MadaDbContext db,
             CancellationToken cancellationToken) =>
         {
-            if (!CanWriteAttendance(user) && !user.IsInRole("R03_HEAD_INSTRUCTORS"))
+            if (!RolePermissionAuthorization.HasPermission(user, "attendance.write"))
                 return Problem(403, "ATTENDANCE_WRITE_FORBIDDEN", "Only assigned instructors or branch managers can record attendance.");
             var records = request.Records;
             if (records is null || records.Count == 0)
@@ -437,7 +446,8 @@ public static class OperationalEndpoints
         (session.InstructorId == actorId || session.SubstituteInstructorId == actorId);
 
     private static bool CanAccessAttendanceSession(ClaimsPrincipal user, AcademySession session) =>
-        user.IsInRole("R02_BRANCH_MANAGER") || IsAssignedInstructor(user, session);
+        RolePermissionAuthorization.HasPermission(user, "attendance.read") &&
+        (user.IsInRole("R02_BRANCH_MANAGER") || IsAssignedInstructor(user, session));
 
     private static async Task<bool> HasSupervisionAccess(MadaDbContext db, ClaimsPrincipal user, AcademySession session, bool requireAttendance, CancellationToken cancellationToken)
     {
@@ -468,7 +478,8 @@ public static class OperationalEndpoints
     private static bool CanManageStudents(ClaimsPrincipal user) => user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R05_SECRETARY");
     private static bool CanReadStudentManagement(ClaimsPrincipal user) => user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R05_SECRETARY") || user.IsInRole("R06_ACCOUNTANT");
     private static bool CanWriteAttendance(ClaimsPrincipal user) =>
-        user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R04_INSTRUCTOR");
+        RolePermissionAuthorization.HasPermission(user, "attendance.write") &&
+        (user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R04_INSTRUCTOR"));
 
     private static bool TryGetScope(ClaimsPrincipal user, out Scope scope, out ProblemHttpResult error)
     {
