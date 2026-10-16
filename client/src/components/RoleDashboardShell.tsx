@@ -52,9 +52,11 @@ function hasSidebarElement(nodes: ReactNode): boolean {
   return Children.toArray(nodes).some(child => {
     if (!isValidElement(child)) return false;
     if (child.type === "aside") return true;
-    if (typeof child.type === "function") {
-      const fnName = child.type.name || (child.type as { displayName?: string }).displayName || "";
-      if (fnName.toLowerCase().includes("sidebar")) return true;
+    const type = child.type as any;
+    if (typeof type === "function" || typeof type === "object") {
+      if (type?.isSidebar || type?.__madaSidebar) return true;
+      const fnName = type?.displayName || type?.name || "";
+      if (typeof fnName === "string" && fnName.toLowerCase().includes("sidebar")) return true;
     }
     if (typeof child.props === "object" && child.props !== null) {
       const cls = String((child.props as { className?: string }).className || "");

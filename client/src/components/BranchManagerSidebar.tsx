@@ -63,3 +63,7 @@ export default function BranchManagerSidebar({ open, onClose, roleCode = "R02" }
     </aside>
   </>;
 }
+
+(BranchManagerSidebar as unknown as { isSidebar: boolean }).isSidebar = true;
+BranchManagerSidebar.displayName = "BranchManagerSidebar";
+

@@ -29,3 +29,7 @@ export default function R03HeadInstructorsSidebar({ open, onClose, activePath }:
     </aside>
   </>;
 }
+
+(R03HeadInstructorsSidebar as unknown as { isSidebar: boolean }).isSidebar = true;
+R03HeadInstructorsSidebar.displayName = "R03HeadInstructorsSidebar";
+

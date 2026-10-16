@@ -122,6 +122,7 @@ export default function AcademyAuditTrail() {
     <RoleDashboardShell
       className="app-shell"
       showSessionLogout={false}
+      hideSidebar
       roleCode="R01"
       roleLabel="مسؤول الأكاديمية"
       scopeLevel="tenant"

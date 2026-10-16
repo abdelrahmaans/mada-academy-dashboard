@@ -476,6 +476,7 @@ export default function AcademyRoles() {
     <RoleDashboardShell
       className="app-shell academy-roles-shell"
       showSessionLogout={false}
+      hideSidebar
       roleCode="R01"
       roleLabel="مسؤول الأكاديمية"
       scopeLevel="tenant"

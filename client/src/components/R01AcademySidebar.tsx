@@ -60,3 +60,7 @@ export default function R01AcademySidebar({ activePath, mobileOpen, onClose }: P
     </aside>
   </>;
 }
+
+(R01AcademySidebar as unknown as { isSidebar: boolean }).isSidebar = true;
+R01AcademySidebar.displayName = "R01AcademySidebar";
+
