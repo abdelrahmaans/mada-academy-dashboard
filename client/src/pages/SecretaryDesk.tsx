@@ -120,6 +120,7 @@ function SecretaryDeskPreview() {
   return (
     <RoleDashboardShell
       className="app-shell secretary-desk-shell"
+      hideSidebar
       roleCode="R05"
       roleLabel="السكرتارية"
       scopeLevel="branch"

@@ -49,7 +49,7 @@ export default function SupervisionAssignments() {
     catch (cause) { toast.error(cause instanceof Error ? cause.message : "تعذر سحب الصلاحية."); }
   };
 
-  return <RoleDashboardShell className="app-shell supervision-assignments-shell" showSessionLogout={false} roleCode="R02" roleLabel="مدير الفرع" scopeLevel="branch" scopeLabel="فرع واحد" demo={false}>
+  return <RoleDashboardShell className="app-shell supervision-assignments-shell" showSessionLogout={false} hideSidebar roleCode="R02" roleLabel="مدير الفرع" scopeLevel="branch" scopeLabel="فرع واحد" demo={false}>
     <BranchManagerSidebar open={mobileOpen} onClose={() => setMobileOpen(false)} />
     <main className="main-panel" dir="rtl"><RoleSurfaceTopbar onMenu={() => setMobileOpen(true)} scopeLabel="نطاق الفرع" roleLabel="مدير الفرع" />
       <div className="workspace supervision-assignments-page">

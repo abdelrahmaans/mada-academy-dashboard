@@ -82,7 +82,7 @@ export default function AcademicProgramsLive() {
   if (!me || me.role !== "R03_HEAD_INSTRUCTORS") return <main className="r03-program-live" dir="rtl"><section className="r03-program-error" role="alert"><strong>هذه الصفحة مخصصة لرئيس المدربين.</strong><p>بيانات البرامج لم تُحمّل.</p></section></main>;
 
   return (
-    <RoleDashboardShell className="app-shell r03-program-shell" showSessionLogout={false} roleCode="R03" roleLabel="رئيس المدربين" scopeLevel="branch" scopeLabel={`فرع واحد · ${branch}`} branchName={me.academy?.name} demo={false}>
+    <RoleDashboardShell className="app-shell r03-program-shell" showSessionLogout={false} hideSidebar roleCode="R03" roleLabel="رئيس المدربين" scopeLevel="branch" scopeLabel={`فرع واحد · ${branch}`} branchName={me.academy?.name} demo={false}>
       <R03HeadInstructorsSidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} activePath="/academic-programs" />
       <main className="main-panel" dir="rtl">
         <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel={`فرع ${branch}`} roleLabel="رئيس المدربين" />

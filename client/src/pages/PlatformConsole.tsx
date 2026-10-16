@@ -468,6 +468,7 @@ function PlatformConsolePreviewContent() {
   return (
     <RoleDashboardShell
       className="app-shell platform-console"
+      hideSidebar
       roleCode="R00"
       roleLabel="أدمن منصة مدى"
       scopeLevel="platform"

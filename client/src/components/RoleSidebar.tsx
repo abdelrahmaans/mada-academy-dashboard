@@ -219,3 +219,8 @@ export default function RoleSidebar({
     </aside>
   );
 }
+
+RoleSidebar.displayName = "RoleSidebar";
+RoleSidebar.isSidebar = true;
+RoleSidebar.__madaSidebar = true;
+

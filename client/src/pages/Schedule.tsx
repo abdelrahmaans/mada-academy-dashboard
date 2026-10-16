@@ -932,6 +932,7 @@ function SchedulePage() {
   return (
     <RoleDashboardShell
       className="app-shell schedule-shell"
+      hideSidebar
       roleCode={roleCode}
       roleLabel={me?.roleLabel || roleDefinition.label}
       scopeLevel={roleDefinition.scopeLevel}

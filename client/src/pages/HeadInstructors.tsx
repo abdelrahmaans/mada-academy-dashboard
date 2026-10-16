@@ -819,6 +819,7 @@ function HeadInstructorsPreview() {
   return (
     <RoleDashboardShell
       className="academic-shell"
+      hideSidebar
       roleCode="R03"
       roleLabel="رئيس المدربين"
       scopeLevel="branch"

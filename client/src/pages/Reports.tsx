@@ -214,6 +214,7 @@ function ReportsPreview() {
   return (
     <RoleDashboardShell
       className="app-shell reports-preview-shell"
+      hideSidebar
       roleCode="R02"
       roleLabel="مدير الفرع"
       scopeLevel="branch"
