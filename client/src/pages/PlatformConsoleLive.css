@@ -37,6 +37,21 @@
   gap: 10px;
 }
 
+.pc-topbar-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+
+.pc-topbar-title svg {
+  color: #1d6a65;
+  flex-shrink: 0;
+}
+
 .pc-live-pill {
   color: #18714f;
   font-weight: 650;
@@ -184,15 +199,32 @@
 }
 
 .pc-live-link {
-  padding: 8px 11px;
-  border: 1px solid #e1e9e9;
-  border-radius: 9px;
-  background: #fff;
-  color: #236c67;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border: 1px solid #d5e2e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #165652;
   font: inherit;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
+  line-height: 1.4;
   cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pc-live-link svg {
+  flex-shrink: 0;
+}
+
+.pc-live-link:hover {
+  background: #f0f7f6;
+  border-color: #1d6a65;
+  color: #1d6a65;
 }
 
 .pc-live-link:disabled {
@@ -735,5 +767,527 @@
   .pc-ticket-card {
     grid-template-columns: 1fr;
     gap: 8px;
+  }
+}
+
+/* ==========================================================================
+   System Infrastructure Health Grid
+   ========================================================================== */
+.pc-system-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 6px;
+}
+
+.pc-system-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.pc-system-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.pc-system-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.pc-system-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pc-system-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pc-system-icon-wrap.api {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.pc-system-icon-wrap.db {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.pc-system-icon-wrap.auth {
+  background: #faf5ff;
+  color: #9333ea;
+}
+
+.pc-system-icon-wrap.storage {
+  background: #fff7ed;
+  color: #ea580c;
+}
+
+.pc-system-title-wrap strong {
+  display: block;
+  font-size: 13.5px;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.pc-system-title-wrap small {
+  display: block;
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.pc-system-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pc-system-badge.healthy {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.pc-badge-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.pc-system-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pc-system-metric-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.pc-system-metric-row strong {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 11.5px;
+}
+
+.pc-system-metric-row strong.text-emerald {
+  color: #059669;
+}
+
+/* ==========================================================================
+   Financial & Subscription Flows (اللي داخل واللي طالع)
+   ========================================================================== */
+.pc-finance-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.pc-finance-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.pc-finance-card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pc-finance-card-icon.inflow {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.pc-finance-card-icon.due {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.pc-finance-card-icon.outflow {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.pc-finance-card-icon.net {
+  background: #f0fdfa;
+  color: #0d9488;
+}
+
+.pc-finance-card-body small {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.pc-finance-card-body strong {
+  display: block;
+  font-size: 19px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.pc-finance-card-body span {
+  display: block;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+/* ==========================================================================
+   Subscription Plans Matrix
+   ========================================================================== */
+.pc-plans-section {
+  margin-bottom: 18px;
+}
+
+.pc-plans-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.pc-plan-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 22px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+}
+
+.pc-plan-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+}
+
+.pc-plan-card.featured {
+  border-color: #0d9488;
+  box-shadow: 0 0 0 1px #0d9488, 0 8px 20px rgba(13, 148, 136, 0.08);
+  background: linear-gradient(180deg, #f0fdfa 0%, #ffffff 40%);
+}
+
+.pc-plan-badge {
+  position: absolute;
+  top: -11px;
+  right: 20px;
+  background: #0d9488;
+  color: #ffffff;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.pc-plan-head h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.pc-plan-head p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.pc-plan-price {
+  margin: 14px 0;
+  padding: 12px 0;
+  border-top: 1px dashed #e2e8f0;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+.pc-plan-price strong {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.pc-plan-price span {
+  font-size: 12px;
+  color: #64748b;
+  margin-right: 4px;
+}
+
+.pc-plan-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pc-plan-features li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #334155;
+}
+
+.pc-plan-features li svg {
+  color: #0d9488;
+  flex-shrink: 0;
+}
+
+.pc-plan-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+  font-size: 11.5px;
+  color: #64748b;
+}
+
+.pc-plan-footer strong {
+  color: #0f172a;
+}
+
+/* Payment Status Tags */
+.pc-pay-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.pc-pay-tag.paid {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.pc-pay-tag.partial {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.pc-pay-tag.overdue {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.pc-pay-tag.trial {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+/* ==========================================================================
+   Roles & Permissions RBAC Guide
+   ========================================================================== */
+.pc-roles-why-card {
+  background: linear-gradient(135deg, #f0fdfa 0%, #ffffff 100%);
+  border: 1px solid #ccfbf1;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 18px;
+}
+
+.pc-roles-why-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.pc-roles-why-head h3 {
+  margin: 0;
+  font-size: 15px;
+  color: #115e59;
+}
+
+.pc-roles-why-card p {
+  margin: 0 0 14px;
+  font-size: 12.5px;
+  color: #334155;
+  line-height: 1.6;
+}
+
+.pc-roles-pillars {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pc-roles-pillar {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.pc-roles-pillar strong {
+  display: block;
+  font-size: 12.5px;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.pc-roles-pillar span {
+  display: block;
+  font-size: 11.5px;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.pc-roles-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.pc-role-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.pc-role-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pc-role-card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pc-role-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.pc-role-card-title strong {
+  font-size: 13.5px;
+  color: #0f172a;
+  display: block;
+}
+
+.pc-role-scope-badge {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+}
+
+.pc-role-points {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.pc-role-point {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.4;
+}
+
+.pc-role-point.can {
+  color: #166534;
+}
+
+.pc-role-point.cannot {
+  color: #991b1b;
+}
+
+.pc-role-point svg {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1050px) {
+  .pc-finance-flow-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pc-plans-grid {
+    grid-template-columns: 1fr;
+  }
+  .pc-roles-pillars {
+    grid-template-columns: 1fr;
+  }
+  .pc-roles-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .pc-finance-flow-grid {
+    grid-template-columns: 1fr;
   }
 }

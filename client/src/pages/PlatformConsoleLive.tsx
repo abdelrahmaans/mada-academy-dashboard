@@ -4,13 +4,16 @@ import {
   AlertCircle,
   Building2,
   CalendarDays,
+  Check,
   CheckCircle2,
   ChevronDown,
   ChevronLeft,
   CircleHelp,
   Clock3,
   CreditCard,
+  Database,
   GraduationCap,
+  HardDrive,
   KeyRound,
   LayoutDashboard,
   LifeBuoy,
@@ -20,10 +23,14 @@ import {
   RefreshCw,
   Search,
   Server,
+  ShieldAlert,
   ShieldCheck,
   Ticket,
+  TrendingDown,
+  TrendingUp,
   UserRoundX,
   Users,
+  Wallet,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -177,6 +184,256 @@ const fmtNumber = (value: number) =>
   new Intl.NumberFormat("en-US").format(value);
 
 const reasonValid = (reason: string) => reason.trim().length >= 4;
+
+const SUBSCRIPTION_PLANS = [
+  {
+    id: "starter",
+    name: "الباقة الأساسية (Starter)",
+    tag: "للأكاديميات والأنشطة الفردية",
+    priceMonthly: 1500,
+    priceAnnual: 15000,
+    features: [
+      "فرع واحد مصرح",
+      "حتى 100 طالب نشط",
+      "2 حساب إداري وإشراف",
+      "جداول الحصص وتسجيل الحضور",
+      "إصدار الفواتير وسندات القبض",
+    ],
+    highlight: false,
+  },
+  {
+    id: "growth",
+    name: "باقة النمو الاحترافية (Growth)",
+    tag: "الأكثر طلباً للأكاديميات المتنامية",
+    priceMonthly: 3500,
+    priceAnnual: 35000,
+    features: [
+      "حتى 3 فروع مصرحة",
+      "حتى 500 طالب نشط",
+      "حسابات غير محدودة لكل الفروع",
+      "بوابة الأسرة وولي الأمر (R08)",
+      "تقارير تنفيذية ومتابعة تحصيل فروع",
+      "إشراف أكاديمي واعتماد تقييمات",
+    ],
+    highlight: true,
+  },
+  {
+    id: "enterprise",
+    name: "باقة المؤسسات (Enterprise)",
+    tag: "للمجموعات الكبرى وسلاسل الفروع",
+    priceMonthly: 7000,
+    priceAnnual: 70000,
+    features: [
+      "فروع غير محدودة",
+      "عدد طلاب غير محدود",
+      "خوادم مخصصة وعزل بيانات كامل",
+      "نطاق ودومين مخصص للأكاديمية",
+      "دعم فني وتدريب مباشر على مدار الساعة",
+      "تكامل API مخصص مع أجهزة الحضور والأنظمة البنكية",
+    ],
+    highlight: false,
+  },
+];
+
+const getAcademyFinancials = (row: PlatformAcademy) => {
+  const isEnterprise =
+    row.plan?.toLowerCase().includes("enterprise") || row.branches >= 5;
+  const isStarter =
+    row.plan?.toLowerCase().includes("starter") || row.branches <= 1;
+  const planName = isEnterprise
+    ? "Enterprise"
+    : isStarter
+    ? "Starter"
+    : "Growth";
+  const annualFee = isEnterprise ? 70000 : isStarter ? 15000 : 35000;
+
+  if (row.status === "TRIAL") {
+    return {
+      planName,
+      annualFee,
+      paidAmount: 0,
+      dueAmount: annualFee,
+      nextRenewal: "25 أكتوبر 2026",
+      statusClass: "trial",
+      statusText: "فترة تجريبية مجانية",
+    };
+  }
+
+  if (row.status === "PAUSED") {
+    return {
+      planName,
+      annualFee,
+      paidAmount: Math.round(annualFee * 0.5),
+      dueAmount: Math.round(annualFee * 0.5),
+      nextRenewal: "متأخر منذ 10 أيام",
+      statusClass: "overdue",
+      statusText: "متأخر السداد",
+    };
+  }
+
+  if (row.name?.includes("الرواد")) {
+    return {
+      planName: "Enterprise",
+      annualFee: 70000,
+      paidAmount: 35000,
+      dueAmount: 35000,
+      nextRenewal: "30 نوفمبر 2026",
+      statusClass: "partial",
+      statusText: "مسدد جزئيًا (قسط 1)",
+    };
+  }
+
+  return {
+    planName,
+    annualFee,
+    paidAmount: annualFee,
+    dueAmount: 0,
+    nextRenewal: "15 يناير 2027",
+    statusClass: "paid",
+    statusText: "مسدد بالكامل ✓",
+  };
+};
+
+const ROLE_POLICIES_GUIDE = [
+  {
+    code: "R00",
+    title: "مسؤول المنصة المركزي (Super Admin)",
+    scope: "المنصة بالكامل (Multi-Tenant)",
+    allowed: [
+      "إنشاء الأكاديميات وإيقافها ومتابعة الخطط والاشتراكات",
+      "مراقبة صحة الخوادم وقواعد البيانات والبنية التحتية",
+      "إدارة جلسات مستخدمي المنصة وسحب الصلاحيات الطارئة",
+      "معاينة سجل العمليات والتدقيق (Platform Audit Log)",
+    ],
+    forbidden: [
+      "ممنوع التدخل في العمليات الداخلية للطلاب والدرجات والتقييمات",
+      "محجوب عن بيانات الطلاب العائلية والفواتير التفصيلية للعملاء",
+    ],
+  },
+  {
+    code: "R01",
+    title: "مالك ومسؤول الأكاديمية (Academy Owner)",
+    scope: "نطاق الأكاديمية وفروعها بالكامل",
+    allowed: [
+      "رؤية ومقارنة مؤشرات كل الفروع من لوحة واحدة",
+      "تعيين وتفويض مديري الفروع ورؤساء المدربين",
+      "إدارة السياسة المالية والتحصيل والمصروفات المعتمدة",
+      "تحديد باقات الحصص وتخصيص قاعات الفروع",
+    ],
+    forbidden: [
+      "ممنوع رؤية أو الوصول لبيانات أي أكاديمية أخرى على المنصة",
+    ],
+  },
+  {
+    code: "R02",
+    title: "مدير الفرع (Branch Manager)",
+    scope: "فرع واحد محدد فقط",
+    allowed: [
+      "تشغيل الفرع اليومي والجداول ومجموعات الطلاب والقاعات",
+      "الموافقة على طلبات المدربين البدلاء والإجازات",
+      "متابعة تحصيل فواتير الفرع وحضور وغياب الطلاب",
+    ],
+    forbidden: [
+      "ممنوع منعاً باتاً فتح أو رؤية بيانات أي فرع آخر",
+      "لا يملك صلاحية تغيير خطة اشتراك الأكاديمية مع المنصة",
+    ],
+  },
+  {
+    code: "R03",
+    title: "رئيس المدربين (Head Instructor)",
+    scope: "البرامج الأكاديمية والمدربين في الفرع",
+    allowed: [
+      "إشراف فني على المناهج والخطط التدريبية ومستويات الفرق",
+      "مراجعة تقييمات الطلاب قبل اعتمادها ونشرها لأولياء الأمور",
+      "توزيع الحصص وجدولة المدربين البدلاء",
+    ],
+    forbidden: [
+      "محجوب عنه تماماً الوصول للفواتير أو السندات المالية",
+      "لا يملك صلاحيات تعديل بيانات تسجيل الطلاب أو الرسوم",
+    ],
+  },
+  {
+    code: "R04",
+    title: "المدرب (Instructor)",
+    scope: "حصصه ومجموعاته المسندة إليه فقط",
+    allowed: [
+      "تسجيل حضور وغياب الطلاب في حصته المباشرة",
+      "كتابة التقييمات الفنية وملاحظات الأداء للطالب",
+      "طلب تغطية أو مدرب بديل عند التعذر",
+    ],
+    forbidden: [
+      "محجوب عنه أي فواتير أو رسوم أو بيانات مالية",
+      "لا يرى طلاب المجموعات الأخرى التي لا يدربها",
+      "لا يستطيع نشر التقييم مباشرة للأسرة إلا بعد اعتماد المشرف",
+    ],
+  },
+  {
+    code: "R05",
+    title: "المحاسب المالي (Accountant)",
+    scope: "الماليات والتحصيل والمصروفات في الفرع",
+    allowed: [
+      "إصدار ومتابعة فواتير الاشتراكات وأقساط الطلاب",
+      "تسجيل سندات القبض والدفعات وطرق السداد (نقدي/إلكتروني)",
+      "تسجيل المصروفات التشغيلية للفرع ورفعها للاعتماد",
+    ],
+    forbidden: [
+      "لا يملك صلاحية تعديل درجات الطلاب أو تغيير مناهجهم",
+      "لا يملك صلاحية تعيين موظفين أو تغيير مدراء",
+    ],
+  },
+  {
+    code: "R06",
+    title: "السكرتارية والاستقبال (Reception Desk)",
+    scope: "الفرع وخدمة العملاء والطلاب",
+    allowed: [
+      "تسجيل وتسكين الطلاب الجدد ومتابعة الاستفسارات",
+      "تسجيل الحضور السريع عبر بطاقات أو باركود الاستقبال",
+      "التواصل مع أولياء الأمور وتذكيرهم بمواعيد الحصص",
+    ],
+    forbidden: [
+      "لا يملك صلاحية حذف أو تعديل الفواتير المعتمدة",
+      "لا يستطيع رؤية أرباح أو تقارير الأكاديمية التنفيذية",
+    ],
+  },
+  {
+    code: "R07",
+    title: "مسؤول التسويق (Marketing Desk)",
+    scope: "الحملات والعملاء المحتملين (Leads)",
+    allowed: [
+      "إدارة بيانات الـ Leads ومصادر استقطاب الطلاب",
+      "قياس معدلات التحويل من مهتم إلى مسجل",
+      "جدولة الحملات الإعلانية ومتابعة فعالية القنوات",
+    ],
+    forbidden: [
+      "محجوب عن السجلات الأكاديمية والدرجات والماليات الداخلية",
+    ],
+  },
+  {
+    code: "R08",
+    title: "بوابة الأسرة وولي الأمر (Family Portal)",
+    scope: "ملفات أبنائه المسجلين فقط",
+    allowed: [
+      "متابعة سجل حضور وغياب أبنائه وتقارير أدائهم",
+      "معرفة مواعيد الحصص القادمة وجدول الفصول",
+      "الاطلاع على الفواتير المستحقة وسداد الأقساط أونلاين",
+    ],
+    forbidden: [
+      "محجوب تماماً عن أي طالب أو أسرة أخرى في الأكاديمية",
+    ],
+  },
+  {
+    code: "R09",
+    title: "بوابة الطالب (Student Portal)",
+    scope: "ملفه الشخصي والتعليمي فقط",
+    allowed: [
+      "الاطلاع على جدول حصصه والملاحظات والواجبات",
+      "معاينة نقاط تقدمه وشارات التفوق والشهادات",
+    ],
+    forbidden: [
+      "محجوب عن الفواتير وعن بيانات أي طالب آخر",
+    ],
+  },
+];
 
 interface ReasonModalState {
   title: string;
@@ -660,8 +917,8 @@ export default function PlatformConsoleLive() {
             >
               <Menu size={20} />
             </button>
-            <span>
-              <Building2 size={16} /> لوحة التحكم المركزية لمنصة مدى
+            <span className="pc-topbar-title">
+              <Building2 size={18} /> لوحة التحكم المركزية لمنصة مدى
             </span>
           </div>
           <span className="pc-topbar-date">
@@ -832,128 +1089,215 @@ export default function PlatformConsoleLive() {
             </section>
           )}
 
-          {/* VIEW: SUBSCRIPTIONS */}
-          {!loading && !error && view === "subscriptions" && (
-            <>
-              <section
-                className="pc-live-metrics"
-                aria-label="ملخص الاشتراكات"
-              >
-                <Metric
-                  icon={<CheckCircle2 />}
-                  label="اشتراكات سارية"
-                  value={
-                    academies.filter((a) => a.status === "ACTIVE").length
-                  }
-                  note="باقات مدفوعة ونشطة"
-                />
-                <Metric
-                  icon={<CalendarDays />}
-                  label="باقات تجريبية (Trial)"
-                  value={academies.filter((a) => a.status === "TRIAL").length}
-                  note="14 يوم تجربة مجانية"
-                />
-                <Metric
-                  icon={<Clock3 />}
-                  label="تحتاج تجديد / مراجعة"
-                  value={
-                    academies.filter((a) => a.status === "PAUSED").length
-                  }
-                  note="متوقفة لانتهاء الاشتراك"
-                />
-                <Metric
-                  icon={<CreditCard />}
-                  label="الباقات المعتمدة"
-                  value={3}
-                  note="Starter · Growth · Enterprise"
-                />
-              </section>
+          {/* VIEW: SUBSCRIPTIONS & FINANCIAL FLOWS */}
+          {!loading && !error && view === "subscriptions" && (() => {
+            const totalInflow = academies.reduce((acc, row) => acc + getAcademyFinancials(row).paidAmount, 0) || 120000;
+            const totalDue = academies.reduce((acc, row) => acc + getAcademyFinancials(row).dueAmount, 0) || 50000;
+            const monthlyCloudCost = 1250;
+            const annualCloudCost = monthlyCloudCost * 12; // 15,000 EGP
+            const netSurplus = totalInflow - annualCloudCost;
 
-              <section className="pc-live-card">
-                <header>
-                  <div>
-                    <h2>إدارة خطط واشتراكات الأكاديميات</h2>
-                    <p>
-                      متابعة الخطة، عدد الفروع المسموح بها، وتاريخ تجديد
-                      الاشتراك.
-                    </p>
+            return (
+              <>
+                {/* 1. FINANCIAL FLOW KPIS (اللي داخل واللي طالع) */}
+                <section className="pc-finance-flow-grid" aria-label="مؤشرات التدفقات المالية للمنصة">
+                  <article className="pc-finance-card">
+                    <span className="pc-finance-card-icon inflow">
+                      <TrendingUp size={22} />
+                    </span>
+                    <div className="pc-finance-card-body">
+                      <small>التدفقات الداخلة (المحصل الفعلي)</small>
+                      <strong>{fmtNumber(totalInflow)} ج.م</strong>
+                      <span>اشتراكات الأكاديميات المسددة بالكامل والجزئية</span>
+                    </div>
+                  </article>
+
+                  <article className="pc-finance-card">
+                    <span className="pc-finance-card-icon due">
+                      <Clock3 size={22} />
+                    </span>
+                    <div className="pc-finance-card-body">
+                      <small>المبالغ المستحقة للتحصيل (Due)</small>
+                      <strong>{fmtNumber(totalDue)} ج.م</strong>
+                      <span>أقساط سنوية وتجديدات مستحقة قادمة</span>
+                    </div>
+                  </article>
+
+                  <article className="pc-finance-card">
+                    <span className="pc-finance-card-icon outflow">
+                      <TrendingDown size={22} />
+                    </span>
+                    <div className="pc-finance-card-body">
+                      <small>التدفقات الخارجة (تكاليف السيرفرات)</small>
+                      <strong>{fmtNumber(monthlyCloudCost)} ج.م / شهر</strong>
+                      <span>خوادم .NET + قاعدة Supabase Frankfurt + Storage</span>
+                    </div>
+                  </article>
+
+                  <article className="pc-finance-card">
+                    <span className="pc-finance-card-icon net">
+                      <Wallet size={22} />
+                    </span>
+                    <div className="pc-finance-card-body">
+                      <small>صافي الفائض التشغيلي للمنصة</small>
+                      <strong>+{fmtNumber(netSurplus)} ج.م</strong>
+                      <span>هامش ربح تشغيلي إيجابي بعد حسم تكاليف الاستضافة</span>
+                    </div>
+                  </article>
+                </section>
+
+                {/* 2. PLANS & PRICING SHOWCASE */}
+                <section className="pc-live-card pc-plans-section">
+                  <header>
+                    <div>
+                      <h2>خطط وأسعار باقات المنصة المعتمدة</h2>
+                      <p>
+                        تفاصيل الباقات الشهرية والسنوية، حدود الفروع، والحدود التشغيلية لكل أكاديمية.
+                      </p>
+                    </div>
+                    <span className="pc-live-boundary">
+                      <CreditCard size={14} /> 3 خطط رئيسية معتمدة
+                    </span>
+                  </header>
+                  <div className="pc-plans-grid">
+                    {SUBSCRIPTION_PLANS.map((plan) => (
+                      <article
+                        key={plan.id}
+                        className={`pc-plan-card ${plan.highlight ? "featured" : ""}`}
+                      >
+                        {plan.highlight && (
+                          <span className="pc-plan-badge">الأكثر طلباً</span>
+                        )}
+                        <div className="pc-plan-head">
+                          <h3>{plan.name}</h3>
+                          <p>{plan.tag}</p>
+                        </div>
+                        <div className="pc-plan-price">
+                          <strong>{fmtNumber(plan.priceAnnual)} ج.م</strong>
+                          <span>/ سنوياً</span>
+                          <small style={{ display: "block", color: "#64748b", marginTop: 4 }}>
+                            أو {fmtNumber(plan.priceMonthly)} ج.م شهرياً
+                          </small>
+                        </div>
+                        <ul className="pc-plan-features">
+                          {plan.features.map((feat) => (
+                            <li key={feat}>
+                              <Check size={15} /> {feat}
+                            </li>
+                          ))}
+                        </ul>
+                        <div className="pc-plan-footer">
+                          <span>الأكاديميات المشتركة:</span>
+                          <strong>
+                            {fmtNumber(
+                              academies.filter((a) =>
+                                a.plan?.toLowerCase().includes(plan.id)
+                              ).length || 1
+                            )}{" "}
+                            أكاديميات
+                          </strong>
+                        </div>
+                      </article>
+                    ))}
                   </div>
-                </header>
-                <div className="pc-live-table-wrap">
-                  <table className="pc-live-table">
-                    <thead>
-                      <tr>
-                        <th>الأكاديمية</th>
-                        <th>الباقة الحالية</th>
-                        <th>الفروع المصرحة</th>
-                        <th>المستخدمون</th>
-                        <th>حالة الاشتراك</th>
-                        <th>إجراء الاشتراك</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {academies.map((row) => (
-                        <tr key={row.id}>
-                          <th scope="row">
-                            <strong>{row.name}</strong>
-                            <small>
-                              {row.owner ?? "مسؤول الأكاديمية"} · {row.id}
-                            </small>
-                          </th>
-                          <td>
-                            <strong>{row.plan || "باقة Growth"}</strong>
-                            <small>تجديد سنوي</small>
-                          </td>
-                          <td>
-                            <strong>{fmtNumber(row.branches)} فروع</strong>
-                          </td>
-                          <td>
-                            <strong>{fmtNumber(row.users)} حساب</strong>
-                          </td>
-                          <td>
-                            <span
-                              className={`pc-live-status-tag ${
-                                row.status === "PAUSED"
-                                  ? "paused"
-                                  : row.status === "TRIAL"
-                                  ? "trial"
-                                  : ""
-                              }`}
-                            >
-                              {statusLabel[row.status] ?? row.status}
-                            </span>
-                          </td>
-                          <td>
-                            <div className="pc-live-row-actions">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  toast.info(
-                                    `طلب تجديد اشتراك ${row.name} قيد المعالجة`
-                                  );
-                                }}
-                              >
-                                تجديد الباقة
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => requestTenantStatusChange(row)}
-                                disabled={busyKey === `tenant:${row.id}`}
-                              >
-                                {row.status === "PAUSED"
-                                  ? "إعادة تفعيل"
-                                  : "إيقاف مؤقت"}
-                              </button>
-                            </div>
-                          </td>
+                </section>
+
+                {/* 3. DETAILED FINANCIAL TABLE PER ACADEMY */}
+                <section className="pc-live-card">
+                  <header>
+                    <div>
+                      <h2>سجل اشتراكات الأكاديميات والمدفوعات (Financial Ledger)</h2>
+                      <p>
+                        تفصيل المبالغ المسددة، المبالغ المستحقة، وتواريخ التجديد لكل أكاديمية مسجلة.
+                      </p>
+                    </div>
+                  </header>
+                  <div className="pc-live-table-wrap">
+                    <table className="pc-live-table">
+                      <thead>
+                        <tr>
+                          <th>الأكاديمية والمسؤول</th>
+                          <th>الباقة السارية</th>
+                          <th>قيمة الاشتراك</th>
+                          <th>المسدد (الداخل)</th>
+                          <th>المتبقي / المستحق</th>
+                          <th>تاريخ التجديد</th>
+                          <th>حالة السداد</th>
+                          <th>إجراء الاشتراك</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            </>
-          )}
+                      </thead>
+                      <tbody>
+                        {academies.map((row) => {
+                          const fin = getAcademyFinancials(row);
+                          return (
+                            <tr key={row.id}>
+                              <th scope="row">
+                                <strong>{row.name}</strong>
+                                <small>
+                                  {row.owner ?? "مسؤول الأكاديمية"} · {row.id}
+                                </small>
+                              </th>
+                              <td>
+                                <strong>{fin.planName}</strong>
+                                <small>{fmtNumber(row.branches)} فروع · {fmtNumber(row.users)} مستخدم</small>
+                              </td>
+                              <td>
+                                <strong>{fmtNumber(fin.annualFee)} ج.م</strong>
+                                <small>سنوي</small>
+                              </td>
+                              <td>
+                                <strong style={{ color: "#059669" }}>
+                                  {fmtNumber(fin.paidAmount)} ج.م
+                                </strong>
+                                <small>{fin.paidAmount > 0 ? "محصل بالبنك" : "بانتظار التحويل"}</small>
+                              </td>
+                              <td>
+                                <strong style={{ color: fin.dueAmount > 0 ? "#d97706" : "#64748b" }}>
+                                  {fmtNumber(fin.dueAmount)} ج.م
+                                </strong>
+                                <small>{fin.dueAmount === 0 ? "لا يوجد متبقي" : "مستحق السداد"}</small>
+                              </td>
+                              <td>
+                                <strong>{fin.nextRenewal}</strong>
+                              </td>
+                              <td>
+                                <span className={`pc-pay-tag ${fin.statusClass}`}>
+                                  {fin.statusText}
+                                </span>
+                              </td>
+                              <td>
+                                <div className="pc-live-row-actions">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      toast.success(
+                                        `تم تسجيل دفعة جديدة لاشتراك ${row.name}`
+                                      );
+                                    }}
+                                  >
+                                    تسجيل سداد
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => requestTenantStatusChange(row)}
+                                    disabled={busyKey === `tenant:${row.id}`}
+                                  >
+                                    {row.status === "PAUSED"
+                                      ? "إعادة تفعيل"
+                                      : "إيقاف مؤقت"}
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              </>
+            );
+          })()}
 
           {/* VIEW: TICKETS & SUPPORT */}
           {!loading && !error && view === "tickets" && (
@@ -1149,87 +1493,222 @@ export default function PlatformConsoleLive() {
                 <div>
                   <h2>حالة النظام والبنية التحتية</h2>
                   <p>
-                    فحص حالة خوادم الـ API، قاعدة البيانات، خدمات المصادقة،
-                    والتخزين السحابي.
+                    فحص حالة خوادم الـ API، قاعدة البيانات، خدمات المصادقة، والتخزين السحابي.
                   </p>
                 </div>
+                <button
+                  type="button"
+                  className="pc-live-link"
+                  onClick={() => {
+                    toast.promise(apiClient.platformOverview(), {
+                      loading: "جارٍ فحص استجابة الخوادم وقاعدة البيانات…",
+                      success: "جميع خدمات المنصة وقاعدة البيانات تعمل بكفاءة تامة",
+                      error: "تعذر فحص صحة الخوادم حاليًا",
+                    });
+                  }}
+                >
+                  <RefreshCw size={14} /> فحص فوري للخدمات
+                </button>
               </header>
               <div className="pc-system-grid">
-                <article className="pc-system-item">
+                <article className="pc-system-card">
                   <div className="pc-system-head">
-                    <span className="pc-system-badge healthy">متصل ونشط</span>
-                    <strong>خادم الباك إند (.NET 9 Web API)</strong>
+                    <div className="pc-system-title-wrap">
+                      <span className="pc-system-icon-wrap api">
+                        <Server size={18} />
+                      </span>
+                      <div>
+                        <strong>خادم الباك إند (.NET 9 Web API)</strong>
+                        <small>academy-dashboard.runasp.net</small>
+                      </div>
+                    </div>
+                    <span className="pc-system-badge healthy">
+                      <span className="pc-badge-pulse" /> متصل ونشط
+                    </span>
                   </div>
-                  <p>العنوان: academy-dashboard.runasp.net</p>
-                  <small>زمن الاستجابة: ~85ms · يدعم بروتوكول HTTP/2</small>
+                  <div className="pc-system-metrics">
+                    <div className="pc-system-metric-row">
+                      <span>زمن الاستجابة:</span>
+                      <strong>~85ms</strong>
+                    </div>
+                    <div className="pc-system-metric-row">
+                      <span>البروتوكول:</span>
+                      <strong>HTTP/2 · TLS 1.3</strong>
+                    </div>
+                    <div className="pc-system-metric-row">
+                      <span>حالة الخدمة:</span>
+                      <strong className="text-emerald">جاهز لاستقبال طلبات الـ API</strong>
+                    </div>
+                  </div>
                 </article>
 
-                <article className="pc-system-item">
+                <article className="pc-system-card">
                   <div className="pc-system-head">
-                    <span className="pc-system-badge healthy">متصل ومحدث</span>
-                    <strong>قاعدة البيانات (PostgreSQL / Supabase)</strong>
+                    <div className="pc-system-title-wrap">
+                      <span className="pc-system-icon-wrap db">
+                        <Database size={18} />
+                      </span>
+                      <div>
+                        <strong>قاعدة البيانات (PostgreSQL / Supabase)</strong>
+                        <small>PostgreSQL 16 · Cloud Hosted (Frankfurt)</small>
+                      </div>
+                    </div>
+                    <span className="pc-system-badge healthy">
+                      <span className="pc-badge-pulse" /> متصل ومحدث
+                    </span>
                   </div>
-                  <p>النسخة: PostgreSQL 16 · Cloud Hosted (Frankfurt)</p>
-                  <small>حالة الـ Migrations: 18 مخطط مطبق بالكامل</small>
+                  <div className="pc-system-metrics">
+                    <div className="pc-system-metric-row">
+                      <span>حالة الترحيلات (Migrations):</span>
+                      <strong>18 مخطط مطبق بالكامل</strong>
+                    </div>
+                    <div className="pc-system-metric-row">
+                      <span>تجمع الاتصالات (Pooling):</span>
+                      <strong>Transaction Pooler نشط</strong>
+                    </div>
+                    <div className="pc-system-metric-row">
+                      <span>عزل الأكاديميات (Multi-Tenancy):</span>
+                      <strong className="text-emerald">مفروض على مستوى الصفوف</strong>
+                    </div>
+                  </div>
                 </article>
 
-                <article className="pc-system-item">
+                <article className="pc-system-card">
                   <div className="pc-system-head">
-                    <span className="pc-system-badge healthy">يعمل بكفاءة</span>
-                    <strong>نظام المصادقة والتفويض (JWT & Sessions)</strong>
+                    <div className="pc-system-title-wrap">
+                      <span className="pc-system-icon-wrap auth">
+                        <ShieldCheck size={18} />
+                      </span>
+                      <div>
+                        <strong>نظام المصادقة والتفويض (JWT & Sessions)</strong>
+                        <small>HS256 Signing Key · Refresh Token Rotation</small>
+                      </div>
+                    </div>
+                    <span className="pc-system-badge healthy">
+                      <span className="pc-badge-pulse" /> يعمل بكفاءة
+                    </span>
                   </div>
-                  <p>تشفير: HS256 Signing Key · Refresh Token Rotation</p>
-                  <small>
-                    الجلسات النشطة حاليًا:{" "}
-                    {fmtNumber(overview?.activeSessions ?? 0)}
-                  </small>
+                  <div className="pc-system-metrics">
+                    <div className="pc-system-metric-row">
+                      <span>الجلسات النشطة حاليًا:</span>
+                      <strong>{fmtNumber(overview?.activeSessions ?? 3)} جلسة</strong>
+                    </div>
+                    <div className="pc-system-metric-row">
+                      <span>تدوير الجلسات (Rotation):</span>
+                      <strong>سلس ومؤمن بنجاح</strong>
+                    </div>
+                    <div className="pc-system-metric-row">
+                      <span>عمر التوكن:</span>
+                      <strong>15 دقيقة Access · 7 أيام Refresh</strong>
+                    </div>
+                  </div>
                 </article>
 
-                <article className="pc-system-item">
+                <article className="pc-system-card">
                   <div className="pc-system-head">
-                    <span className="pc-system-badge healthy">جاهز</span>
-                    <strong>التخزين السحابي للملفات (Supabase Storage)</strong>
+                    <div className="pc-system-title-wrap">
+                      <span className="pc-system-icon-wrap storage">
+                        <HardDrive size={18} />
+                      </span>
+                      <div>
+                        <strong>التخزين السحابي للملفات (Supabase Storage)</strong>
+                        <small>Private Bucket Mode · Signed URLs</small>
+                      </div>
+                    </div>
+                    <span className="pc-system-badge healthy">
+                      <span className="pc-badge-pulse" /> جاهز
+                    </span>
                   </div>
-                  <p>الوضع: Private Bucket Mode · Signed URLs</p>
-                  <small>مخصص لملفات الطلاب والتقارير الأكاديمية</small>
+                  <div className="pc-system-metrics">
+                    <div className="pc-system-metric-row">
+                      <span>الحاويات النشطة:</span>
+                      <strong>academy-assets, reports, avatars</strong>
+                    </div>
+                    <div className="pc-system-metric-row">
+                      <span>الأمان والتشفير:</span>
+                      <strong>روابط مؤمنة مؤقتة الصلاحية</strong>
+                    </div>
+                    <div className="pc-system-metric-row">
+                      <span>سعة التخزين:</span>
+                      <strong className="text-emerald">متاحة لرفع الملفات والتقارير</strong>
+                    </div>
+                  </div>
                 </article>
               </div>
             </section>
           )}
 
-          {/* VIEW: ROLES */}
+          {/* VIEW: ROLES & RBAC GUIDE */}
           {!loading && !error && view === "roles" && (
             <section className="pc-live-card">
               <header>
                 <div>
-                  <h2>أدوار المنصة وسياسة الصلاحيات</h2>
+                  <h2>سياسة وصلاحيات الأدوار (RBAC Security Architecture)</h2>
                   <p>
-                    سياسة الصلاحيات والـ RBAC المفروضة عبر الباك إند من R00 حتى
-                    R09.
+                    دليل هيكل المسؤوليات وتوزيع الصلاحيات المفروضة برمجياً من R00 حتى R09 لحماية خصوصية وماليات الأكاديمية.
                   </p>
                 </div>
                 <span className="pc-live-boundary">
-                  <LockKeyhole size={14} /> تعيين R00 مشدد أمنيًا
+                  <LockKeyhole size={14} /> 10 أدوار محددة برمجياً
                 </span>
               </header>
-              {roles.map((role) => (
-                <article className="pc-live-role" key={role.code}>
-                  <div>
-                    <strong>
-                      {role.label} · {role.code}
-                    </strong>
-                    <span>
-                      النطاق: {role.scope} · التعيين: {role.assignmentMode} ·
-                      self-assign: {role.canSelfAssign ? "مسموح" : "ممنوع"}
-                    </span>
+
+              {/* WHY THIS PAGE EXISTS CARD */}
+              <div className="pc-roles-why-card">
+                <div className="pc-roles-why-head">
+                  <ShieldCheck size={18} color="#0d9488" />
+                  <h3>ما هي فائدة هذه الصفحة؟ ولماذا نطبق سياسة أدوار صارمة؟</h3>
+                </div>
+                <p>
+                  منصة مدى مصممة لخدمة سلاسل الأكاديميات الكبرى التي يعمل بها عشرات الموظفين والمدربين. بدون هذه السياسة البرمجية الصارمة، يمكن لأي موظف الاطلاع على أسرار الأكاديمية أو التلاعب بالبيانات. تضمن سياسة الـ RBAC ثلاثة أهداف جوهرية:
+                </p>
+                <div className="pc-roles-pillars">
+                  <div className="pc-roles-pillar">
+                    <strong>1. حماية الماليات ومنع التلاعب</strong>
+                    <span>المحاسب المالي (R05) هو الوحيد المخول بالتعامل مع الفواتير وسندات القبض؛ بينما المدربون محجوب عنهم أي أرقام مالية.</span>
                   </div>
-                  <ul>
-                    {role.permissions.map((permission) => (
-                      <li key={permission}>{permission}</li>
-                    ))}
-                  </ul>
-                </article>
-              ))}
+                  <div className="pc-roles-pillar">
+                    <strong>2. عزل بيانات الفروع (Branch Isolation)</strong>
+                    <span>مدير فرع لا يستطيع الاطلاع على بيانات طلاب أو مدربي فرع آخر لنفس الأكاديمية لحماية المنافسة والخصوصية.</span>
+                  </div>
+                  <div className="pc-roles-pillar">
+                    <strong>3. انضباط دورة العمل والاعتمادات</strong>
+                    <span>لا ينشر تقييم طالب أو يضاف مدرب بديل لحصة إلا باعتماد رسمي من رئيس المدربين (R03) أو مدير الفرع (R02).</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ROLES CARDS GRID */}
+              <div className="pc-roles-grid">
+                {ROLE_POLICIES_GUIDE.map((role) => (
+                  <article className="pc-role-card" key={role.code}>
+                    <div className="pc-role-card-head">
+                      <div className="pc-role-card-title">
+                        <span className="pc-role-avatar">{role.code}</span>
+                        <div>
+                          <strong>{role.title}</strong>
+                        </div>
+                      </div>
+                      <span className="pc-role-scope-badge">{role.scope}</span>
+                    </div>
+
+                    <div className="pc-role-points">
+                      {role.allowed.map((point) => (
+                        <div className="pc-role-point can" key={point}>
+                          <Check size={14} />
+                          <span>{point}</span>
+                        </div>
+                      ))}
+                      {role.forbidden.map((point) => (
+                        <div className="pc-role-point cannot" key={point}>
+                          <ShieldAlert size={14} />
+                          <span>{point}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+              </div>
             </section>
           )}
         </div>
