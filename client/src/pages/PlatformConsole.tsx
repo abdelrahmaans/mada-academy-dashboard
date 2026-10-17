@@ -10,6 +10,7 @@ import {
   CircleHelp,
   Clock3,
   CreditCard,
+  GraduationCap,
   LayoutDashboard,
   LifeBuoy,
   MapPin,
@@ -487,36 +488,42 @@ function PlatformConsolePreviewContent() {
         className={`sidebar pc-sidebar ${mobileNavOpen ? "sidebar-open pc-sidebar-open" : ""}`}
         aria-label="تنقل المنصة"
       >
-        <div className="sidebar-top pc-brand-row">
-          <span className="pc-brand-symbol" aria-hidden="true">
-            <Building2 size={21} />
-          </span>
-          <span className="pc-brand-copy">
-            <strong>مدى</strong>
-            <small>منصة الأكاديميات</small>
-          </span>
+        <div className="sidebar-top">
           <button
-            className="sidebar-close pc-mobile-close"
+            type="button"
+            className="brand-lockup r01-brand-button"
+            onClick={() => {
+              setActiveView("overview");
+              setMobileNavOpen(false);
+            }}
+          >
+            <span className="brand-symbol">
+              <GraduationCap size={28} />
+            </span>
+            <span className="brand-word">مدى</span>
+          </button>
+          <button
+            className="icon-button sidebar-close"
             type="button"
             aria-label="إغلاق القائمة"
             onClick={() => setMobileNavOpen(false)}
           >
-            <X size={18} />
+            <X size={19} />
           </button>
         </div>
 
-        <div className="academy-switcher pc-platform-card">
-          <span className="pc-platform-avatar">
-            <ShieldCheck size={17} aria-hidden="true" />
+        <div className="academy-switcher" aria-label="نطاق المنصة">
+          <span className="academy-avatar">
+            <ShieldCheck size={20} aria-hidden="true" />
           </span>
-          <span>
-            <strong>مساحة المنصة</strong>
-            <small>الدور R00 · {liveMode ? "LIVE" : "وضع المعاينة"}</small>
+          <span className="academy-meta">
+            <strong>منصة مدى</strong>
+            <small>الدور R00 · وضع المعاينة</small>
           </span>
-          <ChevronDown size={14} aria-hidden="true" />
+          <ChevronDown size={15} className="switcher-chevron" aria-hidden="true" />
         </div>
 
-        <div className="nav-caption pc-nav-caption">إدارة المنصة</div>
+        <div className="nav-caption">مساحة مسؤول المنصة</div>
         <nav
           className="primary-nav pc-nav-list"
           aria-label="أقسام إدارة المنصة"
