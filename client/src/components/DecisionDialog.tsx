@@ -1,8 +1,9 @@
 import {
   AlertCircle,
-  Check,
   CalendarDays,
+  Check,
   FileText,
+  Snowflake,
   UserCheck,
   Wallet,
   X,
@@ -21,10 +22,10 @@ function formatMoney(value: number) {
 function ApprovalTypeIcon({ kind }: { kind: ApprovalItem["kind"] }) {
   return (
     <div
-      className={`approval-type-icon ${kind === "discount" ? "approval-discount-icon" : kind === "expense" ? "approval-expense-icon" : "approval-substitute-icon"}`}
+      className={`approval-type-icon ${kind === "discount" ? "approval-discount-icon" : kind === "expense" ? "approval-expense-icon" : kind === "freeze" ? "approval-session-icon" : "approval-substitute-icon"}`}
       aria-hidden="true"
     >
-      {kind === "session" ? <CalendarDays size={18} /> : kind === "discount" || kind === "correction" ? (
+      {kind === "session" ? <CalendarDays size={18} /> : kind === "freeze" ? <Snowflake size={18} /> : kind === "discount" || kind === "correction" ? (
         <FileText size={18} />
       ) : kind === "expense" ? (
         <Wallet size={18} />
@@ -166,6 +167,13 @@ export default function DecisionDialog({
                 <small>التصنيف</small>
                 <strong>{item.expenseCategory}</strong>
               </span>
+            </>
+          ) : item.kind === "freeze" ? (
+            <>
+              <span><small>الطالب</small><strong>{item.student}</strong></span>
+              <span><small>المجموعة</small><strong>{item.course}</strong></span>
+              <span><small>فترة التجميد</small><strong>{item.sessionDate}</strong></span>
+              <span><small>أثر الحصص والتعويض</small><strong>{item.requestType}</strong></span>
             </>
           ) : item.kind === "correction" ? (
             <>

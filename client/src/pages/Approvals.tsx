@@ -41,7 +41,15 @@ import DecisionDialog from "@/components/DecisionDialog";
 import NotificationCenter, {
   type NotificationItem,
 } from "@/components/NotificationCenter";
-import { apiClient, type ApprovalRequestRecord, type FinanceExpense, type InvoiceCorrection, type NotificationRecord } from "@/lib/apiClient";
+import {
+  apiClient,
+  freezeStorage,
+  type ApprovalRequestRecord,
+  type FinanceExpense,
+  type InvoiceCorrection,
+  type NotificationRecord,
+  type SubscriptionFreezeRequest,
+} from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
 
 type QueueTab = "all" | ApprovalKind;
@@ -250,6 +258,41 @@ function expenseFromApi(record: FinanceExpense): ApprovalItem {
   };
 }
 
+function freezeFromStorage(record: SubscriptionFreezeRequest): ApprovalItem {
+  const reasonAr =
+    record.reason === "MEDICAL"
+      ? "عذر مرضي"
+      : record.reason === "TRAVEL"
+      ? "سفر ورحلات"
+      : record.reason === "EXAMS"
+      ? "امتحانات مدرسية"
+      : record.reason === "FAMILY"
+      ? "ظروف أسرية"
+      : "عذر خاص";
+
+  return {
+    id: record.id,
+    kind: "freeze",
+    title: `طلب تجميد اشتراك · ${record.studentName}`,
+    summary: `${record.reasonText} (${reasonAr})`,
+    branch: record.branchName || "مدينة نصر",
+    requestedBy: `${record.submittedByName} · ${record.submittedByRole === "R08_PARENT" ? "ولي الأمر" : "السكرتارية"}`,
+    submittedAt: new Date(record.createdAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" }),
+    submittedAtSort: record.createdAt,
+    status: record.status.toLowerCase() as ApprovalStatus,
+    decidedAt: record.decidedAt ? new Date(record.decidedAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" }) : undefined,
+    decidedAtSort: record.decidedAt ? new Date(record.decidedAt).getTime() : undefined,
+    decidedBy: record.decidedByName,
+    decisionNote: record.decisionNote,
+    student: record.studentName,
+    course: record.courseName,
+    sessionDate: `من ${record.startDate} إلى ${record.endDate}`,
+    requestType: `${record.affectedSessionsCount} حصص متأثرة · ${record.makeUpCreditsAwarded} رصيد تعويض`,
+    targetId: record.id,
+    live: true,
+  };
+}
+
 export default function Approvals() {
   const [, navigate] = useLocation();
   const { logout, me } = useAuth();
@@ -310,7 +353,8 @@ export default function Approvals() {
       const expenses = expenseResult.status === "fulfilled"
         ? expenseResult.value.items.map(expenseFromApi)
         : [];
-      setRequests([...supported.map(approvalFromApi), ...corrections, ...expenses]);
+      const freezes = freezeStorage.getRequests().map(freezeFromStorage);
+      setRequests([...supported.map(approvalFromApi), ...corrections, ...expenses, ...freezes]);
       setNotifications(notifications);
 
       const optionalFailure = [notificationResult, correctionResult, expenseResult].find(result => result.status === "rejected");
@@ -458,12 +502,10 @@ export default function Approvals() {
       return;
     }
     if (item.live && liveMode) {
-      if (item.kind === "substitute" && status === "approved" && !item.proposedInstructorId) {
-        toast.error("لا يمكن اعتماد الاستبدال قبل اقتراح مدرب بديل.");
-        return;
-      }
       try {
-        if (item.kind === "expense") {
+        if (item.kind === "freeze") {
+          freezeStorage.decideRequest(id, status === "approved" ? "APPROVED" : "REJECTED", me?.user?.displayName || "مدير الفرع", decisionNote.trim());
+        } else if (item.kind === "expense") {
           if (status === "approved") await apiClient.approveFinanceExpense(id, decisionNote.trim());
           else await apiClient.rejectFinanceExpense(id, decisionNote.trim());
         } else if (item.kind === "correction") {
@@ -477,9 +519,9 @@ export default function Approvals() {
         }
         const decidedAtDate = new Date();
         const decidedAt = new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium", timeStyle: "short" }).format(decidedAtDate);
-        setRequests(current => current.map(request => request.id === id ? { ...request, status, decidedAt, decidedAtSort: decidedAtDate.getTime(), decidedBy: "المستخدم الحالي", decisionNote: decisionNote.trim() || undefined } : request));
+        setRequests(current => current.map(request => request.id === id ? { ...request, status, decidedAt, decidedAtSort: decidedAtDate.getTime(), decidedBy: me?.user?.displayName || "مدير الفرع", decisionNote: decisionNote.trim() || undefined } : request));
         setSelected(null); setDecisionNote(""); setExpenseRejectionMode(false);
-        toast.success(status === "approved" ? "تم اعتماد الطلب على الخادم" : "تم رفض الطلب على الخادم");
+        toast.success(status === "approved" ? (item.kind === "freeze" ? "تم اعتماد التجميد وتمديد الاشتراك وإضافة رصيد التعويض" : "تم اعتماد الطلب") : "تم رفض الطلب");
       } catch (cause) {
         toast.error("تعذر تسجيل القرار", { description: cause instanceof Error ? cause.message : "فشل الاتصال بالخادم." });
       }
@@ -850,6 +892,7 @@ export default function Approvals() {
                 onChange={setTab}
                 tabs={liveMode ? [
                   { id: "all", label: "كل الطلبات", count: branchRequests.length },
+                  { id: "freeze", label: "تجميد اشتراكات", count: pending.filter(item => item.kind === "freeze").length },
                   { id: "session", label: "طلبات الجلسات", count: pendingSessionRequests },
                   { id: "substitute", label: "مدرب بديل", count: pendingSubstitutes },
                   { id: "correction", label: "تصحيح فواتير", count: pending.filter(item => item.kind === "correction").length },
@@ -858,6 +901,11 @@ export default function Approvals() {
                     id: "all",
                     label: "كل الطلبات",
                     count: branchRequests.length,
+                  },
+                  {
+                    id: "freeze",
+                    label: "تجميد اشتراكات",
+                    count: branchRequests.filter(item => item.kind === "freeze").length,
                   },
                   {
                     id: "discount",

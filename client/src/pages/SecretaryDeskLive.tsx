@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Search,
   Send,
+  Snowflake,
   Sparkles,
   UserCheck,
   UserPlus,
@@ -30,12 +31,14 @@ import StatusBadge from "@/components/StatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   apiClient,
+  freezeStorage,
   type ConvertLeadInput,
   type CreateLeadInput,
   type DirectStudentInput,
   type LeadRecord,
   type SchedulingGroupRecord,
   type StudentRecord,
+  type SubscriptionFreezeRequest,
 } from "@/lib/apiClient";
 import "./SecretaryDeskLive.css";
 
@@ -66,9 +69,17 @@ export default function SecretaryDeskLive() {
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const [activeTab, setActiveTab] = useState<"pipeline" | "registration" | "followups">("pipeline");
+  const [activeTab, setActiveTab] = useState<"pipeline" | "registration" | "followups" | "freezes">("pipeline");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [freezeModalOpen, setFreezeModalOpen] = useState(false);
+  const [freezeFormData, setFreezeFormData] = useState({
+    studentId: "",
+    startDate: new Date().toISOString().split("T")[0],
+    endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+    reason: "MEDICAL" as const,
+    reasonText: "",
+  });
 
   // Modal states
   const [newLeadModalOpen, setNewLeadModalOpen] = useState(false);
@@ -328,6 +339,13 @@ export default function SecretaryDeskLive() {
             onClick={() => setActiveTab("followups")}
           >
             <Clock size={17} /> متابعات اليوم العاجلة ({activeLeadsCount})
+          </button>
+          <button
+            type="button"
+            className={`secretary-tab-btn ${activeTab === "freezes" ? "active" : ""}`}
+            onClick={() => setActiveTab("freezes")}
+          >
+            <Snowflake size={17} /> طلبات التجميد والتعويض
           </button>
         </div>
 
@@ -636,6 +654,219 @@ export default function SecretaryDeskLive() {
             </div>
           </section>
         )}
+
+        {/* TAB 4: Subscription Freezes & Make-up Sessions */}
+        {activeTab === "freezes" && (() => {
+          const allFreezes = freezeStorage.getRequests();
+          const handleSecretaryFreezeSubmit = (e: React.FormEvent) => {
+            e.preventDefault();
+            const student = students.find(s => s.id === freezeFormData.studentId);
+            if (!student) {
+              toast.error("يرجى اختيار الطالب");
+              return;
+            }
+            if (!freezeFormData.reasonText.trim()) {
+              toast.error("يرجى كتابة سبب التجميد بالتفصيل");
+              return;
+            }
+            const group = groups.find(g => g.branchId === student.branchId);
+            freezeStorage.createRequest({
+              studentId: student.id,
+              studentName: student.fullName,
+              courseName: group?.courseName || "برنامج تدريبي",
+              branchName: branchName,
+              startDate: freezeFormData.startDate,
+              endDate: freezeFormData.endDate,
+              reason: freezeFormData.reason,
+              reasonText: freezeFormData.reasonText,
+              submittedByRole: "R05_SECRETARY",
+              submittedByName: `${me?.user?.displayName || "موظف الاستقبال"} (السكرتارية)`,
+            });
+            setFreezeModalOpen(false);
+            setFreezeFormData({
+              studentId: "",
+              startDate: new Date().toISOString().split("T")[0],
+              endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+              reason: "MEDICAL",
+              reasonText: "",
+            });
+            setRefreshKey(v => v + 1);
+            toast.success(`تم تسجيل طلب التجميد للطالب ${student.fullName} ورفعه لمدير الفرع`);
+          };
+
+          return (
+            <section className="secretary-panel">
+              <div className="secretary-panel-toolbar" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+                <div>
+                  <h2 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0 }}>طلبات تجميد الاشتراكات والحصص التعويضية</h2>
+                  <p style={{ fontSize: "0.84rem", color: "#64748b", margin: "3px 0 0" }}>تسجيل تجميد فوري للطلاب عبر شباك الاستقبال ومتابعة القرارات المعتمدة.</p>
+                </div>
+                <button
+                  type="button"
+                  className="button button-primary"
+                  onClick={() => setFreezeModalOpen(true)}
+                  style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  <Plus size={16} /> تسجيل طلب تجميد بالاستقبال
+                </button>
+              </div>
+
+              <div style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "10px" }}>
+                {allFreezes.map(freeze => {
+                  const statusBadge =
+                    freeze.status === "APPROVED"
+                      ? { label: "معتمد · تم التمديد", bg: "rgba(16, 185, 129, 0.12)", color: "#059669" }
+                      : freeze.status === "REJECTED"
+                      ? { label: "مرفوض", bg: "rgba(239, 68, 68, 0.12)", color: "#dc2626" }
+                      : { label: "قيد مراجعة مدير الفرع", bg: "rgba(245, 158, 11, 0.12)", color: "#d97706" };
+
+                  return (
+                    <article
+                      key={freeze.id}
+                      style={{
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "10px",
+                        padding: "16px",
+                        background: "#ffffff",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "8px",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>{freeze.studentName}</span>
+                          <span style={{ fontSize: "0.8rem", color: "#64748b" }}>({freeze.courseName})</span>
+                          <span
+                            style={{
+                              fontSize: "0.78rem",
+                              fontWeight: 600,
+                              padding: "2px 8px",
+                              borderRadius: "12px",
+                              background: statusBadge.bg,
+                              color: statusBadge.color,
+                            }}
+                          >
+                            {statusBadge.label}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: "0.8rem", color: "#64748b" }}>
+                          مقدم الطلب: {freeze.submittedByName}
+                        </span>
+                      </div>
+
+                      <p style={{ margin: 0, fontSize: "0.86rem", color: "#334155" }}>
+                        <strong>السبب:</strong> {freeze.reasonText}
+                      </p>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", fontSize: "0.82rem", color: "#64748b", borderTop: "1px dashed #e2e8f0", paddingTop: "8px", marginTop: "4px" }}>
+                        <span>فترة التجميد: من <b>{freeze.startDate}</b> إلى <b>{freeze.endDate}</b></span>
+                        <span>رصيد التعويض المتاح: <b>{freeze.makeUpCreditsAwarded} حصص</b></span>
+                        {freeze.extendedNewEndDate && (
+                          <span style={{ color: "#059669", fontWeight: 600 }}>
+                            الانتهاء الجديد: {freeze.extendedNewEndDate}
+                          </span>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+
+              {/* Modal for Secretary to register freeze */}
+              {freezeModalOpen && (
+                <div className="dialog-overlay" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setFreezeModalOpen(false); }}>
+                  <section className="dialog-card" role="dialog" aria-modal="true" style={{ maxWidth: "480px" }}>
+                    <button className="dialog-close" aria-label="إغلاق" onClick={() => setFreezeModalOpen(false)}>
+                      <X size={17} />
+                    </button>
+                    <div className="team-dialog-heading">
+                      <span className="approval-id">R05 · مكتب الاستقبال</span>
+                      <h2>تسجيل طلب تجميد اشتراك</h2>
+                      <p>تسجيل طلب وارد لشباك الاستقبال ويرفع آليًا لمدير الفرع للاعتماد.</p>
+                    </div>
+
+                    <form onSubmit={handleSecretaryFreezeSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px", marginTop: "1rem" }}>
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "4px" }}>اختر الطالب</label>
+                        <select
+                          required
+                          value={freezeFormData.studentId}
+                          onChange={e => setFreezeFormData({ ...freezeFormData, studentId: e.target.value })}
+                          style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                        >
+                          <option value="">-- اختر الطالب المسجل --</option>
+                          {students.map(s => (
+                            <option key={s.id} value={s.id}>{s.fullName} ({s.id})</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "4px" }}>من تاريخ</label>
+                          <input
+                            type="date"
+                            required
+                            value={freezeFormData.startDate}
+                            onChange={e => setFreezeFormData({ ...freezeFormData, startDate: e.target.value })}
+                            style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "4px" }}>إلى تاريخ</label>
+                          <input
+                            type="date"
+                            required
+                            value={freezeFormData.endDate}
+                            onChange={e => setFreezeFormData({ ...freezeFormData, endDate: e.target.value })}
+                            style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "4px" }}>تصنيف العذر</label>
+                        <select
+                          value={freezeFormData.reason}
+                          onChange={e => setFreezeFormData({ ...freezeFormData, reason: e.target.value as any })}
+                          style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                        >
+                          <option value="MEDICAL">ظروف صحية / إجازة مرضية</option>
+                          <option value="TRAVEL">سفر ورحلات</option>
+                          <option value="EXAMS">امتحانات واختبارات</option>
+                          <option value="FAMILY">ظروف أسرية</option>
+                          <option value="OTHER">سبب آخر</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "4px" }}>سبب التجميد وملاحظات الاستقبال</label>
+                        <textarea
+                          rows={3}
+                          required
+                          placeholder="اكتب سبب طلب ولي الأمر وملاحظة الاستقبال..."
+                          value={freezeFormData.reasonText}
+                          onChange={e => setFreezeFormData({ ...freezeFormData, reasonText: e.target.value })}
+                          style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", resize: "none" }}
+                        />
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
+                        <button type="button" className="button button-secondary" onClick={() => setFreezeModalOpen(false)}>
+                          إلغاء
+                        </button>
+                        <button type="submit" className="button button-primary">
+                          رفع الطلب للمدير
+                        </button>
+                      </div>
+                    </form>
+                  </section>
+                </div>
+              )}
+            </section>
+          );
+        })()}
       </main>
 
       {/* Modal: New Lead Creation */}

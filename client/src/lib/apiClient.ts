@@ -759,3 +759,148 @@ export type ActivateEnrollmentResult = {
   status: "ACTIVE";
   activeEnrollmentCount: number;
 };
+
+export type SubscriptionFreezeRequest = {
+  id: string;
+  studentId: string;
+  studentName: string;
+  courseName: string;
+  branchName: string;
+  startDate: string;
+  endDate: string;
+  reason: "MEDICAL" | "TRAVEL" | "EXAMS" | "FAMILY" | "OTHER";
+  reasonText: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  submittedByRole: "R08_PARENT" | "R05_SECRETARY";
+  submittedByName: string;
+  createdAt: string;
+  decidedAt?: string;
+  decidedByName?: string;
+  decisionNote?: string;
+  affectedSessionsCount: number;
+  extendedNewEndDate?: string;
+  makeUpCreditsAwarded: number;
+};
+
+export type CreateFreezeRequestInput = {
+  studentId: string;
+  studentName: string;
+  courseName: string;
+  branchName?: string;
+  startDate: string;
+  endDate: string;
+  reason: "MEDICAL" | "TRAVEL" | "EXAMS" | "FAMILY" | "OTHER";
+  reasonText: string;
+  submittedByRole?: "R08_PARENT" | "R05_SECRETARY";
+  submittedByName?: string;
+};
+
+const FREEZE_STORAGE_KEY = "mada_subscription_freezes_v1";
+
+const DEFAULT_FREEZES: SubscriptionFreezeRequest[] = [
+  {
+    id: "FRZ-2026-001",
+    studentId: "MAD-0248",
+    studentName: "ياسين محمد علي",
+    courseName: "روبوتكس مستوى 2",
+    branchName: "مدينة نصر",
+    startDate: "2026-10-20",
+    endDate: "2026-11-03",
+    reason: "EXAMS",
+    reasonText: "فترة امتحانات منتصف الفصل الدراسي الأول",
+    status: "PENDING",
+    submittedByRole: "R08_PARENT",
+    submittedByName: "محمد علي (ولي الأمر)",
+    createdAt: "2026-10-17T09:30:00Z",
+    affectedSessionsCount: 2,
+    makeUpCreditsAwarded: 2,
+  },
+  {
+    id: "FRZ-2026-002",
+    studentId: "MAD-0247",
+    studentName: "ليلى أحمد محمود",
+    courseName: "برمجة للمبتدئين",
+    branchName: "المعادي",
+    startDate: "2026-10-10",
+    endDate: "2026-10-24",
+    reason: "MEDICAL",
+    reasonText: "إجازة مرضية وإجراء عملية جراحية بسيطة",
+    status: "APPROVED",
+    submittedByRole: "R05_SECRETARY",
+    submittedByName: "هبة محمود (استقبال المعادي)",
+    createdAt: "2026-10-09T14:15:00Z",
+    decidedAt: "2026-10-09T16:00:00Z",
+    decidedByName: "أحمد محمود (مدير الفرع)",
+    decisionNote: "معتمد طبقًا للتقرير الطبي المرفق. تم تمديد الاشتراك أسبوعين وإضافة حصتي تعويض.",
+    affectedSessionsCount: 2,
+    extendedNewEndDate: "2026-11-14",
+    makeUpCreditsAwarded: 2,
+  },
+];
+
+export const freezeStorage = {
+  getRequests: (): SubscriptionFreezeRequest[] => {
+    try {
+      const raw = localStorage.getItem(FREEZE_STORAGE_KEY);
+      if (!raw) {
+        localStorage.setItem(FREEZE_STORAGE_KEY, JSON.stringify(DEFAULT_FREEZES));
+        return DEFAULT_FREEZES;
+      }
+      return JSON.parse(raw);
+    } catch {
+      return DEFAULT_FREEZES;
+    }
+  },
+  saveRequests: (items: SubscriptionFreezeRequest[]) => {
+    localStorage.setItem(FREEZE_STORAGE_KEY, JSON.stringify(items));
+  },
+  createRequest: (input: CreateFreezeRequestInput): SubscriptionFreezeRequest => {
+    const list = freezeStorage.getRequests();
+    const start = new Date(input.startDate);
+    const end = new Date(input.endDate);
+    const diffDays = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+    const affected = Math.max(1, Math.round(diffDays / 7)); // approximate weekly sessions
+
+    const newReq: SubscriptionFreezeRequest = {
+      id: `FRZ-2026-${String(list.length + 1).padStart(3, "0")}`,
+      studentId: input.studentId,
+      studentName: input.studentName,
+      courseName: input.courseName,
+      branchName: input.branchName || "الفرع الرئيسي",
+      startDate: input.startDate,
+      endDate: input.endDate,
+      reason: input.reason,
+      reasonText: input.reasonText,
+      status: "PENDING",
+      submittedByRole: input.submittedByRole || "R08_PARENT",
+      submittedByName: input.submittedByName || "ولي الأمر",
+      createdAt: new Date().toISOString(),
+      affectedSessionsCount: affected,
+      makeUpCreditsAwarded: affected,
+    };
+    const updated = [newReq, ...list];
+    freezeStorage.saveRequests(updated);
+    return newReq;
+  },
+  decideRequest: (id: string, decision: "APPROVED" | "REJECTED", decidedByName: string, note?: string): SubscriptionFreezeRequest => {
+    const list = freezeStorage.getRequests();
+    const updated = list.map(item => {
+      if (item.id !== id) return item;
+      const end = new Date(item.endDate);
+      const start = new Date(item.startDate);
+      const diffDays = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+      const extended = new Date(Date.now() + (30 + diffDays) * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+      return {
+        ...item,
+        status: decision,
+        decidedAt: new Date().toISOString(),
+        decidedByName,
+        decisionNote: note || (decision === "APPROVED" ? "تم الاعتماد وتمديد الاشتراك وإضافة رصيد التعويض" : "تم الرفض لعدم مطابقة سياسة التجميد"),
+        extendedNewEndDate: decision === "APPROVED" ? extended : undefined,
+      };
+    });
+    freezeStorage.saveRequests(updated);
+    return updated.find(item => item.id === id)!;
+  },
+};

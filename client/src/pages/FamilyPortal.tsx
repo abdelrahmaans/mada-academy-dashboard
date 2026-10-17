@@ -6,6 +6,7 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
+  Clock,
   FileText,
   GraduationCap,
   HelpCircle,
@@ -13,7 +14,9 @@ import {
   LogOut,
   Menu,
   MessageCircle,
+  Plus,
   ShieldCheck,
+  Snowflake,
   Star,
   Wallet,
   X,
@@ -25,11 +28,19 @@ import ChildrenSwitcher, {
 } from "@/components/ChildrenSwitcher";
 import { RoleScopeProvider } from "@/contexts/RoleScopeContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { apiClient, type ConsumerSessionRecord, type ConsumerStudentRecord, type FinanceInvoice } from "@/lib/apiClient";
+import {
+  apiClient,
+  freezeStorage,
+  type ConsumerSessionRecord,
+  type ConsumerStudentRecord,
+  type CreateFreezeRequestInput,
+  type FinanceInvoice,
+  type SubscriptionFreezeRequest,
+} from "@/lib/apiClient";
 import { sessionsForStudent } from "@/lib/consumerScope";
 import "@/components/RoleFoundation.css";
 
-type PortalTab = "overview" | "attendance" | "evaluations" | "invoices";
+type PortalTab = "overview" | "attendance" | "evaluations" | "invoices" | "freeze";
 type ChildData = FamilyChild & {
   attendance: number;
   progress: number;
@@ -179,6 +190,7 @@ export default function FamilyPortal() {
     { id: "attendance", label: "الحضور", icon: CalendarDays },
     { id: "evaluations", label: "التقييمات", icon: Star },
     { id: "invoices", label: "الفواتير", icon: Wallet },
+    { id: "freeze", label: "تجميد وتعويض", icon: Snowflake },
   ];
   const selectChild = (id: string) => {
     setSelectedId(id);
@@ -351,6 +363,7 @@ export default function FamilyPortal() {
           {child && tab === "attendance" && <Attendance child={child} liveMode={liveMode} />}
           {child && tab === "evaluations" && <Evaluations child={child} liveMode={liveMode} />}
           {child && tab === "invoices" && (liveMode ? <LiveInvoices invoices={child.invoices ?? []} loading={invoiceLoading} error={invoiceError} onRetry={retry} /> : <Invoices child={child} supportRequested={supportRequested} onRequestSupport={() => { setSupportRequested(true); toast.success("تم تسجيل طلب المراجعة في المعاينة فقط."); }} />)}
+          {child && tab === "freeze" && <FreezeSection child={child} liveMode={liveMode} />}
           <footer className="family-portal-privacy">
             <ShieldCheck size={14} />
             <span>
@@ -532,6 +545,255 @@ function Evaluations({ child, liveMode }: { child: ChildData; liveMode: boolean 
     </section>
   );
 }
+function FreezeSection({ child, liveMode }: { child: ChildData; liveMode: boolean }) {
+  const [requests, setRequests] = useState<SubscriptionFreezeRequest[]>(() => {
+    return freezeStorage.getRequests().filter(r => r.studentId === child.id);
+  });
+  const [modalOpen, setModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    startDate: new Date().toISOString().split("T")[0],
+    endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+    reason: "TRAVEL" as const,
+    reasonText: "",
+  });
+
+  const handleCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.reasonText.trim()) {
+      toast.error("يرجى كتابة سبب التجميد بالتفصيل");
+      return;
+    }
+    const created = freezeStorage.createRequest({
+      studentId: child.id,
+      studentName: child.name,
+      courseName: child.course,
+      branchName: child.branch,
+      startDate: formData.startDate,
+      endDate: formData.endDate,
+      reason: formData.reason,
+      reasonText: formData.reasonText,
+      submittedByRole: "R08_PARENT",
+      submittedByName: "ولي الأمر",
+    });
+    setRequests(prev => [created, ...prev]);
+    setModalOpen(false);
+    setFormData({
+      startDate: new Date().toISOString().split("T")[0],
+      endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      reason: "TRAVEL",
+      reasonText: "",
+    });
+    toast.success("تم إرسال طلب التجميد بنجاح إلى مدير الفرع للمراجعة");
+  };
+
+  const totalMakeUpCredits = requests
+    .filter(r => r.status === "APPROVED")
+    .reduce((sum, r) => sum + r.makeUpCreditsAwarded, 0);
+
+  return (
+    <section className="family-portal-panel family-detail-panel">
+      <PanelTitle
+        icon={<Snowflake size={16} />}
+        title="تجميد الاشتراك وحصص التعويض"
+        action={
+          <button
+            type="button"
+            className="button button-primary"
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 12px", fontSize: "0.85rem" }}
+            onClick={() => setModalOpen(true)}
+          >
+            <Plus size={15} /> طلب تجميد جديد
+          </button>
+        }
+      />
+
+      <div className="family-metrics" style={{ marginTop: "1rem", marginBottom: "1rem" }}>
+        <Metric
+          icon={<Snowflake size={17} />}
+          label="حالة التجميد الحالية"
+          value={requests.some(r => r.status === "APPROVED") ? "اشتراك ممتد" : "نشط بدون تجميد"}
+          note="طبقًا لقرارات الفرع"
+          tone="teal"
+        />
+        <Metric
+          icon={<Clock size={17} />}
+          label="رصيد حصص التعويض"
+          value={`${totalMakeUpCredits} حصة`}
+          note="متاحة للتسكين البديل"
+          tone="violet"
+        />
+        <Metric
+          icon={<AlertCircle size={17} />}
+          label="الطلبات المعلقة"
+          value={`${requests.filter(r => r.status === "PENDING").length} طلب`}
+          note="قيد مراجعة الإدارة"
+          tone="amber"
+        />
+      </div>
+
+      <div className="family-info-note" style={{ background: "rgba(14, 165, 233, 0.08)", borderColor: "rgba(14, 165, 233, 0.25)" }}>
+        <ShieldCheck size={16} style={{ color: "var(--color-primary, #0c7569)", flexShrink: 0 }} />
+        <span>
+          <strong>سياسة التجميد بالأكاديمية:</strong> يتاح لكل طالب تجميد الاشتراك لمرة واحدة بحد أقصى ٣٠ يومًا سنويًا بعذر مقبول (سفر، طبي، امتحانات). يتم ترحيل تاريخ انتهاء الاشتراك تلقائيًا عند الاعتماد وإضافة رصيد حصص تعويضية.
+        </span>
+      </div>
+
+      <div style={{ marginTop: "1.2rem" }}>
+        <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.8rem", color: "var(--foreground, #1e293b)" }}>
+          سجل طلبات التجميد السابقة
+        </h3>
+
+        {requests.length === 0 ? (
+          <div className="family-info-note">لا توجد طلبات تجميد مسجلة لهذا الطفل حتى الآن.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {requests.map(req => {
+              const statusBadge =
+                req.status === "APPROVED"
+                  ? { label: "معتمد · تم التمديد", bg: "rgba(16, 185, 129, 0.12)", color: "#059669" }
+                  : req.status === "REJECTED"
+                  ? { label: "مرفوض", bg: "rgba(239, 68, 68, 0.12)", color: "#dc2626" }
+                  : { label: "قيد المراجعة", bg: "rgba(245, 158, 11, 0.12)", color: "#d97706" };
+
+              return (
+                <div
+                  key={req.id}
+                  style={{
+                    border: "1px solid var(--border, #e2e8f0)",
+                    borderRadius: "10px",
+                    padding: "14px 18px",
+                    background: "var(--card, #ffffff)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <span style={{ fontWeight: 700, fontSize: "0.92rem", color: "var(--foreground, #0f172a)" }}>
+                        {req.id}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "0.78rem",
+                          fontWeight: 600,
+                          padding: "2px 8px",
+                          borderRadius: "12px",
+                          background: statusBadge.bg,
+                          color: statusBadge.color,
+                        }}
+                      >
+                        {statusBadge.label}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: "0.82rem", color: "#64748b" }}>
+                      فترة التجميد: من {req.startDate} إلى {req.endDate}
+                    </span>
+                  </div>
+
+                  <p style={{ margin: 0, fontSize: "0.86rem", color: "#334155" }}>
+                    <strong>السبب:</strong> {req.reasonText} ({req.reason === "MEDICAL" ? "طبي" : req.reason === "TRAVEL" ? "سفر" : req.reason === "EXAMS" ? "امتحانات" : "عائلي"})
+                  </p>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", fontSize: "0.8rem", color: "#64748b", borderTop: "1px dashed #e2e8f0", paddingTop: "8px", marginTop: "4px" }}>
+                    <span>الحصص المتأثرة: <b>{req.affectedSessionsCount} حصص</b> · رصيد التعويض الممنوح: <b>{req.makeUpCreditsAwarded}</b></span>
+                    {req.extendedNewEndDate && (
+                      <span style={{ color: "#059669", fontWeight: 600 }}>
+                        تاريخ الانتهاء الجديد للاشتراك: {req.extendedNewEndDate}
+                      </span>
+                    )}
+                    {req.decisionNote && (
+                      <span style={{ width: "100%", color: "#475569", background: "rgba(241, 245, 249, 0.6)", padding: "4px 8px", borderRadius: "6px" }}>
+                        ملاحظة الإدارة: {req.decisionNote}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {modalOpen && (
+        <div className="dialog-overlay" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setModalOpen(false); }}>
+          <section className="dialog-card" role="dialog" aria-modal="true" style={{ maxWidth: "480px" }}>
+            <button className="dialog-close" aria-label="إغلاق" onClick={() => setModalOpen(false)}>
+              <X size={17} />
+            </button>
+            <div className="team-dialog-heading">
+              <span className="approval-id">R08 · طلب تجميد</span>
+              <h2>طلب تجميد اشتراك لـ {child.name}</h2>
+              <p>سيتم ترحيل تاريخ انتهاء الاشتراك واحتساب رصيد حصص تعويضية فور الاعتماد من مدير الفرع.</p>
+            </div>
+
+            <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: "14px", marginTop: "1rem" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "4px" }}>تاريخ بدء التجميد</label>
+                  <input
+                    type="date"
+                    required
+                    value={formData.startDate}
+                    onChange={e => setFormData({ ...formData, startDate: e.target.value })}
+                    style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "4px" }}>تاريخ نهاية التجميد</label>
+                  <input
+                    type="date"
+                    required
+                    value={formData.endDate}
+                    onChange={e => setFormData({ ...formData, endDate: e.target.value })}
+                    style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "4px" }}>تصنيف السبب</label>
+                <select
+                  value={formData.reason}
+                  onChange={e => setFormData({ ...formData, reason: e.target.value as any })}
+                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                >
+                  <option value="TRAVEL">سفر ورحلات عائلية</option>
+                  <option value="MEDICAL">ظروف صحية أو إجازة مرضية</option>
+                  <option value="EXAMS">امتحانات واختبارات مدرسية</option>
+                  <option value="FAMILY">ظروف أسرية خاصة</option>
+                  <option value="OTHER">سبب آخر</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "4px" }}>تفاصيل السبب (إلزامي للـ Audit)</label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="يرجى كتابة تفاصيل سبب التجميد لتسريع المراجعة من مدير الفرع..."
+                  value={formData.reasonText}
+                  onChange={e => setFormData({ ...formData, reasonText: e.target.value })}
+                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", resize: "none" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
+                <button type="button" className="button button-secondary" onClick={() => setModalOpen(false)}>
+                  إلغاء
+                </button>
+                <button type="submit" className="button button-primary">
+                  إرسال الطلب للاعتماد
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function LiveInvoices({ invoices, loading, error, onRetry }: { invoices: FinanceInvoice[]; loading: boolean; error: string | null; onRetry: () => void }) {
   return <section className="family-portal-panel family-detail-panel"><PanelTitle icon={<Wallet size={16} />} title="الفواتير والمدفوعات" />
     {loading ? <div className="family-info-note" role="status">جارٍ تحميل فواتير الأطفال المرتبطين…</div> : error ? <div className="family-info-note" role="alert"><AlertCircle size={14} /> تعذر تحميل الفواتير: {error} <button type="button" onClick={onRetry}>إعادة المحاولة</button></div> : invoices.length === 0 ? <div className="family-info-note"><AlertCircle size={14} /> لا توجد فواتير مرتبطة بهذا الملف حاليًا.</div> : <div className="family-invoice-list">{invoices.map(invoice => <article className="family-invoice-card" key={invoice.id}><div><strong>{invoice.invoiceNumber}</strong><small>استحقاق {invoice.dueDate} · {invoice.status}</small></div><div><b>{(invoice.remainingPiastres / 100).toLocaleString("ar-EG")} ج.م متبقي</b><small>الإجمالي {(invoice.totalPiastres / 100).toLocaleString("ar-EG")} · المدفوع {(invoice.paidPiastres / 100).toLocaleString("ar-EG")}</small></div></article>)}</div>}

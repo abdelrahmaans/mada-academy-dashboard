@@ -5,13 +5,14 @@ import {
   ChevronLeft,
   FileText,
   MapPin,
+  Snowflake,
   UserCheck,
   Users,
   Wallet,
   X,
 } from "lucide-react";
 
-export type ApprovalKind = "discount" | "substitute" | "expense" | "session" | "correction";
+export type ApprovalKind = "discount" | "substitute" | "expense" | "session" | "correction" | "freeze";
 export type ApprovalStatus = "pending" | "approved" | "rejected";
 
 export type ApprovalItem = {
@@ -66,10 +67,10 @@ function formatMoney(value: number) {
 function ApprovalTypeIcon({ kind }: { kind: ApprovalKind }) {
   return (
     <div
-      className={`approval-type-icon ${kind === "discount" ? "approval-discount-icon" : kind === "expense" ? "approval-expense-icon" : kind === "session" ? "approval-session-icon" : "approval-substitute-icon"}`}
+      className={`approval-type-icon ${kind === "discount" ? "approval-discount-icon" : kind === "expense" ? "approval-expense-icon" : kind === "session" ? "approval-session-icon" : kind === "freeze" ? "approval-session-icon" : "approval-substitute-icon"}`}
       aria-hidden="true"
     >
-      {kind === "session" ? <CalendarDays size={18} /> : kind === "discount" || kind === "correction" ? (
+      {kind === "session" ? <CalendarDays size={18} /> : kind === "freeze" ? <Snowflake size={18} /> : kind === "discount" || kind === "correction" ? (
         <FileText size={18} />
       ) : kind === "expense" ? (
         <Wallet size={18} />
@@ -81,6 +82,18 @@ function ApprovalTypeIcon({ kind }: { kind: ApprovalKind }) {
 }
 
 function ApprovalDetailStrip({ item }: { item: ApprovalItem }) {
+  if (item.kind === "freeze") {
+    return (
+      <div className="approval-detail-strip">
+        <span>الطالب: {item.student}</span>
+        <i />
+        <span>المجموعة: {item.course}</span>
+        <i />
+        <span>السبب: {item.summary}</span>
+      </div>
+    );
+  }
+
   if (item.kind === "discount") {
     return (
       <div className="approval-detail-strip">
@@ -125,6 +138,16 @@ function ApprovalDetailStrip({ item }: { item: ApprovalItem }) {
 }
 
 function ApprovalSideSummary({ item }: { item: ApprovalItem }) {
+  if (item.kind === "freeze") {
+    return (
+      <>
+        <small>طلب تجميد اشتراك</small>
+        <strong>{item.sessionDate ?? "فترة محددة"}</strong>
+        <span>تعويض: {item.requestType ?? "حسب الحصص"}</span>
+      </>
+    );
+  }
+
   if (item.kind === "discount") {
     return (
       <>
