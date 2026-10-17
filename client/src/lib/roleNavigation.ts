@@ -82,9 +82,9 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     homePath: "/head-instructors",
     backPath: "/head-instructors",
     navigation: [
-      { path: "/head-instructors", label: "ملخص الفريق", purpose: "branch-scoped evaluation review and team overview", permission: "branch.read" },
-      { path: "/academic-programs", label: "البرامج الأكاديمية", purpose: "curriculum and progress review", permission: "branch.read" },
-      { path: "/schedule", label: "جدول الفريق", purpose: "sessions in supervision scope", permission: "sessions.read" },
+      { path: "/head-instructors", label: "غرفة الإشراف وفريق المدربين", purpose: "branch-scoped evaluation review and team overview", permission: "branch.read" },
+      { path: "/academic-programs", label: "البرامج والمناهج الأكاديمية", purpose: "curriculum and progress review", permission: "branch.read" },
+      { path: "/schedule", label: "جدول الحصص والتغطيات", purpose: "sessions in supervision scope", permission: "sessions.read" },
     ],
   },
   R04: {
