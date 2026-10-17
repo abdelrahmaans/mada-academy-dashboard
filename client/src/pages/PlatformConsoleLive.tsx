@@ -860,6 +860,18 @@ export default function PlatformConsoleLive() {
           <ChevronDown size={15} className="switcher-chevron" />
         </div>
 
+        <div style={{ padding: "0 4px 6px" }}>
+          <button
+            type="button"
+            className="pc-primary-button"
+            style={{ width: "100%", justifyContent: "center", gap: "8px", height: "38px", fontSize: "12px", borderRadius: "10px" }}
+            onClick={() => navigate("/platform/academies/new")}
+          >
+            <Plus size={16} />
+            <span>إنشاء أكاديمية جديدة</span>
+          </button>
+        </div>
+
         <div className="nav-caption">مساحة مسؤول المنصة</div>
         <nav className="primary-nav" aria-label="مساحة مسؤول المنصة">
           {nav.map((item) => {

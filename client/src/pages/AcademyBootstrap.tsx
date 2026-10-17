@@ -76,8 +76,8 @@ export default function AcademyBootstrap() {
   return (
     <main className="academy-bootstrap-page" dir="rtl">
       <header className="academy-bootstrap-topbar">
-        <button className="academy-bootstrap-brand" onClick={() => navigate("/workspace")}><span><GraduationCap size={19} /></span><strong>مدى</strong><small>Platform Control</small></button>
-        <button className="academy-bootstrap-close" aria-label="إغلاق" onClick={() => navigate("/workspace")}><X size={18} /></button>
+        <button className="academy-bootstrap-brand" onClick={() => navigate("/platform-console")}><span><GraduationCap size={19} /></span><strong>مدى</strong><small>Platform Control</small></button>
+        <button className="academy-bootstrap-close" aria-label="إغلاق" onClick={() => navigate("/platform-console")}><X size={18} /></button>
       </header>
       <div className="academy-bootstrap-layout">
         <section className="academy-bootstrap-intro">

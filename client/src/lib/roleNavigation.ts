@@ -38,6 +38,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     backPath: "/platform-console",
     navigation: [
       { path: "/platform-console", label: "مركز المنصة", purpose: "tenants, plans, support", permission: "platform.read" },
+      { path: "/platform/academies/new", label: "إنشاء أكاديمية جديدة", purpose: "bootstrap new academy", permission: "platform.read" },
     ],
   },
   R01: {
