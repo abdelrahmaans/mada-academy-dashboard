@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
+import BranchManagerSidebar from "@/components/BranchManagerSidebar";
 import ApprovalCard, {
   APPROVAL_STATUS_LABELS,
   type ApprovalItem,
@@ -169,31 +170,6 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   },
 ];
 
-function BrandMark() {
-  return (
-    <div className="brand-lockup" aria-label="مدى">
-      <span className="brand-symbol" aria-hidden="true">
-        <svg viewBox="0 0 40 40" fill="none">
-          <path
-            d="M4 12.5 12.5 8l8.2 4.5v9.4l-8.2 4.6L4 21.9v-9.4Z"
-            fill="currentColor"
-          />
-          <path
-            d="m19.3 12.5 8.2-4.5 8.5 4.5v9.4l-8.5 4.6-8.2-4.6v-9.4Z"
-            fill="currentColor"
-            opacity=".72"
-          />
-          <path
-            d="m11.5 24.1 8.3-4.6 8.2 4.6v8.2l-8.2 4.4-8.3-4.4v-8.2Z"
-            fill="currentColor"
-            opacity=".48"
-          />
-        </svg>
-      </span>
-      <span className="brand-word">مدى</span>
-    </div>
-  );
-}
 
 function formatMoney(value: number) {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(
@@ -437,13 +413,6 @@ export default function Approvals() {
     setDecisionNote("");
     setExpenseRejectionMode(false);
   };
-
-  const showComingSoon = (label: string) => {
-    toast("القسم قيد التجهيز", {
-      description: `هنبدأ في تطوير «${label}» في المرحلة التالية.`,
-    });
-    setMobileNavOpen(false);
-  };
   const handleNotificationAction = async (notification: NotificationItem) => {
     let marked = !liveMode;
     if (liveMode) {
@@ -597,112 +566,11 @@ export default function Approvals() {
 
   return (
     <div className="app-shell" dir="rtl">
-      {mobileNavOpen && (
-        <button
-          className="mobile-scrim"
-          aria-label="إغلاق القائمة"
-          onClick={() => setMobileNavOpen(false)}
-        />
-      )}
-      <aside className={`sidebar ${mobileNavOpen ? "sidebar-open" : ""}`}>
-        <div className="sidebar-top">
-          <BrandMark />
-          <button
-            className="icon-button sidebar-close"
-            aria-label="إغلاق القائمة"
-            onClick={() => setMobileNavOpen(false)}
-          >
-            <X size={19} />
-          </button>
-        </div>
-        <div className="academy-switcher">
-          <span className="academy-avatar">
-            <GraduationCap size={20} />
-          </span>
-          <span className="academy-meta">
-            <strong>أكاديمية مدى</strong>
-            <small>إدارة الأكاديمية</small>
-          </span>
-          <ChevronDown size={15} className="switcher-chevron" />
-        </div>
-        <div className="nav-caption">القائمة الرئيسية</div>
-        <nav className="primary-nav" aria-label="القائمة الرئيسية">
-          <button className="nav-link" onClick={() => navigate(isAccountant ? "/finance-desk" : "/")}>
-            <LayoutDashboard size={19} />
-            <span>الرئيسية</span>
-          </button>
-          <button className="nav-link" hidden={isAccountant} onClick={() => navigate("/students")}>
-            <Users size={19} />
-            <span>الطلاب</span>
-            <span className="nav-count">248</span>
-          </button>
-          <button className="nav-link" hidden={isAccountant} onClick={() => navigate("/schedule")}>
-            <CalendarDays size={19} />
-            <span>الجدول</span>
-          </button>
-          <button className="nav-link" hidden={isAccountant} onClick={() => navigate("/classes")}>
-            <BookOpen size={19} />
-            <span>الحصص والكورسات</span>
-          </button>
-          <button
-            className="nav-link"
-            onClick={() => showComingSoon("المسابقات")}
-          >
-            <Sparkles size={19} />
-            <span>المسابقات</span>
-          </button>
-        </nav>
-        <div className="nav-caption nav-caption-spaced">الإدارة</div>
-        <nav className="primary-nav" aria-label="قائمة الإدارة">
-          <button className="nav-link" onClick={() => navigate("/finance")}>
-            <Wallet size={19} />
-            <span>المالية والتحصيل</span>
-          </button>
-          <button className="nav-link" hidden={isAccountant} onClick={() => navigate("/team")}>
-            <Users size={19} />
-            <span>الفريق والأدوار</span>
-          </button>
-          <button className="nav-link active" aria-current="page">
-            <ShieldCheck size={19} />
-            <span>الموافقات</span>
-            <span className="nav-count">{pending.length}</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/reports")}>
-            <Activity size={19} />
-            <span>التقارير والتحليلات</span>
-          </button>
-        </nav>
-        <div className="sidebar-spacer" />
-        <div className="sidebar-help">
-          <span className="help-icon">
-            <CircleHelp size={18} />
-          </span>
-          <div>
-            <strong>محتاج مساعدة؟</strong>
-            <span>مركز الدعم والإرشادات</span>
-          </div>
-          <ChevronLeft size={16} />
-        </div>
-        <div className="sidebar-bottom">
-          <button
-            className="nav-link"
-            onClick={() => showComingSoon("الإعدادات")}
-          >
-            <Settings size={19} />
-            <span>الإعدادات</span>
-          </button>
-          <button
-            className="nav-link"
-            onClick={() => { void logout().then(() => navigate("/login")); }}
-          >
-            <LogOut size={19} />
-            <span>تسجيل الخروج</span>
-          </button>
-        </div>
-        <div className="sidebar-version">
-          مدى لإدارة الأكاديميات <span>نسخة تجريبية</span>
-        </div>
-      </aside>
+      <BranchManagerSidebar
+        roleCode={isAccountant ? "R06" : "R02"}
+        open={mobileNavOpen}
+        onClose={() => setMobileNavOpen(false)}
+      />
 
       <main className="main-panel">
         <header className="topbar">
