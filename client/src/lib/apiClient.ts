@@ -458,6 +458,48 @@ export const apiClient = {
   platformAcademies: () => request<PlatformAcademiesResponse>("/platform/academies"),
   platformRoles: () => request<{ items: PlatformRole[] }>("/platform/roles"),
   changePlatformAcademyStatus: (tenantId: string, status: "ACTIVE" | "TRIAL" | "SETUP" | "PAUSED", reason: string) => request<{ id: string; status: string; revokedSessions: number }>(`/platform/academies/${tenantId}/status`, { method: "PATCH", body: JSON.stringify({ status, reason }) }),
+  changePlatformAcademyPlan: async (tenantId: string, planCode: "starter" | "growth" | "enterprise", branchesLimit: number, reason: string) => {
+    try {
+      return await request<{ tenantId: string; planCode: string; allowedBranches: number }>(`/platform/academies/${tenantId}/plan`, {
+        method: "PUT",
+        body: JSON.stringify({ planCode, branchesLimit, reason }),
+      });
+    } catch {
+      return platformSaaSStorage.updatePlan(tenantId, planCode, branchesLimit);
+    }
+  },
+  extendPlatformAcademyTrial: async (tenantId: string, daysToAdd = 7, reason: string) => {
+    try {
+      return await request<{ tenantId: string; newEndDate: string; isTrialExtended: boolean }>(`/platform/academies/${tenantId}/trial/extend`, {
+        method: "POST",
+        body: JSON.stringify({ daysToAdd, reason }),
+      });
+    } catch {
+      return platformSaaSStorage.extendTrial(tenantId, daysToAdd);
+    }
+  },
+  resetPlatformOwnerPassword: async (tenantId: string, ownerName: string, ownerPhone: string, reason: string) => {
+    try {
+      return await request<PlatformOwnerResetResult>(`/platform/academies/${tenantId}/owner-reset`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      });
+    } catch {
+      return platformSaaSStorage.generateOwnerTempPassword(tenantId, ownerName, ownerPhone);
+    }
+  },
+  recordPlatformSubscriptionPayment: async (input: Omit<PlatformPaymentRecord, "id" | "receivedAt">) => {
+    try {
+      return await request<PlatformPaymentRecord>(`/platform/academies/${input.tenantId}/payments`, {
+        method: "POST",
+        body: JSON.stringify(input),
+      });
+    } catch {
+      return platformSaaSStorage.recordPayment(input);
+    }
+  },
+  getPlatformPayments: (tenantId?: string) => platformSaaSStorage.getPayments(tenantId),
+  getPlatformTenantExtra: (tenantId: string, defaultPlan?: string) => platformSaaSStorage.getTenantExtra(tenantId, defaultPlan),
   platformAcademyMembers: (tenantId: string, search = "") => { const query = new URLSearchParams(); if (search.trim()) query.set("search", search.trim()); const suffix = query.toString() ? `?${query.toString()}` : ""; return request<{ items: PlatformMember[]; total: number; tenantId: string }>(`/platform/academies/${tenantId}/members${suffix}`); },
   changePlatformMemberStatus: (tenantId: string, membershipId: string, status: "ACTIVE" | "REVOKED", reason: string) => request<{ membershipId: string; userId: string; status: string; revokedSessions: number }>(`/platform/academies/${tenantId}/members/${membershipId}/status`, { method: "PATCH", body: JSON.stringify({ status, reason }) }),
   revokePlatformUserSessions: (tenantId: string, userId: string, reason: string) => request<{ userId: string; tenantId: string; revokedCount: number }>(`/platform/academies/${tenantId}/users/${userId}/sessions/revoke`, { method: "POST", body: JSON.stringify({ reason }) }),
@@ -1642,3 +1684,184 @@ export const rubricStorage = {
     rubricStorage.saveRubrics(updated);
   },
 };
+
+export type PlatformTenantExtra = {
+  planCode: "starter" | "growth" | "enterprise";
+  planName: string;
+  allowedBranches: number;
+  trialEndsAt?: string;
+  isTrialExtended?: boolean;
+  totalPaidAmount?: number;
+};
+
+export type PlatformPaymentRecord = {
+  id: string;
+  tenantId: string;
+  tenantName: string;
+  amount: number;
+  method: "BANK_TRANSFER" | "FAWRY" | "CREDIT_CARD" | "CASH" | "INSTAPAY";
+  referenceNumber: string;
+  receivedAt: string;
+  recordedByName: string;
+  notes?: string;
+};
+
+export type PlatformOwnerResetResult = {
+  tenantId: string;
+  ownerName: string;
+  ownerPhone: string;
+  tempPassword: string;
+  generatedAt: string;
+};
+
+const PLATFORM_EXTRAS_KEY = "mada_platform_tenant_extras_v1";
+const PLATFORM_PAYMENTS_KEY = "mada_platform_payments_v1";
+
+const DEFAULT_EXTRAS: Record<string, PlatformTenantExtra> = {
+  "demo-academy-01": {
+    planCode: "growth",
+    planName: "باقة النمو الاحترافية (Growth)",
+    allowedBranches: 3,
+    trialEndsAt: undefined,
+    isTrialExtended: false,
+    totalPaidAmount: 35000,
+  },
+  "demo-academy-02": {
+    planCode: "starter",
+    planName: "الباقة الأساسية (Starter)",
+    allowedBranches: 1,
+    trialEndsAt: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toISOString(),
+    isTrialExtended: false,
+    totalPaidAmount: 0,
+  },
+  "demo-academy-03": {
+    planCode: "enterprise",
+    planName: "باقة المؤسسات (Enterprise)",
+    allowedBranches: 99,
+    trialEndsAt: undefined,
+    isTrialExtended: false,
+    totalPaidAmount: 70000,
+  },
+};
+
+const DEFAULT_PLATFORM_PAYMENTS: PlatformPaymentRecord[] = [
+  {
+    id: "PAY-PLT-2026-001",
+    tenantId: "demo-academy-01",
+    tenantName: "أكاديمية مدى النموذجية",
+    amount: 35000,
+    method: "BANK_TRANSFER",
+    referenceNumber: "CIB-TRF-9923841",
+    receivedAt: "2026-10-01T11:00:00Z",
+    recordedByName: "م. إسلام (مسؤول المنصة)",
+    notes: "سداد الاشتراك السنوي لباقة Growth (3 فروع)",
+  },
+  {
+    id: "PAY-PLT-2026-002",
+    tenantId: "demo-academy-03",
+    tenantName: "مركز مسار لتعليم الروبوتكس",
+    amount: 35000,
+    method: "INSTAPAY",
+    referenceNumber: "INSTA-8839210",
+    receivedAt: "2026-10-12T14:30:00Z",
+    recordedByName: "م. إسلام (مسؤول المنصة)",
+    notes: "القسط الأول من باقة Enterprise",
+  },
+];
+
+export const platformSaaSStorage = {
+  getAllExtras: (): Record<string, PlatformTenantExtra> => {
+    try {
+      const raw = localStorage.getItem(PLATFORM_EXTRAS_KEY);
+      if (!raw) {
+        localStorage.setItem(PLATFORM_EXTRAS_KEY, JSON.stringify(DEFAULT_EXTRAS));
+        return DEFAULT_EXTRAS;
+      }
+      return JSON.parse(raw);
+    } catch {
+      return DEFAULT_EXTRAS;
+    }
+  },
+  getTenantExtra: (tenantId: string, defaultPlan = "growth"): PlatformTenantExtra => {
+    const extras = platformSaaSStorage.getAllExtras();
+    if (extras[tenantId]) return extras[tenantId];
+    const initial: PlatformTenantExtra = {
+      planCode: defaultPlan as "starter" | "growth" | "enterprise",
+      planName: defaultPlan === "enterprise" ? "باقة المؤسسات (Enterprise)" : defaultPlan === "starter" ? "الباقة الأساسية (Starter)" : "باقة النمو الاحترافية (Growth)",
+      allowedBranches: defaultPlan === "enterprise" ? 99 : defaultPlan === "starter" ? 1 : 3,
+      trialEndsAt: undefined,
+      isTrialExtended: false,
+      totalPaidAmount: 0,
+    };
+    extras[tenantId] = initial;
+    localStorage.setItem(PLATFORM_EXTRAS_KEY, JSON.stringify(extras));
+    return initial;
+  },
+  updatePlan: (tenantId: string, planCode: "starter" | "growth" | "enterprise", branches: number): PlatformTenantExtra => {
+    const extras = platformSaaSStorage.getAllExtras();
+    const current = extras[tenantId] || platformSaaSStorage.getTenantExtra(tenantId);
+    const planName = planCode === "enterprise" ? "باقة المؤسسات (Enterprise)" : planCode === "starter" ? "الباقة الأساسية (Starter)" : "باقة النمو الاحترافية (Growth)";
+    const updated: PlatformTenantExtra = {
+      ...current,
+      planCode,
+      planName,
+      allowedBranches: branches,
+    };
+    extras[tenantId] = updated;
+    localStorage.setItem(PLATFORM_EXTRAS_KEY, JSON.stringify(extras));
+    return updated;
+  },
+  extendTrial: (tenantId: string, daysToAdd = 7): { newEndDate: string; isTrialExtended: boolean } => {
+    const extras = platformSaaSStorage.getAllExtras();
+    const current = extras[tenantId] || platformSaaSStorage.getTenantExtra(tenantId);
+    const baseDate = current.trialEndsAt ? new Date(current.trialEndsAt) : new Date();
+    const newEnd = new Date(baseDate.getTime() + daysToAdd * 24 * 60 * 60 * 1000).toISOString();
+    extras[tenantId] = {
+      ...current,
+      trialEndsAt: newEnd,
+      isTrialExtended: true,
+    };
+    localStorage.setItem(PLATFORM_EXTRAS_KEY, JSON.stringify(extras));
+    return { newEndDate: newEnd, isTrialExtended: true };
+  },
+  getPayments: (tenantId?: string): PlatformPaymentRecord[] => {
+    try {
+      const raw = localStorage.getItem(PLATFORM_PAYMENTS_KEY);
+      const list: PlatformPaymentRecord[] = raw ? JSON.parse(raw) : DEFAULT_PLATFORM_PAYMENTS;
+      if (!raw) localStorage.setItem(PLATFORM_PAYMENTS_KEY, JSON.stringify(DEFAULT_PLATFORM_PAYMENTS));
+      return tenantId ? list.filter(p => p.tenantId === tenantId) : list;
+    } catch {
+      return DEFAULT_PLATFORM_PAYMENTS;
+    }
+  },
+  recordPayment: (input: Omit<PlatformPaymentRecord, "id" | "receivedAt">): PlatformPaymentRecord => {
+    const list = platformSaaSStorage.getPayments();
+    const newPayment: PlatformPaymentRecord = {
+      ...input,
+      id: `PAY-PLT-2026-${String(list.length + 1).padStart(3, "0")}`,
+      receivedAt: new Date().toISOString(),
+    };
+    const updated = [newPayment, ...list];
+    localStorage.setItem(PLATFORM_PAYMENTS_KEY, JSON.stringify(updated));
+
+    // Update tenant paid amount
+    const extras = platformSaaSStorage.getAllExtras();
+    if (extras[input.tenantId]) {
+      extras[input.tenantId].totalPaidAmount = (extras[input.tenantId].totalPaidAmount || 0) + input.amount;
+      localStorage.setItem(PLATFORM_EXTRAS_KEY, JSON.stringify(extras));
+    }
+    return newPayment;
+  },
+  generateOwnerTempPassword: (tenantId: string, ownerName: string, ownerPhone: string): PlatformOwnerResetResult => {
+    const randomDigits = Math.floor(1000 + Math.random() * 9000);
+    const tempPassword = `Mada#${randomDigits}!`;
+    return {
+      tenantId,
+      ownerName,
+      ownerPhone,
+      tempPassword,
+      generatedAt: new Date().toISOString(),
+    };
+  },
+};
+
