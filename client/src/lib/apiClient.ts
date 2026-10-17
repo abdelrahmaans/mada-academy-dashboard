@@ -1102,3 +1102,134 @@ export const payrollStorage = {
     return updated.find(item => item.id === id)!;
   },
 };
+
+export type WaitlistEntry = {
+  id: string;
+  studentId?: string;
+  studentName: string;
+  parentName: string;
+  phone: string;
+  groupId: string;
+  courseName: string;
+  branchName: string;
+  status: "WAITING" | "NOTIFIED" | "ENROLLED" | "EXPIRED" | "CANCELLED";
+  priorityRank: number;
+  addedAt: string;
+  notifiedAt?: string;
+  enrolledAt?: string;
+  notes?: string;
+};
+
+const WAITLIST_STORAGE_KEY = "mada_waitlists_v1";
+
+const DEFAULT_WAITLIST: WaitlistEntry[] = [
+  {
+    id: "WTL-2026-001",
+    studentId: "MAD-0255",
+    studentName: "كريم شريف نبيل",
+    parentName: "شريف نبيل",
+    phone: "+201011223344",
+    groupId: "GRP-042",
+    courseName: "روبوتكس مستوى 2",
+    branchName: "مدينة نصر",
+    status: "WAITING",
+    priorityRank: 1,
+    addedAt: "2026-10-15T11:20:00Z",
+    notes: "المجموعة مكتملة (16/16). في انتظار تجميد أو انسحاب طالب.",
+  },
+  {
+    id: "WTL-2026-002",
+    studentId: "MAD-0256",
+    studentName: "سارة تامر حسني",
+    parentName: "تامر حسني",
+    phone: "+201099887766",
+    groupId: "GRP-042",
+    courseName: "روبوتكس مستوى 2",
+    branchName: "مدينة نصر",
+    status: "WAITING",
+    priorityRank: 2,
+    addedAt: "2026-10-16T14:10:00Z",
+    notes: "أولوية ثانية للحجز الصباحي.",
+  },
+  {
+    id: "WTL-2026-003",
+    studentId: "MAD-0257",
+    studentName: "محمود إبراهيم زايد",
+    parentName: "إبراهيم زايد",
+    phone: "+201055443322",
+    groupId: "GRP-041",
+    courseName: "برمجة للمبتدئين",
+    branchName: "المعادي",
+    status: "NOTIFIED",
+    priorityRank: 1,
+    addedAt: "2026-10-14T09:00:00Z",
+    notifiedAt: "2026-10-17T10:00:00Z",
+    notes: "تم إرسال إشعار توفر مقعد شاغر عبر واتساب.",
+  },
+];
+
+export const waitlistStorage = {
+  getEntries: (): WaitlistEntry[] => {
+    try {
+      const raw = localStorage.getItem(WAITLIST_STORAGE_KEY);
+      if (!raw) {
+        localStorage.setItem(WAITLIST_STORAGE_KEY, JSON.stringify(DEFAULT_WAITLIST));
+        return DEFAULT_WAITLIST;
+      }
+      return JSON.parse(raw);
+    } catch {
+      return DEFAULT_WAITLIST;
+    }
+  },
+  saveEntries: (items: WaitlistEntry[]) => {
+    localStorage.setItem(WAITLIST_STORAGE_KEY, JSON.stringify(items));
+  },
+  addEntry: (input: Omit<WaitlistEntry, "id" | "status" | "priorityRank" | "addedAt">): WaitlistEntry => {
+    const list = waitlistStorage.getEntries();
+    const groupEntries = list.filter(e => e.groupId === input.groupId && e.status === "WAITING");
+    const newEntry: WaitlistEntry = {
+      ...input,
+      id: `WTL-2026-${String(list.length + 1).padStart(3, "0")}`,
+      status: "WAITING",
+      priorityRank: groupEntries.length + 1,
+      addedAt: new Date().toISOString(),
+    };
+    const updated = [newEntry, ...list];
+    waitlistStorage.saveEntries(updated);
+    return newEntry;
+  },
+  notifyEntry: (id: string): WaitlistEntry => {
+    const list = waitlistStorage.getEntries();
+    const updated = list.map(item => item.id === id ? {
+      ...item,
+      status: "NOTIFIED" as const,
+      notifiedAt: new Date().toISOString(),
+    } : item);
+    waitlistStorage.saveEntries(updated);
+    return updated.find(item => item.id === id)!;
+  },
+  enrollEntry: (id: string): WaitlistEntry => {
+    const list = waitlistStorage.getEntries();
+    const updated = list.map(item => item.id === id ? {
+      ...item,
+      status: "ENROLLED" as const,
+      enrolledAt: new Date().toISOString(),
+    } : item);
+    waitlistStorage.saveEntries(updated);
+    return updated.find(item => item.id === id)!;
+  },
+  cancelEntry: (id: string): WaitlistEntry => {
+    const list = waitlistStorage.getEntries();
+    const updated = list.map(item => item.id === id ? {
+      ...item,
+      status: "CANCELLED" as const,
+    } : item);
+    waitlistStorage.saveEntries(updated);
+    return updated.find(item => item.id === id)!;
+  },
+  deleteEntry: (id: string) => {
+    const list = waitlistStorage.getEntries();
+    const updated = list.filter(item => item.id !== id);
+    waitlistStorage.saveEntries(updated);
+  },
+};

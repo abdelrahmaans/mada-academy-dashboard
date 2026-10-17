@@ -31,11 +31,13 @@ import {
 import { useLocation } from "wouter";
 import {
   apiClient,
+  waitlistStorage,
   type CourseTemplateRecord,
   type GroupRecord,
   type SchedulingClassroom,
   type SchedulingInstructor,
   type StudentRecord,
+  type WaitlistEntry,
 } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -84,7 +86,7 @@ export type Offering = {
   enrolledStudents: number;
 };
 
-type TabKey = "courses" | "groups";
+type TabKey = "courses" | "groups" | "waitlist";
 
 const trackLabels: Record<Track, string> = {
   robotics: "روبوتكس",
@@ -452,6 +454,54 @@ function ClassesPage() {
   >([]);
   const [liveStudents, setLiveStudents] = useState<StudentRecord[]>([]);
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [waitlistEntries, setWaitlistEntries] = useState<WaitlistEntry[]>(() =>
+    waitlistStorage.getEntries()
+  );
+
+  const reloadWaitlist = () => {
+    setWaitlistEntries(waitlistStorage.getEntries());
+  };
+
+  const handleNotifyWaitlist = (id: string) => {
+    const updated = waitlistStorage.notifyEntry(id);
+    reloadWaitlist();
+    toast.success(
+      `تم إرسال إشعار توفر مقعد شاغر للطالب ${updated.studentName} بنجاح عبر واتساب!`
+    );
+  };
+
+  const handleEnrollWaitlist = (id: string) => {
+    const updated = waitlistStorage.enrollEntry(id);
+    setOfferings(current =>
+      current.map(o =>
+        o.id === updated.groupId
+          ? { ...o, enrolledStudents: Math.min(o.maxStudents, o.enrolledStudents + 1) }
+          : o
+      )
+    );
+    reloadWaitlist();
+    toast.success(
+      `تم تسكين الطالب ${updated.studentName} وتفعيل اشتراكه في المجموعة بنجاح!`
+    );
+  };
+
+  const handleAddWaitlistEntry = (
+    input: Omit<WaitlistEntry, "id" | "status" | "priorityRank" | "addedAt">
+  ) => {
+    waitlistStorage.addEntry(input);
+    reloadWaitlist();
+  };
+
+  const handleCancelWaitlistEntry = (id: string) => {
+    waitlistStorage.cancelEntry(id);
+    reloadWaitlist();
+  };
+
+  const handleDeleteWaitlistEntry = (id: string) => {
+    waitlistStorage.deleteEntry(id);
+    reloadWaitlist();
+  };
+
   useEffect(() => {
     if (!apiClient.hasSession()) {
       setLiveMode(false);
@@ -1192,6 +1242,12 @@ function ClassesPage() {
             clearFilters={clearFilters}
             setSelectedCourse={setSelectedCourse}
             setSelectedOffering={setSelectedOffering}
+            waitlistEntries={waitlistEntries}
+            onNotifyWaitlist={handleNotifyWaitlist}
+            onEnrollWaitlist={handleEnrollWaitlist}
+            onAddWaitlistEntry={handleAddWaitlistEntry}
+            onCancelWaitlistEntry={handleCancelWaitlistEntry}
+            onDeleteWaitlistEntry={handleDeleteWaitlistEntry}
           />
           <div className="students-demo-note">
             <Activity size={14} />

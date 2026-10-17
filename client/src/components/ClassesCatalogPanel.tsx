@@ -1,10 +1,12 @@
-import { BookOpen, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, Clock3, Filter, MapPin, MoreHorizontal, Search, Sparkles } from "lucide-react";
+import { BookOpen, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, Clock3, Filter, MapPin, MoreHorizontal, Search, Sparkles, Users } from "lucide-react";
 import { toast } from "sonner";
 import type { Course, Offering, Track } from "@/pages/Classes";
+import type { WaitlistEntry } from "@/lib/apiClient";
+import WaitlistManagementView from "@/components/WaitlistManagementView";
 
 type Props = {
-  tab: "courses" | "groups";
-  setTab: (tab: "courses" | "groups") => void;
+  tab: "courses" | "groups" | "waitlist";
+  setTab: (tab: "courses" | "groups" | "waitlist") => void;
   courses: Course[];
   offerings: Offering[];
   filteredCourses: Course[];
@@ -26,11 +28,20 @@ type Props = {
   clearFilters: () => void;
   setSelectedCourse: (course: Course) => void;
   setSelectedOffering: (offering: Offering) => void;
+  waitlistEntries: WaitlistEntry[];
+  onNotifyWaitlist: (id: string) => void;
+  onEnrollWaitlist: (id: string) => void;
+  onAddWaitlistEntry: (input: Omit<WaitlistEntry, "id" | "status" | "priorityRank" | "addedAt">) => void;
+  onCancelWaitlistEntry?: (id: string) => void;
+  onDeleteWaitlistEntry?: (id: string) => void;
 };
 
 export default function ClassesCatalogPanel({
   tab, setTab, courses, offerings, filteredCourses, filteredOfferings, trackFilter, setTrackFilter, branchFilter, setBranchFilter, statusFilter, setStatusFilter, trackOptions, branches, trackLabels, trackIcons, levelLabels, courseStatusLabels, offeringStatusLabels, liveMode, clearFilters, setSelectedCourse, setSelectedOffering,
+  waitlistEntries, onNotifyWaitlist, onEnrollWaitlist, onAddWaitlistEntry, onCancelWaitlistEntry, onDeleteWaitlistEntry,
 }: Props) {
+  const activeWaitlistCount = waitlistEntries.filter(e => e.status === "WAITING").length;
+
   return (
           <section className="panel classes-panel">
             <div className="classes-panel-title">
@@ -38,13 +49,21 @@ export default function ClassesCatalogPanel({
                 <span className="panel-icon panel-icon-teal">
                   {tab === "courses" ? (
                     <BookOpen size={18} />
-                  ) : (
+                  ) : tab === "groups" ? (
                     <CalendarDays size={18} />
+                  ) : (
+                    <Users size={18} />
                   )}
                 </span>
                 <div>
-                  <h2>المحتوى الأكاديمي</h2>
-                  <p>القوالب التعليمية منفصلة عن مجموعات التشغيل والجداول</p>
+                  <h2>
+                    {tab === "waitlist" ? "إدارة الطاقة الاستيعابية وقوائم الانتظار" : "المحتوى الأكاديمي والتشغيلي"}
+                  </h2>
+                  <p>
+                    {tab === "waitlist"
+                      ? "تنظيم المقاعد المكتملة، أولويات الحجز، والإشعارات الآلية للشواغر عبر واتساب"
+                      : "القوالب التعليمية منفصلة عن مجموعات التشغيل والجداول"}
+                  </p>
                 </div>
               </div>
               <button
@@ -83,61 +102,74 @@ export default function ClassesCatalogPanel({
                   <CalendarDays size={15} />
                   المجموعات والحصص<span>{offerings.length}</span>
                 </button>
+                <button
+                  role="tab"
+                  aria-selected={tab === "waitlist"}
+                  className={
+                    tab === "waitlist" ? "classes-tab active" : "classes-tab"
+                  }
+                  onClick={() => setTab("waitlist")}
+                >
+                  <Users size={15} />
+                  قوائم الانتظار والشواغر<span>{activeWaitlistCount}</span>
+                </button>
               </div>
-              <div className="classes-filters">
-                <label className="track-filter">
-                  <Sparkles size={14} />
-                  <select
-                    aria-label="تصفية حسب المسار"
-                    value={trackFilter}
-                    onChange={event =>
-                      setTrackFilter(event.target.value as Track | "all")
-                    }
-                  >
-                    <option value="all">كل المسارات</option>
-                    {trackOptions.map(([key, label]) => (
-                      <option value={key} key={key}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown size={13} />
-                </label>
-                {tab === "groups" && (
+              {tab !== "waitlist" && (
+                <div className="classes-filters">
                   <label className="track-filter">
-                    <MapPin size={14} />
+                    <Sparkles size={14} />
                     <select
-                      aria-label="تصفية حسب الفرع"
-                      value={branchFilter}
-                      onChange={event => setBranchFilter(event.target.value)}
+                      aria-label="تصفية حسب المسار"
+                      value={trackFilter}
+                      onChange={event =>
+                        setTrackFilter(event.target.value as Track | "all")
+                      }
                     >
-                      {branches.map(branch => (
-                        <option key={branch}>{branch}</option>
+                      <option value="all">كل المسارات</option>
+                      {trackOptions.map(([key, label]) => (
+                        <option value={key} key={key}>
+                          {label}
+                        </option>
                       ))}
                     </select>
                     <ChevronDown size={13} />
                   </label>
-                )}
-                <label className="track-filter status-filter">
-                  <Filter size={14} />
-                  <select
-                    aria-label="تصفية حسب الحالة"
-                    value={statusFilter}
-                    onChange={event => setStatusFilter(event.target.value)}
-                  >
-                    <option value="all">كل الحالات</option>
-                    {(tab === "courses"
-                      ? Object.entries(courseStatusLabels)
-                      : Object.entries(offeringStatusLabels)
-                    ).map(([key, label]) => (
-                      <option key={key} value={key}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown size={13} />
-                </label>
-              </div>
+                  {tab === "groups" && (
+                    <label className="track-filter">
+                      <MapPin size={14} />
+                      <select
+                        aria-label="تصفية حسب الفرع"
+                        value={branchFilter}
+                        onChange={event => setBranchFilter(event.target.value)}
+                      >
+                        {branches.map(branch => (
+                          <option key={branch}>{branch}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={13} />
+                    </label>
+                  )}
+                  <label className="track-filter status-filter">
+                    <Filter size={14} />
+                    <select
+                      aria-label="تصفية حسب الحالة"
+                      value={statusFilter}
+                      onChange={event => setStatusFilter(event.target.value)}
+                    >
+                      <option value="all">كل الحالات</option>
+                      {(tab === "courses"
+                        ? Object.entries(courseStatusLabels)
+                        : Object.entries(offeringStatusLabels)
+                      ).map(([key, label]) => (
+                        <option key={key} value={key}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown size={13} />
+                  </label>
+                </div>
+              )}
             </div>
 
             {tab === "courses" ? (
@@ -240,7 +272,7 @@ export default function ClassesCatalogPanel({
                   </div>
                 )}
               </>
-            ) : (
+            ) : tab === "groups" ? (
               <>
                 <div className="groups-table-wrap">
                   <table className="groups-table">
@@ -312,6 +344,19 @@ export default function ClassesCatalogPanel({
                                   }}
                                 />
                               </i>
+                              {offering.enrolledStudents >= offering.maxStudents && (
+                                <button
+                                  type="button"
+                                  className="group-waitlist-pill"
+                                  onClick={event => {
+                                    event.stopPropagation();
+                                    setTab("waitlist");
+                                  }}
+                                  title="عرض المسجلين بقائمة الانتظار لهذه المجموعة"
+                                >
+                                  مكتملة · {waitlistEntries.filter(w => w.groupId === offering.id && w.status === "WAITING").length} بالانتظار
+                                </button>
+                              )}
                             </span>
                           </td>
                           <td data-label="الحالة">
@@ -374,6 +419,16 @@ export default function ClassesCatalogPanel({
                   </button>
                 </div>
               </>
+            ) : (
+              <WaitlistManagementView
+                offerings={offerings}
+                waitlistEntries={waitlistEntries}
+                onNotifyWaitlist={onNotifyWaitlist}
+                onEnrollWaitlist={onEnrollWaitlist}
+                onAddWaitlistEntry={onAddWaitlistEntry}
+                onCancelWaitlistEntry={onCancelWaitlistEntry}
+                onDeleteWaitlistEntry={onDeleteWaitlistEntry}
+              />
             )}
           </section>
   );

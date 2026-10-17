@@ -33,6 +33,7 @@ import {
   apiClient,
   freezeStorage,
   shiftStorage,
+  waitlistStorage,
   type ConvertLeadInput,
   type CreateLeadInput,
   type DirectStudentInput,
@@ -196,6 +197,21 @@ export default function SecretaryDeskLive() {
         createInvoice: convertData.createInvoice,
         joinWaitlistIfFull: true,
       });
+
+      if (result.enrollmentStatus === "WAITLISTED") {
+        const matchedGrp = groups.find(g => g.id === convertData.courseOfferingId);
+        waitlistStorage.addEntry({
+          studentId: result.studentId,
+          studentName: result.studentName,
+          parentName: convertingLead.parentName || "ولي الأمر",
+          phone: convertingLead.phone || "",
+          groupId: convertData.courseOfferingId || "",
+          courseName: matchedGrp?.courseName || "كورس الأكاديمية",
+          branchName: matchedGrp?.branchName || branchName,
+          notes: `تحويل من استفسار (${convertingLead.childName}) - إدراج بالانتظار لاكتمال المقاعد.`,
+        });
+      }
+
       toast.success(result.enrollmentStatus === "WAITLISTED" ? `تمت إضافة ${result.studentName} إلى قائمة الانتظار` : `تم تحويل ${result.studentName} إلى طالب مسجل بنجاح!`, {
         description: result.invoiceNumber ? `رقم الفاتورة الصادرة: ${result.invoiceNumber}` : result.enrollmentStatus === "WAITLISTED" ? "سيتم تفعيل التسجيل عند توفر مكان في الجروب." : undefined,
       });
@@ -219,10 +235,30 @@ export default function SecretaryDeskLive() {
         ...directRegistration,
         courseOfferingId: directRegistration.courseOfferingId || undefined,
         discountPercent: Number(directRegistration.discountPercent) || 0,
+        joinWaitlistIfFull: true,
       });
-      toast.success(`تم تسجيل الطالب ${result.studentName} بنجاح!`, {
-        description: result.invoiceNumber ? `صدرت الفاتورة برقم: ${result.invoiceNumber}` : undefined,
-      });
+
+      if (result.enrollmentStatus === "WAITLISTED") {
+        const matchedGrp = groups.find(g => g.id === directRegistration.courseOfferingId);
+        waitlistStorage.addEntry({
+          studentId: result.studentId,
+          studentName: result.studentName,
+          parentName: directRegistration.fullName.split(" ").slice(1).join(" ") || "ولي الأمر",
+          phone: directRegistration.phone || "",
+          groupId: directRegistration.courseOfferingId || "",
+          courseName: matchedGrp?.courseName || "كورس الأكاديمية",
+          branchName: matchedGrp?.branchName || branchName,
+          notes: "تسجيل مكتبي فوري - أدرج في قائمة الانتظار لاكتمال مقاعد المجموعة.",
+        });
+        toast.success(`تم إدراج الطالب ${result.studentName} في قائمة الانتظار بنجاح!`, {
+          description: "المجموعة مكتملة السعة. تم حجز أسبقية للطالب وسيتم إشعاره فور توفر مقعد شاغر.",
+        });
+      } else {
+        toast.success(`تم تسجيل الطالب ${result.studentName} بنجاح!`, {
+          description: result.invoiceNumber ? `صدرت الفاتورة برقم: ${result.invoiceNumber}` : undefined,
+        });
+      }
+
       setDirectRegistration({
         fullName: "",
         phone: "",
@@ -563,10 +599,40 @@ export default function SecretaryDeskLive() {
                     {groups.map(g => (
                       <option key={g.id} value={g.id}>
                         {g.courseName} · {g.classroomName} · {g.instructorName} ({g.enrolledStudents}/{g.maxStudents})
+                        {g.enrolledStudents >= g.maxStudents ? " [مكتملة السعة 100% - قائمة انتظار]" : ""}
                       </option>
                     ))}
                   </select>
                 </label>
+
+                {(() => {
+                  const selectedGrp = groups.find(g => g.id === directRegistration.courseOfferingId);
+                  if (selectedGrp && selectedGrp.enrolledStudents >= selectedGrp.maxStudents) {
+                    return (
+                      <div
+                        className="waitlist-alert-notice"
+                        style={{
+                          gridColumn: "1 / -1",
+                          padding: "10px 14px",
+                          background: "#fffbeb",
+                          border: "1px solid #fde68a",
+                          borderRadius: "10px",
+                          fontSize: "12px",
+                          color: "#92400e",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <Clock size={16} style={{ color: "#d97706", flexShrink: 0 }} />
+                        <span>
+                          <strong>تنبيه الطاقة الاستيعابية:</strong> المجموعة المحددة مكتملة العدد ({selectedGrp.enrolledStudents}/{selectedGrp.maxStudents} مقعد). سيتم تسجيل الطالب تلقائياً في <strong>قائمة الانتظار</strong> بالأولوية التالية، مع إمكانية إشعار ولي الأمر فور توفر مقعد شاغر.
+                        </span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
 
                 <label>
                   <span>نسبة الخصم المعتمدة (%)</span>
