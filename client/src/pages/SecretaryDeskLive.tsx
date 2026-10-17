@@ -32,6 +32,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   apiClient,
   freezeStorage,
+  shiftStorage,
   type ConvertLeadInput,
   type CreateLeadInput,
   type DirectStudentInput,
@@ -69,7 +70,7 @@ export default function SecretaryDeskLive() {
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const [activeTab, setActiveTab] = useState<"pipeline" | "registration" | "followups" | "freezes">("pipeline");
+  const [activeTab, setActiveTab] = useState<"pipeline" | "registration" | "followups" | "freezes" | "shifts">("pipeline");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [freezeModalOpen, setFreezeModalOpen] = useState(false);
@@ -79,6 +80,15 @@ export default function SecretaryDeskLive() {
     endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
     reason: "MEDICAL" as const,
     reasonText: "",
+  });
+
+  const [shiftModalOpen, setShiftModalOpen] = useState(false);
+  const [shiftFormData, setShiftFormData] = useState({
+    shiftName: "MORNING" as const,
+    cashAmount: "",
+    electronicAmount: "",
+    totalReceiptsCount: "",
+    notes: "",
   });
 
   // Modal states
@@ -346,6 +356,13 @@ export default function SecretaryDeskLive() {
             onClick={() => setActiveTab("freezes")}
           >
             <Snowflake size={17} /> طلبات التجميد والتعويض
+          </button>
+          <button
+            type="button"
+            className={`secretary-tab-btn ${activeTab === "shifts" ? "active" : ""}`}
+            onClick={() => setActiveTab("shifts")}
+          >
+            <Wallet size={17} /> تقفيل خزينة الوردية
           </button>
         </div>
 
@@ -858,6 +875,211 @@ export default function SecretaryDeskLive() {
                         </button>
                         <button type="submit" className="button button-primary">
                           رفع الطلب للمدير
+                        </button>
+                      </div>
+                    </form>
+                  </section>
+                </div>
+              )}
+            </section>
+          );
+        })()}
+
+        {/* TAB 5: Shift Cash Handover */}
+        {activeTab === "shifts" && (() => {
+          const allShifts = shiftStorage.getHandovers();
+          const handleShiftSubmit = (e: React.FormEvent) => {
+            e.preventDefault();
+            const cash = parseFloat(shiftFormData.cashAmount) || 0;
+            const electronic = parseFloat(shiftFormData.electronicAmount) || 0;
+            const receipts = parseInt(shiftFormData.totalReceiptsCount, 10) || 0;
+
+            if (cash <= 0 && electronic <= 0) {
+              toast.error("يرجى إدخال المبالغ المحصلة في الشيفت");
+              return;
+            }
+
+            const newShift = shiftStorage.submitShift({
+              branchName: branchName,
+              shiftDate: new Date().toISOString().split("T")[0],
+              shiftName: shiftFormData.shiftName,
+              submittedByUserId: me?.id || "SEC-01",
+              submittedByName: `${me?.user?.displayName || "موظف الاستقبال"} (السكرتارية)`,
+              cashAmount: cash,
+              electronicAmount: electronic,
+              totalReceiptsCount: receipts,
+              notes: shiftFormData.notes || undefined,
+            });
+
+            setShiftModalOpen(false);
+            setShiftFormData({
+              shiftName: "MORNING",
+              cashAmount: "",
+              electronicAmount: "",
+              totalReceiptsCount: "",
+              notes: "",
+            });
+            setRefreshKey(v => v + 1);
+            toast.success(`تم تقفيل الوردية ${newShift.id} وتوريد إشعار للمحاسب للاستلام`);
+          };
+
+          return (
+            <section className="secretary-panel">
+              <div className="secretary-panel-toolbar" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
+                <div>
+                  <h2 style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0 }}>تقفيل خزينة الشيفت وتسليم العهدة النقدية</h2>
+                  <p style={{ fontSize: "0.84rem", color: "#64748b", margin: "3px 0 0" }}>تسليم الكاش والإيصالات المحصلة خلال الوردية للمحاسب المالي رسمياً.</p>
+                </div>
+                <button
+                  type="button"
+                  className="button button-primary"
+                  onClick={() => setShiftModalOpen(true)}
+                  style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+                >
+                  <Plus size={16} /> تقفيل وتسليم الوردية الحالية
+                </button>
+              </div>
+
+              <div style={{ marginTop: "1rem", display: "flex", flexDirection: "column", gap: "12px" }}>
+                {allShifts.map(shift => {
+                  const isAccepted = shift.status === "ACCEPTED";
+                  const isPending = shift.status === "SUBMITTED";
+
+                  return (
+                    <article
+                      key={shift.id}
+                      style={{
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "10px",
+                        padding: "16px",
+                        background: "#ffffff",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "8px",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>{shift.id}</span>
+                          <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
+                            وردية {shift.shiftName === "MORNING" ? "صباحية" : "مسائية"} · {shift.shiftDate}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: "0.78rem",
+                              fontWeight: 600,
+                              padding: "2px 8px",
+                              borderRadius: "12px",
+                              background: isAccepted ? "rgba(16, 185, 129, 0.12)" : isPending ? "rgba(245, 158, 11, 0.12)" : "rgba(239, 68, 68, 0.12)",
+                              color: isAccepted ? "#059669" : isPending ? "#d97706" : "#dc2626",
+                            }}
+                          >
+                            {isAccepted ? "تم الاستلام من المحاسب" : isPending ? "بانتظار استلام المحاسب" : "يوجد فرق / عجز"}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#0f172a" }}>
+                          الكاش: {shift.cashAmount.toLocaleString("en-US")} ج.م · الإلكتروني: {shift.electronicAmount.toLocaleString("en-US")} ج.م
+                        </span>
+                      </div>
+
+                      {shift.notes && (
+                        <p style={{ margin: 0, fontSize: "0.86rem", color: "#475569" }}>
+                          <strong>ملاحظات:</strong> {shift.notes}
+                        </p>
+                      )}
+
+                      {shift.receivedByName && (
+                        <div style={{ fontSize: "0.8rem", color: "#059669", borderTop: "1px dashed #e2e8f0", paddingTop: "6px" }}>
+                          تم استلام النقدية واعتمادها بواسطة: <b>{shift.receivedByName}</b>
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+
+              {/* Modal for Registering Shift Handover */}
+              {shiftModalOpen && (
+                <div className="dialog-overlay" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setShiftModalOpen(false); }}>
+                  <section className="dialog-card" role="dialog" aria-modal="true" style={{ maxWidth: "480px" }}>
+                    <button className="dialog-close" aria-label="إغلاق" onClick={() => setShiftModalOpen(false)}>
+                      <X size={17} />
+                    </button>
+                    <div className="team-dialog-heading">
+                      <span className="approval-id">R05 · تقفيل وردية</span>
+                      <h2>تقفيل الخزينة وتسليم عهدة الشباك</h2>
+                      <p>حصر النقدية الفعلية وسندات القبض المسددة في الشيفت لإرسالها للمحاسب.</p>
+                    </div>
+
+                    <form onSubmit={handleShiftSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px", marginTop: "1rem" }}>
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "4px" }}>فترة الوردية</label>
+                        <select
+                          value={shiftFormData.shiftName}
+                          onChange={e => setShiftFormData({ ...shiftFormData, shiftName: e.target.value as any })}
+                          style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                        >
+                          <option value="MORNING">وردية صباحية (09:00 ص - 03:00 م)</option>
+                          <option value="EVENING">وردية مسائية (03:00 م - 09:00 م)</option>
+                        </select>
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "4px" }}>إجمالي النقدية (الكاش الفعلي)</label>
+                          <input
+                            type="number"
+                            required
+                            min="0"
+                            placeholder="مثال: 4500"
+                            value={shiftFormData.cashAmount}
+                            onChange={e => setShiftFormData({ ...shiftFormData, cashAmount: e.target.value })}
+                            style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "4px" }}>التحصيل الإلكتروني (Visa/IPN)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="مثال: 3200"
+                            value={shiftFormData.electronicAmount}
+                            onChange={e => setShiftFormData({ ...shiftFormData, electronicAmount: e.target.value })}
+                            style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "4px" }}>عدد إيصالات وسندات القبض</label>
+                        <input
+                          type="number"
+                          required
+                          min="1"
+                          placeholder="مثال: 8"
+                          value={shiftFormData.totalReceiptsCount}
+                          onChange={e => setShiftFormData({ ...shiftFormData, totalReceiptsCount: e.target.value })}
+                          style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "4px" }}>ملاحظات الوردية إن وجدت</label>
+                        <textarea
+                          rows={2}
+                          placeholder="أي ملاحظات حول المبالغ أو السندات المسلمة..."
+                          value={shiftFormData.notes}
+                          onChange={e => setShiftFormData({ ...shiftFormData, notes: e.target.value })}
+                          style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", resize: "none" }}
+                        />
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
+                        <button type="button" className="button button-secondary" onClick={() => setShiftModalOpen(false)}>
+                          إلغاء
+                        </button>
+                        <button type="submit" className="button button-primary">
+                          تسليم الوردية وإرسال الإشعار
                         </button>
                       </div>
                     </form>

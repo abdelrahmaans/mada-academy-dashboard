@@ -904,3 +904,201 @@ export const freezeStorage = {
     return updated.find(item => item.id === id)!;
   },
 };
+
+export type ShiftCashHandover = {
+  id: string;
+  branchName: string;
+  shiftDate: string;
+  shiftName: "MORNING" | "EVENING";
+  submittedByUserId: string;
+  submittedByName: string;
+  cashAmount: number;
+  electronicAmount: number;
+  totalReceiptsCount: number;
+  status: "SUBMITTED" | "ACCEPTED" | "DISCREPANCY";
+  receivedByName?: string;
+  receivedAt?: string;
+  discrepancyAmount?: number;
+  notes?: string;
+  createdAt: string;
+};
+
+export type TrainerPayrollRecord = {
+  id: string;
+  instructorId: string;
+  instructorName: string;
+  month: string; // e.g. "2026-10"
+  completedSessionsCount: number;
+  ratePerSession: number;
+  baseSalary: number;
+  bonusAmount: number;
+  deductionAmount: number;
+  netPayable: number;
+  status: "DRAFT" | "SUBMITTED" | "APPROVED" | "PAID";
+  paidAt?: string;
+  paymentMethod?: string;
+  paymentReference?: string;
+};
+
+const SHIFT_STORAGE_KEY = "mada_shift_handovers_v1";
+const PAYROLL_STORAGE_KEY = "mada_trainer_payrolls_v1";
+
+const DEFAULT_SHIFTS: ShiftCashHandover[] = [
+  {
+    id: "SHF-2026-101",
+    branchName: "مدينة نصر",
+    shiftDate: "2026-10-17",
+    shiftName: "MORNING",
+    submittedByUserId: "SEC-01",
+    submittedByName: "هبة محمود (استقبال)",
+    cashAmount: 6400,
+    electronicAmount: 4800,
+    totalReceiptsCount: 6,
+    status: "SUBMITTED",
+    notes: "تحصيل فواتير اشتراكات كاش من أولياء الأمور الصباحية",
+    createdAt: "2026-10-17T13:30:00Z",
+  },
+  {
+    id: "SHF-2026-100",
+    branchName: "مدينة نصر",
+    shiftDate: "2026-10-16",
+    shiftName: "EVENING",
+    submittedByUserId: "SEC-02",
+    submittedByName: "سارة خالد (استقبال)",
+    cashAmount: 8200,
+    electronicAmount: 6500,
+    totalReceiptsCount: 9,
+    status: "ACCEPTED",
+    receivedByName: "أحمد محمود (المحاسب)",
+    receivedAt: "2026-10-16T21:15:00Z",
+    notes: "تم استلام النقدية بالكامل ومطابقة السندات",
+    createdAt: "2026-10-16T20:45:00Z",
+  },
+];
+
+const DEFAULT_PAYROLLS: TrainerPayrollRecord[] = [
+  {
+    id: "PAY-2026-10-01",
+    instructorId: "INS-01",
+    instructorName: "عمر سامح",
+    month: "2026-10",
+    completedSessionsCount: 22,
+    ratePerSession: 200,
+    baseSalary: 0,
+    bonusAmount: 400,
+    deductionAmount: 0,
+    netPayable: 4800,
+    status: "SUBMITTED",
+  },
+  {
+    id: "PAY-2026-10-02",
+    instructorId: "INS-02",
+    instructorName: "يوسف عماد",
+    month: "2026-10",
+    completedSessionsCount: 18,
+    ratePerSession: 200,
+    baseSalary: 0,
+    bonusAmount: 0,
+    deductionAmount: 200,
+    netPayable: 3400,
+    status: "APPROVED",
+  },
+  {
+    id: "PAY-2026-10-03",
+    instructorId: "INS-03",
+    instructorName: "مريم حسن (كبير المدربين)",
+    month: "2026-10",
+    completedSessionsCount: 16,
+    ratePerSession: 250,
+    baseSalary: 3000,
+    bonusAmount: 500,
+    deductionAmount: 0,
+    netPayable: 7500,
+    status: "PAID",
+    paidAt: "2026-10-15T12:00:00Z",
+    paymentMethod: "INSTAPAY",
+    paymentReference: "IPN-984210",
+  },
+];
+
+export const shiftStorage = {
+  getHandovers: (): ShiftCashHandover[] => {
+    try {
+      const raw = localStorage.getItem(SHIFT_STORAGE_KEY);
+      if (!raw) {
+        localStorage.setItem(SHIFT_STORAGE_KEY, JSON.stringify(DEFAULT_SHIFTS));
+        return DEFAULT_SHIFTS;
+      }
+      return JSON.parse(raw);
+    } catch {
+      return DEFAULT_SHIFTS;
+    }
+  },
+  saveHandovers: (items: ShiftCashHandover[]) => {
+    localStorage.setItem(SHIFT_STORAGE_KEY, JSON.stringify(items));
+  },
+  submitShift: (input: Omit<ShiftCashHandover, "id" | "status" | "createdAt">): ShiftCashHandover => {
+    const list = shiftStorage.getHandovers();
+    const newShift: ShiftCashHandover = {
+      ...input,
+      id: `SHF-2026-${String(list.length + 101).padStart(3, "0")}`,
+      status: "SUBMITTED",
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [newShift, ...list];
+    shiftStorage.saveHandovers(updated);
+    return newShift;
+  },
+  acceptShift: (id: string, receivedByName: string, discrepancy = 0, notes?: string): ShiftCashHandover => {
+    const list = shiftStorage.getHandovers();
+    const updated = list.map(item => {
+      if (item.id !== id) return item;
+      return {
+        ...item,
+        status: discrepancy !== 0 ? ("DISCREPANCY" as const) : ("ACCEPTED" as const),
+        receivedByName,
+        receivedAt: new Date().toISOString(),
+        discrepancyAmount: discrepancy,
+        notes: notes ? `${item.notes || ""} · ${notes}` : item.notes,
+      };
+    });
+    shiftStorage.saveHandovers(updated);
+    return updated.find(item => item.id === id)!;
+  },
+};
+
+export const payrollStorage = {
+  getPayrolls: (): TrainerPayrollRecord[] => {
+    try {
+      const raw = localStorage.getItem(PAYROLL_STORAGE_KEY);
+      if (!raw) {
+        localStorage.setItem(PAYROLL_STORAGE_KEY, JSON.stringify(DEFAULT_PAYROLLS));
+        return DEFAULT_PAYROLLS;
+      }
+      return JSON.parse(raw);
+    } catch {
+      return DEFAULT_PAYROLLS;
+    }
+  },
+  savePayrolls: (items: TrainerPayrollRecord[]) => {
+    localStorage.setItem(PAYROLL_STORAGE_KEY, JSON.stringify(items));
+  },
+  approvePayroll: (id: string): TrainerPayrollRecord => {
+    const list = payrollStorage.getPayrolls();
+    const updated = list.map(item => item.id === id ? { ...item, status: "APPROVED" as const } : item);
+    payrollStorage.savePayrolls(updated);
+    return updated.find(item => item.id === id)!;
+  },
+  markPaid: (id: string, method: string, reference?: string): TrainerPayrollRecord => {
+    const list = payrollStorage.getPayrolls();
+    const updated = list.map(item => item.id === id ? {
+      ...item,
+      status: "PAID" as const,
+      paidAt: new Date().toISOString(),
+      paymentMethod: method,
+      paymentReference: reference,
+    } : item);
+    payrollStorage.savePayrolls(updated);
+    return updated.find(item => item.id === id)!;
+  },
+};

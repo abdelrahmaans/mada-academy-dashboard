@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   TrendingDown,
   TrendingUp,
+  UserCheck,
   Wallet,
   X,
 } from "lucide-react";
@@ -35,6 +36,8 @@ import {
   Overview,
   PanelTitle,
   Reports,
+  ShiftsView,
+  PayrollView,
   PAYMENT_METHOD_LABELS,
   STATUS_LABEL,
   EXPENSE_LABEL,
@@ -55,12 +58,16 @@ import {
 } from "@/lib/financeAccess";
 import {
   apiClient,
+  shiftStorage,
+  payrollStorage,
   type AuthMe,
   type FinanceExpense,
   type FinanceInvoice,
   type FinancePayment,
   type FinanceReport,
+  type ShiftCashHandover,
   type StudentRecord,
+  type TrainerPayrollRecord,
 } from "@/lib/apiClient";
 import {
   buildExpenseMutation,
@@ -304,6 +311,27 @@ export default function FinanceDesk() {
   >(() => (liveMode ? "loading" : "ready"));
   const [loadError, setLoadError] = useState("");
   const [loadAttempt, setLoadAttempt] = useState(0);
+
+  const [handovers, setHandovers] = useState<ShiftCashHandover[]>(() => shiftStorage.getHandovers());
+  const [payrolls, setPayrolls] = useState<TrainerPayrollRecord[]>(() => payrollStorage.getPayrolls());
+
+  const acceptShiftHandover = (id: string, notes?: string) => {
+    const updated = shiftStorage.acceptShift(id, financeMe?.user?.displayName || "المحاسب", 0, notes);
+    setHandovers(shiftStorage.getHandovers());
+    toast.success(`تم استلام وتوريد عهدة الوردية ${updated.id} للخزينة بنجاح!`);
+  };
+
+  const approveTrainerPayroll = (id: string) => {
+    payrollStorage.approvePayroll(id);
+    setPayrolls(payrollStorage.getPayrolls());
+    toast.success("تم اعتماد مسير الراتب، وجاهز للصرف للمدرب");
+  };
+
+  const payTrainerPayroll = (id: string, method: string, reference?: string) => {
+    payrollStorage.markPaid(id, method, reference);
+    setPayrolls(payrollStorage.getPayrolls());
+    toast.success(`تم تسجيل صرف الراتب عبر ${method} بنجاح!`);
+  };
 
   const getEvidenceUploadGuard = (key: string) => {
     let guard = evidenceUploadGuards.current.get(key);
@@ -840,6 +868,24 @@ export default function FinanceDesk() {
               count={pendingCount}
             />
           )}
+          {canAccessFinanceView(activeAccess, "shifts") && (
+            <NavButton
+              active={view === "shifts"}
+              onClick={() => selectView("shifts")}
+              icon={<Wallet size={19} />}
+              label="ورديات الاستقبال (الكاش)"
+              count={handovers.filter(h => h.status === "SUBMITTED").length}
+            />
+          )}
+          {canAccessFinanceView(activeAccess, "payroll") && (
+            <NavButton
+              active={view === "payroll"}
+              onClick={() => selectView("payroll")}
+              icon={<UserCheck size={19} />}
+              label="أتعاب المدربين بالحصة"
+              count={payrolls.filter(p => p.status !== "PAID").length}
+            />
+          )}
           {canAccessFinanceView(activeAccess, "reports") && (
             <NavButton
               active={view === "reports"}
@@ -1067,6 +1113,24 @@ export default function FinanceDesk() {
                 submitting={expenseSubmitting}
                 decisionSubmitting={expenseDecisionSubmitting}
                 evidenceUploadingIds={evidenceUploadingIds}
+              />
+            )}
+          {(!liveMode || workspaceState === "ready") &&
+            canAccessFinanceView(activeAccess, "shifts") &&
+            view === "shifts" && (
+              <ShiftsView
+                handovers={handovers}
+                onAccept={acceptShiftHandover}
+                accountantName={financeMe?.user?.displayName || "المحاسب"}
+              />
+            )}
+          {(!liveMode || workspaceState === "ready") &&
+            canAccessFinanceView(activeAccess, "payroll") &&
+            view === "payroll" && (
+              <PayrollView
+                payrolls={payrolls}
+                onApprove={approveTrainerPayroll}
+                onPay={payTrainerPayroll}
               />
             )}
           {(!liveMode || workspaceState === "ready") &&

@@ -2,6 +2,7 @@ import type { FormEvent, ReactNode } from "react";
 import {
   AlertCircle,
   ArrowDownToLine,
+  Banknote,
   BarChart3,
   Check,
   CheckCircle2,
@@ -15,9 +16,16 @@ import {
   ShieldCheck,
   TrendingDown,
   TrendingUp,
+  UserCheck,
   Wallet,
 } from "lucide-react";
-import type { FinanceReport } from "@/lib/apiClient";
+import {
+  shiftStorage,
+  payrollStorage,
+  type FinanceReport,
+  type ShiftCashHandover,
+  type TrainerPayrollRecord,
+} from "@/lib/apiClient";
 import type {
   Expense,
   ExpenseStatus,
@@ -86,6 +94,8 @@ export const VIEW_TITLES: Record<View, string> = {
   overview: "الملخص المالي",
   collections: "الفواتير والتحصيل",
   expenses: "المصاريف",
+  shifts: "تقفيل ورديات الاستقبال (الكاش)",
+  payroll: "مستحقات ورواتب المدربين بالحصة",
   reports: "التقارير المالية",
 };
 export const VIEW_COPY: Record<View, string> = {
@@ -95,6 +105,10 @@ export const VIEW_COPY: Record<View, string> = {
     "سجل الدفعات، راجع الأرصدة، وارفع طلب تصحيح بدل تعديل الفاتورة مباشرة.",
   expenses:
     "أنشئ مصروفًا، راجع حالته، وارفضه بسبب موثق قبل دخوله في الإجماليات.",
+  shifts:
+    "استلام واعتماد العهدة النقدية اليومية من السكرتارية والاستقبال وتوثيق أي عجز أو فروقات.",
+  payroll:
+    "احتساب أتعاب المدربين آليًا بناءً على عدد الحصص المنفذة والبدلات والخصومات واعتماد الصرف.",
   reports: "قارن التحصيل بالمصروفات المعتمدة وصافي الحركة حسب الفروع.",
 };
 export function Overview({
@@ -788,6 +802,296 @@ export function Reports({
     </section>
   );
 }
+
+export function ShiftsView({
+  handovers,
+  onAccept,
+  accountantName,
+}: {
+  handovers: ShiftCashHandover[];
+  onAccept: (id: string, notes?: string) => void;
+  accountantName: string;
+}) {
+  const pendingTotalCash = handovers
+    .filter(h => h.status === "SUBMITTED")
+    .reduce((sum, h) => sum + h.cashAmount, 0);
+
+  const pendingCount = handovers.filter(h => h.status === "SUBMITTED").length;
+
+  return (
+    <section className="finance-desk-panel">
+      <PanelTitle
+        icon={<Banknote size={17} />}
+        title="استلام عهدة ورديات الاستقبال (الكاش)"
+        action={
+          <span className="finance-count-badge">
+            {pendingCount} ورديات بانتظار الاستلام
+          </span>
+        }
+      />
+
+      <div className="finance-desk-kpi-grid" style={{ marginTop: "1rem", marginBottom: "1.2rem" }}>
+        <Kpi
+          icon={<Banknote size={19} />}
+          label="إجمالي كاش بانتظار التوريد للخزينة"
+          value={<>{money(pendingTotalCash)} <bdi>ج.م</bdi></>}
+          hint="نقدية في شباك الاستقبال"
+          tone="amber"
+        />
+        <Kpi
+          icon={<CheckCircle2 size={19} />}
+          label="ورديات معتمدة بالكامل"
+          value={handovers.filter(h => h.status === "ACCEPTED").length}
+          hint="تم توريدها لحساب الخزينة"
+          tone="teal"
+        />
+        <Kpi
+          icon={<AlertCircle size={19} />}
+          label="ورديات بها فروقات / عجز"
+          value={handovers.filter(h => h.status === "DISCREPANCY").length}
+          hint="تحتاج تسوية فورية"
+          tone="blue"
+        />
+      </div>
+
+      <div className="finance-report-note" style={{ marginBottom: "1rem" }}>
+        <ShieldCheck size={14} /> <strong>ضابط الرقابة والـ Audit:</strong> يمنع خروج موظف الاستقبال من الفرع قبل اعتماد المحاسب استلام الكاش الفعلي ومطابقته مع إجمالي سندات القبض المسجلة بالسيستم.
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        {handovers.map(shift => {
+          const isPending = shift.status === "SUBMITTED";
+          const isAccepted = shift.status === "ACCEPTED";
+
+          return (
+            <article
+              key={shift.id}
+              style={{
+                border: "1px solid var(--border, #e2e8f0)",
+                borderRadius: "10px",
+                padding: "16px 20px",
+                background: "var(--card, #ffffff)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontWeight: 700, fontSize: "1rem" }}>{shift.id}</span>
+                  <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
+                    وردية {shift.shiftName === "MORNING" ? "صباحية" : "مسائية"} · {shift.shiftDate} · فرع {shift.branchName}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "0.78rem",
+                      fontWeight: 600,
+                      padding: "2px 8px",
+                      borderRadius: "12px",
+                      background: isAccepted ? "rgba(16, 185, 129, 0.12)" : isPending ? "rgba(245, 158, 11, 0.12)" : "rgba(239, 68, 68, 0.12)",
+                      color: isAccepted ? "#059669" : isPending ? "#d97706" : "#dc2626",
+                    }}
+                  >
+                    {isAccepted ? "تم الاستلام والمطابقة" : isPending ? "بانتظار استلام المحاسب" : "يوجد فرق / عجز"}
+                  </span>
+                </div>
+                {isPending && (
+                  <button
+                    type="button"
+                    className="button button-primary"
+                    style={{ padding: "6px 14px", fontSize: "0.84rem" }}
+                    onClick={() => {
+                      const note = window.prompt("ملاحظة الاستلام (اختياري):", "تم استلام النقدية بالكامل ومطابقة السندات");
+                      onAccept(shift.id, note || undefined);
+                    }}
+                  >
+                    <Check size={14} /> استلام وتوريد للخزينة
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px", background: "rgba(248, 250, 252, 0.8)", padding: "12px", borderRadius: "8px" }}>
+                <div>
+                  <small style={{ display: "block", color: "#64748b", fontSize: "0.78rem" }}>النقدية في الخزينة (الكاش)</small>
+                  <strong style={{ fontSize: "1.05rem", color: "#0f172a" }}>{money(shift.cashAmount)} ج.م</strong>
+                </div>
+                <div>
+                  <small style={{ display: "block", color: "#64748b", fontSize: "0.78rem" }}>التحصيل الإلكتروني (Visa/InstaPay)</small>
+                  <strong style={{ fontSize: "1.05rem", color: "#475569" }}>{money(shift.electronicAmount)} ج.م</strong>
+                </div>
+                <div>
+                  <small style={{ display: "block", color: "#64748b", fontSize: "0.78rem" }}>عدد سندات القبض</small>
+                  <strong style={{ fontSize: "1.05rem", color: "#475569" }}>{shift.totalReceiptsCount} إيصالات</strong>
+                </div>
+                <div>
+                  <small style={{ display: "block", color: "#64748b", fontSize: "0.78rem" }}>مسؤول الشيفت (الاستقبال)</small>
+                  <strong style={{ fontSize: "0.92rem", color: "#334155" }}>{shift.submittedByName}</strong>
+                </div>
+              </div>
+
+              {shift.notes && (
+                <div style={{ fontSize: "0.82rem", color: "#475569" }}>
+                  <strong>الملاحظات:</strong> {shift.notes}
+                </div>
+              )}
+
+              {shift.receivedByName && (
+                <div style={{ fontSize: "0.78rem", color: "#059669", borderTop: "1px dashed #e2e8f0", paddingTop: "6px" }}>
+                  تم الاستلام والاعتماد بواسطة: <b>{shift.receivedByName}</b> في {new Date(shift.receivedAt!).toLocaleString("ar-EG")}
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+export function PayrollView({
+  payrolls,
+  onApprove,
+  onPay,
+}: {
+  payrolls: TrainerPayrollRecord[];
+  onApprove: (id: string) => void;
+  onPay: (id: string, method: string, reference?: string) => void;
+}) {
+  const totalNetPayable = payrolls
+    .filter(p => p.status !== "PAID")
+    .reduce((sum, p) => sum + p.netPayable, 0);
+
+  const totalSessionsCompleted = payrolls.reduce((sum, p) => sum + p.completedSessionsCount, 0);
+
+  return (
+    <section className="finance-desk-panel">
+      <PanelTitle
+        icon={<UserCheck size={17} />}
+        title="مسيرات أتعاب ورواتب المدربين بالحصة"
+        action={
+          <span className="finance-count-badge">
+            شهر أكتوبر 2026
+          </span>
+        }
+      />
+
+      <div className="finance-desk-kpi-grid" style={{ marginTop: "1rem", marginBottom: "1.2rem" }}>
+        <Kpi
+          icon={<Wallet size={19} />}
+          label="إجمالي مستحقات بانتظار الصرف"
+          value={<>{money(totalNetPayable)} <bdi>ج.م</bdi></>}
+          hint="صافي مستحقات المدربين"
+          tone="amber"
+        />
+        <Kpi
+          icon={<Clock3 size={19} />}
+          label="إجمالي الحصص المنفذة المعتمدة"
+          value={`${totalSessionsCompleted} حصة`}
+          hint="مرصودة من سجلات الحضور"
+          tone="teal"
+        />
+        <Kpi
+          icon={<CheckCircle2 size={19} />}
+          label="الرواتب المسددة"
+          value={payrolls.filter(p => p.status === "PAID").length}
+          hint="تم تسليمها للمدربين"
+          tone="blue"
+        />
+      </div>
+
+      <div className="finance-report-note" style={{ marginBottom: "1rem" }}>
+        <ShieldCheck size={14} /> <strong>لوجيك الاحتساب المالي:</strong> يُحسب المستحق آلياً كـ (عدد الحصص المنفذة بالفعل × سعر الحصة المتفق عليه) + الراتب الأساسي + المكافآت - الخصومات، بعد اعتماد رئيس المدربين لاكتمال الحصص.
+      </div>
+
+      <div style={{ overflowX: "auto" }}>
+        <table className="finance-desk-table" style={{ width: "100%", textAlign: "right" }}>
+          <thead>
+            <tr>
+              <th>كود المسير</th>
+              <th>المدرب</th>
+              <th>الحصص المنفذة</th>
+              <th>سعر الحصة</th>
+              <th>الأساسي / البدلات</th>
+              <th>الاستقطاعات</th>
+              <th>الصافي المستحق</th>
+              <th>الحالة</th>
+              <th>الإجراء</th>
+            </tr>
+          </thead>
+          <tbody>
+            {payrolls.map(item => {
+              const statusBadge =
+                item.status === "PAID"
+                  ? { label: "تم الصرف", bg: "rgba(16, 185, 129, 0.12)", color: "#059669" }
+                  : item.status === "APPROVED"
+                  ? { label: "معتمد للصرف", bg: "rgba(14, 165, 233, 0.12)", color: "#0284c7" }
+                  : { label: "مسودة قيد التدقيق", bg: "rgba(245, 158, 11, 0.12)", color: "#d97706" };
+
+              return (
+                <tr key={item.id}>
+                  <td><b>{item.id}</b></td>
+                  <td><strong>{item.instructorName}</strong></td>
+                  <td><b>{item.completedSessionsCount}</b> حصة</td>
+                  <td>{money(item.ratePerSession)} ج.م</td>
+                  <td>{money(item.baseSalary + item.bonusAmount)} ج.م</td>
+                  <td style={{ color: item.deductionAmount > 0 ? "#dc2626" : "inherit" }}>
+                    {item.deductionAmount > 0 ? `-${money(item.deductionAmount)}` : "—"}
+                  </td>
+                  <td><strong style={{ color: "#059669", fontSize: "0.98rem" }}>{money(item.netPayable)} ج.م</strong></td>
+                  <td>
+                    <span
+                      style={{
+                        fontSize: "0.78rem",
+                        fontWeight: 600,
+                        padding: "2px 8px",
+                        borderRadius: "12px",
+                        background: statusBadge.bg,
+                        color: statusBadge.color,
+                      }}
+                    >
+                      {statusBadge.label}
+                    </span>
+                  </td>
+                  <td>
+                    {item.status === "SUBMITTED" && (
+                      <button
+                        type="button"
+                        className="button button-secondary"
+                        style={{ padding: "4px 10px", fontSize: "0.8rem" }}
+                        onClick={() => onApprove(item.id)}
+                      >
+                        اعتماد المسير
+                      </button>
+                    )}
+                    {item.status === "APPROVED" && (
+                      <button
+                        type="button"
+                        className="button button-primary"
+                        style={{ padding: "4px 10px", fontSize: "0.8rem" }}
+                        onClick={() => {
+                          const ref = window.prompt("رقم الإيصال أو مرجع التحويل البنكي (InstaPay/Cash):", "IPN-10294");
+                          if (ref) onPay(item.id, "INSTAPAY", ref);
+                        }}
+                      >
+                        صرف الراتب
+                      </button>
+                    )}
+                    {item.status === "PAID" && (
+                      <small style={{ color: "#64748b" }}>
+                        سدد عبر {item.paymentMethod} ({item.paymentReference})
+                      </small>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 export function Kpi({
   icon,
   label,
