@@ -87,7 +87,7 @@ export default function AcademicProgramsLive() {
       <main className="main-panel" dir="rtl">
         <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel={`فرع ${branch}`} roleLabel="رئيس المدربين" />
         <div className="r03-program-live">
-        <header className="r03-program-header"><div><span className="r03-program-kicker"><span /> البرامج الأكاديمية · LIVE</span><h1>برامج الفرع وجلساته</h1><p>المجموعات والجلسات الفعلية من قواعد بيانات الفرع؛ لا تتضمن أسعارًا أو عمليات مالية.</p></div><button type="button" className="r03-program-refresh" onClick={() => void load(true)} disabled={loading}><RefreshCw size={15} /> تحديث</button></header>
+        <header className="r03-program-header"><div><span className="r03-program-kicker"><span /> البرامج الأكاديمية</span><h1>برامج الفرع وجلساته</h1><p>المجموعات والجلسات الفعلية من قواعد بيانات الفرع؛ لا تتضمن أسعارًا أو عمليات مالية.</p></div><button type="button" className="r03-program-refresh" onClick={() => void load(true)} disabled={loading}><RefreshCw size={15} /> تحديث</button></header>
         <RoleScopeCard className="r03-program-scope" compact />
         <nav className="r03-program-tabs" aria-label="بيانات البرامج"><button type="button" className={view === "groups" ? "active" : ""} onClick={() => setView("groups")}><BookOpen size={15} /> مجموعات البرامج</button><button type="button" className={view === "sessions" ? "active" : ""} onClick={() => setView("sessions")}><CalendarDays size={15} /> الجلسات</button><button type="button" className={view === "progress" ? "active" : ""} onClick={() => setView("progress")}><Target size={15} /> تقدم الطلاب</button></nav>
         {loading && <LoadingState label="جارٍ تحميل مجموعات البرامج والجلسات…" compact />}

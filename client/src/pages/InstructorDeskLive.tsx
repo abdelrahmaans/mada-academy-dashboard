@@ -412,7 +412,7 @@ export default function InstructorDeskLive() {
         <header className="r04-live-header">
           <div>
             <span className="r04-live-eyebrow">
-              <span /> مساحة المدرب · LIVE
+              <span /> مساحة المدرب
             </span>
             <h1>جلساتي وسير العمل</h1>
             <p>

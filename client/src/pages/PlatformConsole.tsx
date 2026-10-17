@@ -263,7 +263,7 @@ const ticketPriorityLabels = {
   low: "عادية",
 } as const;
 const formatNumber = (value: number) =>
-  new Intl.NumberFormat("ar-EG").format(value);
+  new Intl.NumberFormat("en-US").format(value);
 
 function PlatformConsolePreviewContent() {
   const [, navigate] = useLocation();
@@ -318,7 +318,7 @@ function PlatformConsolePreviewContent() {
             branches: item.branches,
             users: item.users,
             status: item.status.toLowerCase() as AcademyStatus,
-            renewal: new Date(item.createdAt).toLocaleDateString("ar-EG"),
+            renewal: new Date(item.createdAt).toLocaleDateString("ar-EG-u-nu-latn"),
           }))
         );
         setActivities(
@@ -326,7 +326,7 @@ function PlatformConsolePreviewContent() {
             id: item.id,
             title: item.action,
             detail: `${item.tenantName ?? "Platform"} · ${item.targetType} · ${item.actorName ?? "system"}`,
-            time: new Date(item.createdAt).toLocaleString("ar-EG"),
+            time: new Date(item.createdAt).toLocaleString("ar-EG-u-nu-latn"),
             tone: item.action.includes("STATUS") ? "amber" : "blue",
           }))
         );
@@ -452,11 +452,7 @@ function PlatformConsolePreviewContent() {
   };
 
   const pageAction =
-    activeView === "support" ? (
-      <span className="pc-header-note">
-        <ShieldCheck size={15} aria-hidden="true" /> وصول محدود لمعلومات التذكرة
-      </span>
-    ) : (
+    activeView === "academies" ? (
       <button
         className="pc-primary-button"
         type="button"
@@ -464,7 +460,11 @@ function PlatformConsolePreviewContent() {
       >
         <Plus size={17} aria-hidden="true" /> إنشاء أكاديمية
       </button>
-    );
+    ) : activeView === "support" ? (
+      <span className="pc-header-note">
+        <ShieldCheck size={15} aria-hidden="true" /> وصول محدود لمعلومات التذكرة
+      </span>
+    ) : null;
 
   return (
     <RoleDashboardShell

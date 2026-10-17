@@ -54,7 +54,7 @@ const ticketPriorityLabels = {
   low: "عادية",
 } as const;
 const formatNumber = (value: number) =>
-  new Intl.NumberFormat("ar-EG").format(value);
+  new Intl.NumberFormat("en-US").format(value);
 
 export function TicketStatusBadge({ status }: { status: TicketStatus }) {
   return (

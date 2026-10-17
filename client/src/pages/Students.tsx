@@ -790,11 +790,7 @@ function StudentPage() {
               description={`${dataError} · لم يتم استبدال بيانات الخادم ببيانات تجريبية.`}
             />
           )}
-          {!dataLoading && !dataError && dataMode === "live" && (
-            <div className="role-feedback-state role-feedback-success role-feedback-compact" role="status">
-              البيانات LIVE من PostgreSQL · القراءة مقيدة بنطاق الحساب الحالي
-            </div>
-          )}
+
 
           <section className="student-stats-grid" aria-label="ملخص الطلاب">
             <article className="student-stat">

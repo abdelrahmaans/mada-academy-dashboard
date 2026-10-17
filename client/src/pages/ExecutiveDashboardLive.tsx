@@ -22,11 +22,11 @@ function periodRange(offset: PeriodOffset) {
 }
 
 function money(piastres: number) {
-  return new Intl.NumberFormat("ar-EG", { style: "currency", currency: "EGP", maximumFractionDigits: 0 }).format(piastres / 100);
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "EGP", maximumFractionDigits: 0 }).format(piastres / 100);
 }
 
 function integer(value: number) {
-  return new Intl.NumberFormat("ar-EG").format(value);
+  return new Intl.NumberFormat("en-US").format(value);
 }
 
 function Kpi({ icon, title, value, caption, tone }: { icon: React.ReactNode; title: string; value: string; caption: string; tone: "blue" | "teal" | "violet" | "amber" }) {
@@ -38,7 +38,7 @@ function Metrics({ metrics }: { metrics: ExecutiveMetrics }) {
     <div className="r1-live-kpis">
       <Kpi icon={<Users size={19} />} title="طلاب نشطون" value={integer(metrics.activeStudents)} caption="من سجلات الطلاب النشطة" tone="teal" />
       <Kpi icon={<CalendarDays size={19} />} title="الجلسات" value={integer(metrics.sessions)} caption={`${integer(metrics.completedSessions)} مكتملة في الفترة`} tone="blue" />
-      <Kpi icon={<CheckCircle2 size={19} />} title="الحضور" value={metrics.attendancePercent === null ? "—" : `${new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 1 }).format(metrics.attendancePercent)}٪`} caption={metrics.attendanceMarkedCount ? `${integer(metrics.attendedCount)} حضورًا من ${integer(metrics.attendanceMarkedCount)} علامة غير معذورة` : "لا توجد علامات حضور للفترة"} tone="violet" />
+      <Kpi icon={<CheckCircle2 size={19} />} title="الحضور" value={metrics.attendancePercent === null ? "—" : `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(metrics.attendancePercent)}٪`} caption={metrics.attendanceMarkedCount ? `${integer(metrics.attendedCount)} حضورًا من ${integer(metrics.attendanceMarkedCount)} علامة غير معذورة` : "لا توجد علامات حضور للفترة"} tone="violet" />
       <Kpi icon={<Wallet size={19} />} title="التحصيل" value={money(metrics.collectedPiastres)} caption="حسب تاريخ استلام الدفعات" tone="amber" />
       <Kpi icon={<GraduationCap size={19} />} title="مصروفات معتمدة" value={money(metrics.approvedExpensesPiastres)} caption="لا تشمل المصروفات المعلقة أو المرفوضة" tone="blue" />
       <Kpi icon={<Wallet size={19} />} title="صافي الحركة" value={money(metrics.netPiastres)} caption="التحصيل ناقص المصروفات المعتمدة" tone="teal" />
@@ -48,7 +48,7 @@ function Metrics({ metrics }: { metrics: ExecutiveMetrics }) {
 }
 
 function occurredAt(value: string) {
-  return new Intl.DateTimeFormat("ar-EG", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+  return new Intl.DateTimeFormat("ar-EG-u-nu-latn", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
 export default function ExecutiveDashboardLive() {
@@ -109,7 +109,7 @@ export default function ExecutiveDashboardLive() {
     <main className="main-panel">
       <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel={selectedBranchName} />
       <div className="workspace r1-live-page" dir="rtl">
-      <PageHeader className="welcome-row" eyebrow={<span className="eyebrow"><i className="eyebrow-dot" /> الإدارة التنفيذية · R01 · LIVE</span>} title="لوحة الإدارة التنفيذية" description="مؤشرات تشغيلية ومالية للقراءة فقط، محسوبة من بيانات الأكاديمية ضمن الفرع والفترة المختارين." />
+      <PageHeader className="welcome-row" eyebrow={<span className="eyebrow"><i className="eyebrow-dot" /> الإدارة التنفيذية · R01</span>} title="لوحة الإدارة التنفيذية" description="مؤشرات تشغيلية ومالية للقراءة فقط، محسوبة من بيانات الأكاديمية ضمن الفرع والفترة المختارين." />
       <RoleScopeCard className="executive-scope-card" />
       <section className="r1-live-controls" aria-label="تصفية التقرير التنفيذي">
         <label><span><Building2 size={16} /> الفرع</span><select value={branchId} onChange={event => setBranchId(event.target.value)}><option value="ALL">كل الفروع</option>{report?.availableBranches.map(branch => <option key={branch.id} value={branch.id}>{branch.name}{branch.status !== "ACTIVE" ? " · غير نشط" : ""}</option>)}</select></label>
@@ -123,7 +123,7 @@ export default function ExecutiveDashboardLive() {
         {report.branchesWithoutStudentData > 0 && <div className="r1-live-warning" role="status"><AlertCircle size={17} /> {integer(report.branchesWithoutStudentData)} فرع بلا طلاب نشطين ضمن بيانات الأكاديمية الحالية.</div>}
         <section className="r1-live-panel"><header><div><h2>ملخص الأكاديمية</h2><p>الأرقام تتغير من الخادم مع تغيير الفرع أو الفترة؛ لا يتم استبدال فشل المصدر بأرقام تجريبية.</p></div><span className="r1-live-badge"><i /> بيانات حية</span></header><Metrics metrics={report.summary} /></section>
         <section className="r1-live-panel"><header><div><h2>التنبيهات التشغيلية</h2><p>تنبيهات مشتقة من مؤشرات الفروع والطلبات المحفوظة؛ لا تُستخدم thresholds تخمينية.</p></div></header>{report.alerts.length === 0 ? <p className="r1-live-empty">لا توجد تنبيهات من القواعد الحالية للفترة والنطاق المختارين.</p> : <div className="r1-live-alert-list">{report.alerts.map((alert, index) => <article key={`${alert.code}-${alert.branchId ?? index}`}><AlertCircle size={16} /><div><strong>{alert.title}</strong><span>{alert.detail}</span></div></article>)}</div>}</section>
-        <section className="r1-live-panel"><header><div><h2>مقارنة الفروع</h2><p>مجاميع كل فرع من مصادر البيانات نفسها المستخدمة في الملخص.</p></div></header>{report.branches.length === 0 ? <p className="r1-live-empty">لا توجد فروع في نطاق الأكاديمية بعد.</p> : <div className="r1-live-table-wrap"><table className="r1-live-table"><thead><tr><th>الفرع</th><th>طلاب نشطون</th><th>الحضور</th><th>الجلسات</th><th>التحصيل</th><th>مصروفات معتمدة</th><th>الصافي</th></tr></thead><tbody>{report.branches.map(branch => <tr key={branch.branchId}><th scope="row"><strong>{branch.branchName}</strong><small>{branch.branchCode} · {branch.branchStatus === "ACTIVE" ? "نشط" : "غير نشط"}</small></th><td>{integer(branch.activeStudents)}</td><td>{branch.attendancePercent === null ? "—" : `${new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 1 }).format(branch.attendancePercent)}٪`}</td><td>{integer(branch.sessions)} <small>({integer(branch.completedSessions)} مكتملة)</small></td><td>{money(branch.collectedPiastres)}</td><td>{money(branch.approvedExpensesPiastres)}</td><td>{money(branch.netPiastres)}</td></tr>)}</tbody></table></div>}</section>
+        <section className="r1-live-panel"><header><div><h2>مقارنة الفروع</h2><p>مجاميع كل فرع من مصادر البيانات نفسها المستخدمة في الملخص.</p></div></header>{report.branches.length === 0 ? <p className="r1-live-empty">لا توجد فروع في نطاق الأكاديمية بعد.</p> : <div className="r1-live-table-wrap"><table className="r1-live-table"><thead><tr><th>الفرع</th><th>طلاب نشطون</th><th>الحضور</th><th>الجلسات</th><th>التحصيل</th><th>مصروفات معتمدة</th><th>الصافي</th></tr></thead><tbody>{report.branches.map(branch => <tr key={branch.branchId}><th scope="row"><strong>{branch.branchName}</strong><small>{branch.branchCode} · {branch.branchStatus === "ACTIVE" ? "نشط" : "غير نشط"}</small></th><td>{integer(branch.activeStudents)}</td><td>{branch.attendancePercent === null ? "—" : `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(branch.attendancePercent)}٪`}</td><td>{integer(branch.sessions)} <small>({integer(branch.completedSessions)} مكتملة)</small></td><td>{money(branch.collectedPiastres)}</td><td>{money(branch.approvedExpensesPiastres)}</td><td>{money(branch.netPiastres)}</td></tr>)}</tbody></table></div>}</section>
         <details className="r1-live-sources"><summary>مصادر الأرقام وتعريفها</summary><dl>{Object.entries(report.dataSources).map(([key, source]) => <div key={key}><dt>{key}</dt><dd>{source}</dd></div>)}</dl></details>
       </>}
 

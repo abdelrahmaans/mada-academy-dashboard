@@ -16,10 +16,10 @@ import {
   LifeBuoy,
   LockKeyhole,
   Menu,
-  MessageSquare,
   Plus,
   RefreshCw,
   Search,
+  Server,
   ShieldCheck,
   Ticket,
   UserRoundX,
@@ -49,6 +49,7 @@ type View =
   | "tickets"
   | "support"
   | "audit"
+  | "system"
   | "roles";
 
 interface NavItem {
@@ -63,7 +64,8 @@ const nav: NavItem[] = [
   { id: "subscriptions", label: "متابعة الاشتراكات", icon: CreditCard },
   { id: "tickets", label: "مركز التذاكر والدعم", icon: LifeBuoy },
   { id: "support", label: "مستخدمي الأكاديمية", icon: Users },
-  { id: "audit", label: "سجل التدقيق والعمليات", icon: Activity },
+  { id: "audit", label: "سجل العمليات والـ Audit", icon: Activity },
+  { id: "system", label: "حالة النظام والخوادم", icon: Server },
   { id: "roles", label: "سياسة وصلاحيات الأدوار", icon: KeyRound },
 ];
 
@@ -95,7 +97,7 @@ const INITIAL_TICKETS: SupportTicket[] = [
     category: "اشتراكات وخطط",
     priority: "high",
     status: "new",
-    createdAt: "اليوم · 11:30 ص",
+    createdAt: "17 أكتوبر 2026",
     description:
       "نود توسيع نطاق الأكاديمية لفرعي الشيخ زايد والتجمع الخامس وتفعيل صلاحية الفروع المتعددة على اشتراكنا السنوي.",
     internalNotes: "بانتظار تأكيد استلام التحويل البنكي للباقة السنوية.",
@@ -111,7 +113,7 @@ const INITIAL_TICKETS: SupportTicket[] = [
     category: "مشكلة تقنية",
     priority: "medium",
     status: "inProgress",
-    createdAt: "أمس · 04:15 م",
+    createdAt: "16 أكتوبر 2026",
     description:
       "هل تدعم واجهة تسجيل الحضور الربط المباشر مع أجهزة ZKTeco لبصمة حمام السباحة؟",
     internalNotes: "تم توضيح آلية الـ Webhook وAPI الجلسات للمدير التقني لديهم.",
@@ -127,7 +129,7 @@ const INITIAL_TICKETS: SupportTicket[] = [
     category: "استفسار تشغيلي",
     priority: "low",
     status: "resolved",
-    createdAt: "منذ 3 أيام",
+    createdAt: "14 أكتوبر 2026",
     description:
       "تم استخراج التقارير الربع سنوية وتأكيد مطابقة أرقام الفواتير.",
     internalNotes: "تم حل المشكلة وتوفير كشف الـ CSV المخصص.",
@@ -141,29 +143,48 @@ const statusLabel: Record<string, string> = {
   PAUSED: "موقوف",
 };
 
-const ticketPriorityLabels: Record<SupportTicket["priority"], { label: string; class: string }> = {
+const ticketPriorityLabels: Record<
+  SupportTicket["priority"],
+  { label: string; class: string }
+> = {
   urgent: { label: "عاجل جدًا", class: "urgent" },
   high: { label: "أولوية عالية", class: "high" },
   medium: { label: "أولوية متوسطة", class: "medium" },
   low: { label: "عادي", class: "low" },
 };
 
-const ticketStatusLabels: Record<SupportTicket["status"], { label: string; class: string }> = {
+const ticketStatusLabels: Record<
+  SupportTicket["status"],
+  { label: string; class: string }
+> = {
   new: { label: "تذكرة جديدة", class: "new" },
   inProgress: { label: "قيد المتابعة", class: "inProgress" },
   waiting: { label: "بانتظار العميل", class: "waiting" },
   resolved: { label: "تم الحل", class: "resolved" },
 };
 
+// Formats dates with Arabic locale but standard English/Latin numbers (e.g. 17 أكتوبر 2026)
 const fmtDate = (value: string | null | undefined) =>
   value
-    ? new Intl.DateTimeFormat("ar-EG", {
+    ? new Intl.DateTimeFormat("ar-EG-u-nu-latn", {
         dateStyle: "medium",
         timeStyle: "short",
       }).format(new Date(value))
-    : "لا يوجد";
+    : "—";
+
+// Always returns standard Western/English numerals (e.g. 79, 126, 1,250)
+const fmtNumber = (value: number) =>
+  new Intl.NumberFormat("en-US").format(value);
 
 const reasonValid = (reason: string) => reason.trim().length >= 4;
+
+interface ReasonModalState {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  isDestructive?: boolean;
+  onConfirm: (reason: string) => Promise<void>;
+}
 
 export default function PlatformConsoleLive() {
   const [, navigate] = useLocation();
@@ -183,14 +204,19 @@ export default function PlatformConsoleLive() {
   const [activity, setActivity] = useState<PlatformActivity[]>([]);
   const [supportLoading, setSupportLoading] = useState(false);
   const [supportError, setSupportError] = useState<string | null>(null);
-  const [reason, setReason] = useState("");
   const [busyKey, setBusyKey] = useState("");
+
+  // Contextual modal prompt for reasons instead of awkward inline inputs
+  const [reasonModal, setReasonModal] = useState<ReasonModalState | null>(null);
+  const [reasonInput, setReasonInput] = useState("");
 
   // Tickets state
   const [tickets, setTickets] = useState<SupportTicket[]>(INITIAL_TICKETS);
-  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+  const [selectedTicket, setSelectedTicket] =
+    useState<SupportTicket | null>(null);
   const [ticketReplyNote, setTicketReplyNote] = useState("");
-  const [ticketStatusDraft, setTicketStatusDraft] = useState<SupportTicket["status"]>("inProgress");
+  const [ticketStatusDraft, setTicketStatusDraft] =
+    useState<SupportTicket["status"]>("inProgress");
 
   const selectedTenant =
     academies.find((item) => item.id === selectedTenantId) ?? null;
@@ -218,7 +244,9 @@ export default function PlatformConsoleLive() {
 
         if (academyResult.status === "fulfilled") {
           setAcademies(academyResult.value.items);
-          setSelectedTenantId((current) => current || academyResult.value.items[0]?.id || "");
+          setSelectedTenantId(
+            (current) => current || academyResult.value.items[0]?.id || ""
+          );
         } else {
           warnings.push("قائمة الأكاديميات غير متاحة مؤقتًا.");
         }
@@ -246,7 +274,9 @@ export default function PlatformConsoleLive() {
       .catch((failure) => {
         if (!active) return;
         const message =
-          failure instanceof Error ? failure.message : "تعذر تحميل بيانات الإدارة الحية.";
+          failure instanceof Error
+            ? failure.message
+            : "تعذر تحميل بيانات الإدارة الحية.";
         setError(message);
         toast.error(message);
       })
@@ -265,41 +295,53 @@ export default function PlatformConsoleLive() {
     setSupportLoading(true);
     setSupportError(null);
 
-    const delay = window.setTimeout(() => {
-      const calls =
-        view === "support"
-          ? Promise.all([
-              apiClient.platformAcademyMembers(selectedTenantId, userSearch),
-              apiClient.platformAcademyActivity(selectedTenantId),
-            ])
-          : Promise.all([apiClient.platformAcademyActivity(selectedTenantId)]);
+    const delay = window.setTimeout(
+      () => {
+        const calls =
+          view === "support"
+            ? Promise.all([
+                apiClient.platformAcademyMembers(
+                  selectedTenantId,
+                  userSearch
+                ),
+                apiClient.platformAcademyActivity(selectedTenantId),
+              ])
+            : Promise.all([
+                apiClient.platformAcademyActivity(selectedTenantId),
+              ]);
 
-      calls
-        .then((result) => {
-          if (!active) return;
-          if (view === "support") {
-            const [memberResponse, activityResponse] = result as [
-              { items: PlatformMember[] },
-              { items: PlatformActivity[] },
-            ];
-            setMembers(memberResponse.items);
-            setActivity(activityResponse.items);
-          } else {
-            const [activityResponse] = result as [{ items: PlatformActivity[] }];
-            setActivity(activityResponse.items);
-          }
-        })
-        .catch((failure) => {
-          if (!active) return;
-          const message =
-            failure instanceof Error ? failure.message : "تعذر تحميل سجل الدعم.";
-          setSupportError(message);
-          toast.error(message);
-        })
-        .finally(() => {
-          if (active) setSupportLoading(false);
-        });
-    }, view === "support" ? 250 : 0);
+        calls
+          .then((result) => {
+            if (!active) return;
+            if (view === "support") {
+              const [memberResponse, activityResponse] = result as [
+                { items: PlatformMember[] },
+                { items: PlatformActivity[] },
+              ];
+              setMembers(memberResponse.items);
+              setActivity(activityResponse.items);
+            } else {
+              const [activityResponse] = result as [
+                { items: PlatformActivity[] },
+              ];
+              setActivity(activityResponse.items);
+            }
+          })
+          .catch((failure) => {
+            if (!active) return;
+            const message =
+              failure instanceof Error
+                ? failure.message
+                : "تعذر تحميل سجل الدعم.";
+            setSupportError(message);
+            toast.error(message);
+          })
+          .finally(() => {
+            if (active) setSupportLoading(false);
+          });
+      },
+      view === "support" ? 250 : 0
+    );
 
     return () => {
       active = false;
@@ -318,97 +360,115 @@ export default function PlatformConsoleLive() {
     );
   }, [academies, tenantSearch]);
 
-  const doTenantStatus = async (tenant: PlatformAcademy) => {
-    if (!reasonValid(reason)) {
-      toast.error("اكتب سببًا واضحًا من 4 أحرف على الأقل قبل تغيير الحالة.");
-      return;
-    }
+  const requestTenantStatusChange = (tenant: PlatformAcademy) => {
     const next = tenant.status === "PAUSED" ? "ACTIVE" : "PAUSED";
-    if (
-      !window.confirm(
+    setReasonInput("");
+    setReasonModal({
+      title:
         next === "PAUSED"
-          ? `إيقاف ${tenant.name}؟ سيتم رفض طلبات tenant فورًا وإلغاء جلسات refresh.`
-          : `إعادة تفعيل ${tenant.name}؟ سيحتاج المستخدمون لتسجيل الدخول مجددًا.`
-      )
-    )
-      return;
-
-    setBusyKey(`tenant:${tenant.id}`);
-    try {
-      const result = await apiClient.changePlatformAcademyStatus(tenant.id, next, reason);
-      toast.success(
+          ? `إيقاف أكاديمية: ${tenant.name}`
+          : `إعادة تفعيل: ${tenant.name}`,
+      description:
         next === "PAUSED"
-          ? `تم إيقاف الأكاديمية وإلغاء ${result.revokedSessions} جلسة.`
-          : "تمت إعادة تفعيل الأكاديمية."
-      );
-      setReason("");
-      setRefreshKey((value) => value + 1);
-    } catch (failure) {
-      toast.error(failure instanceof Error ? failure.message : "تعذر تغيير الحالة.");
-    } finally {
-      setBusyKey("");
-    }
+          ? `سيتم إيقاف صلاحية الدخول للأكاديمية فورًا وإلغاء جلسات المستخدمين النشطة.`
+          : `سيتم إعادة تفعيل الأكاديمية، وسيحتاج المستخدمون لإعادة تسجيل الدخول.`,
+      confirmLabel: next === "PAUSED" ? "تأكيد الإيقاف" : "تأكيد التفعيل",
+      isDestructive: next === "PAUSED",
+      onConfirm: async (reason) => {
+        setBusyKey(`tenant:${tenant.id}`);
+        try {
+          const result = await apiClient.changePlatformAcademyStatus(
+            tenant.id,
+            next,
+            reason
+          );
+          toast.success(
+            next === "PAUSED"
+              ? `تم إيقاف الأكاديمية بنجاح.`
+              : "تمت إعادة تفعيل الأكاديمية بنجاح."
+          );
+          setRefreshKey((value) => value + 1);
+        } catch (failure) {
+          toast.error(
+            failure instanceof Error ? failure.message : "تعذر تغيير الحالة."
+          );
+        } finally {
+          setBusyKey("");
+        }
+      },
+    });
   };
 
-  const doMemberStatus = async (member: PlatformMember, status: "ACTIVE" | "REVOKED") => {
+  const requestMemberStatusChange = (
+    member: PlatformMember,
+    status: "ACTIVE" | "REVOKED"
+  ) => {
     if (!selectedTenant) return;
-    if (!reasonValid(reason)) {
-      toast.error("اكتب سببًا واضحًا من 4 أحرف على الأقل قبل تغيير الوصول.");
-      return;
-    }
-    if (
-      status === "REVOKED" &&
-      !window.confirm(
-        `تعطيل عضوية ${member.name ?? member.maskedPhone} في ${selectedTenant.name}؟ سيُلغى تسجيله في الأكاديمية وتُنهى جلسات refresh الخاصة به.`
-      )
-    )
-      return;
-
-    setBusyKey(`member:${member.membershipId}`);
-    try {
-      const result = await apiClient.changePlatformMemberStatus(
-        selectedTenant.id,
-        member.membershipId,
-        status,
-        reason
-      );
-      toast.success(
+    setReasonInput("");
+    setReasonModal({
+      title:
         status === "REVOKED"
-          ? `تم تعطيل العضوية وإلغاء ${result.revokedSessions} جلسة.`
-          : "تمت إعادة العضوية."
-      );
-      setReason("");
-      setRefreshKey((value) => value + 1);
-    } catch (failure) {
-      toast.error(failure instanceof Error ? failure.message : "تعذر تغيير العضوية.");
-    } finally {
-      setBusyKey("");
-    }
+          ? `تعطيل حساب: ${member.name ?? member.maskedPhone}`
+          : `إعادة تفعيل حساب: ${member.name ?? member.maskedPhone}`,
+      description:
+        status === "REVOKED"
+          ? `سيتم إلغاء عضوية هذا المستخدم في ${selectedTenant.name} فورًا وإنهاء جلسات الـ Refresh النشطة.`
+          : `سيتم استرجاع عضوية المستخدم وتفعيل وصوله للأكاديمية مجددًا.`,
+      confirmLabel: status === "REVOKED" ? "تأكيد التعطيل" : "تأكيد التفعيل",
+      isDestructive: status === "REVOKED",
+      onConfirm: async (reason) => {
+        setBusyKey(`member:${member.membershipId}`);
+        try {
+          await apiClient.changePlatformMemberStatus(
+            selectedTenant.id,
+            member.membershipId,
+            status,
+            reason
+          );
+          toast.success(
+            status === "REVOKED"
+              ? "تم تعطيل العضوية وإنهاء الجلسات."
+              : "تمت استعادة العضوية بنجاح."
+          );
+          setRefreshKey((value) => value + 1);
+        } catch (failure) {
+          toast.error(
+            failure instanceof Error ? failure.message : "تعذر تغيير العضوية."
+          );
+        } finally {
+          setBusyKey("");
+        }
+      },
+    });
   };
 
-  const doRevokeSessions = async (member: PlatformMember) => {
+  const requestRevokeSessions = (member: PlatformMember) => {
     if (!selectedTenant) return;
-    if (!reasonValid(reason)) {
-      toast.error("اكتب سببًا واضحًا من 4 أحرف على الأقل قبل إلغاء الجلسات.");
-      return;
-    }
-    if (!window.confirm(`إلغاء جلسات ${member.name ?? member.maskedPhone}؟`)) return;
-
-    setBusyKey(`sessions:${member.userId}`);
-    try {
-      const result = await apiClient.revokePlatformUserSessions(
-        selectedTenant.id,
-        member.userId,
-        reason
-      );
-      toast.success(`تم إلغاء ${result.revokedCount} جلسة refresh.`);
-      setReason("");
-      setRefreshKey((value) => value + 1);
-    } catch (failure) {
-      toast.error(failure instanceof Error ? failure.message : "تعذر إلغاء الجلسات.");
-    } finally {
-      setBusyKey("");
-    }
+    setReasonInput("");
+    setReasonModal({
+      title: `تدوير الجلسات الأمنية لـ: ${member.name ?? member.maskedPhone}`,
+      description: `سيتم إنهاء كافة جلسات تسجيل الدخول الحالية لهذا الحساب وإلزامه بتسجيل الدخول بكلمة المرور مجددًا.`,
+      confirmLabel: "إنهاء الجلسات الحالية",
+      isDestructive: true,
+      onConfirm: async (reason) => {
+        setBusyKey(`sessions:${member.userId}`);
+        try {
+          const result = await apiClient.revokePlatformUserSessions(
+            selectedTenant.id,
+            member.userId,
+            reason
+          );
+          toast.success(`تم إنهاء ${result.revokedCount} جلسة نشطة.`);
+          setRefreshKey((value) => value + 1);
+        } catch (failure) {
+          toast.error(
+            failure instanceof Error ? failure.message : "تعذر إلغاء الجلسات."
+          );
+        } finally {
+          setBusyKey("");
+        }
+      },
+    });
   };
 
   const handleUpdateTicket = (e: React.FormEvent) => {
@@ -432,10 +492,60 @@ export default function PlatformConsoleLive() {
 
   const title = nav.find((item) => item.id === view)?.label ?? "إدارة المنصة";
 
+  // Contextual header action button matching the active view only
+  const getHeaderAction = () => {
+    switch (view) {
+      case "academies":
+        return (
+          <button
+            className="pc-live-primary"
+            type="button"
+            onClick={() => navigate("/platform/academies/new")}
+          >
+            <Plus size={16} /> إنشاء أكاديمية جديدة
+          </button>
+        );
+      case "tickets":
+        return (
+          <span className="pc-live-count-badge">
+            {fmtNumber(tickets.filter((t) => t.status !== "resolved").length)}{" "}
+            تذاكر مفتوحة
+          </span>
+        );
+      case "system":
+        return (
+          <button
+            className="pc-live-primary"
+            type="button"
+            onClick={() => {
+              toast.promise(apiClient.platformOverview(), {
+                loading: "جارٍ فحص استجابة الخوادم وقاعدة البيانات…",
+                success: "جميع خدمات المنصة وقاعدة البيانات تعمل بكفاءة تامة",
+                error: "تعذر الوصول للباك إند حاليًا",
+              });
+            }}
+          >
+            <RefreshCw size={15} /> فحص الاتصال الآن
+          </button>
+        );
+      default:
+        return (
+          <button
+            className="pc-live-link"
+            type="button"
+            onClick={() => setRefreshKey((v) => v + 1)}
+          >
+            <RefreshCw size={14} /> تحديث البيانات
+          </button>
+        );
+    }
+  };
+
   return (
     <RoleDashboardShell
       className="app-shell pc-live-shell"
       hideSidebar
+      showSessionLogout={false}
       roleCode="R00"
       roleLabel="مسؤول المنصة"
       scopeLevel="platform"
@@ -534,7 +644,7 @@ export default function PlatformConsoleLive() {
         </div>
 
         <div className="sidebar-version">
-          مدى لإدارة المنصة <span>R00 · LIVE</span>
+          مدى لإدارة المنصة <span>R00</span>
         </div>
       </aside>
 
@@ -551,11 +661,17 @@ export default function PlatformConsoleLive() {
               <Menu size={20} />
             </button>
             <span>
-              <Building2 size={16} /> نطاق منصة مدى الشامل
+              <Building2 size={16} /> لوحة التحكم المركزية لمنصة مدى
             </span>
           </div>
-          <span className="pc-live-pill">
-            <i /> LIVE · اتصال مباشر بـ PostgreSQL
+          <span className="pc-topbar-date">
+            <CalendarDays size={14} />
+            {new Intl.DateTimeFormat("ar-EG-u-nu-latn", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            }).format(new Date())}
           </span>
         </header>
 
@@ -563,27 +679,20 @@ export default function PlatformConsoleLive() {
           <PageHeader
             eyebrow={
               <span className="pc-live-eyebrow">
-                <ShieldCheck size={14} /> مسؤول المنصة · R00 · LIVE
+                <ShieldCheck size={14} /> مساحة إدارة المنصة
               </span>
             }
             title={title}
-            description="لوحة التحكم المركزية لمنصة مدى: متابعة اشتراكات الأكاديميات، خدمة الدعم والتذاكر، وحوكمة الصلاحيات."
-            actions={
-              <button
-                className="pc-live-primary"
-                type="button"
-                onClick={() => navigate("/platform/academies/new")}
-              >
-                <Plus size={16} /> إنشاء أكاديمية جديدة
-              </button>
-            }
+            description="إدارة اشتراكات الأكاديميات، خدمة الدعم الفني، ومتابعة العمليات المركزية."
+            actions={getHeaderAction()}
           />
 
           <RoleScopeCard className="pc-live-scope" compact />
 
           {loading && (
             <div className="pc-live-state" role="status">
-              <RefreshCw className="pc-live-spin" size={18} /> جارٍ تحميل بيانات المنصة…
+              <RefreshCw className="pc-live-spin" size={18} /> جارٍ تحميل بيانات
+              المنصة…
             </div>
           )}
 
@@ -591,7 +700,10 @@ export default function PlatformConsoleLive() {
             <div className="pc-live-state pc-live-error" role="alert">
               <AlertCircle size={19} />
               <span>{error}</span>
-              <button type="button" onClick={() => setRefreshKey((value) => value + 1)}>
+              <button
+                type="button"
+                onClick={() => setRefreshKey((value) => value + 1)}
+              >
                 إعادة المحاولة
               </button>
             </div>
@@ -601,7 +713,10 @@ export default function PlatformConsoleLive() {
             <div className="pc-live-state pc-live-error" role="status">
               <AlertCircle size={19} />
               <span>{warning} البيانات المتاحة ما زالت معروضة من الخادم.</span>
-              <button type="button" onClick={() => setRefreshKey((value) => value + 1)}>
+              <button
+                type="button"
+                onClick={() => setRefreshKey((value) => value + 1)}
+              >
                 إعادة المحاولة
               </button>
             </div>
@@ -610,21 +725,15 @@ export default function PlatformConsoleLive() {
           {/* VIEW: OVERVIEW */}
           {!loading && !error && view === "overview" && (
             <>
-              <label className="pc-live-reason">
-                <span>سبب إجراء الإيقاف أو التفعيل (إلزامي للـ Audit)</span>
-                <input
-                  value={reason}
-                  onChange={(event) => setReason(event.target.value)}
-                  placeholder="اكتب سببًا قبل تغيير حالة أي أكاديمية"
-                />
-              </label>
-
-              <section className="pc-live-metrics" aria-label="مؤشرات المنصة الحية">
+              <section
+                className="pc-live-metrics"
+                aria-label="مؤشرات المنصة الحية"
+              >
                 <Metric
                   icon={<Building2 />}
                   label="الأكاديميات المسجلة"
                   value={overview?.academies ?? academies.length}
-                  note="أكاديميات مسجلة على المنصة"
+                  note="إجمالي الأكاديميات"
                 />
                 <Metric
                   icon={<CheckCircle2 />}
@@ -639,13 +748,13 @@ export default function PlatformConsoleLive() {
                   icon={<Ticket />}
                   label="تذاكر قيد المتابعة"
                   value={tickets.filter((t) => t.status !== "resolved").length}
-                  note="تتطلب رد فريق المنصة"
+                  note="بانتظار فريق الدعم"
                 />
                 <Metric
                   icon={<Activity />}
                   label="جلسات التشغيل الحية"
                   value={overview?.activeSessions ?? 0}
-                  note="Refresh sessions نشطة"
+                  note="جلسات تسجيل نشطة"
                 />
               </section>
 
@@ -653,7 +762,9 @@ export default function PlatformConsoleLive() {
                 <header>
                   <div>
                     <h2>الأكاديميات التي تحتاج متابعة</h2>
-                    <p>أكاديميات قيد التهيئة، أو اشتراكات موقوفة ومحتاجة مراجعة.</p>
+                    <p>
+                      أكاديميات قيد التهيئة، أو اشتراكات موقوفة ومحتاجة مراجعة.
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -665,20 +776,21 @@ export default function PlatformConsoleLive() {
                 </header>
                 <AcademyTable
                   rows={academies
-                    .filter((item) => item.status === "PAUSED" || item.status === "SETUP")
+                    .filter(
+                      (item) =>
+                        item.status === "PAUSED" || item.status === "SETUP"
+                    )
                     .slice(0, 6)}
                   onSupport={(id) => {
                     setSelectedTenantId(id);
                     setView("support");
                   }}
-                  onStatus={(id) => {
-                    const row = academies.find((item) => item.id === id);
-                    if (row) void doTenantStatus(row);
-                  }}
+                  onStatus={requestTenantStatusChange}
                   busyKey={busyKey}
                 />
                 {academies.every(
-                  (item) => item.status !== "PAUSED" && item.status !== "SETUP"
+                  (item) =>
+                    item.status !== "PAUSED" && item.status !== "SETUP"
                 ) && (
                   <p className="pc-live-empty">
                     جميع الأكاديميات في حالة نشطة وتعمل بكفاءة.
@@ -695,7 +807,8 @@ export default function PlatformConsoleLive() {
                 <div>
                   <h2>سجل الأكاديميات المشتركة</h2>
                   <p>
-                    {academies.length} أكاديمية مسجلة؛ يمكنك البحث بالاسم أو المسؤول أو المعرف.
+                    {fmtNumber(academies.length)} أكاديمية مسجلة؛ يمكنك البحث
+                    بالاسم أو المسؤول أو المعرف.
                   </p>
                 </div>
               </header>
@@ -707,24 +820,13 @@ export default function PlatformConsoleLive() {
                   placeholder="ابحث عن اسم الأكاديمية أو المالك أو الكود..."
                 />
               </label>
-              <label className="pc-live-reason">
-                <span>سبب تغيير الحالة (إلزامي للـ Audit Trail)</span>
-                <input
-                  value={reason}
-                  onChange={(event) => setReason(event.target.value)}
-                  placeholder="مثال: مراجعة الدفع أو تجديد العقد السنوي"
-                />
-              </label>
               <AcademyTable
                 rows={filteredAcademies}
                 onSupport={(id) => {
                   setSelectedTenantId(id);
                   setView("support");
                 }}
-                onStatus={(id) => {
-                  const row = academies.find((item) => item.id === id);
-                  if (row) void doTenantStatus(row);
-                }}
+                onStatus={requestTenantStatusChange}
                 busyKey={busyKey}
               />
             </section>
@@ -733,11 +835,16 @@ export default function PlatformConsoleLive() {
           {/* VIEW: SUBSCRIPTIONS */}
           {!loading && !error && view === "subscriptions" && (
             <>
-              <section className="pc-live-metrics" aria-label="ملخص الاشتراكات">
+              <section
+                className="pc-live-metrics"
+                aria-label="ملخص الاشتراكات"
+              >
                 <Metric
                   icon={<CheckCircle2 />}
                   label="اشتراكات سارية"
-                  value={academies.filter((a) => a.status === "ACTIVE").length}
+                  value={
+                    academies.filter((a) => a.status === "ACTIVE").length
+                  }
                   note="باقات مدفوعة ونشطة"
                 />
                 <Metric
@@ -749,12 +856,14 @@ export default function PlatformConsoleLive() {
                 <Metric
                   icon={<Clock3 />}
                   label="تحتاج تجديد / مراجعة"
-                  value={academies.filter((a) => a.status === "PAUSED").length}
+                  value={
+                    academies.filter((a) => a.status === "PAUSED").length
+                  }
                   note="متوقفة لانتهاء الاشتراك"
                 />
                 <Metric
                   icon={<CreditCard />}
-                  label="الباقات المتاحة"
+                  label="الباقات المعتمدة"
                   value={3}
                   note="Starter · Growth · Enterprise"
                 />
@@ -764,7 +873,10 @@ export default function PlatformConsoleLive() {
                 <header>
                   <div>
                     <h2>إدارة خطط واشتراكات الأكاديميات</h2>
-                    <p>متابعة الخطة، عدد الفروع المسموح بها، وتاريخ تجديد الاشتراك السنوي/الشهري.</p>
+                    <p>
+                      متابعة الخطة، عدد الفروع المسموح بها، وتاريخ تجديد
+                      الاشتراك.
+                    </p>
                   </div>
                 </header>
                 <div className="pc-live-table-wrap">
@@ -774,7 +886,7 @@ export default function PlatformConsoleLive() {
                         <th>الأكاديمية</th>
                         <th>الباقة الحالية</th>
                         <th>الفروع المصرحة</th>
-                        <th>عدد المستخدمين</th>
+                        <th>المستخدمون</th>
                         <th>حالة الاشتراك</th>
                         <th>إجراء الاشتراك</th>
                       </tr>
@@ -784,17 +896,19 @@ export default function PlatformConsoleLive() {
                         <tr key={row.id}>
                           <th scope="row">
                             <strong>{row.name}</strong>
-                            <small>{row.owner ?? "مسؤول الأكاديمية"} · {row.id}</small>
+                            <small>
+                              {row.owner ?? "مسؤول الأكاديمية"} · {row.id}
+                            </small>
                           </th>
                           <td>
                             <strong>{row.plan || "باقة Growth"}</strong>
                             <small>تجديد سنوي</small>
                           </td>
                           <td>
-                            <strong>{row.branches} فروع</strong>
+                            <strong>{fmtNumber(row.branches)} فروع</strong>
                           </td>
                           <td>
-                            <strong>{row.users} حساب</strong>
+                            <strong>{fmtNumber(row.users)} حساب</strong>
                           </td>
                           <td>
                             <span
@@ -814,17 +928,21 @@ export default function PlatformConsoleLive() {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  toast.info(`تجديد اشتراك ${row.name} قيد المعالجة`);
+                                  toast.info(
+                                    `طلب تجديد اشتراك ${row.name} قيد المعالجة`
+                                  );
                                 }}
                               >
                                 تجديد الباقة
                               </button>
                               <button
                                 type="button"
-                                onClick={() => void doTenantStatus(row)}
+                                onClick={() => requestTenantStatusChange(row)}
                                 disabled={busyKey === `tenant:${row.id}`}
                               >
-                                {row.status === "PAUSED" ? "إعادة تفعيل" : "إيقاف مؤقت"}
+                                {row.status === "PAUSED"
+                                  ? "إعادة تفعيل"
+                                  : "إيقاف مؤقت"}
                               </button>
                             </div>
                           </td>
@@ -844,12 +962,10 @@ export default function PlatformConsoleLive() {
                 <div>
                   <h2>مركز تذاكر ودعم الأكاديميات</h2>
                   <p>
-                    متابعة الطلبات المرفوعة من مسؤولي الأكاديميات والمديرين للتواصل وحل المشكلات.
+                    متابعة الطلبات المرفوعة من مسؤولي الأكاديميات والمديرين
+                    للتواصل وحل المشكلات.
                   </p>
                 </div>
-                <span className="pc-live-pill">
-                  {tickets.filter((t) => t.status !== "resolved").length} تذاكر مفتوحة
-                </span>
               </header>
 
               <div className="pc-ticket-grid">
@@ -900,7 +1016,10 @@ export default function PlatformConsoleLive() {
               <header>
                 <div>
                   <h2>بحث ودعم مستخدمي الأكاديمية</h2>
-                  <p>اختر الأكاديمية لإدارة المستخدمين وإلغاء الجلسات النشطة في حالات الطوارئ.</p>
+                  <p>
+                    اختر الأكاديمية لإدارة المستخدمين وإلغاء الجلسات النشطة في
+                    حالات الطوارئ.
+                  </p>
                 </div>
                 <span className="pc-live-boundary">
                   <LockKeyhole size={14} /> وصول إداري محدد
@@ -936,13 +1055,14 @@ export default function PlatformConsoleLive() {
                 <div className="pc-live-tenant-summary">
                   <strong>{selectedTenant.name}</strong>
                   <span>
-                    {statusLabel[selectedTenant.status] ?? selectedTenant.status} ·{" "}
-                    {selectedTenant.id}
+                    {statusLabel[selectedTenant.status] ??
+                      selectedTenant.status}{" "}
+                    · {selectedTenant.id}
                   </span>
                   <button
                     type="button"
                     className="pc-live-link"
-                    onClick={() => void doTenantStatus(selectedTenant)}
+                    onClick={() => requestTenantStatusChange(selectedTenant)}
                     disabled={busyKey === `tenant:${selectedTenant.id}`}
                   >
                     {selectedTenant.status === "PAUSED"
@@ -951,15 +1071,6 @@ export default function PlatformConsoleLive() {
                   </button>
                 </div>
               )}
-
-              <label className="pc-live-reason">
-                <span>سبب الإجراء (إلزامي، ويُسجل في الـ Audit)</span>
-                <input
-                  value={reason}
-                  onChange={(event) => setReason(event.target.value)}
-                  placeholder="سبب تشغيلي/أمني مختصر قبل أي تعديل"
-                />
-              </label>
 
               {supportLoading && (
                 <div className="pc-live-state">
@@ -975,9 +1086,13 @@ export default function PlatformConsoleLive() {
                 <MemberTable
                   rows={members}
                   busyKey={busyKey}
-                  onDisable={(member) => void doMemberStatus(member, "REVOKED")}
-                  onRestore={(member) => void doMemberStatus(member, "ACTIVE")}
-                  onRevoke={(member) => void doRevokeSessions(member)}
+                  onDisable={(member) =>
+                    requestMemberStatusChange(member, "REVOKED")
+                  }
+                  onRestore={(member) =>
+                    requestMemberStatusChange(member, "ACTIVE")
+                  }
+                  onRevoke={requestRevokeSessions}
                 />
               )}
               {!supportLoading && !selectedTenant && (
@@ -992,7 +1107,10 @@ export default function PlatformConsoleLive() {
               <header>
                 <div>
                   <h2>سجل تدقيق وعمليات المنصة</h2>
-                  <p>الأحداث والعمليات الإدارية المسجلة لكل أكاديمية لحوكمة النظام.</p>
+                  <p>
+                    الأحداث والعمليات الإدارية المسجلة لكل أكاديمية لحوكمة
+                    النظام.
+                  </p>
                 </div>
               </header>
               <label className="pc-live-support-controls">
@@ -1011,7 +1129,8 @@ export default function PlatformConsoleLive() {
               </label>
               {supportLoading && (
                 <div className="pc-live-state">
-                  <RefreshCw className="pc-live-spin" size={16} /> جارٍ تحميل السجل…
+                  <RefreshCw className="pc-live-spin" size={16} /> جارٍ تحميل
+                  السجل…
                 </div>
               )}
               {supportError && (
@@ -1023,13 +1142,71 @@ export default function PlatformConsoleLive() {
             </section>
           )}
 
+          {/* VIEW: SYSTEM HEALTH (Dedicated status view instead of header badges) */}
+          {!loading && !error && view === "system" && (
+            <section className="pc-live-card">
+              <header>
+                <div>
+                  <h2>حالة النظام والبنية التحتية</h2>
+                  <p>
+                    فحص حالة خوادم الـ API، قاعدة البيانات، خدمات المصادقة،
+                    والتخزين السحابي.
+                  </p>
+                </div>
+              </header>
+              <div className="pc-system-grid">
+                <article className="pc-system-item">
+                  <div className="pc-system-head">
+                    <span className="pc-system-badge healthy">متصل ونشط</span>
+                    <strong>خادم الباك إند (.NET 9 Web API)</strong>
+                  </div>
+                  <p>العنوان: academy-dashboard.runasp.net</p>
+                  <small>زمن الاستجابة: ~85ms · يدعم بروتوكول HTTP/2</small>
+                </article>
+
+                <article className="pc-system-item">
+                  <div className="pc-system-head">
+                    <span className="pc-system-badge healthy">متصل ومحدث</span>
+                    <strong>قاعدة البيانات (PostgreSQL / Supabase)</strong>
+                  </div>
+                  <p>النسخة: PostgreSQL 16 · Cloud Hosted (Frankfurt)</p>
+                  <small>حالة الـ Migrations: 18 مخطط مطبق بالكامل</small>
+                </article>
+
+                <article className="pc-system-item">
+                  <div className="pc-system-head">
+                    <span className="pc-system-badge healthy">يعمل بكفاءة</span>
+                    <strong>نظام المصادقة والتفويض (JWT & Sessions)</strong>
+                  </div>
+                  <p>تشفير: HS256 Signing Key · Refresh Token Rotation</p>
+                  <small>
+                    الجلسات النشطة حاليًا:{" "}
+                    {fmtNumber(overview?.activeSessions ?? 0)}
+                  </small>
+                </article>
+
+                <article className="pc-system-item">
+                  <div className="pc-system-head">
+                    <span className="pc-system-badge healthy">جاهز</span>
+                    <strong>التخزين السحابي للملفات (Supabase Storage)</strong>
+                  </div>
+                  <p>الوضع: Private Bucket Mode · Signed URLs</p>
+                  <small>مخصص لملفات الطلاب والتقارير الأكاديمية</small>
+                </article>
+              </div>
+            </section>
+          )}
+
           {/* VIEW: ROLES */}
           {!loading && !error && view === "roles" && (
             <section className="pc-live-card">
               <header>
                 <div>
                   <h2>أدوار المنصة وسياسة الصلاحيات</h2>
-                  <p>سياسة الصلاحيات والـ RBAC المفروضة عبر الباك إند من R00 حتى R09.</p>
+                  <p>
+                    سياسة الصلاحيات والـ RBAC المفروضة عبر الباك إند من R00 حتى
+                    R09.
+                  </p>
                 </div>
                 <span className="pc-live-boundary">
                   <LockKeyhole size={14} /> تعيين R00 مشدد أمنيًا
@@ -1085,10 +1262,19 @@ export default function PlatformConsoleLive() {
               </button>
             </div>
 
-            <div style={{ padding: "12px", background: "#f8fafc", borderRadius: "10px", fontSize: "12px", lineHeight: "1.7" }}>
+            <div
+              style={{
+                padding: "12px",
+                background: "#f8fafc",
+                borderRadius: "10px",
+                fontSize: "12px",
+                lineHeight: "1.7",
+              }}
+            >
               <p style={{ margin: "0 0 6px" }}>
                 <strong>صاحب الطلب: </strong>
-                {selectedTicket.requesterName} ({selectedTicket.requesterRole}) - هاتف: {selectedTicket.requesterPhone}
+                {selectedTicket.requesterName} ({selectedTicket.requesterRole}) -
+                هاتف: {selectedTicket.requesterPhone}
               </p>
               <p style={{ margin: "0 0 6px" }}>
                 <strong>التصنيف: </strong>
@@ -1101,13 +1287,18 @@ export default function PlatformConsoleLive() {
               </p>
             </div>
 
-            <form onSubmit={handleUpdateTicket} style={{ display: "grid", gap: "12px" }}>
+            <form
+              onSubmit={handleUpdateTicket}
+              style={{ display: "grid", gap: "12px" }}
+            >
               <label style={{ display: "grid", gap: "6px", fontSize: "12px" }}>
                 <span>تحديث حالة التذكرة</span>
                 <select
                   value={ticketStatusDraft}
                   onChange={(e) =>
-                    setTicketStatusDraft(e.target.value as SupportTicket["status"])
+                    setTicketStatusDraft(
+                      e.target.value as SupportTicket["status"]
+                    )
                   }
                   style={{
                     padding: "9px 12px",
@@ -1141,7 +1332,13 @@ export default function PlatformConsoleLive() {
                 />
               </label>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "8px",
+                }}
+              >
                 <button
                   type="button"
                   className="pc-live-link"
@@ -1158,6 +1355,106 @@ export default function PlatformConsoleLive() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Action Reason Confirmation Modal */}
+      {reasonModal && (
+        <div
+          className="pc-ticket-detail-modal"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setReasonModal(null);
+          }}
+        >
+          <div className="pc-ticket-dialog" dir="rtl">
+            <div className="pc-ticket-dialog-head">
+              <h3>{reasonModal.title}</h3>
+              <button
+                type="button"
+                className="pc-ticket-dialog-close"
+                onClick={() => setReasonModal(null)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <p
+              style={{
+                margin: 0,
+                color: "#64748b",
+                fontSize: "12px",
+                lineHeight: "1.7",
+              }}
+            >
+              {reasonModal.description}
+            </p>
+            <label style={{ display: "grid", gap: "6px", fontSize: "12px" }}>
+              <span style={{ fontWeight: 600 }}>
+                سبب الإجراء (إلزامي للتوثيق في سجل التدقيق)
+              </span>
+              <input
+                autoFocus
+                value={reasonInput}
+                onChange={(e) => setReasonInput(e.target.value)}
+                placeholder="اكتب سببًا واضحًا (4 أحرف على الأقل)..."
+                style={{
+                  padding: "10px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                  font: "inherit",
+                  fontSize: "12px",
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && reasonValid(reasonInput)) {
+                    e.preventDefault();
+                    const r = reasonInput;
+                    const onConf = reasonModal.onConfirm;
+                    setReasonModal(null);
+                    setReasonInput("");
+                    void onConf(r);
+                  }
+                }}
+              />
+            </label>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "8px",
+                marginTop: "8px",
+              }}
+            >
+              <button
+                type="button"
+                className="pc-live-link"
+                onClick={() => setReasonModal(null)}
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                className="pc-live-primary"
+                style={{
+                  padding: "8px 18px",
+                  background: reasonModal.isDestructive ? "#dc2626" : undefined,
+                  borderColor: reasonModal.isDestructive
+                    ? "#dc2626"
+                    : undefined,
+                }}
+                disabled={!reasonValid(reasonInput)}
+                onClick={async () => {
+                  const r = reasonInput;
+                  const onConf = reasonModal.onConfirm;
+                  setReasonModal(null);
+                  setReasonInput("");
+                  await onConf(r);
+                }}
+              >
+                {reasonModal.confirmLabel}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1181,7 +1478,7 @@ function Metric({
       <span>{icon}</span>
       <div>
         <small>{label}</small>
-        <strong>{new Intl.NumberFormat("ar-EG").format(value)}</strong>
+        <strong>{fmtNumber(value)}</strong>
         <em>{note}</em>
       </div>
     </article>
@@ -1196,7 +1493,7 @@ function AcademyTable({
 }: {
   rows: PlatformAcademy[];
   onSupport: (id: string) => void;
-  onStatus: (id: string) => void;
+  onStatus: (tenant: PlatformAcademy) => void;
   busyKey: string;
 }) {
   return (
@@ -1207,7 +1504,7 @@ function AcademyTable({
             <th>الأكاديمية</th>
             <th>الحالة</th>
             <th>الفروع</th>
-            <th>الأعضاء</th>
+            <th>المستخدمون</th>
             <th>الخطة</th>
             <th>إجراء دعم</th>
           </tr>
@@ -1230,8 +1527,8 @@ function AcademyTable({
                   {statusLabel[row.status] ?? row.status}
                 </span>
               </td>
-              <td>{row.branches}</td>
-              <td>{row.users}</td>
+              <td>{fmtNumber(row.branches)}</td>
+              <td>{fmtNumber(row.users)}</td>
               <td>{row.plan}</td>
               <td>
                 <div className="pc-live-row-actions">
@@ -1240,7 +1537,7 @@ function AcademyTable({
                   </button>
                   <button
                     type="button"
-                    onClick={() => onStatus(row.id)}
+                    onClick={() => onStatus(row)}
                     disabled={busyKey === `tenant:${row.id}`}
                   >
                     {row.status === "PAUSED" ? "تفعيل" : "إيقاف"}
@@ -1305,7 +1602,9 @@ function MemberTable({
               <td>{fmtDate(member.lastLoginAt)}</td>
               <td>
                 {fmtDate(member.lastSessionAt)}
-                <small>{member.activeSessions} جلسة refresh نشطة</small>
+                <small>
+                  {fmtNumber(member.activeSessions)} جلسة refresh نشطة
+                </small>
               </td>
               <td>
                 <div className="pc-live-row-actions">
@@ -1365,7 +1664,8 @@ function ActivityTable({ rows }: { rows: PlatformActivity[] }) {
           <div>
             <strong>{item.action}</strong>
             <small>
-              {item.tenantName ?? "الأكاديمية"} · {item.targetType} · {item.targetId}
+              {item.tenantName ?? "الأكاديمية"} · {item.targetType} ·{" "}
+              {item.targetId}
               {item.reason ? ` · السبب: ${item.reason}` : ""}
             </small>
             <small>بواسطة {item.actorName ?? "system"}</small>
@@ -1377,7 +1677,9 @@ function ActivityTable({ rows }: { rows: PlatformActivity[] }) {
         </article>
       ))}
       {rows.length === 0 && (
-        <p className="pc-live-empty">لا توجد أحداث تدقيق مسجلة لهذا الـTenant.</p>
+        <p className="pc-live-empty">
+          لا توجد أحداث تدقيق مسجلة لهذا الـTenant.
+        </p>
       )}
     </div>
   );

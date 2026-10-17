@@ -81,7 +81,7 @@ export default function RoleDashboardShell({
   branchName,
   demo = true,
   hideSidebar = false,
-  showSessionLogout = true,
+  showSessionLogout = false,
   ...props
 }: RoleDashboardShellProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -133,7 +133,7 @@ export default function RoleDashboardShell({
           data-role-back={roleDefinition.backPath}
           data-scope-level={scopeLevel}
         >
-          {showSessionLogout && <SessionLogoutButton />}
+          {/* Logout is exclusively located in the sidebar navigation */}
           {!existingSidebar && (
             <>
               {mobileNavOpen && (

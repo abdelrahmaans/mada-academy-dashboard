@@ -83,11 +83,11 @@ export default function HomeLive({ me }: { me: AuthMe }) {
 }
 
 function LiveStat({ icon, label, value, suffix, tone }: { icon: ReactNode; label: string; value: number; suffix: string; tone: string }) {
-  return <article className={`r02-live-stat r02-live-stat-${tone}`}><span className="r02-live-stat-icon">{icon}</span><div><small>{label}</small><strong>{new Intl.NumberFormat("ar-EG").format(value)} <em>{suffix}</em></strong></div></article>;
+  return <article className={`r02-live-stat r02-live-stat-${tone}`}><span className="r02-live-stat-icon">{icon}</span><div><small>{label}</small><strong>{new Intl.NumberFormat("en-US").format(value)} <em>{suffix}</em></strong></div></article>;
 }
 
 function formatSessionTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "موعد الجلسة غير متاح";
-  return new Intl.DateTimeFormat("ar-EG", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(date);
+  return new Intl.DateTimeFormat("ar-EG-u-nu-latn", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(date);
 }
