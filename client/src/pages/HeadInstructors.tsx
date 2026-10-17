@@ -36,6 +36,7 @@ import {
   UserRound,
   Users,
   X,
+  Award,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
@@ -53,6 +54,7 @@ import {
 import WorkflowStepper from "@/components/WorkflowStepper";
 import { apiClient } from "@/lib/apiClient";
 import HeadInstructorsLive from "./HeadInstructorsLive";
+import RubricsManagementView from "@/components/RubricsManagementView";
 import {
   EvaluationCard,
   HeadInstructorsEvaluationsView,
@@ -64,7 +66,8 @@ type WorkspaceView =
   | "team"
   | "sessions"
   | "approvals"
-  | "evaluations";
+  | "evaluations"
+  | "rubrics";
 export type SessionStatus =
   | "scheduled"
   | "completed"
@@ -146,6 +149,7 @@ const VIEW_NAMES: Record<WorkspaceView, string> = {
   sessions: "الحصص والحضور",
   approvals: "اعتماد الحضور",
   evaluations: "تقييمات الطلاب",
+  rubrics: "بنك معايير التقييم",
 };
 const VIEW_VALUES = Object.keys(VIEW_NAMES) as WorkspaceView[];
 const SESSION_STATUS_LABELS: Record<SessionStatus, string> = {
@@ -886,6 +890,13 @@ function HeadInstructorsPreview() {
             <span>تقييمات الطلاب</span>
             <b>{liveMode ? "LIVE" : followUpEvaluationCount}</b>
           </button>
+          <button
+            className={view === "rubrics" ? "active" : ""}
+            onClick={() => goToView("rubrics")}
+          >
+            <Award size={17} />
+            <span>بنك معايير التقييم</span>
+          </button>
         </nav>
         <div className="academic-sidebar-divider" />
         <button
@@ -1095,6 +1106,7 @@ function HeadInstructorsPreview() {
                 cardStatusLabels={CARD_STATUS_LABELS}
               />
             ))}
+          {view === "rubrics" && <RubricsManagementView />}
 
           <footer className="academic-footnote">
             <span>

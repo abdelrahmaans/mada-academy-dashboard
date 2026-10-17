@@ -1,4 +1,4 @@
-import { BookOpen, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, CircleHelp, GraduationCap, LayoutDashboard, LogOut, Users, X } from "lucide-react";
+import { Award, BookOpen, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, CircleHelp, GraduationCap, LayoutDashboard, LogOut, Users, X } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import "./R03HeadInstructorsSidebar.css";
@@ -22,7 +22,7 @@ export default function R03HeadInstructorsSidebar({ open, onClose, activePath }:
       <div className="nav-caption">الإشراف الأكاديمي</div>
       <nav className="primary-nav" aria-label="الإشراف الأكاديمي">{ITEMS.map(item => { const Icon = item.icon; const active = activePath === item.path; return <button type="button" key={item.path} className={`nav-link ${active ? "active" : ""}`} aria-current={active ? "page" : undefined} onClick={() => go(item.path)}><Icon size={19} /><span>{item.label}</span></button>; })}</nav>
       <div className="nav-caption nav-caption-spaced">مسارات الإشراف</div>
-      <nav className="primary-nav" aria-label="مسارات الإشراف"><button className="nav-link" type="button" onClick={() => go("/head-instructors#evaluations")}><CheckCircle2 size={19} /><span>مراجعة التقييمات</span></button><button className="nav-link" type="button" onClick={() => go("/head-instructors#team")}><Users size={19} /><span>فريق المدربين</span></button></nav>
+      <nav className="primary-nav" aria-label="مسارات الإشراف"><button className="nav-link" type="button" onClick={() => go("/head-instructors#evaluations")}><CheckCircle2 size={19} /><span>مراجعة التقييمات</span></button><button className="nav-link" type="button" onClick={() => go("/head-instructors#rubrics")}><Award size={19} /><span>معايير التقييم</span></button><button className="nav-link" type="button" onClick={() => go("/head-instructors#team")}><Users size={19} /><span>فريق المدربين</span></button></nav>
       <div className="sidebar-spacer" /><div className="sidebar-help"><span className="help-icon"><CircleHelp size={18} /></span><div><strong>محتاج مساعدة؟</strong><span>دليل الإشراف الأكاديمي</span></div><ChevronLeft size={16} /></div>
       <div className="sidebar-bottom"><button className="nav-link" type="button" onClick={() => go("/head-instructors#approvals")}><CheckCircle2 size={19} /><span>اعتماد الحضور</span></button><button className="nav-link" type="button" onClick={() => { void logout().then(() => navigate("/login")); }}><LogOut size={19} /><span>تسجيل الخروج</span></button></div>
       <div className="sidebar-version">مدى لإدارة الأكاديميات <span>R03</span></div>

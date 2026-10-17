@@ -1233,3 +1233,412 @@ export const waitlistStorage = {
     waitlistStorage.saveEntries(updated);
   },
 };
+
+export type RubricCriterion = {
+  id: string;
+  key: string;
+  label: string;
+  category: "TECHNICAL" | "PRACTICAL" | "BEHAVIORAL" | "PHYSICAL" | "CREATIVE";
+  categoryLabel: string;
+  maxScore: number;
+  weightPercent?: number;
+  hint: string;
+};
+
+export type DisciplineRubric = {
+  id: string;
+  trackKey: "robotics" | "coding" | "circuits" | "ai" | "soft_skills" | "sports_swimming" | "martial_arts" | "general";
+  trackLabel: string;
+  title: string;
+  description: string;
+  scaleMax: number;
+  criteria: RubricCriterion[];
+  isActive: boolean;
+  isDefault: boolean;
+  updatedAt: string;
+  authorName?: string;
+};
+
+const RUBRICS_STORAGE_KEY = "mada_evaluation_rubrics_v1";
+
+const DEFAULT_RUBRICS: DisciplineRubric[] = [
+  {
+    id: "RBR-ROBO-01",
+    trackKey: "robotics",
+    trackLabel: "روبوتكس وميكاترونكس",
+    title: "نموذج تقييم مهارات الروبوتكس والمستشعرات",
+    description: "معايير معتمدة لقياس الدقة الميكانيكية، ربط المستشعرات، والبرمجة الحركية للروبوت.",
+    scaleMax: 5,
+    isActive: true,
+    isDefault: true,
+    updatedAt: "2026-10-15T10:00:00Z",
+    authorName: "مريم حسن (رئيس المدربين)",
+    criteria: [
+      {
+        id: "crt-101",
+        key: "mechanical_assembly",
+        label: "دقة التركيب والتجميع الميكانيكي",
+        category: "TECHNICAL",
+        categoryLabel: "مهارة فنية",
+        maxScore: 5,
+        weightPercent: 25,
+        hint: "ثبات الهيكل، سلامة التروس، وتركيب المحركات في مسارها الصحيح.",
+      },
+      {
+        id: "crt-102",
+        key: "sensor_programming",
+        label: "برمجة المستشعرات واتخاذ القرار",
+        category: "PRACTICAL",
+        categoryLabel: "تطبيق عملي",
+        maxScore: 5,
+        weightPercent: 30,
+        hint: "قراءة الحساسات (الموجات فوق الصوتية/الألوان) وتنفيذ ردود الفعل.",
+      },
+      {
+        id: "crt-103",
+        key: "troubleshooting",
+        label: "استكشاف الأعطال وحل المشكلات (Debugging)",
+        category: "CREATIVE",
+        categoryLabel: "تفكير تحليلي",
+        maxScore: 5,
+        weightPercent: 25,
+        hint: "القدرة على تشخيص الخلل وإعادة تجربة الحلول المستقلة.",
+      },
+      {
+        id: "crt-104",
+        key: "lab_safety_teamwork",
+        label: "السلامة المعملية والعمل الجماعي",
+        category: "BEHAVIORAL",
+        categoryLabel: "سلوك وانضباط",
+        maxScore: 5,
+        weightPercent: 20,
+        hint: "المحافظة على المكونات وتنظيم مساحة العمل والمشاركة البناءة.",
+      },
+    ],
+  },
+  {
+    id: "RBR-CODE-01",
+    trackKey: "coding",
+    trackLabel: "برمجة وتطوير ألعاب",
+    title: "نموذج تقييم التفكير البرمجي وبناء الألعاب",
+    description: "معايير تقييم خوارزميات البرمجة، التعامل مع المتغيرات والدوال، وتصميم بيئة اللعبة.",
+    scaleMax: 5,
+    isActive: true,
+    isDefault: true,
+    updatedAt: "2026-10-14T12:30:00Z",
+    authorName: "مريم حسن (رئيس المدربين)",
+    criteria: [
+      {
+        id: "crt-201",
+        key: "algorithmic_logic",
+        label: "التفكير الخوارزمي والمنطقي",
+        category: "TECHNICAL",
+        categoryLabel: "مهارة فنية",
+        maxScore: 5,
+        weightPercent: 30,
+        hint: "استخدام الحلقات التكرارية والشروط المنطقية بشكل صحيح وفعال.",
+      },
+      {
+        id: "crt-202",
+        key: "code_structure",
+        label: "نظافة الكود وهيكلة الأوامر",
+        category: "PRACTICAL",
+        categoryLabel: "تطبيق عملي",
+        maxScore: 5,
+        weightPercent: 25,
+        hint: "تسمية المتغيرات وتقسيم المهام لكتل مفهومة ومرتبة.",
+      },
+      {
+        id: "crt-203",
+        key: "game_mechanics",
+        label: "ابتكار آليات اللعبة والفيزياء",
+        category: "CREATIVE",
+        categoryLabel: "إبداع وابتكار",
+        maxScore: 5,
+        weightPercent: 25,
+        hint: "حركة الشخصيات، نظام النقاط، وتصميم تجربة مستخدم ممتعة.",
+      },
+      {
+        id: "crt-204",
+        key: "persistence",
+        label: "المثابرة وإنجاز المشروعات",
+        category: "BEHAVIORAL",
+        categoryLabel: "سلوك وانضباط",
+        maxScore: 5,
+        weightPercent: 20,
+        hint: "التركيز في المهام البرمجية والتطوير الذاتي للنماذج الأولية.",
+      },
+    ],
+  },
+  {
+    id: "RBR-CIRC-01",
+    trackKey: "circuits",
+    trackLabel: "دوائر إلكترونية وأنظمة مدمجة",
+    title: "نموذج تقييم الدوائر الكهربائية والـ Microcontrollers",
+    description: "قياس مهارات قراءة المخططات الإلكترونية، التعامل مع الملتيميتر واللوحات التوصيلية.",
+    scaleMax: 5,
+    isActive: true,
+    isDefault: true,
+    updatedAt: "2026-10-12T15:00:00Z",
+    authorName: "مريم حسن (رئيس المدربين)",
+    criteria: [
+      {
+        id: "crt-301",
+        key: "schematic_understanding",
+        label: "فهم المخططات والمكونات الإلكترونية",
+        category: "TECHNICAL",
+        categoryLabel: "مهارة فنية",
+        maxScore: 5,
+        weightPercent: 30,
+        hint: "التمييز بين المقاومات، المكثفات، الدايودات وقطبية التوصيل.",
+      },
+      {
+        id: "crt-302",
+        key: "breadboard_wiring",
+        label: "دقة التوصيل على لوحة التجارب (Breadboard)",
+        category: "PRACTICAL",
+        categoryLabel: "تطبيق عملي",
+        maxScore: 5,
+        weightPercent: 30,
+        hint: "نظافة الأسلاك، تجنب قصر الدائرة (Short Circuit)، وحساب الجهد.",
+      },
+      {
+        id: "crt-303",
+        key: "electrical_safety",
+        label: "إجراءات السلامة الكهربائية والأدوات",
+        category: "BEHAVIORAL",
+        categoryLabel: "سلامة وسلوك",
+        maxScore: 5,
+        weightPercent: 20,
+        hint: "التعامل السليم مع مصادر الطاقة واللحام بحذر ومسؤولية.",
+      },
+      {
+        id: "crt-304",
+        key: "circuit_innovation",
+        label: "تصميم دوائر وحلول تطبيقية",
+        category: "CREATIVE",
+        categoryLabel: "إبداع وتحليل",
+        maxScore: 5,
+        weightPercent: 20,
+        hint: "ابتكار دوائر استشعار ضوئي أو صوتي مخصصة لحل مشكلات واقعية.",
+      },
+    ],
+  },
+  {
+    id: "RBR-SWIM-01",
+    trackKey: "sports_swimming",
+    trackLabel: "سباحة ورياضات مائية",
+    title: "نموذج تقييم المهارات المائية والأداء الحركي",
+    description: "معايير الكفاءة الحركية، التوافق العضلي العصبي، والتنفس للسباحين الصغار والناشئين.",
+    scaleMax: 5,
+    isActive: true,
+    isDefault: true,
+    updatedAt: "2026-10-16T08:00:00Z",
+    authorName: "مريم حسن (رئيس المدربين)",
+    criteria: [
+      {
+        id: "crt-401",
+        key: "hydrodynamics",
+        label: "الانسيابية والطفو الحركي",
+        category: "PHYSICAL",
+        categoryLabel: "لياقة وحركة",
+        maxScore: 5,
+        weightPercent: 30,
+        hint: "استقامة الجذع في الماء، تقليل مقاومة الماء، وتوازن الجسم.",
+      },
+      {
+        id: "crt-402",
+        key: "kick_stroke_coordination",
+        label: "توافق ضربات الذراعين والأرجل",
+        category: "TECHNICAL",
+        categoryLabel: "مهارة فنية",
+        maxScore: 5,
+        weightPercent: 30,
+        hint: "قوة الدفع من مشط القدم، امتداد الذراع، ومرحلة السحب والدفع.",
+      },
+      {
+        id: "crt-403",
+        key: "breath_control",
+        label: "تنظيم التنفس الجانبي والغوص",
+        category: "PHYSICAL",
+        categoryLabel: "تحمل وتكنيك",
+        maxScore: 5,
+        weightPercent: 25,
+        hint: "إخراج الهواء تحت الماء بسلاسة وأخذ الشهيق السريع دون توقف.",
+      },
+      {
+        id: "crt-404",
+        key: "pool_discipline",
+        label: "الانضباط وتعليمات مدرب المسبح",
+        category: "BEHAVIORAL",
+        categoryLabel: "انضباط وسلامة",
+        maxScore: 5,
+        weightPercent: 15,
+        hint: "الالتزام بالحارة التدريبية، ارتداء الأدوات، والهدوء خارج الماء.",
+      },
+    ],
+  },
+  {
+    id: "RBR-SOFT-01",
+    trackKey: "soft_skills",
+    trackLabel: "مهارات القيادة والتفكير الإبداعي",
+    title: "نموذج تقييم مهارات التواصل وحل المشكلات",
+    description: "قياس مهارات الإلقاء، العمل الجماعي، وإدارة الوقت والقيادة الإيجابية.",
+    scaleMax: 5,
+    isActive: true,
+    isDefault: true,
+    updatedAt: "2026-10-11T11:00:00Z",
+    authorName: "مريم حسن (رئيس المدربين)",
+    criteria: [
+      {
+        id: "crt-501",
+        key: "presentation_skills",
+        label: "مهارات العرض والتعبير اللفظي",
+        category: "CREATIVE",
+        categoryLabel: "إلقاء وتواصل",
+        maxScore: 5,
+        weightPercent: 30,
+        hint: "لغة الجسد، وضوح الفكرة، والجرأة في التحدث أمام الجمهور.",
+      },
+      {
+        id: "crt-502",
+        key: "leadership_teamwork",
+        label: "القيادة التعاونية ودعم الزملاء",
+        category: "BEHAVIORAL",
+        categoryLabel: "قيادة وفريق",
+        maxScore: 5,
+        weightPercent: 30,
+        hint: "الاستماع للرأي الآخر، تحفيز الفريق، وتقاسم الأدوار بعدالة.",
+      },
+      {
+        id: "crt-503",
+        key: "critical_thinking",
+        label: "التفكير النقدي وتحليل المواقف",
+        category: "TECHNICAL",
+        categoryLabel: "تحليل وفكر",
+        maxScore: 5,
+        weightPercent: 25,
+        hint: "طرح أسئلة استقصائية ذكية وتقديم بدائل إبداعية للمشكلات.",
+      },
+      {
+        id: "crt-504",
+        key: "initiative",
+        label: "المبادرة وتحمل المسؤولية",
+        category: "BEHAVIORAL",
+        categoryLabel: "سلوك ومبادرة",
+        maxScore: 5,
+        weightPercent: 15,
+        hint: "المبادرة في التطوع للمهام والالتزام بمواعيد التكليفات.",
+      },
+    ],
+  },
+  {
+    id: "RBR-GEN-01",
+    trackKey: "general",
+    trackLabel: "التقييم الأكاديمي العام",
+    title: "النموذج العام لتقييم الحصص التدريبية",
+    description: "النموذج التأسيسي المعتمد لأي نشاط أو دورة تدريبية لم يُخصص لها نموذج مستقل.",
+    scaleMax: 5,
+    isActive: true,
+    isDefault: true,
+    updatedAt: "2026-10-10T09:00:00Z",
+    authorName: "مريم حسن (رئيس المدربين)",
+    criteria: [
+      {
+        id: "crt-001",
+        key: "understanding",
+        label: "استيعاب الفكرة والمفاهيم",
+        category: "TECHNICAL",
+        categoryLabel: "فهم واستيعاب",
+        maxScore: 5,
+        weightPercent: 35,
+        hint: "المفاهيم والخطوات الأساسية المستهدفة من الحصة.",
+      },
+      {
+        id: "crt-002",
+        key: "practice",
+        label: "التطبيق العملي والممارسة",
+        category: "PRACTICAL",
+        categoryLabel: "تطبيق عملي",
+        maxScore: 5,
+        weightPercent: 35,
+        hint: "تنفيذ المهام المطلوبة واستخدام الأدوات والأجهزة.",
+      },
+      {
+        id: "crt-003",
+        key: "collaboration",
+        label: "التعاون والمبادرة الإيجابية",
+        category: "BEHAVIORAL",
+        categoryLabel: "سلوك ومشاركة",
+        maxScore: 5,
+        weightPercent: 30,
+        hint: "التفاعل الإيجابي مع المدرب والزملاء في مساحة التعلم.",
+      },
+    ],
+  },
+];
+
+export const rubricStorage = {
+  getRubrics: (): DisciplineRubric[] => {
+    try {
+      const raw = localStorage.getItem(RUBRICS_STORAGE_KEY);
+      if (!raw) {
+        localStorage.setItem(RUBRICS_STORAGE_KEY, JSON.stringify(DEFAULT_RUBRICS));
+        return DEFAULT_RUBRICS;
+      }
+      return JSON.parse(raw);
+    } catch {
+      return DEFAULT_RUBRICS;
+    }
+  },
+  saveRubrics: (items: DisciplineRubric[]) => {
+    localStorage.setItem(RUBRICS_STORAGE_KEY, JSON.stringify(items));
+  },
+  getRubricByTrack: (trackKey: string): DisciplineRubric => {
+    const list = rubricStorage.getRubrics();
+    const found = list.find(r => r.trackKey === trackKey && r.isActive && r.isDefault)
+      || list.find(r => r.trackKey === trackKey && r.isActive)
+      || list.find(r => r.trackKey === "general")
+      || DEFAULT_RUBRICS[0];
+    return found;
+  },
+  createRubric: (input: Omit<DisciplineRubric, "id" | "updatedAt">): DisciplineRubric => {
+    const list = rubricStorage.getRubrics();
+    const newRubric: DisciplineRubric = {
+      ...input,
+      id: `RBR-CUSTOM-${Date.now().toString().slice(-4)}`,
+      updatedAt: new Date().toISOString(),
+    };
+    if (newRubric.isDefault) {
+      list.forEach(item => {
+        if (item.trackKey === newRubric.trackKey) item.isDefault = false;
+      });
+    }
+    const updated = [newRubric, ...list];
+    rubricStorage.saveRubrics(updated);
+    return newRubric;
+  },
+  saveRubric: (rubric: DisciplineRubric): DisciplineRubric => {
+    const list = rubricStorage.getRubrics();
+    const updated = list.map(item => item.id === rubric.id ? { ...rubric, updatedAt: new Date().toISOString() } : item);
+    rubricStorage.saveRubrics(updated);
+    return rubric;
+  },
+  deleteRubric: (id: string) => {
+    const list = rubricStorage.getRubrics();
+    const updated = list.filter(item => item.id !== id);
+    rubricStorage.saveRubrics(updated);
+  },
+  setDefault: (id: string) => {
+    const list = rubricStorage.getRubrics();
+    const target = list.find(r => r.id === id);
+    if (!target) return;
+    const updated = list.map(item => {
+      if (item.trackKey === target.trackKey) {
+        return { ...item, isDefault: item.id === id };
+      }
+      return item;
+    });
+    rubricStorage.saveRubrics(updated);
+  },
+};

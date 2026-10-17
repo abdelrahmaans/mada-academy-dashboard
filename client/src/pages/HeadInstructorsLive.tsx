@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2, RefreshCw, ShieldCheck, Users } from "lucide-react";
+import { Award, CheckCircle2, RefreshCw, ShieldCheck, Users } from "lucide-react";
 import EvaluationReviewQueue from "@/components/EvaluationReviewQueue";
 import HeadInstructorsLiveOverview, { type HeadInstructorsOverviewData } from "@/components/HeadInstructorsLiveOverview";
+import RubricsManagementView from "@/components/RubricsManagementView";
 import R03HeadInstructorsSidebar from "@/components/R03HeadInstructorsSidebar";
 import { LoadingState } from "@/components/FeedbackStates";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
@@ -12,11 +13,16 @@ import { apiClient, type NotificationRecord } from "@/lib/apiClient";
 import { mergeR03LiveResults } from "@/lib/liveSurfaceAcceptance";
 import "./HeadInstructorsLive.css";
 
-type LiveView = "overview" | "evaluations";
+type LiveView = "overview" | "evaluations" | "rubrics";
 
 export default function HeadInstructorsLive() {
   const { me, loading: authLoading } = useAuth();
-  const [view, setView] = useState<LiveView>(() => window.location.hash === "#evaluations" ? "evaluations" : "overview");
+  const [view, setView] = useState<LiveView>(() => {
+    const hash = window.location.hash;
+    if (hash === "#evaluations") return "evaluations";
+    if (hash === "#rubrics") return "rubrics";
+    return "overview";
+  });
   const [data, setData] = useState<HeadInstructorsOverviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,7 +67,12 @@ export default function HeadInstructorsLive() {
   }, [authLoading, load]);
 
   useEffect(() => {
-    const syncHashView = () => setView(window.location.hash === "#evaluations" ? "evaluations" : "overview");
+    const syncHashView = () => {
+      const hash = window.location.hash;
+      if (hash === "#evaluations") setView("evaluations");
+      else if (hash === "#rubrics") setView("rubrics");
+      else setView("overview");
+    };
     window.addEventListener("hashchange", syncHashView);
     syncHashView();
     return () => window.removeEventListener("hashchange", syncHashView);
@@ -108,12 +119,14 @@ export default function HeadInstructorsLive() {
         <nav className="r03-live-tabs" aria-label="أقسام إشراف المدربين">
           <button type="button" className={view === "overview" ? "active" : ""} onClick={() => setView("overview")}><Users size={15} /> ملخص الفرع</button>
           <button type="button" className={view === "evaluations" ? "active" : ""} onClick={() => setView("evaluations")}><CheckCircle2 size={15} /> مراجعة التقييمات <b>{data?.evaluations.counts.SUBMITTED ?? "—"}</b></button>
+          <button type="button" className={view === "rubrics" ? "active" : ""} onClick={() => setView("rubrics")}><Award size={15} /> بنك معايير التقييم</button>
         </nav>
         {loading && <LoadingState label="جارٍ تحميل بيانات الفريق والمجموعات والجلسات والتقييمات…" compact />}
         {!loading && error && <section className="r03-live-error" role="alert"><ShieldCheck size={20} /><div><strong>تعذر عرض لوحة R03 الحية</strong><p>{error} لم يتم استبدال بيانات الخادم ببيانات تجريبية.</p></div><button type="button" onClick={() => void load()}>إعادة المحاولة</button></section>}
         {!loading && !error && warning && <section className="r03-live-error" role="status"><ShieldCheck size={20} /><div><strong>بعض الملحقات غير متاحة</strong><p>{warning} البيانات الأساسية ما زالت معروضة من الخادم.</p></div><button type="button" onClick={() => void load()}>إعادة المحاولة</button></section>}
         {!loading && !error && data && view === "overview" && <HeadInstructorsLiveOverview data={data} upcomingSessions={upcomingSessions} activeGroups={activeGroups} coachCount={coachCount} completedSessions={completedSessions} markingId={markingId} onMarkRead={notification => void markRead(notification)} />}
         {!loading && !error && data && view === "evaluations" && <EvaluationReviewQueue />}
+        {view === "rubrics" && <RubricsManagementView />}
         </div>
       </main>
     </RoleDashboardShell>
