@@ -41,15 +41,13 @@ describe("role navigation scopes", () => {
   });
 
   it("exposes explicit R01 routes for academy-wide internal views", () => {
-    expect(ROLE_DEFINITIONS.R01.navigation.map(item => item.path)).toEqual(expect.arrayContaining([
-      "/academy-owner",
-      "/academy-owner/branches",
-      "/academy-owner/tickets",
-      "/academy-owner/reports",
+    expect(ROLE_DEFINITIONS.R01.navigation.map(item => item.path)).toEqual([
+      "/executive-dashboard",
+      "/academy-owner/pnl-retention",
       "/academy/branches",
-      "/academy/classrooms",
       "/academy/roles",
-    ]));
+      "/academy/audit-trail",
+    ]);
   });
 
   it("keeps finance navigation out of the branch-manager role", () => {
@@ -62,8 +60,8 @@ describe("role navigation scopes", () => {
       "/", "/students", "/classes", "/schedule", "/secretary-desk", "/finance-desk",
       "/marketing-desk", "/team", "/branch-operations", "/supervision-assignments", "/approvals",
       "/reports", "/instructor-desk", "/head-instructors", "/academic-programs", "/academy-owner",
-      "/academy-owner/branches", "/academy-owner/tickets", "/academy-owner/reports", "/executive-dashboard",
-      "/platform-console", "/family-portal", "/student-portal", "/academy/branches", "/academy/classrooms",
+      "/academy-owner/branches", "/academy-owner/tickets", "/academy-owner/reports", "/academy-owner/pnl-retention", "/executive-dashboard",
+      "/platform-console", "/platform/academies/new", "/family-portal", "/student-portal", "/academy/branches", "/academy/classrooms",
       "/academy/roles", "/academy/audit-trail",
     ]);
 

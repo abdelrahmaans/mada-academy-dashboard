@@ -12,16 +12,10 @@ type Item = { path: string; label: string; icon: typeof LayoutDashboard };
 
 const R01_ICON_BY_PATH: Record<string, Item["icon"]> = {
   "/executive-dashboard": LayoutDashboard,
-  "/academy-owner": Building2,
-  "/academy-owner/branches": Building2,
-  "/academy-owner/tickets": CircleHelp,
-  "/academy-owner/reports": BarChart3,
   "/academy-owner/pnl-retention": TrendingUp,
   "/academy/branches": Building2,
-  "/academy/classrooms": GraduationCap,
   "/academy/roles": Users,
-  "/academy/audit-trail": Activity,
-  "/reports": BarChart3,
+  "/academy/audit-trail": ShieldCheck,
 };
 
 export function R01MobileMenuButton({ onOpen }: { onOpen: () => void }) {

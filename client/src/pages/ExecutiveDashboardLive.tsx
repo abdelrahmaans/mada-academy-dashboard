@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, Activity, BarChart3, Building2, CalendarDays, CheckCircle2, GraduationCap, LayoutDashboard, Menu, RefreshCw, ShieldCheck, Users, Wallet, X } from "lucide-react";
+import { AlertCircle, Activity, ArrowDownToLine, BarChart3, Building2, CalendarDays, CheckCircle2, GraduationCap, LayoutDashboard, Menu, RefreshCw, ShieldCheck, Users, Wallet, X } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
@@ -106,12 +106,69 @@ export default function ExecutiveDashboardLive() {
   const selectedBranchName = branchId === "ALL" ? "كل الفروع" : report?.availableBranches.find(branch => branch.id === branchId)?.name ?? "الفرع المحدد";
   const retry = () => setRetryKey(value => value + 1);
 
+  const exportBoardRollup = () => {
+    if (!report) {
+      toast.error("لا توجد بيانات متاحة للتصدير حاليًا.");
+      return;
+    }
+    const headers = ["الفرع", "كود الفرع", "الحالة", "الطلاب النشطون", "الجلسات", "المكتملة", "نسبة الحضور", "التحصيل (ج.م)", "المصروفات المعتمدة (ج.م)", "صافي الحركة (ج.م)"];
+    const rows = report.branches.map(b => [
+      b.branchName,
+      b.branchCode,
+      b.branchStatus === "ACTIVE" ? "نشط" : "غير نشط",
+      b.activeStudents,
+      b.sessions,
+      b.completedSessions,
+      b.attendancePercent ? `${b.attendancePercent}%` : "—",
+      b.collectedPiastres / 100,
+      b.approvedExpensesPiastres / 100,
+      b.netPiastres / 100,
+    ]);
+    const summaryRow = [
+      "المجموع المجمع للأكاديمية",
+      "ALL",
+      "—",
+      report.summary.activeStudents,
+      report.summary.sessions,
+      report.summary.completedSessions,
+      report.summary.attendancePercent ? `${report.summary.attendancePercent}%` : "—",
+      report.summary.collectedPiastres / 100,
+      report.summary.approvedExpensesPiastres / 100,
+      report.summary.netPiastres / 100,
+    ];
+    const csvContent = "\ufeff" + [headers, ...rows, summaryRow].map(r => r.map(c => `"${String(c).replaceAll('"', '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `mada-board-rollup-${range.from}-to-${range.to}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("تم تصدير تقرير مجلس الإدارة بنجاح");
+  };
+
   return <RoleDashboardShell className="app-shell executive-dashboard-shell r1-live-shell" showSessionLogout={false} hideSidebar roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية الحالية" branchName={selectedBranchName} demo={false}>
     <R01AcademySidebar activePath="/executive-dashboard" mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
     <main className="main-panel">
       <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel={selectedBranchName} />
       <div className="workspace r1-live-page" dir="rtl">
-      <PageHeader className="welcome-row" eyebrow={<span className="eyebrow"><i className="eyebrow-dot" /> الإدارة التنفيذية · R01</span>} title="لوحة الإدارة التنفيذية" description="مؤشرات تشغيلية ومالية للقراءة فقط، محسوبة من بيانات الأكاديمية ضمن الفرع والفترة المختارين." />
+      <PageHeader
+        className="welcome-row"
+        eyebrow={<span className="eyebrow"><i className="eyebrow-dot" /> الإدارة التنفيذية · R01</span>}
+        title="لوحة الإدارة التنفيذية"
+        description="مؤشرات تشغيلية ومالية للقراءة فقط، محسوبة من بيانات الأكاديمية ضمن الفرع والفترة المختارين."
+        actions={
+          <button
+            type="button"
+            className="pc-live-primary"
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", padding: "8px 14px" }}
+            onClick={exportBoardRollup}
+          >
+            <ArrowDownToLine size={15} />
+            تصدير تقرير مجلس الإدارة المجمع (CSV)
+          </button>
+        }
+      />
       <RoleScopeCard className="executive-scope-card" />
 
       <div className="pnl-tabs-nav" style={{ marginBottom: "16px" }}>
