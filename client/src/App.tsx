@@ -107,6 +107,7 @@ const APP_ROUTES = [
   ["/academy-owner/branches", () => <Guard roles={["R01_ACADEMY_OWNER"]} permission="branch.read"><AcademyOwner /></Guard>],
   ["/academy-owner/tickets", () => <Guard roles={["R01_ACADEMY_OWNER"]} permission="academy.read"><AcademyOwner /></Guard>],
   ["/academy-owner/reports", () => <Guard roles={["R01_ACADEMY_OWNER"]} permission="reports.read"><AcademyOwner /></Guard>],
+  ["/academy-owner/pnl-retention", () => <Guard roles={["R01_ACADEMY_OWNER"]} permission="reports.read"><AcademyOwner /></Guard>],
   ["/executive-dashboard", () => <Guard roles={["R01_ACADEMY_OWNER"]} permission="academy.read"><ExecutiveDashboard /></Guard>],
   ["/platform-console", () => <Guard roles={["R00_PLATFORM_ADMIN"]} permission="platform.read"><PlatformConsole /></Guard>],
   ["/family-portal", () => <Guard roles={["R08_PARENT"]} permission="consumer.students.read"><FamilyPortal /></Guard>],

@@ -9,6 +9,7 @@ import R01AcademySidebar from "@/components/R01AcademySidebar";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { apiClient, type ExecutiveActivityItem, type ExecutiveDashboardReport, type ExecutiveMetrics } from "@/lib/apiClient";
 import { executiveFailureMessage } from "@/lib/liveSurfaceAcceptance";
+import BranchMultiUnitPnLView from "@/components/BranchMultiUnitPnLView";
 import "./ExecutiveDashboardLive.css";
 
 type PeriodOffset = 0 | -1 | -2;
@@ -62,6 +63,7 @@ export default function ExecutiveDashboardLive() {
   const [activityError, setActivityError] = useState<string | null>(null);
   const [activityLoading, setActivityLoading] = useState(true);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [liveTab, setLiveTab] = useState<"summary" | "pnl">("summary");
   const range = useMemo(() => periodRange(period), [period]);
 
   useEffect(() => {
@@ -111,30 +113,56 @@ export default function ExecutiveDashboardLive() {
       <div className="workspace r1-live-page" dir="rtl">
       <PageHeader className="welcome-row" eyebrow={<span className="eyebrow"><i className="eyebrow-dot" /> الإدارة التنفيذية · R01</span>} title="لوحة الإدارة التنفيذية" description="مؤشرات تشغيلية ومالية للقراءة فقط، محسوبة من بيانات الأكاديمية ضمن الفرع والفترة المختارين." />
       <RoleScopeCard className="executive-scope-card" />
-      <section className="r1-live-controls" aria-label="تصفية التقرير التنفيذي">
-        <label><span><Building2 size={16} /> الفرع</span><select value={branchId} onChange={event => setBranchId(event.target.value)}><option value="ALL">كل الفروع</option>{report?.availableBranches.map(branch => <option key={branch.id} value={branch.id}>{branch.name}{branch.status !== "ACTIVE" ? " · غير نشط" : ""}</option>)}</select></label>
-        <label><span><CalendarDays size={16} /> الفترة</span><select value={period} onChange={event => setPeriod(Number(event.target.value) as PeriodOffset)}><option value={0}>{periodRange(0).label} · حتى اليوم</option><option value={-1}>{periodRange(-1).label}</option><option value={-2}>{periodRange(-2).label}</option></select></label>
-        <span className="r1-live-period">{range.from} — {range.to}</span>
-      </section>
 
-      {loading && <section className="r1-live-state" role="status"><RefreshCw className="r1-live-spin" size={20} /> جارٍ جلب مؤشرات التقرير من الخادم…</section>}
-      {!loading && error && <section className="r1-live-state r1-live-error" role="alert"><AlertCircle size={20} /><div><strong>تعذر تحميل مؤشرات R01</strong><span>{error}</span><button type="button" onClick={retry}>إعادة المحاولة</button></div></section>}
-      {!loading && report && <>
-        {report.branchesWithoutStudentData > 0 && <div className="r1-live-warning" role="status"><AlertCircle size={17} /> {integer(report.branchesWithoutStudentData)} فرع بلا طلاب نشطين ضمن بيانات الأكاديمية الحالية.</div>}
-        <section className="r1-live-panel"><header><div><h2>ملخص الأكاديمية</h2><p>الأرقام تتغير من الخادم مع تغيير الفرع أو الفترة؛ لا يتم استبدال فشل المصدر بأرقام تجريبية.</p></div><span className="r1-live-badge"><i /> بيانات حية</span></header><Metrics metrics={report.summary} /></section>
-        <section className="r1-live-panel"><header><div><h2>التنبيهات التشغيلية</h2><p>تنبيهات مشتقة من مؤشرات الفروع والطلبات المحفوظة؛ لا تُستخدم thresholds تخمينية.</p></div></header>{report.alerts.length === 0 ? <p className="r1-live-empty">لا توجد تنبيهات من القواعد الحالية للفترة والنطاق المختارين.</p> : <div className="r1-live-alert-list">{report.alerts.map((alert, index) => <article key={`${alert.code}-${alert.branchId ?? index}`}><AlertCircle size={16} /><div><strong>{alert.title}</strong><span>{alert.detail}</span></div></article>)}</div>}</section>
-        <section className="r1-live-panel"><header><div><h2>مقارنة الفروع</h2><p>مجاميع كل فرع من مصادر البيانات نفسها المستخدمة في الملخص.</p></div></header>{report.branches.length === 0 ? <p className="r1-live-empty">لا توجد فروع في نطاق الأكاديمية بعد.</p> : <div className="r1-live-table-wrap"><table className="r1-live-table"><thead><tr><th>الفرع</th><th>طلاب نشطون</th><th>الحضور</th><th>الجلسات</th><th>التحصيل</th><th>مصروفات معتمدة</th><th>الصافي</th></tr></thead><tbody>{report.branches.map(branch => <tr key={branch.branchId}><th scope="row"><strong>{branch.branchName}</strong><small>{branch.branchCode} · {branch.branchStatus === "ACTIVE" ? "نشط" : "غير نشط"}</small></th><td>{integer(branch.activeStudents)}</td><td>{branch.attendancePercent === null ? "—" : `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(branch.attendancePercent)}٪`}</td><td>{integer(branch.sessions)} <small>({integer(branch.completedSessions)} مكتملة)</small></td><td>{money(branch.collectedPiastres)}</td><td>{money(branch.approvedExpensesPiastres)}</td><td>{money(branch.netPiastres)}</td></tr>)}</tbody></table></div>}</section>
-        <details className="r1-live-sources"><summary>مصادر الأرقام وتعريفها</summary><dl>{Object.entries(report.dataSources).map(([key, source]) => <div key={key}><dt>{key}</dt><dd>{source}</dd></div>)}</dl></details>
+      <div className="pnl-tabs-nav" style={{ marginBottom: "16px" }}>
+        <button
+          type="button"
+          className={`pnl-tab-btn ${liveTab === "summary" ? "active" : ""}`}
+          onClick={() => setLiveTab("summary")}
+        >
+          <LayoutDashboard size={16} />
+          <span>الملخص التنفيذي وسجل القرارات</span>
+        </button>
+        <button
+          type="button"
+          className={`pnl-tab-btn ${liveTab === "pnl" ? "active" : ""}`}
+          onClick={() => setLiveTab("pnl")}
+        >
+          <BarChart3 size={16} />
+          <span>الأرباح والخسائر واستبقاء الطلاب متعدد الفروع (P&L & Retention)</span>
+        </button>
+      </div>
+
+      {liveTab === "pnl" && (
+        <BranchMultiUnitPnLView initialBranch={selectedBranchName === "كل الفروع" ? "كل الفروع" : selectedBranchName} />
+      )}
+
+      {liveTab === "summary" && <>
+        <section className="r1-live-controls" aria-label="تصفية التقرير التنفيذي">
+          <label><span><Building2 size={16} /> الفرع</span><select value={branchId} onChange={event => setBranchId(event.target.value)}><option value="ALL">كل الفروع</option>{report?.availableBranches.map(branch => <option key={branch.id} value={branch.id}>{branch.name}{branch.status !== "ACTIVE" ? " · غير نشط" : ""}</option>)}</select></label>
+          <label><span><CalendarDays size={16} /> الفترة</span><select value={period} onChange={event => setPeriod(Number(event.target.value) as PeriodOffset)}><option value={0}>{periodRange(0).label} · حتى اليوم</option><option value={-1}>{periodRange(-1).label}</option><option value={-2}>{periodRange(-2).label}</option></select></label>
+          <span className="r1-live-period">{range.from} — {range.to}</span>
+        </section>
+
+        {loading && <section className="r1-live-state" role="status"><RefreshCw className="r1-live-spin" size={20} /> جارٍ جلب مؤشرات التقرير من الخادم…</section>}
+        {!loading && error && <section className="r1-live-state r1-live-error" role="alert"><AlertCircle size={20} /><div><strong>تعذر تحميل مؤشرات R01</strong><span>{error}</span><button type="button" onClick={retry}>إعادة المحاولة</button></div></section>}
+        {!loading && report && <>
+          {report.branchesWithoutStudentData > 0 && <div className="r1-live-warning" role="status"><AlertCircle size={17} /> {integer(report.branchesWithoutStudentData)} فرع بلا طلاب نشطين ضمن بيانات الأكاديمية الحالية.</div>}
+          <section className="r1-live-panel"><header><div><h2>ملخص الأكاديمية</h2><p>الأرقام تتغير من الخادم مع تغيير الفرع أو الفترة؛ لا يتم استبدال فشل المصدر بأرقام تجريبية.</p></div><span className="r1-live-badge"><i /> بيانات حية</span></header><Metrics metrics={report.summary} /></section>
+          <section className="r1-live-panel"><header><div><h2>التنبيهات التشغيلية</h2><p>تنبيهات مشتقة من مؤشرات الفروع والطلبات المحفوظة؛ لا تُستخدم thresholds تخمينية.</p></div></header>{report.alerts.length === 0 ? <p className="r1-live-empty">لا توجد تنبيهات من القواعد الحالية للفترة والنطاق المختارين.</p> : <div className="r1-live-alert-list">{report.alerts.map((alert, index) => <article key={`${alert.code}-${alert.branchId ?? index}`}><AlertCircle size={16} /><div><strong>{alert.title}</strong><span>{alert.detail}</span></div></article>)}</div>}</section>
+          <section className="r1-live-panel"><header><div><h2>مقارنة الفروع</h2><p>مجاميع كل فرع من مصادر البيانات نفسها المستخدمة في الملخص.</p></div></header>{report.branches.length === 0 ? <p className="r1-live-empty">لا توجد فروع في نطاق الأكاديمية بعد.</p> : <div className="r1-live-table-wrap"><table className="r1-live-table"><thead><tr><th>الفرع</th><th>طلاب نشطون</th><th>الحضور</th><th>الجلسات</th><th>التحصيل</th><th>مصروفات معتمدة</th><th>الصافي</th></tr></thead><tbody>{report.branches.map(branch => <tr key={branch.branchId}><th scope="row"><strong>{branch.branchName}</strong><small>{branch.branchCode} · {branch.branchStatus === "ACTIVE" ? "نشط" : "غير نشط"}</small></th><td>{integer(branch.activeStudents)}</td><td>{branch.attendancePercent === null ? "—" : `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(branch.attendancePercent)}٪`}</td><td>{integer(branch.sessions)} <small>({integer(branch.completedSessions)} مكتملة)</small></td><td>{money(branch.collectedPiastres)}</td><td>{money(branch.approvedExpensesPiastres)}</td><td>{money(branch.netPiastres)}</td></tr>)}</tbody></table></div>}</section>
+          <details className="r1-live-sources"><summary>مصادر الأرقام وتعريفها</summary><dl>{Object.entries(report.dataSources).map(([key, source]) => <div key={key}><dt>{key}</dt><dd>{source}</dd></div>)}</dl></details>
+        </>}
+
+        <section className="r1-live-panel r1-live-activity-panel"><header><div><h2><Activity size={17} /> سجل التدقيق والقرارات</h2><p>أحداث الأكاديمية وقرارات الموافقات ضمن الفترة والفرع الحاليين.</p></div><button type="button" onClick={retry} aria-label="تحديث سجل التدقيق">تحديث</button></header>
+          {activityLoading && <div className="r1-live-activity-state" role="status"><RefreshCw className="r1-live-spin" size={16} /> جارٍ تحميل السجل…</div>}
+          {!activityLoading && activityError && <div className="r1-live-warning" role="alert"><AlertCircle size={16} /><span>تعذر تحميل سجل التدقيق: {activityError}</span><button type="button" onClick={retry}>إعادة المحاولة</button></div>}
+          {!activityLoading && !activityError && activity.length === 0 && <p className="r1-live-empty">لا توجد أحداث تدقيق أو قرارات مسجلة لهذه الفترة والنطاق.</p>}
+          {!activityLoading && !activityError && activity.length > 0 && <div className="r1-live-activity-list">{activity.map(item => <article key={`${item.source}-${item.id}`}><span className={`r1-live-activity-type ${item.source === "DECISION" ? "decision" : "audit"}`}>{item.source === "DECISION" ? "قرار" : "تدقيق"}</span><div><strong>{item.action} · {item.targetType}</strong><small>المستهدف: {item.targetId}{item.state ? ` · الحالة: ${item.state}` : ""}</small>{item.reason && <small>السبب: {item.reason}</small>}<small>بواسطة {item.actorName ?? "system"}</small></div><time>{occurredAt(item.occurredAt)}</time></article>)}</div>}
+          <small className="r1-live-audit-source">المصادر: AuditEvents + ApprovalRequests. لا يتم إرجاع metadata أو بيانات الاتصال.</small>
+        </section>
+        <p className="r1-live-scope-note">بيانات القراءة فقط داخل Tenant الحالي؛ لا تتيح هذه اللوحة إنشاء دفعات أو اعتماد مصروفات.</p>
       </>}
-
-      <section className="r1-live-panel r1-live-activity-panel"><header><div><h2><Activity size={17} /> سجل التدقيق والقرارات</h2><p>أحداث الأكاديمية وقرارات الموافقات ضمن الفترة والفرع الحاليين.</p></div><button type="button" onClick={retry} aria-label="تحديث سجل التدقيق">تحديث</button></header>
-        {activityLoading && <div className="r1-live-activity-state" role="status"><RefreshCw className="r1-live-spin" size={16} /> جارٍ تحميل السجل…</div>}
-        {!activityLoading && activityError && <div className="r1-live-warning" role="alert"><AlertCircle size={16} /><span>تعذر تحميل سجل التدقيق: {activityError}</span><button type="button" onClick={retry}>إعادة المحاولة</button></div>}
-        {!activityLoading && !activityError && activity.length === 0 && <p className="r1-live-empty">لا توجد أحداث تدقيق أو قرارات مسجلة لهذه الفترة والنطاق.</p>}
-        {!activityLoading && !activityError && activity.length > 0 && <div className="r1-live-activity-list">{activity.map(item => <article key={`${item.source}-${item.id}`}><span className={`r1-live-activity-type ${item.source === "DECISION" ? "decision" : "audit"}`}>{item.source === "DECISION" ? "قرار" : "تدقيق"}</span><div><strong>{item.action} · {item.targetType}</strong><small>المستهدف: {item.targetId}{item.state ? ` · الحالة: ${item.state}` : ""}</small>{item.reason && <small>السبب: {item.reason}</small>}<small>بواسطة {item.actorName ?? "system"}</small></div><time>{occurredAt(item.occurredAt)}</time></article>)}</div>}
-        <small className="r1-live-audit-source">المصادر: AuditEvents + ApprovalRequests. لا يتم إرجاع metadata أو بيانات الاتصال.</small>
-      </section>
-      <p className="r1-live-scope-note">بيانات القراءة فقط داخل Tenant الحالي؛ لا تتيح هذه اللوحة إنشاء دفعات أو اعتماد مصروفات.</p>
       </div>
     </main>
   </RoleDashboardShell>;

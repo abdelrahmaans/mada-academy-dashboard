@@ -54,6 +54,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
       { path: "/academy-owner/branches", label: "الفروع والأداء", purpose: "academy branch rollup", permission: "branch.read" },
       { path: "/academy-owner/tickets", label: "مركز التذاكر", purpose: "academy tickets", permission: "academy.read" },
       { path: "/academy-owner/reports", label: "التقارير المجمعة", purpose: "academy rollup reports", permission: "reports.read" },
+      { path: "/academy-owner/pnl-retention", label: "الأرباح واستبقاء الطلاب", purpose: "multi-unit pnl and student retention analytics", permission: "reports.read" },
       { path: "/academy/branches", label: "إدارة الفروع", purpose: "branch lifecycle and assignment", anyOfPermissions: ["branch.read", "branch.create"] },
       { path: "/academy/classrooms", label: "القاعات الدراسية", purpose: "classrooms, capacity and readiness", permission: "classrooms.manage" },
       { path: "/academy/roles", label: "المستخدمون والصلاحيات", purpose: "members, roles, permissions", anyOfPermissions: ["roles.read", "roles.manage"] },
