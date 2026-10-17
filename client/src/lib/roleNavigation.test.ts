@@ -50,6 +50,16 @@ describe("role navigation scopes", () => {
     ]);
   });
 
+  it("streamlines R02 branch manager navigation to 5 core operational modules", () => {
+    expect(ROLE_DEFINITIONS.R02.navigation.map(item => item.path)).toEqual([
+      "/",
+      "/schedule",
+      "/students",
+      "/team",
+      "/approvals",
+    ]);
+  });
+
   it("keeps finance navigation out of the branch-manager role", () => {
     expect(ROLE_DEFINITIONS.R02.navigation.map(item => item.path)).not.toContain("/finance");
     expect(ROLE_DEFINITIONS.R02.navigation.map(item => item.path)).not.toContain("/finance-desk");

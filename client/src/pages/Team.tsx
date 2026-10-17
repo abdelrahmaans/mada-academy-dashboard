@@ -29,8 +29,8 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import BranchManagerSidebar from "@/components/BranchManagerSidebar";
 import { TeamManagementViews } from "@/components/TeamManagementViews";
-import SessionLogoutButton from "@/components/SessionLogoutButton";
 import {
   ROLE_BY_CODE,
   ROLES,
@@ -128,31 +128,6 @@ const INITIAL_STAFF: StaffMember[] = [
     joined: "18 مارس 2026",
   },
 ];
-function BrandMark() {
-  return (
-    <div className="brand-lockup" aria-label="مدى">
-      <span className="brand-symbol" aria-hidden="true">
-        <svg viewBox="0 0 40 40" fill="none">
-          <path
-            d="M4 12.5 12.5 8l8.2 4.5v9.4l-8.2 4.6L4 21.9v-9.4Z"
-            fill="currentColor"
-          />
-          <path
-            d="m19.3 12.5 8.2-4.5 8.5 4.5v9.4l-8.5 4.6-8.2-4.6v-9.4Z"
-            fill="currentColor"
-            opacity=".72"
-          />
-          <path
-            d="m11.5 24.1 8.3-4.6 8.2 4.6v8.2l-8.2 4.4-8.3-4.4v-8.2Z"
-            fill="currentColor"
-            opacity=".48"
-          />
-        </svg>
-      </span>
-      <span className="brand-word">مدى</span>
-    </div>
-  );
-}
 
 export default function Team() {
   const [, navigate] = useLocation();
@@ -207,13 +182,6 @@ export default function Team() {
     counts.set("R02", 1);
     return counts;
   }, [branchStaff]);
-
-  const showComingSoon = (label: string) => {
-    toast("القسم قيد التجهيز", {
-      description: `هنبدأ في تطوير «${label}» في المرحلة التالية.`,
-    });
-    setMobileNavOpen(false);
-  };
   const openAddDialog = () => {
     setName("");
     setPhone("");
@@ -306,101 +274,7 @@ export default function Team() {
 
   return (
     <div className="app-shell" dir="rtl">
-      {mobileNavOpen && (
-        <button
-          className="mobile-scrim"
-          aria-label="إغلاق القائمة"
-          onClick={() => setMobileNavOpen(false)}
-        />
-      )}
-      <aside className={`sidebar ${mobileNavOpen ? "sidebar-open" : ""}`}>
-        <div className="sidebar-top">
-          <BrandMark />
-          <button
-            className="icon-button sidebar-close"
-            aria-label="إغلاق القائمة"
-            onClick={() => setMobileNavOpen(false)}
-          >
-            <X size={19} />
-          </button>
-        </div>
-        <div className="academy-switcher">
-          <span className="academy-avatar">
-            <GraduationCap size={20} />
-          </span>
-          <span className="academy-meta">
-            <strong>أكاديمية مدى</strong>
-            <small>إدارة الأكاديمية</small>
-          </span>
-          <ChevronDown size={15} className="switcher-chevron" />
-        </div>
-        <div className="nav-caption">القائمة الرئيسية</div>
-        <nav className="primary-nav" aria-label="القائمة الرئيسية">
-          <button className="nav-link" onClick={() => navigate("/")}>
-            <LayoutDashboard size={19} />
-            <span>الرئيسية</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/students")}>
-            <Users size={19} />
-            <span>الطلاب</span>
-            <span className="nav-count">248</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/schedule")}>
-            <CalendarDays size={19} />
-            <span>الجدول</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/classes")}>
-            <BookOpen size={19} />
-            <span>الحصص والكورسات</span>
-          </button>
-          <button
-            className="nav-link"
-            onClick={() => showComingSoon("المسابقات")}
-          >
-            <Sparkles size={19} />
-            <span>المسابقات</span>
-          </button>
-        </nav>
-        <div className="nav-caption nav-caption-spaced">الإدارة</div>
-        <nav className="primary-nav" aria-label="قائمة الإدارة">
-          <button className="nav-link active" aria-current="page">
-            <UserCog size={19} />
-            <span>الفريق والأدوار</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/approvals")}>
-            <CheckCircle2 size={19} />
-            <span>الموافقات</span>
-          </button>
-          <button className="nav-link" onClick={() => navigate("/reports")}>
-            <Activity size={19} />
-            <span>التقارير والتحليلات</span>
-          </button>
-        </nav>
-        <div className="sidebar-spacer" />
-        <div className="sidebar-help">
-          <span className="help-icon">
-            <CircleHelp size={18} />
-          </span>
-          <div>
-            <strong>محتاج مساعدة؟</strong>
-            <span>مركز الدعم والإرشادات</span>
-          </div>
-          <ChevronLeft size={16} />
-        </div>
-        <div className="sidebar-bottom">
-          <button
-            className="nav-link"
-            onClick={() => showComingSoon("الإعدادات")}
-          >
-            <Settings size={19} />
-            <span>الإعدادات</span>
-          </button>
-          <SessionLogoutButton className="nav-link" iconSize={19} />
-        </div>
-        <div className="sidebar-version">
-          مدى لإدارة الأكاديميات <span>نسخة تجريبية</span>
-        </div>
-      </aside>
+      <BranchManagerSidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
 
       <main className="main-panel">
         <header className="topbar">
@@ -475,16 +349,10 @@ export default function Team() {
             </div>
             <div className="welcome-actions">
               <button
-                className="button button-secondary academy-owner-preview-button"
-                onClick={() => navigate("/academy-owner")}
+                className="button button-secondary"
+                onClick={() => navigate("/supervision-assignments")}
               >
-                <GraduationCap size={17} /> معاينة رئيس الأكاديمية
-              </button>
-              <button
-                className="button button-secondary academy-owner-preview-button"
-                onClick={() => navigate("/platform-console")}
-              >
-                <ShieldCheck size={17} /> معاينة أدمن المنصة · R00
+                <UserPlus size={17} /> متابعة وتفويض المجموعات
               </button>
               <button className="button button-secondary" onClick={downloadCsv}>
                 <ArrowDownToLine size={17} /> تصدير الفريق

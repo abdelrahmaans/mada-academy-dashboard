@@ -1,4 +1,4 @@
-import { BarChart3, BookOpen, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, CircleHelp, GraduationCap, LayoutDashboard, LogOut, Settings, ShieldCheck, Users, UserPlus, Wallet, X } from "lucide-react";
+import { BarChart3, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, CircleHelp, GraduationCap, LayoutDashboard, LogOut, ShieldCheck, Users, UserPlus, Wallet, X } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { getRoleDefinition } from "@/lib/roleNavigation";
@@ -8,18 +8,12 @@ type RoleMode = "R02" | "R06";
 type Props = { open: boolean; onClose: () => void; roleCode?: RoleMode };
 type Item = { path: string; label: string; icon: typeof LayoutDashboard };
 
-const R02_MAIN: Item[] = [
-  { path: "/", label: "الرئيسية", icon: LayoutDashboard },
-  { path: "/students", label: "الطلاب", icon: Users },
-  { path: "/schedule", label: "الجدول", icon: CalendarDays },
-  { path: "/classes", label: "الحصص والكورسات", icon: BookOpen },
-  { path: "/branch-operations", label: "إدارة التشغيل", icon: Settings },
-];
-const R02_ADMIN: Item[] = [
-  { path: "/team", label: "الفريق والأدوار", icon: Users },
-  { path: "/supervision-assignments", label: "متابعة المجموعات", icon: UserPlus },
-  { path: "/approvals", label: "الموافقات", icon: CheckCircle2 },
-  { path: "/reports", label: "التقارير والتحليلات", icon: BarChart3 },
+const R02_ITEMS: Item[] = [
+  { path: "/", label: "غرفة عمليات الفرع", icon: LayoutDashboard },
+  { path: "/schedule", label: "الجدول والمجموعات", icon: CalendarDays },
+  { path: "/students", label: "الطلاب والاشتراكات", icon: Users },
+  { path: "/team", label: "فريق الفرع والإشراف", icon: UserPlus },
+  { path: "/approvals", label: "الموافقات والقرارات", icon: CheckCircle2 },
 ];
 const R06_ITEMS: Item[] = [
   { path: "/finance-desk", label: "المكتب المالي", icon: Wallet },
@@ -46,16 +40,16 @@ export default function BranchManagerSidebar({ open, onClose, roleCode = "R02" }
   const { logout } = useAuth();
   const isAccountant = roleCode === "R06";
   const roleDefinition = getRoleDefinition(roleCode);
-  const roleItems = (isAccountant ? R06_ITEMS : [...R02_MAIN, ...R02_ADMIN]).map(item => ({ ...item, label: registryLabel(roleCode, item.path, item.label) }));
+  const items = isAccountant ? R06_ITEMS : R02_ITEMS;
+  const roleItems = items.map(item => ({ ...item, label: registryLabel(roleCode, item.path, item.label) }));
   const go = (path: string) => { onClose(); navigate(path); };
   return <>
     {open && <button className="mobile-scrim" aria-label="إغلاق القائمة" onClick={onClose} />}
     <aside className={`sidebar branch-manager-sidebar ${open ? "sidebar-open" : ""}`} aria-label={isAccountant ? "تنقل المحاسب" : "تنقل مدير الفرع"}>
       <div className="sidebar-top"><MadaBrand onClick={() => go(isAccountant ? "/finance-desk" : "/")} /><button className="icon-button sidebar-close" aria-label="إغلاق القائمة" onClick={onClose}><X size={19} /></button></div>
       <div className="academy-switcher"><span className="academy-avatar">{isAccountant ? <Wallet size={20} /> : <GraduationCap size={20} />}</span><span className="academy-meta"><strong>أكاديمية مدى</strong><small>{isAccountant ? "المحاسب · R06" : "مدير الفرع · R02"}</small></span><ChevronDown size={15} className="switcher-chevron" /></div>
-      <div className="nav-caption">{isAccountant ? "المساحة المالية" : "القائمة الرئيسية"}</div>
-      <nav className="primary-nav" aria-label="القائمة الرئيسية"><NavItems items={isAccountant ? roleItems : roleItems.slice(0, R02_MAIN.length)} location={location} onNavigate={go} /></nav>
-      {!isAccountant && <><div className="nav-caption nav-caption-spaced">الإدارة</div><nav className="primary-nav" aria-label="قائمة الإدارة"><NavItems items={roleItems.slice(R02_MAIN.length)} location={location} onNavigate={go} /></nav></>}
+      <div className="nav-caption">{isAccountant ? "المساحة المالية" : "عمليات الفرع"}</div>
+      <nav className="primary-nav" aria-label={isAccountant ? "المساحة المالية" : "عمليات الفرع"}><NavItems items={roleItems} location={location} onNavigate={go} /></nav>
       <div className="sidebar-spacer" />
       <div className="sidebar-help"><span className="help-icon"><CircleHelp size={18} /></span><div><strong>محتاج مساعدة؟</strong><span>{isAccountant ? "سياسة التحصيل والموافقات" : "دليل تشغيل الفرع"}</span></div><ChevronLeft size={16} /></div>
       <div className="sidebar-bottom"><button className="nav-link" onClick={() => go(isAccountant ? "/approvals" : "/team")}><ShieldCheck size={19} /><span>{isAccountant ? "الموافقات" : "إدارة الفريق"}</span></button><button className="nav-link" onClick={() => { void logout().then(() => navigate("/login")); }}><LogOut size={19} /><span>تسجيل الخروج</span></button></div>

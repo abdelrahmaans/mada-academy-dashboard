@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Activity, ArrowLeft, BookOpen, CalendarDays, CheckCircle2, Menu, RefreshCw, Users } from "lucide-react";
+import { Activity, ArrowLeft, BookOpen, CalendarDays, CheckCircle2, Menu, RefreshCw, UserPlus, Users } from "lucide-react";
 import { useLocation } from "wouter";
 import PageHeader from "@/components/PageHeader";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
@@ -72,9 +72,10 @@ export default function HomeLive({ me }: { me: AuthMe }) {
           </section>
 
           <section className="r02-live-actions" aria-label="روابط تشغيلية">
-            <button onClick={() => navigate("/students")}><Users size={17} /><span>إدارة الطلاب</span><ArrowLeft size={15} /></button>
-            <button onClick={() => navigate("/approvals")}><CheckCircle2 size={17} /><span>طلبات الموافقة</span><ArrowLeft size={15} /></button>
-            <button onClick={() => navigate("/reports")}><Activity size={17} /><span>التقرير المالي للفرع</span><ArrowLeft size={15} /></button>
+            <button onClick={() => navigate("/schedule")}><CalendarDays size={17} /><span>الجدول والمجموعات</span><ArrowLeft size={15} /></button>
+            <button onClick={() => navigate("/students")}><Users size={17} /><span>الطلاب والاشتراكات</span><ArrowLeft size={15} /></button>
+            <button onClick={() => navigate("/team")}><UserPlus size={17} /><span>فريق الفرع والإشراف</span><ArrowLeft size={15} /></button>
+            <button onClick={() => navigate("/approvals")}><CheckCircle2 size={17} /><span>الموافقات والقرارات</span><ArrowLeft size={15} /></button>
           </section>
         </>}
       </div>
