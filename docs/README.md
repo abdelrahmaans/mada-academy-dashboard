@@ -1,16 +1,32 @@
-# Project Documentation
+# مركز التوثيق الفني لنظام مدى (Mada Documentation Hub)
 
-This folder contains product, API-adjacent, acceptance, security, finance, deployment, and UX documentation. Current implementation truth is maintained in [`.agent/PROJECT_STATUS.md`](../.agent/PROJECT_STATUS.md); current priorities are in [`.agent/NEXT_PHASE_PLAN.md`](../.agent/NEXT_PHASE_PLAN.md).
+مرحباً بك في مركز التوثيق الفني الشامل لمشروع **Mada Academy Dashboard**. تم تنظيم هذا المجلد ليكون المرجع الأساسي للمطورين وفرق العمليات والمنتج.
 
-## Categories
+---
 
-- **Acceptance and LIVE boundaries:** `LIVE_ACCEPTANCE_EVIDENCE.md`, `CONSUMER_FINAL_ACCEPTANCE.md`, `UI_FLOW_REVIEW_STATUS.md`
-- **Product plans:** `IMPLEMENTATION_PLAN.md`, `INVOICES_PAYMENTS_MVP_PLAN.md`, `OTP_MVP_TEMPORARY_PLAN.md`
-- **Operations and release:** `PRE_PRODUCTION_RUNBOOK.md`, `FINANCE_RELEASE_GATE.md`, `CONSUMER_STAGING_SMOKE_TEST.md`, `DISTRIBUTED_RATE_LIMIT_DECISION.md`
-- **Role inventory and UX:** `R00_PLATFORM_ADMIN_INVENTORY.md`, `UI_UX_AUDIT_NOTES.md`, `UI_UX_AUDIT_ROLES_2026-10-05.md`
+## 📚 الفهرس الرئيسي للوثائق الحية (Active Documentation)
 
-## Rules
+### 1. معمارية النظام والأدوار (Architecture & RBAC)
+* 📖 [**دليل الأدوار وسير العمل (ROLES_AND_WORKFLOWS.md)**](./ROLES_AND_WORKFLOWS.md): الدليل المحدث الشامل للأدوار الـ 10 (R00 - R09) والموديولات الخمسة لكل دور، وحدود الصلاحيات، والتزامن مع الـ URL Hash.
+* 📖 [**معمارية المونوريبو والتقنيات (ARCHITECTURE_AND_MONOREPO.md)**](./ARCHITECTURE_AND_MONOREPO.md): الهيكل الشامل للمشروع (React 19 + .NET 10 + PostgreSQL + Packages)، ونظام التصميم المشترك.
+* 📊 [**مصفوفة الصلاحيات ونقاط الاتصال (ROLE_PERMISSION_ENDPOINT_MATRIX.md)**](./ROLE_PERMISSION_ENDPOINT_MATRIX.md): مخطط وتفصيل كل Permission وما يطابقه من Endpoints وسلوكيات في الباك إند.
 
-- Treat the `.agent/` status and plan files as canonical; do not create competing copies here.
-- Keep historical or proposed behavior clearly labeled and do not describe preview/demo surfaces as LIVE.
-- Link to backend contracts in [`../backend/`](../backend/README.md) rather than copying API definitions into multiple files.
+### 2. البنية التحتية والتشغيل (DevOps & Runbooks)
+* 🚀 [**دليل النشر السحابي (CLOUD_DEPLOYMENT_GUIDE.md)**](./CLOUD_DEPLOYMENT_GUIDE.md): تعليمات النشر على المنصات السحابية (Railway, Render, Docker Compose, Supabase).
+* ⚙️ [**دليل ما قبل الإنتاج (PRE_PRODUCTION_RUNBOOK.md)**](./PRE_PRODUCTION_RUNBOOK.md): قائمة التحقق وخطوات التأكد قبل إطلاق بيئة الإنتاج الحية.
+* 🛡️ [**بوابة إطلاق المالية (FINANCE_RELEASE_GATE.md)**](./FINANCE_RELEASE_GATE.md): معايير قبول المعاملات المالية والفواتير وضوابط منع التلاعب.
+
+### 3. التطبيقات التابعة والموازية (Apps & Parity)
+* 🌐 [**توثيق صفحة الهبوط (LANDING_MONOREPO.md)**](./LANDING_MONOREPO.md): معمارية وتكامل تطبيق صفحة الهبوط في `apps/landing`.
+* 🅰️ **توثيق نسخة Angular المؤسسية**: موجودة داخل مجلد `client-angular/docs/` للمقارنة والتكامل المؤسسي.
+
+---
+
+## 🗄️ الأرشيف التاريخي (Documentation Archive)
+
+تم أرشفة مسودات المراحل الأولى، وخطط الـ MVP المبكرة، وسجلات التدقيق القديمة داخل مجلد [`docs/archive/`](./archive/) للحفاظ على نظافة التوثيق الحي وعدم تشتيت المطورين:
+* `docs/archive/OTP_MVP_TEMPORARY_PLAN.md`
+* `docs/archive/INVOICES_PAYMENTS_MVP_PLAN.md`
+* `docs/archive/MADA_PRODUCT_STATE_AND_PLAN_2026-10-10.md`
+* `docs/archive/RELEASE_CLOSURE_REVIEW_2026-10-07.md`
+* `docs/archive/UI_UX_AUDIT_ROLES_2026-10-05.md`
