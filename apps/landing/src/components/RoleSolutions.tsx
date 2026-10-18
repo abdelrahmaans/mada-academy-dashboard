@@ -254,31 +254,33 @@ export const RoleSolutions: React.FC = () => {
           </p>
         </div>
 
-        {/* Roles Tab Selector Buttons */}
-        <div className="flex items-center justify-start lg:justify-center gap-2.5 overflow-x-auto pb-4 scrollbar-none mb-10">
-          {ROLES_DATA.map((role) => {
-            const TabIcon = role.icon;
-            const isActive = activeTab === role.id;
-            return (
-              <button
-                key={role.id}
-                onClick={() => setActiveTab(role.id)}
-                className={`flex items-center gap-2.5 px-4 sm:px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all duration-200 border ${
-                  isActive
-                    ? 'bg-[#14243A] text-white border-[#14243A] shadow-md shadow-[#14243A]/15 scale-[1.02]'
-                    : 'bg-white text-[#14243A]/75 border-[#14243A]/10 hover:bg-white hover:text-[#14243A] hover:border-[#14243A]/25'
-                }`}
-              >
-                <TabIcon className={`w-4 h-4 ${isActive ? 'text-[#0D9488]' : 'text-[#14243A]/50'}`} />
-                <span>{role.title}</span>
-                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-md ${
-                  isActive ? 'bg-white/15 text-teal-300' : 'bg-[#14243A]/5 text-[#14243A]/60'
-                }`}>
-                  {role.roleCode}
-                </span>
-              </button>
-            );
-          })}
+        {/* Roles Tab Selector Buttons - Modern Segmented Control with Hidden Scrollbars */}
+        <div className="w-full max-w-4xl mx-auto mb-10 px-2">
+          <div className="bg-white/80 p-1.5 sm:p-2 rounded-2xl sm:rounded-full border border-[#14243A]/10 shadow-sm flex items-center justify-start sm:justify-center gap-1 sm:gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            {ROLES_DATA.map((role) => {
+              const TabIcon = role.icon;
+              const isActive = activeTab === role.id;
+              return (
+                <button
+                  key={role.id}
+                  onClick={() => setActiveTab(role.id)}
+                  className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl sm:rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 ${
+                    isActive
+                      ? 'bg-[#14243A] text-white shadow-sm shadow-[#14243A]/20 scale-[1.01]'
+                      : 'text-[#14243A]/70 hover:text-[#14243A] hover:bg-[#14243A]/5'
+                  }`}
+                >
+                  <TabIcon className={`w-3.5 h-3.5 ${isActive ? 'text-[#0D9488]' : 'text-[#14243A]/50'}`} />
+                  <span>{role.title}</span>
+                  <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-md ${
+                    isActive ? 'bg-white/15 text-teal-300' : 'bg-[#14243A]/5 text-[#14243A]/60'
+                  }`}>
+                    {role.roleCode}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Active Role Content Card */}

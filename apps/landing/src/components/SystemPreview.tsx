@@ -1,876 +1,672 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Building2, 
-  Calendar, 
   Users, 
   CheckCircle2, 
-  Clock, 
+  Wallet, 
+  TrendingUp, 
+  AlertCircle, 
+  BarChart3, 
+  Bell, 
+  LayoutDashboard, 
+  CalendarDays, 
+  MapPin, 
   ShieldCheck, 
-  BookOpen,
-  Receipt,
-  ExternalLink,
-  Wallet,
-  GraduationCap,
-  Sparkles,
-  BarChart3,
-  Activity,
-  Layers,
-  ArrowUpRight
+  ChevronLeft, 
+  GraduationCap, 
+  ArrowUpRight,
+  Lock,
+  Sparkles
 } from 'lucide-react';
-import { DASHBOARD_URL, DASHBOARD_LIVE_DEMO } from '../lib/publicApi';
+import { DASHBOARD_LIVE_DEMO } from '../lib/publicApi';
+
+type ViewMode = 'overview' | 'branches' | 'alerts' | 'pnl';
+
+interface BranchData {
+  name: string;
+  manager: string;
+  students: number;
+  instructors: number;
+  attendance: number;
+  capacity: number;
+  leads: number;
+  tickets: number;
+  collected: number;
+  expenses: number;
+  trend: number;
+  health: 'good' | 'watch';
+}
+
+const ALL_BRANCHES: BranchData[] = [
+  { 
+    name: 'مدينة نصر', 
+    manager: 'أحمد محمود', 
+    students: 248, 
+    instructors: 9, 
+    attendance: 86, 
+    capacity: 78, 
+    leads: 12, 
+    tickets: 2, 
+    collected: 128500, 
+    expenses: 38500, 
+    trend: 5.6, 
+    health: 'good' 
+  },
+  { 
+    name: 'المعادي', 
+    manager: 'سارة كمال', 
+    students: 186, 
+    instructors: 7, 
+    attendance: 91, 
+    capacity: 69, 
+    leads: 8, 
+    tickets: 1, 
+    collected: 101200, 
+    expenses: 29400, 
+    trend: 3.1, 
+    health: 'good' 
+  },
+  { 
+    name: 'الشيخ زايد', 
+    manager: 'يوسف عماد', 
+    students: 121, 
+    instructors: 5, 
+    attendance: 81, 
+    capacity: 57, 
+    leads: 5, 
+    tickets: 3, 
+    collected: 72400, 
+    expenses: 31800, 
+    trend: -2.4, 
+    health: 'watch' 
+  },
+];
+
+const ALERTS_DATA = [
+  { 
+    id: 'AL-1', 
+    type: 'urgent', 
+    title: 'انخفاض الحضور في الشيخ زايد', 
+    detail: '81% هذا الشهر · أقل من هدف الأكاديمية 85%', 
+    branch: 'الشيخ زايد', 
+    action: 'فتح المتابعة' 
+  },
+  { 
+    id: 'AL-2', 
+    type: 'finance', 
+    title: '3 تذاكر مالية تحتاج تصعيداً', 
+    detail: 'تذاكر تشغيلية وحسابات من فرع الشيخ زايد', 
+    branch: 'الشيخ زايد', 
+    action: 'مراجعة التذاكر' 
+  },
+  { 
+    id: 'AL-3', 
+    type: 'growth', 
+    title: 'فرصة نمو في مدينة نصر', 
+    detail: '12 Lead نشطاً وطاقة تشغيلية 78%', 
+    branch: 'مدينة نصر', 
+    action: 'فتح تقرير النمو' 
+  },
+  { 
+    id: 'AL-4', 
+    type: 'academic', 
+    title: 'المعادي يتصدر الحضور', 
+    detail: '91% حضور مع 186 طالباً نشطاً', 
+    branch: 'المعادي', 
+    action: 'عرض التفاصيل' 
+  },
+];
+
+function formatMoney(value: number): string {
+  return new Intl.NumberFormat('en-US').format(value);
+}
 
 export const SystemPreview: React.FC = () => {
-  // Main view mode: 'executive_r01' (real project executive view) vs 'operations_sim' (interactive operations)
-  const [viewMode, setViewMode] = useState<'executive_r01' | 'operations_sim'>('executive_r01');
+  const [activeView, setActiveView] = useState<ViewMode>('overview');
+  const [selectedBranch, setSelectedBranch] = useState<string>('كل الفروع');
+  const [selectedMonth, setSelectedMonth] = useState<string>('سبتمبر 2026');
 
-  // Executive R01 state
-  const [executiveBranch, setExecutiveBranch] = useState<'ALL' | 'maadi' | 'nasr_city' | 'tagamoa'>('ALL');
-  const [executivePeriod, setExecutivePeriod] = useState<'current' | 'previous'>('current');
+  // Filter branches according to selected branch
+  const scopedBranches = useMemo(() => {
+    if (selectedBranch === 'كل الفروع') return ALL_BRANCHES;
+    return ALL_BRANCHES.filter((b) => b.name === selectedBranch);
+  }, [selectedBranch]);
 
-  // Interactive Ops state
-  const [selectedBranch, setSelectedBranch] = useState<'riyadh' | 'jeddah' | 'khobar'>('riyadh');
-  const [activeTab, setActiveTab] = useState<'attendance' | 'schedule' | 'groups' | 'evaluations' | 'finance'>('attendance');
-  const [roleView, setRoleView] = useState<'owner' | 'branch_mgr' | 'instructor'>('owner');
-
-  // Attendance mock data with interactive status toggling
-  const [attendanceList, setAttendanceList] = useState([
-    { id: 1, name: 'سعد بن عبد الرحمن العتيبي', group: 'روبوتكس - مستوى 2', status: 'present', time: '16:32', note: 'مكتمل الحضور' },
-    { id: 2, name: 'ليان بنت فيصل الشمري', group: 'روبوتكس - مستوى 2', status: 'present', time: '16:35', note: 'مكتمل الحضور' },
-    { id: 3, name: 'عمر بن خالد الدوسري', group: 'روبوتكس - مستوى 2', status: 'late', time: '16:48', note: 'تأخر 15 دقيقة مع عذر' },
-    { id: 4, name: 'فاطمة بنت أحمد القحطاني', group: 'روبوتكس - مستوى 2', status: 'excused', time: '-', note: 'إشعار مسبق من ولي الأمر' },
-    { id: 5, name: 'تركي بن عبد العزيز السبيعي', group: 'روبوتكس - مستوى 2', status: 'absent', time: '-', note: 'غير مسجل' }
-  ]);
-
-  const toggleAttendanceStatus = (id: number, newStatus: string) => {
-    setAttendanceList(prev => prev.map(item => item.id === id ? { ...item, status: newStatus } : item));
-  };
+  // Aggregated totals
+  const totalStudents = scopedBranches.reduce((acc, b) => acc + b.students, 0);
+  const avgAttendance = Math.round(
+    scopedBranches.reduce((acc, b) => acc + b.attendance, 0) / (scopedBranches.length || 1)
+  );
+  const totalCollected = scopedBranches.reduce((acc, b) => acc + b.collected, 0);
+  const totalExpenses = scopedBranches.reduce((acc, b) => acc + b.expenses, 0);
+  const totalLeads = scopedBranches.reduce((acc, b) => acc + b.leads, 0);
+  const totalTickets = scopedBranches.reduce((acc, b) => acc + b.tickets, 0);
 
   return (
-    <div id="preview" className="w-full bg-white rounded-3xl border border-[#14243A]/10 shadow-xl overflow-hidden text-[#14243A]">
+    <div className="w-full bg-white rounded-3xl border border-[#14243A]/15 shadow-2xl overflow-hidden text-[#14243A]">
       
-      {/* Super Top Banner: Mode Switcher & Real Project Connector */}
-      <div className="bg-[#0B1522] text-white px-4 sm:px-6 py-3 border-b border-white/10 flex flex-wrap items-center justify-between gap-4">
-        
-        {/* Toggle between Real Executive Dashboard and Daily Operations */}
+      {/* 1. Browser OS Window Bar */}
+      <div className="bg-[#0B1522] text-white px-4 py-3 flex items-center justify-between border-b border-white/10 text-xs">
+        {/* macOS Window Controls */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-white/60 hidden sm:inline">طريقة العرض:</span>
-          <div className="flex items-center bg-white/10 p-1 rounded-xl border border-white/10 text-xs">
-            <button
-              onClick={() => setViewMode('executive_r01')}
-              className={`py-1.5 px-3.5 rounded-lg transition-all font-bold flex items-center gap-1.5 ${
-                viewMode === 'executive_r01'
-                  ? 'bg-[#0D9488] text-white shadow-sm'
-                  : 'text-white/70 hover:text-white'
-              }`}
-            >
-              <BarChart3 className="w-3.5 h-3.5" />
-              <span>لوحة القيادة التنفيذية (منظور المالك R01)</span>
-              <span className="text-[10px] bg-white/20 px-1.5 py-0.2 rounded font-mono">فعلي</span>
-            </button>
-
-            <button
-              onClick={() => setViewMode('operations_sim')}
-              className={`py-1.5 px-3.5 rounded-lg transition-all font-bold flex items-center gap-1.5 ${
-                viewMode === 'operations_sim'
-                  ? 'bg-[#0D9488] text-white shadow-sm'
-                  : 'text-white/70 hover:text-white'
-              }`}
-            >
-              <Activity className="w-3.5 h-3.5" />
-              <span>محاكي العمليات اليومية</span>
-            </button>
-          </div>
+          <span className="w-3 h-3 rounded-full bg-rose-500/80 inline-block" />
+          <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block" />
+          <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block" />
         </div>
 
-        {/* Real Project Link Button */}
-        <div className="flex items-center gap-3">
-          <a
-            href={DASHBOARD_LIVE_DEMO}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="py-1.5 px-3.5 text-xs font-bold text-white bg-gradient-to-r from-[#0D9488] to-[#0A7268] hover:from-[#0E9F92] hover:to-[#0D8277] active:scale-[0.98] transition-all rounded-lg flex items-center gap-1.5 shadow-sm border border-teal-400/30"
-          >
-            <span>فتح لوحة التحكم الفعلية</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
+        {/* Browser URL Bar */}
+        <div className="hidden sm:flex items-center gap-2 bg-white/10 px-4 py-1.5 rounded-full text-white/70 text-[11px] font-mono border border-white/10 max-w-md w-full justify-center">
+          <Lock className="w-3 h-3 text-[#0D9488]" />
+          <span>app.mada-academy.com/executive-dashboard</span>
+          <span className="text-teal-400 font-bold ml-1">· Live R01</span>
         </div>
+
+        {/* Real App Launch CTA */}
+        <a
+          href={DASHBOARD_LIVE_DEMO}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[11px] font-bold text-white bg-[#0D9488] hover:bg-[#0B7D72] px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 shadow-sm"
+        >
+          <span>فتح النظام الفعلي</span>
+          <ArrowUpRight className="w-3.5 h-3.5" />
+        </a>
       </div>
 
-      {/* =========================================================================
-          VIEW MODE 1: REAL PROJECT EXECUTIVE DASHBOARD (R01_ACADEMY_OWNER)
-          Matches client/src/pages/ExecutiveDashboardLive.tsx 1-to-1
-         ========================================================================= */}
-      {viewMode === 'executive_r01' && (
-        <div className="bg-[#F8FAFC]">
+      {/* 2. Main Shell Layout: Authentic Sidebar + Main Panel (RTL) */}
+      <div className="flex flex-col lg:flex-row min-h-[640px] text-right">
+        
+        {/* Authentic Right Sidebar (Matching client/src/pages/ExecutiveDashboard.tsx) */}
+        <aside className="w-full lg:w-64 bg-[#0B1522] text-white p-4 sm:p-5 flex flex-col justify-between border-b lg:border-b-0 lg:border-l border-white/10 shrink-0">
           
-          {/* Top Control Bar of the Real Dashboard */}
-          <div className="p-4 sm:p-6 bg-white border-b border-[#14243A]/10 flex flex-wrap items-center justify-between gap-4">
-            
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#14243A] text-white flex items-center justify-center font-bold">
-                R01
-              </div>
-              <div className="text-right">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-base sm:text-lg font-black text-[#14243A]">لوحة القيادة التنفيذية الموحدة</h3>
-                  <span className="text-[10px] font-bold bg-[#0D9488]/10 text-[#0D9488] px-2 py-0.5 rounded-full border border-[#0D9488]/20">
-                    نطاق المالك والمدير العام
+          <div className="space-y-6">
+            {/* Brand Logo & Role Code */}
+            <div className="flex items-center justify-between pb-4 border-b border-white/10">
+              <div>
+                <div className="text-lg font-black tracking-tight text-white flex items-center gap-2">
+                  <span>مَـدَى</span>
+                  <span className="text-[10px] font-bold bg-[#0D9488] text-white px-2 py-0.5 rounded-md">
+                    R01
                   </span>
                 </div>
-                <p className="text-xs text-[#14243A]/60">
-                  متابعة الأداء التشغيلي والمالي المباشر عبر شبكة فروع الأكاديمية
-                </p>
+                <div className="text-[11px] text-white/60">
+                  الإدارة التنفيذية والمالك
+                </div>
+              </div>
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            </div>
+
+            {/* Academy Switcher (Tenant Scope) */}
+            <div className="bg-white/5 p-3 rounded-xl border border-white/10 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-[#0D9488]/20 text-teal-300 flex items-center justify-center shrink-0">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div className="overflow-hidden">
+                <div className="text-xs font-bold text-white truncate">أكاديمية مدى الدولية</div>
+                <div className="text-[10px] text-white/50 truncate">مسؤول الأكاديمية · Tenant</div>
               </div>
             </div>
 
-            {/* Branch and Period Filters */}
-            <div className="flex flex-wrap items-center gap-2.5">
-              
-              {/* Branch filter */}
-              <div className="flex items-center gap-1.5 bg-[#F4F7FA] p-1 rounded-xl border border-[#14243A]/10 text-xs">
-                <span className="text-[#14243A]/50 px-2 font-medium">الفرع:</span>
-                <button
-                  onClick={() => setExecutiveBranch('ALL')}
-                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                    executiveBranch === 'ALL' ? 'bg-white text-[#14243A] shadow-xs' : 'text-[#14243A]/70'
-                  }`}
-                >
-                  كافة الفروع (مجمّع)
-                </button>
-                <button
-                  onClick={() => setExecutiveBranch('maadi')}
-                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                    executiveBranch === 'maadi' ? 'bg-white text-[#14243A] shadow-xs' : 'text-[#14243A]/70'
-                  }`}
-                >
-                  فرع المعادي
-                </button>
-                <button
-                  onClick={() => setExecutiveBranch('nasr_city')}
-                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                    executiveBranch === 'nasr_city' ? 'bg-white text-[#14243A] shadow-xs' : 'text-[#14243A]/70'
-                  }`}
-                >
-                  مدينة نصر
-                </button>
-                <button
-                  onClick={() => setExecutiveBranch('tagamoa')}
-                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                    executiveBranch === 'tagamoa' ? 'bg-white text-[#14243A] shadow-xs' : 'text-[#14243A]/70'
-                  }`}
-                >
-                  التجمع
-                </button>
+            {/* Primary Navigation Links (Matching Real Dashboard) */}
+            <div className="space-y-1">
+              <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider px-2 mb-2">
+                لوحة الإدارة
               </div>
 
-              {/* Period */}
-              <div className="flex items-center gap-1 bg-[#F4F7FA] p-1 rounded-xl border border-[#14243A]/10 text-xs">
-                <button
-                  onClick={() => setExecutivePeriod('current')}
-                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                    executivePeriod === 'current' ? 'bg-[#0D9488] text-white shadow-xs' : 'text-[#14243A]/70'
-                  }`}
-                >
-                  الشهر الحالي
-                </button>
-                <button
-                  onClick={() => setExecutivePeriod('previous')}
-                  className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                    executivePeriod === 'previous' ? 'bg-[#0D9488] text-white shadow-xs' : 'text-[#14243A]/70'
-                  }`}
-                >
-                  الشهر السابق
-                </button>
-              </div>
-
-            </div>
-
-          </div>
-
-          {/* Scope Card / Notice from real project */}
-          <div className="p-4 sm:p-6 space-y-6">
-            
-            <div className="bg-[#14243A] text-white p-4 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-[#0D9488]">
-                  <ShieldCheck className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-xs sm:text-sm font-bold">صلاحية الإدارة العليا المعتمدة (Executive Governance)</h4>
-                  <p className="text-[11px] text-white/70">
-                    النطاق الحالي: {executiveBranch === 'ALL' ? 'الشبكة الموحدة لكافة الفروع' : executiveBranch === 'maadi' ? 'فرع المعادي' : executiveBranch === 'nasr_city' ? 'فرع مدينة نصر' : 'فرع التجمع الخامس'} · البيانات مسترجعة لحظياً عبر خادم API المعتمد.
-                  </p>
-                </div>
-              </div>
-              <div className="text-[11px] text-[#0D9488] font-mono bg-white/10 px-3 py-1 rounded-lg font-bold self-end sm:self-auto">
-                SCOPE: MADA-HQ-2026
-              </div>
-            </div>
-
-            {/* KPI Cards Grid from real ExecutiveDashboardLive */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 text-right">
-              
-              {/* KPI 1: طلاب نشطون */}
-              <div className="p-4 bg-white rounded-2xl border border-[#14243A]/10 shadow-xs hover:border-[#0D9488]/40 transition-colors">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#0D9488]/10 text-[#0D9488] flex items-center justify-center">
-                    <Users className="w-4 h-4" />
-                  </div>
-                  <span className="text-[11px] font-bold text-[#14243A]/60">طلاب نشطون</span>
-                </div>
-                <div className="text-2xl font-black text-[#14243A] font-en">
-                  {executiveBranch === 'ALL' ? '1,280' : executiveBranch === 'maadi' ? '460' : executiveBranch === 'nasr_city' ? '510' : '310'}
-                </div>
-                <p className="text-[10px] text-[#14243A]/50 mt-1 font-medium">من سجلات الطلاب النشطة</p>
-              </div>
-
-              {/* KPI 2: الجلسات */}
-              <div className="p-4 bg-white rounded-2xl border border-[#14243A]/10 shadow-xs hover:border-[#3B82F6]/40 transition-colors">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#3B82F6]/10 text-[#3B82F6] flex items-center justify-center">
-                    <Calendar className="w-4 h-4" />
-                  </div>
-                  <span className="text-[11px] font-bold text-[#14243A]/60">الجلسات</span>
-                </div>
-                <div className="text-2xl font-black text-[#14243A] font-en">
-                  {executiveBranch === 'ALL' ? '342' : '114'}
-                </div>
-                <p className="text-[10px] text-[#0D9488] mt-1 font-bold">310 مكتملة في الفترة</p>
-              </div>
-
-              {/* KPI 3: الحضور */}
-              <div className="p-4 bg-white rounded-2xl border border-[#14243A]/10 shadow-xs hover:border-[#8B5CF6]/40 transition-colors">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#8B5CF6]/10 text-[#8B5CF6] flex items-center justify-center">
-                    <CheckCircle2 className="w-4 h-4" />
-                  </div>
-                  <span className="text-[11px] font-bold text-[#14243A]/60">نسبة الحضور</span>
-                </div>
-                <div className="text-2xl font-black text-[#14243A] font-en">
-                  94.2%
-                </div>
-                <p className="text-[10px] text-[#14243A]/50 mt-1 font-medium">1,840 علامة مسجلة</p>
-              </div>
-
-              {/* KPI 4: التحصيل */}
-              <div className="p-4 bg-white rounded-2xl border border-[#14243A]/10 shadow-xs hover:border-[#D49A2D]/40 transition-colors">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#D49A2D]/15 text-[#D49A2D] flex items-center justify-center">
-                    <Wallet className="w-4 h-4" />
-                  </div>
-                  <span className="text-[11px] font-bold text-[#14243A]/60">التحصيل المالي</span>
-                </div>
-                <div className="text-xl sm:text-2xl font-black text-[#14243A] font-en">
-                  {executiveBranch === 'ALL' ? '184,500 ج.م' : '62,000 ج.م'}
-                </div>
-                <p className="text-[10px] text-[#14243A]/50 mt-1 font-medium">حسب الدفعات المستلمة</p>
-              </div>
-
-              {/* KPI 5: مصروفات معتمدة */}
-              <div className="p-4 bg-white rounded-2xl border border-[#14243A]/10 shadow-xs hover:border-[#3B82F6]/40 transition-colors">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#3B82F6]/10 text-[#3B82F6] flex items-center justify-center">
-                    <GraduationCap className="w-4 h-4" />
-                  </div>
-                  <span className="text-[11px] font-bold text-[#14243A]/60">مصروفات معتمدة</span>
-                </div>
-                <div className="text-xl sm:text-2xl font-black text-[#14243A] font-en">
-                  {executiveBranch === 'ALL' ? '42,300 ج.م' : '14,100 ج.م'}
-                </div>
-                <p className="text-[10px] text-[#14243A]/50 mt-1 font-medium">تشغيل الفروع ومستلزماتها</p>
-              </div>
-
-              {/* KPI 6: صافي الحركة */}
-              <div className="p-4 bg-white rounded-2xl border border-[#14243A]/10 shadow-xs hover:border-[#0D9488]/40 transition-colors bg-gradient-to-b from-white to-[#0D9488]/5">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#0D9488]/15 text-[#0D9488] flex items-center justify-center">
-                    <Receipt className="w-4 h-4" />
-                  </div>
-                  <span className="text-[11px] font-bold text-[#0D9488]">صافي الحركة</span>
-                </div>
-                <div className="text-xl sm:text-2xl font-black text-[#0D9488] font-en">
-                  {executiveBranch === 'ALL' ? '+142,200 ج.م' : '+47,900 ج.م'}
-                </div>
-                <p className="text-[10px] text-[#0D9488]/80 mt-1 font-bold">التحصيل ناقص المصروفات</p>
-              </div>
-
-            </div>
-
-            {/* Support Summary Strip from real project */}
-            <div className="p-3 bg-white rounded-xl border border-[#14243A]/10 flex flex-wrap items-center justify-between gap-4 text-xs">
-              <div className="flex items-center gap-6">
-                <span>إجمالي التسجيلات النشطة للفترة: <strong className="font-en text-[#14243A]">1,190</strong></span>
-                <span className="text-[#14243A]/30">·</span>
-                <span>الموافقات الإدارية المعلقة: <strong className="text-amber-600 font-en">4 طلبات</strong></span>
-              </div>
-              <div className="text-[11px] text-[#0D9488] font-bold flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-[#0D9488]" />
-                <span>مزامنة سحابية حية مع قاعدة البيانات</span>
-              </div>
-            </div>
-
-            {/* Recent Executive Activity Feed */}
-            <div className="bg-white rounded-2xl border border-[#14243A]/10 p-5 shadow-xs text-right">
-              <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#14243A]/10">
-                <span className="text-xs font-bold text-[#14243A]">سجل الأنشطة التنفيذية المباشرة (Live Audit Log)</span>
-                <span className="text-[11px] font-en text-[#14243A]/50">UPDATED: REALTIME</span>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-xs p-2.5 rounded-xl hover:bg-[#F8FAFC] transition-colors">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-2 h-2 rounded-full bg-[#0D9488]" />
-                    <span className="font-bold text-[#14243A]">اعتماد مصروف تشغيلي: أدوات معمل الروبوت</span>
-                    <span className="text-[#14243A]/50">· فرع المعادي</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-en font-bold text-[#14243A]">1,200 ج.م</span>
-                    <span className="text-[10px] text-[#0D9488] bg-[#0D9488]/10 px-2 py-0.5 rounded font-bold">معتمد</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between text-xs p-2.5 rounded-xl hover:bg-[#F8FAFC] transition-colors">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-2 h-2 rounded-full bg-[#3B82F6]" />
-                    <span className="font-bold text-[#14243A]">تسجيل دفعة اشتراك: الطالب يوسف النجار</span>
-                    <span className="text-[#14243A]/50">· مسار الذكاء الاصطناعي</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-en font-bold text-[#14243A]">3,500 ج.م</span>
-                    <span className="text-[10px] text-[#3B82F6] bg-[#3B82F6]/10 px-2 py-0.5 rounded font-bold">محصل</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between text-xs p-2.5 rounded-xl hover:bg-[#F8FAFC] transition-colors">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-2 h-2 rounded-full bg-[#D49A2D]" />
-                    <span className="font-bold text-[#14243A]">إتمام جلسة تدريبية وتوثيق حضور 18 طالباً</span>
-                    <span className="text-[#14243A]/50">· فرع مدينة نصر</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-[11px] text-[#14243A]/60">100% نسبة الحضور</span>
-                    <span className="text-[10px] text-[#D49A2D] bg-[#D49A2D]/15 px-2 py-0.5 rounded font-bold">مكتمل</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Direct jump to live project */}
-            <div className="p-4 bg-gradient-to-r from-[#14243A] to-[#1C3250] rounded-2xl text-white flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="text-right">
-                <h4 className="text-sm font-bold flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-[#0D9488]" />
-                  <span>تريد تجربة هذه الشاشة بكامل تفاصيلها وبياناتها الحية؟</span>
-                </h4>
-                <p className="text-xs text-white/70 mt-1">
-                  لوحة التحكم الفعلية تعمل الآن ومتاحة للدخول التفاعلي عبر شاشات المشرفين والمديرين.
-                </p>
-              </div>
-
-              <a
-                href={DASHBOARD_LIVE_DEMO}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="py-2.5 px-5 bg-[#0D9488] hover:bg-[#0B7D72] text-white text-xs font-bold rounded-xl active:scale-[0.98] transition-all flex items-center gap-2 whitespace-nowrap shadow-md"
-              >
-                <span>دخول لوحة التحكم المباشرة</span>
-                <ArrowUpRight className="w-4 h-4" />
-              </a>
-            </div>
-
-          </div>
-
-        </div>
-      )}
-
-      {/* =========================================================================
-          VIEW MODE 2: INTERACTIVE DAILY OPERATIONS SIMULATOR
-          Features attendance status toggle, schedule, cohorts, rubric, and finance
-         ========================================================================= */}
-      {viewMode === 'operations_sim' && (
-        <div>
-          {/* Top Application Bar */}
-          <div className="bg-[#14243A] text-white px-4 py-3.5 sm:px-6 flex flex-wrap items-center justify-between gap-3 border-b border-white/10">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 bg-white/10 py-1.5 px-3 rounded-lg text-xs font-semibold">
-                <Building2 className="w-3.5 h-3.5 text-[#0D9488]" />
-                <span>نطاق الفرع:</span>
-              </div>
-
-              <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10 text-xs">
-                <button
-                  onClick={() => setSelectedBranch('riyadh')}
-                  className={`py-1 px-3 rounded-lg transition-colors font-medium ${
-                    selectedBranch === 'riyadh' ? 'bg-[#0D9488] text-white font-bold' : 'text-white/70 hover:text-white'
-                  }`}
-                >
-                  الرياض - النرجس
-                </button>
-                <button
-                  onClick={() => setSelectedBranch('jeddah')}
-                  className={`py-1 px-3 rounded-lg transition-colors font-medium ${
-                    selectedBranch === 'jeddah' ? 'bg-[#0D9488] text-white font-bold' : 'text-white/70 hover:text-white'
-                  }`}
-                >
-                  جدة - الروضة
-                </button>
-                <button
-                  onClick={() => setSelectedBranch('khobar')}
-                  className={`py-1 px-3 rounded-lg transition-colors font-medium ${
-                    selectedBranch === 'khobar' ? 'bg-[#0D9488] text-white font-bold' : 'text-white/70 hover:text-white'
-                  }`}
-                >
-                  الخبر - الكورنيش
-                </button>
-              </div>
-            </div>
-
-            {/* Role Scoped View Filter */}
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-white/60 hidden sm:inline">معاينة منظور الدور:</span>
-              <div className="flex items-center bg-white/10 rounded-lg p-1 border border-white/10">
-                <button
-                  onClick={() => {
-                    setRoleView('owner');
-                    if (activeTab === 'finance') setActiveTab('finance');
-                  }}
-                  className={`px-2.5 py-1 rounded-md transition-colors ${roleView === 'owner' ? 'bg-white text-[#14243A] font-bold shadow-xs' : 'text-white/70 hover:text-white'}`}
-                  title="رؤية شاملة لكافة الفروع والعمليات"
-                >
-                  المالك
-                </button>
-                <button
-                  onClick={() => {
-                    setRoleView('branch_mgr');
-                    if (activeTab === 'finance') setActiveTab('finance');
-                  }}
-                  className={`px-2.5 py-1 rounded-md transition-colors ${roleView === 'branch_mgr' ? 'bg-white text-[#14243A] font-bold shadow-xs' : 'text-white/70 hover:text-white'}`}
-                  title="نطاق الفرع المحدد فقط"
-                >
-                  مدير الفرع
-                </button>
-                <button
-                  onClick={() => {
-                    setRoleView('instructor');
-                    if (activeTab === 'finance') setActiveTab('attendance');
-                  }}
-                  className={`px-2.5 py-1 rounded-md transition-colors ${roleView === 'instructor' ? 'bg-white text-[#14243A] font-bold shadow-xs' : 'text-white/70 hover:text-white'}`}
-                  title="المجموعات المسندة للمعلم فقط"
-                >
-                  المعلم
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Workspace Scope Banner */}
-          <div className="bg-[#F4F7FA] border-b border-[#14243A]/10 px-4 py-2.5 sm:px-6 flex flex-wrap items-center justify-between gap-2 text-xs text-[#14243A]/80">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-[#0D9488]" />
-              <span className="font-medium">
-                {roleView === 'owner' && 'منظور المالك: استعراض تشغيلي موحد لكافة العمليات والقاعات والحسابات المالية.'}
-                {roleView === 'branch_mgr' && 'منظور مدير الفرع: يقتصر الوصول على كشوف وقاعات فرع ' + (selectedBranch === 'riyadh' ? 'الرياض' : selectedBranch === 'jeddah' ? 'جدة' : 'الخبر')}
-                {roleView === 'instructor' && 'منظور المعلم: محصور في كشف الحضور وتقييمات المجموعات المسندة فقط (حجب السجلات المالية).'}
-              </span>
-            </div>
-            <div className="font-en text-[11px] text-[#14243A]/50 font-semibold">
-              TERMS: Q1 2026/2027 · SCOPE ID: MD-{selectedBranch.toUpperCase()}-09
-            </div>
-          </div>
-
-          {/* Feature Navigation Tabs */}
-          <div className="border-b border-[#14243A]/10 px-4 sm:px-6 bg-white overflow-x-auto">
-            <div className="flex items-center gap-1.5 sm:gap-3 py-2.5 min-w-max">
               <button
-                onClick={() => setActiveTab('attendance')}
-                className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
-                  activeTab === 'attendance'
-                    ? 'bg-[#14243A] text-white shadow-xs'
-                    : 'text-[#14243A]/70 hover:bg-[#F4F7FA] hover:text-[#14243A]'
+                onClick={() => setActiveView('overview')}
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold transition-all ${
+                  activeView === 'overview'
+                    ? 'bg-[#0D9488] text-white shadow-sm'
+                    : 'text-white/70 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <CheckCircle2 className="w-3.5 h-3.5 text-[#0D9488]" />
-                <span>كشف الحضور الفوري</span>
+                <div className="flex items-center gap-2.5">
+                  <LayoutDashboard className="w-4 h-4" />
+                  <span>الملخص التنفيذي</span>
+                </div>
               </button>
 
               <button
-                onClick={() => setActiveTab('schedule')}
-                className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
-                  activeTab === 'schedule'
-                    ? 'bg-[#14243A] text-white shadow-xs'
-                    : 'text-[#14243A]/70 hover:bg-[#F4F7FA] hover:text-[#14243A]'
+                onClick={() => setActiveView('branches')}
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold transition-all ${
+                  activeView === 'branches'
+                    ? 'bg-[#0D9488] text-white shadow-sm'
+                    : 'text-white/70 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Calendar className="w-3.5 h-3.5 text-[#0D9488]" />
-                <span>جدول القاعات والحصص</span>
+                <div className="flex items-center gap-2.5">
+                  <Building2 className="w-4 h-4" />
+                  <span>مقارنة الفروع</span>
+                </div>
+                <span className="text-[10px] font-mono bg-white/20 px-1.5 py-0.5 rounded">3</span>
               </button>
 
               <button
-                onClick={() => setActiveTab('groups')}
-                className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
-                  activeTab === 'groups'
-                    ? 'bg-[#14243A] text-white shadow-xs'
-                    : 'text-[#14243A]/70 hover:bg-[#F4F7FA] hover:text-[#14243A]'
+                onClick={() => setActiveView('pnl')}
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold transition-all ${
+                  activeView === 'pnl'
+                    ? 'bg-[#0D9488] text-white shadow-sm'
+                    : 'text-white/70 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <Users className="w-3.5 h-3.5 text-[#0D9488]" />
-                <span>المجموعات وسجلات الطلاب</span>
+                <div className="flex items-center gap-2.5">
+                  <TrendingUp className="w-4 h-4" />
+                  <span>الأرباح والتحصيل</span>
+                </div>
               </button>
 
               <button
-                onClick={() => setActiveTab('evaluations')}
-                className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
-                  activeTab === 'evaluations'
-                    ? 'bg-[#14243A] text-white shadow-xs'
-                    : 'text-[#14243A]/70 hover:bg-[#F4F7FA] hover:text-[#14243A]'
+                onClick={() => setActiveView('alerts')}
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold transition-all ${
+                  activeView === 'alerts'
+                    ? 'bg-[#0D9488] text-white shadow-sm'
+                    : 'text-white/70 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <BookOpen className="w-3.5 h-3.5 text-[#0D9488]" />
-                <span>التقييمات والمعايير</span>
-              </button>
-
-              {roleView !== 'instructor' ? (
-                <button
-                  onClick={() => setActiveTab('finance')}
-                  className={`py-2 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
-                    activeTab === 'finance'
-                      ? 'bg-[#14243A] text-white shadow-xs'
-                      : 'text-[#14243A]/70 hover:bg-[#F4F7FA] hover:text-[#14243A]'
-                  }`}
-                >
-                  <Receipt className="w-3.5 h-3.5 text-[#D49A2D]" />
-                  <span>القيود المالية التشغيلية</span>
-                </button>
-              ) : (
-                <span className="py-2 px-3 text-xs text-[#14243A]/40 italic cursor-not-allowed select-none">
-                  المالية (صلاحية محجوبة عن المعلم)
+                <div className="flex items-center gap-2.5">
+                  <Bell className="w-4 h-4" />
+                  <span>التنبيهات والقرارات</span>
+                </div>
+                <span className="text-[10px] font-bold bg-amber-500 text-slate-900 px-1.5 py-0.5 rounded-full">
+                  {ALERTS_DATA.length}
                 </span>
-              )}
+              </button>
             </div>
+
+            {/* Quick System Links */}
+            <div className="space-y-1 pt-4 border-t border-white/10 hidden sm:block">
+              <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider px-2 mb-2">
+                روابط الإدارة
+              </div>
+              <div className="text-xs text-white/60 p-2 flex items-center gap-2">
+                <Users className="w-4 h-4 text-white/40" />
+                <span>شؤون الطلاب والتسجيل</span>
+              </div>
+              <div className="text-xs text-white/60 p-2 flex items-center gap-2">
+                <Wallet className="w-4 h-4 text-white/40" />
+                <span>المالية والتحصيل</span>
+              </div>
+            </div>
+
           </div>
 
-          {/* Tab Contents */}
-          <div className="p-4 sm:p-6 bg-[#FAFCFD]">
+          {/* Sidebar Bottom Security Stamp */}
+          <div className="pt-4 border-t border-white/10 text-[10px] text-white/40 flex items-center justify-between">
+            <span>نطاق الأكاديمية فقط</span>
+            <ShieldCheck className="w-3.5 h-3.5 text-teal-400" />
+          </div>
 
-            {/* VIEW 1: ATTENDANCE ROLL-CALL */}
-            {activeTab === 'attendance' && (
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#14243A]/10 text-xs">
-                  <div>
-                    <span className="font-bold text-[#14243A]">المجموعة: </span>
-                    <span className="font-en text-[#14243A]/80 font-semibold">ROB-204</span>
-                    <span className="text-[#14243A]/40 mx-2">·</span>
-                    <span>المسار: الروبوت والذكاء الاصطناعي - قاعة الخوارزمي</span>
-                    <span className="text-[#14243A]/40 mx-2">·</span>
-                    <span>المدرب: م. طارق الصالح</span>
-                  </div>
-                  <div className="text-[#14243A]/70 flex items-center gap-1 font-medium">
-                    <Clock className="w-3.5 h-3.5 text-[#0D9488]" />
-                    <span>جلسة اليوم: 04:30 م - 06:00 م</span>
-                  </div>
-                </div>
+        </aside>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-right text-xs">
-                    <thead>
-                      <tr className="border-b border-[#14243A]/10 text-[#14243A]/60 pb-2">
-                        <th className="py-2.5 font-bold">اسم الطالب</th>
-                        <th className="py-2.5 font-bold">المجموعة</th>
-                        <th className="py-2.5 font-bold">وقت الرصد</th>
-                        <th className="py-2.5 font-bold">ملاحظات التحضير</th>
-                        <th className="py-2.5 font-bold text-center">حالة الحضور اليومية</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#14243A]/5">
-                      {attendanceList.map((student) => (
-                        <tr key={student.id} className="hover:bg-white transition-colors">
-                          <td className="py-3 font-bold text-[#14243A]">{student.name}</td>
-                          <td className="py-3 text-[#14243A]/70">{student.group}</td>
-                          <td className="py-3 font-en text-[#14243A]/60 font-semibold">{student.time}</td>
-                          <td className="py-3 text-[#14243A]/60">{student.note}</td>
-                          <td className="py-3">
-                            <div className="flex items-center justify-center gap-1">
-                              <button
-                                onClick={() => toggleAttendanceStatus(student.id, 'present')}
-                                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-colors ${
-                                  student.status === 'present'
-                                    ? 'bg-[#0D9488] text-white shadow-xs'
-                                    : 'bg-[#F4F7FA] text-[#14243A]/60 hover:text-[#14243A]'
-                                }`}
-                              >
-                                حاضر
-                              </button>
-                              <button
-                                onClick={() => toggleAttendanceStatus(student.id, 'late')}
-                                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-colors ${
-                                  student.status === 'late'
-                                    ? 'bg-[#D49A2D] text-white shadow-xs'
-                                    : 'bg-[#F4F7FA] text-[#14243A]/60 hover:text-[#14243A]'
-                                }`}
-                              >
-                                متأخر
-                              </button>
-                              <button
-                                onClick={() => toggleAttendanceStatus(student.id, 'excused')}
-                                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-colors ${
-                                  student.status === 'excused'
-                                    ? 'bg-[#14243A] text-white shadow-xs'
-                                    : 'bg-[#F4F7FA] text-[#14243A]/60 hover:text-[#14243A]'
-                                }`}
-                              >
-                                معتذر
-                              </button>
-                              <button
-                                onClick={() => toggleAttendanceStatus(student.id, 'absent')}
-                                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-colors ${
-                                  student.status === 'absent'
-                                    ? 'bg-red-600 text-white shadow-xs'
-                                    : 'bg-[#F4F7FA] text-[#14243A]/60 hover:text-[#14243A]'
-                                }`}
-                              >
-                                غائب
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="pt-3 border-t border-[#14243A]/10 flex flex-wrap items-center justify-between text-[11px] text-[#14243A]/70 font-medium">
-                  <div className="flex items-center gap-3">
-                    <span>إجمالي المجموعة: 5 طلاب</span>
-                    <span aria-hidden="true">·</span>
-                    <span className="text-[#0D9488] font-bold">نسبة الحضور المرصودة: 60% حاضر</span>
-                    <span aria-hidden="true">·</span>
-                    <span>1 متأخر</span>
-                    <span aria-hidden="true">·</span>
-                    <span>1 بعذر</span>
-                  </div>
-                  <div className="font-en text-[#14243A]/40 font-semibold">
-                    AUDIT LOG: UPDATED BY INSTRUCTOR #T-4401
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* VIEW 2: SCHEDULE */}
-            {activeTab === 'schedule' && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-[#14243A]/10 text-xs">
-                  <span className="font-bold text-[#14243A]">جدول القاعات التشغيلي - فرع {selectedBranch === 'riyadh' ? 'الرياض' : selectedBranch === 'jeddah' ? 'جدة' : 'الخبر'}</span>
-                  <span className="text-[#14243A]/60 font-en font-bold">TODAY: SUNDAY SCHEDULE</span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="p-3.5 bg-white rounded-xl border border-[#14243A]/10 space-y-2 shadow-xs">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-[#14243A]">معمل البرمجة (A1)</span>
-                      <span className="text-[#0D9488] font-bold text-[11px] bg-[#0D9488]/10 px-2 py-0.5 rounded-md">حصة جارية الآن</span>
-                    </div>
-                    <div className="text-xs space-y-1 text-[#14243A]/75">
-                      <p className="font-bold text-[#14243A]">تطوير الويب - دفعة الواعدين</p>
-                      <p className="font-en text-[#14243A]/60 font-semibold">04:00 PM - 05:30 PM</p>
-                      <p className="text-[11px]">المدرّب: أ. فيصل الدوسري · 14 طالبًا</p>
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 bg-white rounded-xl border border-[#14243A]/10 space-y-2 shadow-xs">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-[#14243A]">قاعة الخوارزمي (B2)</span>
-                      <span className="text-[#D49A2D] font-bold text-[11px] bg-[#D49A2D]/15 px-2 py-0.5 rounded-md">تبدأ بعد 30 دقيقة</span>
-                    </div>
-                    <div className="text-xs space-y-1 text-[#14243A]/75">
-                      <p className="font-bold text-[#14243A]">الرياضيات التطبيقية - المستوى المتقدم</p>
-                      <p className="font-en text-[#14243A]/60 font-semibold">05:30 PM - 07:00 PM</p>
-                      <p className="text-[11px]">المدرّب: د. منى النجار · 12 طالبًا</p>
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 bg-white rounded-xl border border-[#14243A]/10 space-y-2 shadow-xs">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-[#14243A]">معمل الروبوت والميكانيكا</span>
-                      <span className="text-[#14243A]/50 text-[11px] bg-[#14243A]/5 px-2 py-0.5 rounded-md font-semibold">مكتملة</span>
-                    </div>
-                    <div className="text-xs space-y-1 text-[#14243A]/75">
-                      <p className="font-bold text-[#14243A]">هندسة الروبوت - تمهيدي</p>
-                      <p className="font-en text-[#14243A]/60 font-semibold">02:30 PM - 04:00 PM</p>
-                      <p className="text-[11px]">المدرّب: م. طارق الصالح · تم اعتماد الكشف</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-white rounded-xl border border-[#14243A]/10 text-xs">
-                  <p className="font-bold text-[#14243A] mb-1">تنبيه تعارض القاعات والتجهيزات:</p>
-                  <p className="text-[#14243A]/70 text-[11px] leading-relaxed">
-                    النظام يتحقق آليًا من عدم حجز قاعة لأكثر من مجموعة في نفس التوقيت، مع تثبيت جدول المعلم وسعته المعتمدة لمنع الازدواجية عبر الفروع.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* VIEW 3: GROUPS */}
-            {activeTab === 'groups' && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-[#14243A]/10 text-xs">
-                  <span className="font-bold text-[#14243A]">المجموعات النشطة والطاقة الاستيعابية</span>
-                  <span className="text-[#14243A]/60 text-[11px] font-medium">فرز حسب المستوى والقاعة</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  <div className="p-3.5 bg-white rounded-xl border border-[#14243A]/10 space-y-2 shadow-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-[#14243A]">مجموعة البرمجة الإثرائية (PY-101)</span>
-                      <span className="font-en text-[#0D9488] font-bold text-[11px] bg-[#0D9488]/10 px-2 py-0.5 rounded">12 / 12 طالب (مكتملة)</span>
-                    </div>
-                    <div className="text-[11px] text-[#14243A]/70 space-y-1">
-                      <p>الفئة العمرية: 14 - 17 سنة · الفصل: الأول</p>
-                      <p>المشرف: م. فيصل الدوسري · القاعة: معمل 1</p>
-                    </div>
-                    <div className="w-full bg-[#F4F7FA] h-2 rounded-full overflow-hidden">
-                      <div className="bg-[#0D9488] h-full w-full" />
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 bg-white rounded-xl border border-[#14243A]/10 space-y-2 shadow-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-[#14243A]">مجموعة تصميم النماذج (UX-201)</span>
-                      <span className="font-en text-[#D49A2D] font-bold text-[11px] bg-[#D49A2D]/15 px-2 py-0.5 rounded">8 / 10 طلاب (متاح مقعدان)</span>
-                    </div>
-                    <div className="text-[11px] text-[#14243A]/70 space-y-1">
-                      <p>الفئة العمرية: 15 - 18 سنة · الفصل: الأول</p>
-                      <p>المشرفة: أ. ريم الدوسري · القاعة: قاعة الابتكار</p>
-                    </div>
-                    <div className="w-full bg-[#F4F7FA] h-2 rounded-full overflow-hidden">
-                      <div className="bg-[#D49A2D] h-full w-[80%]" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* VIEW 4: EVALUATIONS */}
-            {activeTab === 'evaluations' && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-[#14243A]/10 text-xs">
-                  <div>
-                    <span className="font-bold text-[#14243A]">مصفوفة معايير التقييم الأكاديمي: </span>
-                    <span className="text-[#14243A]/70">نموذج معتمد لدورات الروبوت التطبيقي</span>
-                  </div>
-                  <span className="font-en text-[11px] text-[#14243A]/50 font-bold">RUBRIC-STANDARD-V2</span>
-                </div>
-
-                <div className="space-y-2 text-xs">
-                  <div className="p-3 bg-white rounded-xl border border-[#14243A]/10 flex flex-wrap items-center justify-between gap-2 shadow-xs">
-                    <div>
-                      <p className="font-bold text-[#14243A]">المعيار 1: التحليل المنطقي وخوارزمية الحركة</p>
-                      <p className="text-[11px] text-[#14243A]/60 mt-0.5">قدرة الطالب على بناء خطوات الحل البرمجي قبل كتابة الكود</p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="px-2.5 py-1 bg-[#0D9488]/10 text-[#0D9488] font-bold text-[11px] rounded-md">
-                        متقدم (4/4)
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-3 bg-white rounded-xl border border-[#14243A]/10 flex flex-wrap items-center justify-between gap-2 shadow-xs">
-                    <div>
-                      <p className="font-bold text-[#14243A]">المعيار 2: التوصيل الفيزيائي للمستشعرات</p>
-                      <p className="text-[11px] text-[#14243A]/60 mt-0.5">الدقة في توصيل أسلاك الحساسات والمحركات على لوحة التحكم</p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="px-2.5 py-1 bg-[#14243A]/10 text-[#14243A] font-bold text-[11px] rounded-md">
-                        كفء (3/4)
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-3 bg-white rounded-xl border border-[#14243A]/10 flex flex-wrap items-center justify-between gap-2 shadow-xs">
-                    <div>
-                      <p className="font-bold text-[#14243A]">المعيار 3: العمل التشاركي وتوثيق المشروع</p>
-                      <p className="text-[11px] text-[#14243A]/60 mt-0.5">الالتزام بدور الفريق وتدوين الملاحظات الفنية بملف الإنجاز</p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span className="px-2.5 py-1 bg-[#0D9488]/10 text-[#0D9488] font-bold text-[11px] rounded-md">
-                        متقدم (4/4)
-                      </span>
-                    </div>
-                  </div>
-                </div>
+        {/* Authentic Main Workspace Panel */}
+        <main className="flex-1 bg-[#F4F7FA] p-4 sm:p-6 lg:p-8 flex flex-col justify-between">
+          
+          <div className="space-y-6">
+            
+            {/* Topbar: Filters & Scope Banner */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-[#14243A]/10">
+              
+              <div className="flex flex-wrap items-center gap-2">
                 
-                <p className="text-[11px] text-[#14243A]/60 font-medium">
-                  * التقييمات تراكمية وتصدر تقرير تقدم فصلي رسمي يمكن تصديره ومشاركته مع ولي الأمر وفق الصلاحية.
-                </p>
+                {/* Branch selector */}
+                <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-[#14243A]/10 text-xs font-bold shadow-xs">
+                  <MapPin className="w-3.5 h-3.5 text-[#0D9488]" />
+                  <span className="text-[#14243A]/50 font-normal">الفرع:</span>
+                  <select 
+                    value={selectedBranch} 
+                    onChange={(e) => setSelectedBranch(e.target.value)}
+                    className="bg-transparent text-[#14243A] font-bold focus:outline-none cursor-pointer"
+                  >
+                    <option value="كل الفروع">كل الفروع (مجمّع)</option>
+                    <option value="مدينة نصر">فرع مدينة نصر</option>
+                    <option value="المعادي">فرع المعادي</option>
+                    <option value="الشيخ زايد">فرع الشيخ زايد</option>
+                  </select>
+                </div>
+
+                {/* Month selector */}
+                <div className="flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-xl border border-[#14243A]/10 text-xs font-bold shadow-xs">
+                  <CalendarDays className="w-3.5 h-3.5 text-[#0D9488]" />
+                  <select 
+                    value={selectedMonth} 
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="bg-transparent text-[#14243A] font-bold focus:outline-none cursor-pointer"
+                  >
+                    <option value="سبتمبر 2026">سبتمبر 2026</option>
+                    <option value="أغسطس 2026">أغسطس 2026</option>
+                    <option value="يوليو 2026">يوليو 2026</option>
+                  </select>
+                </div>
+
+              </div>
+
+              {/* Scope Badge */}
+              <div className="flex items-center gap-1.5 text-xs font-bold text-[#0D9488] bg-[#0D9488]/10 border border-[#0D9488]/20 px-3 py-1.5 rounded-full">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>نطاق الأكاديمية فقط · Tenant Scope</span>
+              </div>
+
+            </div>
+
+            {/* Page Header (Eyebrow + Title) */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-xs font-bold text-[#0D9488]">
+                <span className="w-2 h-2 rounded-full bg-[#0D9488]" />
+                <span>الإدارة التنفيذية · R01</span>
+                <span className="text-[#14243A]/30">·</span>
+                <span className="text-[#14243A]/60 font-mono">{selectedMonth} · {selectedBranch}</span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black text-[#14243A]">
+                {activeView === 'overview' && 'لوحة الإدارة التنفيذية'}
+                {activeView === 'branches' && 'مقارنة أداء الفروع'}
+                {activeView === 'pnl' && 'الأرباح واستبقاء الطلاب'}
+                {activeView === 'alerts' && 'مركز التنبيهات والقرارات'}
+              </h3>
+              <p className="text-xs sm:text-sm text-[#14243A]/65">
+                {activeView === 'overview' && 'رؤية واحدة لأداء الأكاديمية، الفروع، النمو، التشغيل، والماليات.'}
+                {activeView === 'branches' && 'قارن أداء الفروع بالمؤشرات نفسها دون فقدان سياق كل فرع.'}
+                {activeView === 'pnl' && 'تحليلات الأرباح والخسائر لكل فرع، اقتصاديات الوحدة، والتحصيل.'}
+                {activeView === 'alerts' && 'رتّب التنبيهات حسب الأثر المالي والتشغيلي واتخذ القرار فوراً.'}
+              </p>
+            </div>
+
+            {/* ================= VIEW 1: OVERVIEW ================= */}
+            {activeView === 'overview' && (
+              <div className="space-y-6">
+                
+                {/* 4 Authentic KPI Cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+                  
+                  {/* KPI 1: طلاب نشطون */}
+                  <div className="bg-white p-4 rounded-2xl border border-[#14243A]/10 shadow-xs">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-bold text-[#14243A]/60">طلاب نشطون</span>
+                      <div className="w-7 h-7 rounded-lg bg-teal-50 text-[#0D9488] flex items-center justify-center">
+                        <Users className="w-3.5 h-3.5" />
+                      </div>
+                    </div>
+                    <div className="text-2xl sm:text-3xl font-black text-[#14243A] font-mono">
+                      {totalStudents}
+                    </div>
+                    <div className="text-[11px] text-[#14243A]/50 mt-1">
+                      عبر نطاق {selectedBranch}
+                    </div>
+                  </div>
+
+                  {/* KPI 2: متوسط الحضور */}
+                  <div className="bg-white p-4 rounded-2xl border border-[#14243A]/10 shadow-xs">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-bold text-[#14243A]/60">متوسط الحضور</span>
+                      <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      </div>
+                    </div>
+                    <div className="text-2xl sm:text-3xl font-black text-emerald-700 font-mono">
+                      {avgAttendance}%
+                    </div>
+                    <div className="text-[11px] text-emerald-600 mt-1">
+                      هدف الأكاديمية 85% ✓
+                    </div>
+                  </div>
+
+                  {/* KPI 3: التحصيل المالي */}
+                  <div className="bg-white p-4 rounded-2xl border border-[#14243A]/10 shadow-xs">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-bold text-[#14243A]/60">إجمالي التحصيل</span>
+                      <div className="w-7 h-7 rounded-lg bg-violet-50 text-violet-600 flex items-center justify-center">
+                        <Wallet className="w-3.5 h-3.5" />
+                      </div>
+                    </div>
+                    <div className="text-xl sm:text-2xl font-black text-[#14243A] font-mono">
+                      {formatMoney(totalCollected)} <span className="text-xs font-sans text-[#14243A]/60">ج.م</span>
+                    </div>
+                    <div className="text-[11px] text-[#14243A]/50 mt-1">
+                      هذا الشهر (صافي: {formatMoney(totalCollected - totalExpenses)} ج.م)
+                    </div>
+                  </div>
+
+                  {/* KPI 4: Leads نشطة */}
+                  <div className="bg-white p-4 rounded-2xl border border-[#14243A]/10 shadow-xs">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-bold text-[#14243A]/60">Leads نشطة</span>
+                      <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+                        <TrendingUp className="w-3.5 h-3.5" />
+                      </div>
+                    </div>
+                    <div className="text-2xl sm:text-3xl font-black text-amber-700 font-mono">
+                      {totalLeads}
+                    </div>
+                    <div className="text-[11px] text-[#14243A]/50 mt-1">
+                      بانتظار التحويل والتسكين
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* 2 Grid Panels: نبض الفروع + قرارات اليوم */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                  
+                  {/* Panel A: نبض الفروع */}
+                  <div className="lg:col-span-7 bg-white p-4 sm:p-5 rounded-2xl border border-[#14243A]/10 shadow-xs">
+                    <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#14243A]/10">
+                      <div className="flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4 text-[#0D9488]" />
+                        <h4 className="text-sm font-bold text-[#14243A]">نبض الفروع التشغيلي</h4>
+                      </div>
+                      <button 
+                        onClick={() => setActiveView('branches')}
+                        className="text-xs font-bold text-[#0D9488] hover:underline flex items-center gap-1"
+                      >
+                        <span>مقارنة كاملة</span>
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {scopedBranches.map((branch) => (
+                        <div 
+                          key={branch.name}
+                          className="p-3 rounded-xl bg-[#F8FAFC] border border-[#14243A]/5 flex items-center justify-between gap-3 text-xs"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-teal-50 text-[#0D9488] flex items-center justify-center font-bold">
+                              <Building2 className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="font-bold text-[#14243A]">{branch.name}</div>
+                              <div className="text-[#14243A]/50 text-[11px]">{branch.manager} · {branch.students} طالب</div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-4">
+                            {/* Attendance Progress bar */}
+                            <div className="hidden sm:block text-left w-24">
+                              <div className="text-[10px] text-[#14243A]/60 mb-0.5">حضور {branch.attendance}%</div>
+                              <div className="w-full bg-[#14243A]/10 h-1.5 rounded-full overflow-hidden">
+                                <div 
+                                  className={`h-full rounded-full ${branch.attendance >= 85 ? 'bg-emerald-500' : 'bg-amber-500'}`} 
+                                  style={{ width: `${branch.attendance}%` }} 
+                                />
+                              </div>
+                            </div>
+
+                            <div className="text-left font-mono font-bold text-[#14243A]">
+                              {formatMoney(branch.collected)} <span className="text-[10px] text-[#14243A]/50">ج.م</span>
+                            </div>
+
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                              branch.trend > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                            }`}>
+                              {branch.trend > 0 ? `+${branch.trend}%` : `${branch.trend}%`}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Panel B: قرارات اليوم */}
+                  <div className="lg:col-span-5 bg-white p-4 sm:p-5 rounded-2xl border border-[#14243A]/10 shadow-xs flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#14243A]/10">
+                        <div className="flex items-center gap-2">
+                          <Bell className="w-4 h-4 text-amber-500" />
+                          <h4 className="text-sm font-bold text-[#14243A]">قرارات اليوم العاجلة</h4>
+                        </div>
+                        <span className="text-xs font-bold text-[#14243A]/50">{ALERTS_DATA.length} عناصر</span>
+                      </div>
+
+                      <div className="space-y-2.5">
+                        <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/60 text-xs">
+                          <div className="font-bold text-amber-900 flex items-center justify-between">
+                            <span>فرع يحتاج متابعة تشغيلية</span>
+                            <span className="text-[10px] bg-amber-200/60 px-1.5 rounded text-amber-800">عاجل</span>
+                          </div>
+                          <div className="text-amber-800/80 text-[11px] mt-0.5">
+                            الشيخ زايد · الحضور 81% (أقل من هدف الأكاديمية) و 3 تذاكر مفتوحة
+                          </div>
+                        </div>
+
+                        <div className="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200/60 text-xs">
+                          <div className="font-bold text-emerald-900">
+                            أفضل أداء أكاديمي هذا الشهر
+                          </div>
+                          <div className="text-emerald-800/80 text-[11px] mt-0.5">
+                            فرع المعادي · حضور 91% مع 186 طالباً مسجلاً ونمو 3.1%
+                          </div>
+                        </div>
+
+                        <div className="p-2.5 rounded-xl bg-violet-50/70 border border-violet-200/60 text-xs">
+                          <div className="font-bold text-violet-900">
+                            صافي الحركة المالية المعتمدة
+                          </div>
+                          <div className="text-violet-800/80 text-[11px] mt-0.5">
+                            {formatMoney(totalCollected - totalExpenses)} ج.م متوفرة بعد تسوية رواتب ومصروفات الفروع
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-[#14243A]/10 mt-3 flex items-center justify-between text-xs">
+                      <span className="text-[#14243A]/60">التنبيهات محدثة لحظياً</span>
+                      <button 
+                        onClick={() => setActiveView('alerts')}
+                        className="font-bold text-[#0D9488] hover:underline"
+                      >
+                        عرض كل التنبيهات
+                      </button>
+                    </div>
+
+                  </div>
+
+                </div>
+
               </div>
             )}
 
-            {/* VIEW 5: FINANCE */}
-            {activeTab === 'finance' && roleView !== 'instructor' && (
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between pb-3 border-b border-[#14243A]/10 text-xs">
-                  <div>
-                    <span className="font-bold text-[#14243A]">سجل القيود والمقبوضات والمصروفات التشغيلية</span>
-                    <span className="text-[#14243A]/40 mx-2">·</span>
-                    <span className="text-[#14243A]/70">توثيق القيود الداخلية للفروع</span>
+            {/* ================= VIEW 2: BRANCH COMPARISON ================= */}
+            {activeView === 'branches' && (
+              <div className="bg-white rounded-2xl border border-[#14243A]/10 shadow-xs overflow-x-auto">
+                <table className="w-full text-xs text-right min-w-[550px]">
+                  <thead>
+                    <tr className="bg-[#14243A] text-white">
+                      <th className="py-3 px-4 font-bold">الفرع والمدير</th>
+                      <th className="py-3 px-3 font-bold text-center">الطلاب</th>
+                      <th className="py-3 px-3 font-bold text-center">الحضور</th>
+                      <th className="py-3 px-3 font-bold text-center">الطاقة</th>
+                      <th className="py-3 px-3 font-bold text-center">Leads</th>
+                      <th className="py-3 px-4 font-bold text-left">التحصيل</th>
+                      <th className="py-3 px-4 font-bold text-left text-teal-300">الصافي</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#14243A]/10">
+                    {scopedBranches.map((b) => (
+                      <tr key={b.name} className="hover:bg-[#F8FAFC]">
+                        <td className="py-3 px-4 font-bold">
+                          <div>{b.name}</div>
+                          <div className="text-[11px] text-[#14243A]/50 font-normal">{b.manager}</div>
+                        </td>
+                        <td className="py-3 px-3 text-center font-mono font-bold">{b.students}</td>
+                        <td className="py-3 px-3 text-center font-mono font-bold text-emerald-700">{b.attendance}%</td>
+                        <td className="py-3 px-3 text-center font-mono">{b.capacity}%</td>
+                        <td className="py-3 px-3 text-center font-mono text-amber-700 font-bold">{b.leads}</td>
+                        <td className="py-3 px-4 text-left font-mono font-bold">{formatMoney(b.collected)} ج.م</td>
+                        <td className="py-3 px-4 text-left font-mono font-bold text-teal-700">{formatMoney(b.collected - b.expenses)} ج.م</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* ================= VIEW 3: ALERTS & DECISIONS ================= */}
+            {activeView === 'alerts' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {ALERTS_DATA.map((alert) => (
+                  <div key={alert.id} className="bg-white p-4 rounded-2xl border border-[#14243A]/10 shadow-xs flex flex-col justify-between space-y-3">
+                    <div>
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="font-mono text-[#0D9488] font-bold">{alert.id} · {alert.branch}</span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                          {alert.type}
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-bold text-[#14243A]">{alert.title}</h4>
+                      <p className="text-xs text-[#14243A]/70 mt-1">{alert.detail}</p>
+                    </div>
+                    <button className="py-2 px-3 rounded-lg bg-[#14243A] hover:bg-[#1C3250] text-white text-xs font-bold transition-all flex items-center justify-between">
+                      <span>{alert.action}</span>
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                  <span className="text-[11px] text-[#0D9488] font-bold bg-[#0D9488]/10 px-2.5 py-0.5 rounded-md">
-                    تمت مطابقة قيود اليوم
-                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* ================= VIEW 4: PNL & CASH FLOW ================= */}
+            {activeView === 'pnl' && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white p-5 rounded-2xl border border-[#14243A]/10 shadow-xs">
+                  <div className="text-xs text-[#14243A]/60 font-bold">إجمالي الإيرادات المحصلة</div>
+                  <div className="text-2xl font-black text-emerald-700 font-mono mt-1">
+                    {formatMoney(totalCollected)} ج.م
+                  </div>
+                  <div className="text-[11px] text-emerald-600 mt-2">إيصالات معتمدة من الخزينة</div>
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-right text-xs">
-                    <thead>
-                      <tr className="border-b border-[#14243A]/10 text-[#14243A]/60 pb-2">
-                        <th className="py-2.5 font-bold">رقم القيد</th>
-                        <th className="py-2.5 font-bold">البيان التشغيلي</th>
-                        <th className="py-2.5 font-bold">النوع</th>
-                        <th className="py-2.5 font-bold font-en">المبلغ (SAR)</th>
-                        <th className="py-2.5 font-bold">حالة القيد والتسوية</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#14243A]/5">
-                      <tr className="hover:bg-white transition-colors">
-                        <td className="py-3 font-en text-[#14243A]/80 font-bold">TX-2026-881</td>
-                        <td className="py-3 text-[#14243A] font-medium">قيد سداد اشتراك فصل دراسي - الطالب: سعد العتيبي</td>
-                        <td className="py-3 text-[#0D9488] font-bold">إيراد اشتراك</td>
-                        <td className="py-3 font-en font-black text-[#14243A] tabular-nums">2,450.00</td>
-                        <td className="py-3 text-[#0D9488] font-semibold">مسجل ومطابق بالحساب البنكي</td>
-                      </tr>
-                      <tr className="hover:bg-white transition-colors">
-                        <td className="py-3 font-en text-[#14243A]/80 font-bold">TX-2026-882</td>
-                        <td className="py-3 text-[#14243A] font-medium">شراء حقائب إلكترونية لمعمل الروبوت - فرع الرياض</td>
-                        <td className="py-3 text-[#D49A2D] font-bold">مصروف تشغيلي</td>
-                        <td className="py-3 font-en font-black text-[#14243A] tabular-nums">1,120.00</td>
-                        <td className="py-3 text-[#14243A]/70">معتمد ومرفق الفاتورة الضريبية</td>
-                      </tr>
-                      <tr className="hover:bg-white transition-colors">
-                        <td className="py-3 font-en text-[#14243A]/80 font-bold">TX-2026-883</td>
-                        <td className="py-3 text-[#14243A] font-medium">دفعة رسوم مجدولة - الطالبة: ليان الشمري</td>
-                        <td className="py-3 text-[#0D9488] font-bold">إيراد اشتراك</td>
-                        <td className="py-3 font-en font-black text-[#14243A] tabular-nums">1,200.00</td>
-                        <td className="py-3 text-[#0D9488] font-semibold">مسجل ومطابق</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                <div className="bg-white p-5 rounded-2xl border border-[#14243A]/10 shadow-xs">
+                  <div className="text-xs text-[#14243A]/60 font-bold">المصروفات ورواتب المدربين</div>
+                  <div className="text-2xl font-black text-rose-700 font-mono mt-1">
+                    {formatMoney(totalExpenses)} ج.م
+                  </div>
+                  <div className="text-[11px] text-rose-600 mt-2">أجور الحصص المنفذة والإيجارات</div>
                 </div>
 
-                <div className="p-3.5 bg-[#F4F7FA] border border-[#14243A]/10 rounded-xl text-[11px] text-[#14243A]/80 flex items-start gap-2.5">
-                  <Receipt className="w-4 h-4 text-[#D49A2D] shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-bold text-[#14243A]">توضيح تشغيلي مهم: </span>
-                    <span>
-                      نظام مدى يسجل القيود والمدفوعات والمصروفات التشغيلية لضبط الحسابات الداخلية ودفاتر الأكاديمية، ولا يعمل كبوابة دفع إلكتروني أو وسيط مالي خارجي.
-                    </span>
+                <div className="bg-white p-5 rounded-2xl border border-[#14243A]/10 shadow-xs">
+                  <div className="text-xs text-[#14243A]/60 font-bold">صافي الأرباح التشغيلية</div>
+                  <div className="text-2xl font-black text-teal-700 font-mono mt-1">
+                    {formatMoney(totalCollected - totalExpenses)} ج.م
                   </div>
+                  <div className="text-[11px] text-teal-600 mt-2">هامش ربح تشغيلي +67%</div>
                 </div>
               </div>
             )}
 
           </div>
-        </div>
-      )}
+
+          {/* Bottom Live Notice */}
+          <div className="mt-6 pt-4 border-t border-[#14243A]/10 flex flex-wrap items-center justify-between text-xs text-[#14243A]/60 gap-2">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>واجهة مطابقة للوحة التحكم الفعلية للعميل مع صلاحية الإدارة R01</span>
+            </div>
+            <span className="font-mono text-[#0D9488]">Mada Core Engine v2.4</span>
+          </div>
+
+        </main>
+
+      </div>
 
     </div>
   );
