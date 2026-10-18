@@ -177,13 +177,56 @@ public static class DemoDataSeeder
             db.StudentAccountLinks.Add(new StudentAccountLink { Id = Guid.Parse("91000000-0000-0000-0000-000000000001"), TenantId = tenantId, StudentId = secondStudentId, UserAccountId = studentAccountId, CreatedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000002") });
         if (!await db.GuardianStudentLinks.AnyAsync(item => item.StudentId == firstStudentId && item.UserAccountId == parentId, cancellationToken))
             db.GuardianStudentLinks.Add(new GuardianStudentLink { Id = Guid.Parse("92000000-0000-0000-0000-000000000001"), TenantId = tenantId, StudentId = firstStudentId, UserAccountId = parentId, CreatedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000002"), Relationship = "ولي الأمر", Status = "ACTIVE" });
-        if (!await db.SessionAttendances.AnyAsync(item => item.SessionId == sessionId && item.StudentId == secondStudentId, cancellationToken))
-            db.SessionAttendances.Add(new SessionAttendance { SessionId = sessionId, StudentId = secondStudentId, Status = "LATE", LateMinutes = 8 });
+        var thirdStudentId = Guid.Parse("70000000-0000-0000-0000-000000000003");
+        var fourthStudentId = Guid.Parse("70000000-0000-0000-0000-000000000004");
+        var session1Id = Guid.Parse("50000000-0000-0000-0000-000000000001");
+        var heliopolisBranchId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        var helioClassroomId = Guid.Parse("20000000-0000-0000-0000-000000000002");
+        var helioStudentId = Guid.Parse("70000000-0000-0000-0000-000000000007");
+
+        // Additional attendances for session 1
+        if (!await db.SessionAttendances.AnyAsync(item => item.SessionId == session1Id && item.StudentId == firstStudentId, cancellationToken))
+            db.SessionAttendances.Add(new SessionAttendance { SessionId = session1Id, StudentId = firstStudentId, Status = "PRESENT" });
+        if (!await db.SessionAttendances.AnyAsync(item => item.SessionId == session1Id && item.StudentId == secondStudentId, cancellationToken))
+            db.SessionAttendances.Add(new SessionAttendance { SessionId = session1Id, StudentId = secondStudentId, Status = "PRESENT" });
+        if (!await db.SessionAttendances.AnyAsync(item => item.SessionId == session1Id && item.StudentId == thirdStudentId, cancellationToken))
+            db.SessionAttendances.Add(new SessionAttendance { SessionId = session1Id, StudentId = thirdStudentId, Status = "ABSENT" });
+        if (!await db.SessionAttendances.AnyAsync(item => item.SessionId == session1Id && item.StudentId == fourthStudentId, cancellationToken))
+            db.SessionAttendances.Add(new SessionAttendance { SessionId = session1Id, StudentId = fourthStudentId, Status = "PRESENT" });
+
+        // Evaluations for students
         if (!await db.SessionEvaluations.AnyAsync(item => item.SessionId == sessionId && item.StudentId == firstStudentId, cancellationToken))
         {
             db.SessionEvaluations.Add(new SessionEvaluation { Id = Guid.Parse("93000000-0000-0000-0000-000000000001"), SessionId = sessionId, StudentId = firstStudentId, InstructorId = mainInstructorId, Score = 88, Notes = "تقدم واضح في التطبيق العملي", Status = "PUBLISHED", SubmittedAt = new DateTimeOffset(2026, 9, 26, 12, 0, 0, TimeSpan.Zero), ReviewedByUserId = reviewerId, ReviewedAt = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero), PublishedAt = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero) });
             db.StateTransitions.Add(new StateTransitionEvent { Id = Guid.Parse("94000000-0000-0000-0000-000000000001"), AggregateType = "SESSION_EVALUATION", AggregateId = "93000000-0000-0000-0000-000000000001", FromState = "SUBMITTED", ToState = "PUBLISHED", ActorUserId = reviewerId });
         }
+        if (!await db.SessionEvaluations.AnyAsync(item => item.SessionId == sessionId && item.StudentId == secondStudentId, cancellationToken))
+            db.SessionEvaluations.Add(new SessionEvaluation { Id = Guid.Parse("93000000-0000-0000-0000-000000000002"), SessionId = sessionId, StudentId = secondStudentId, InstructorId = mainInstructorId, Score = 92, Notes = "أداء ممتاز وتفاعل متميز", Status = "PUBLISHED", SubmittedAt = new DateTimeOffset(2026, 9, 26, 12, 10, 0, TimeSpan.Zero), PublishedAt = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero) });
+        if (!await db.SessionEvaluations.AnyAsync(item => item.SessionId == sessionId && item.StudentId == thirdStudentId, cancellationToken))
+            db.SessionEvaluations.Add(new SessionEvaluation { Id = Guid.Parse("93000000-0000-0000-0000-000000000003"), SessionId = sessionId, StudentId = thirdStudentId, InstructorId = mainInstructorId, Score = 58, Notes = "صعوبة في متابعة الدرس بسبب الغياب المتكرر", Status = "PUBLISHED", SubmittedAt = new DateTimeOffset(2026, 9, 26, 12, 15, 0, TimeSpan.Zero), PublishedAt = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero) });
+        if (!await db.SessionEvaluations.AnyAsync(item => item.SessionId == sessionId && item.StudentId == fourthStudentId, cancellationToken))
+            db.SessionEvaluations.Add(new SessionEvaluation { Id = Guid.Parse("93000000-0000-0000-0000-000000000004"), SessionId = sessionId, StudentId = fourthStudentId, InstructorId = mainInstructorId, Score = 84, Notes = "مستوى جيد وثابت", Status = "PUBLISHED", SubmittedAt = new DateTimeOffset(2026, 9, 26, 12, 20, 0, TimeSpan.Zero), PublishedAt = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero) });
+
+        // Heliopolis Course Offering & Enrollment
+        var helioTemplateId = Guid.Parse("30000000-0000-0000-0000-000000000002");
+        if (!await db.CourseTemplates.AnyAsync(item => item.Id == helioTemplateId, cancellationToken))
+            db.CourseTemplates.Add(new CourseTemplate { Id = helioTemplateId, TenantId = tenantId, Name = "Creative Lab — October", Track = "coding", Type = "soft", AgeGroup = "9-14", Level = "beginner", TotalSessions = 6, SessionDurationHours = 1.5m, BasePricePiastres = 260000, Status = "PUBLISHED" });
+
+        var helioOfferingId = Guid.Parse("40000000-0000-0000-0000-000000000002");
+        if (!await db.CourseOfferings.AnyAsync(item => item.Id == helioOfferingId, cancellationToken))
+            db.CourseOfferings.Add(new CourseOffering { Id = helioOfferingId, TenantId = tenantId, BranchId = heliopolisBranchId, CourseTemplateId = helioTemplateId, InstructorId = mainInstructorId, ClassroomId = helioClassroomId, StartDate = new DateOnly(2026, 10, 1), EndDate = new DateOnly(2026, 11, 15), WeeklyScheduleJson = "{\"days\":[\"SUNDAY\"],\"start\":\"16:00\",\"end\":\"17:30\"}", Status = "ACTIVE", MaxStudents = 10 });
+
+        if (!await db.StudentEnrollments.AnyAsync(item => item.StudentId == helioStudentId && item.CourseOfferingId == helioOfferingId, cancellationToken))
+            db.StudentEnrollments.Add(new StudentEnrollment { Id = Guid.Parse("71000000-0000-0000-0000-000000000007"), StudentId = helioStudentId, CourseOfferingId = helioOfferingId, FinalPricePiastres = 260000, Status = "ACTIVE" });
+
+        var helioSessionId = Guid.Parse("50000000-0000-0000-0000-000000000004");
+        if (!await db.AcademySessions.AnyAsync(item => item.Id == helioSessionId, cancellationToken))
+        {
+            db.AcademySessions.Add(new AcademySession { Id = helioSessionId, TenantId = tenantId, BranchId = heliopolisBranchId, CourseOfferingId = helioOfferingId, SessionNumber = 1, StartAt = new DateTimeOffset(2026, 10, 4, 16, 0, 0, TimeSpan.Zero), EndAt = new DateTimeOffset(2026, 10, 4, 17, 30, 0, TimeSpan.Zero), InstructorId = mainInstructorId, ClassroomId = helioClassroomId, Type = "REGULAR", Status = "COMPLETED", CompletedAt = new DateTimeOffset(2026, 10, 4, 17, 40, 0, TimeSpan.Zero) });
+            db.SessionAttendances.Add(new SessionAttendance { SessionId = helioSessionId, StudentId = helioStudentId, Status = "PRESENT" });
+            db.SessionEvaluations.Add(new SessionEvaluation { Id = Guid.Parse("93000000-0000-0000-0000-000000000005"), SessionId = helioSessionId, StudentId = helioStudentId, InstructorId = mainInstructorId, Score = 95, Notes = "استيعاب سريع وتطبيق احترافي", Status = "PUBLISHED", SubmittedAt = new DateTimeOffset(2026, 10, 4, 17, 45, 0, TimeSpan.Zero), PublishedAt = new DateTimeOffset(2026, 10, 4, 18, 0, 0, TimeSpan.Zero) });
+        }
+
         await db.SaveChangesAsync(cancellationToken);
     }
 
@@ -224,28 +267,38 @@ public static class DemoDataSeeder
         }
 
         var mainStudentId = Guid.Parse("70000000-0000-0000-0000-000000000001");
+        var linaStudentId = Guid.Parse("70000000-0000-0000-0000-000000000002");
+        var adamStudentId = Guid.Parse("70000000-0000-0000-0000-000000000003");
+        var mariamStudentId = Guid.Parse("70000000-0000-0000-0000-000000000004");
         var heliopolisStudentId = Guid.Parse("70000000-0000-0000-0000-000000000007");
+
         if (!await db.Students.AnyAsync(student => student.Id == mainStudentId, cancellationToken))
             db.Students.Add(new Student { Id = mainStudentId, TenantId = tenantId, BranchId = mainBranchId, FullName = "Youssef Ahmed", DateOfBirth = new DateOnly(2015, 4, 12), Status = "ACTIVE" });
         if (!await db.Students.AnyAsync(student => student.Id == heliopolisStudentId, cancellationToken))
             db.Students.Add(new Student { Id = heliopolisStudentId, TenantId = tenantId, BranchId = heliopolisBranchId, FullName = "Salma Hossam", DateOfBirth = new DateOnly(2015, 4, 12), Status = "ACTIVE" });
         await db.SaveChangesAsync(cancellationToken);
 
+        var offeringId = Guid.Parse("40000000-0000-0000-0000-000000000001");
+        var mainEnrollment = await db.StudentEnrollments.FirstOrDefaultAsync(e => e.StudentId == mainStudentId && e.CourseOfferingId == offeringId, cancellationToken);
+        var helioOfferingId = Guid.Parse("40000000-0000-0000-0000-000000000002");
+        var helioEnrollment = await db.StudentEnrollments.FirstOrDefaultAsync(e => e.StudentId == heliopolisStudentId && e.CourseOfferingId == helioOfferingId, cancellationToken);
+
         if (!await db.Invoices.AnyAsync(invoice => invoice.InvoiceNumber == "MAD-MAIN-2026-0001", cancellationToken))
             db.Invoices.Add(new Invoice
             {
                 Id = Guid.Parse("80000000-0000-0000-0000-000000000001"), TenantId = tenantId, BranchId = mainBranchId,
-                StudentId = mainStudentId, InvoiceNumber = "MAD-MAIN-2026-0001", TotalPiastres = 320_000,
+                StudentId = mainStudentId, EnrollmentId = mainEnrollment?.Id, InvoiceNumber = "MAD-MAIN-2026-0001", TotalPiastres = 320_000,
                 IssueDate = new DateOnly(2026, 10, 1), DueDate = new DateOnly(2026, 10, 15), Status = "PARTIAL",
                 CreatedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000005"),
                 Lines = [new InvoiceLine { Id = Guid.Parse("81000000-0000-0000-0000-000000000001"), LineNumber = 1, Description = "Junior Robotics — Level 1", AmountPiastres = 320_000 }],
                 Payments = [new PaymentTransaction { Id = Guid.Parse("82000000-0000-0000-0000-000000000001"), TenantId = tenantId, BranchId = mainBranchId, AmountPiastres = 125_000, Method = "CASH", ReceivedOn = new DateOnly(2026, 10, 2), RecordedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000006") }]
             });
+
         if (!await db.Invoices.AnyAsync(invoice => invoice.InvoiceNumber == "MAD-HELIO-2026-0001", cancellationToken))
             db.Invoices.Add(new Invoice
             {
                 Id = Guid.Parse("80000000-0000-0000-0000-000000000002"), TenantId = tenantId, BranchId = heliopolisBranchId,
-                StudentId = heliopolisStudentId, InvoiceNumber = "MAD-HELIO-2026-0001", TotalPiastres = 260_000,
+                StudentId = heliopolisStudentId, EnrollmentId = helioEnrollment?.Id, InvoiceNumber = "MAD-HELIO-2026-0001", TotalPiastres = 260_000,
                 IssueDate = new DateOnly(2026, 10, 1), DueDate = new DateOnly(2026, 10, 20), Status = "PAID",
                 CreatedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000008"),
                 Lines = [new InvoiceLine { Id = Guid.Parse("81000000-0000-0000-0000-000000000002"), LineNumber = 1, Description = "Creative Lab — October", AmountPiastres = 260_000 }],

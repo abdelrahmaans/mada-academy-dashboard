@@ -142,6 +142,7 @@ app.MapMadaInvoiceCorrectionEndpoints();
 app.MapMadaExpenseEndpoints();
 app.MapMadaPlatformAdminEndpoints();
 app.MapMadaOperationalReportEndpoints();
+app.MapMadaAnalyticsEndpoints();
 
 app.MapMadaAuthEndpoints();
 if (app.Environment.IsDevelopment())

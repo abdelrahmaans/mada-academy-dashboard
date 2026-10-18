@@ -333,6 +333,67 @@ export type OperationalReport = { from: string | null; to: string | null; branch
 export type InvoiceCorrection = { id: string; tenantId: string; branchId: string; invoiceId: string; invoiceNumber?: string | null; studentName?: string | null; approvalRequestId: string; requestedByUserId: string; currentTotalPiastres: number; currentDueDate: string; proposedTotalPiastres: number; proposedDueDate: string; reason: string; status: string; decidedAt?: string | null; decidedByUserId?: string | null; createdAt: string };
 export type InvoiceCorrectionsResponse = { items: InvoiceCorrection[]; total: number };
 
+export type RetentionRadarItem = {
+  studentId: string;
+  fullName: string;
+  branchId: string;
+  branchName: string;
+  courseOfferingId: string;
+  courseName: string;
+  totalSessionsMarked: number;
+  attendancePercent: number;
+  consecutiveAbsences: number;
+  averageScore: number | null;
+  totalBilledPiastres: number;
+  totalPaidPiastres: number;
+  outstandingPiastres: number;
+  maxOverdueDays: number;
+  riskLevel: "HIGH" | "MEDIUM" | "LOW" | string;
+  riskFactor: string;
+  recommendedAction: string;
+};
+
+export type RetentionRadarResponse = {
+  summary: {
+    totalStudents: number;
+    highRiskCount: number;
+    mediumRiskCount: number;
+    lowRiskCount: number;
+    atRiskPercent: number;
+  };
+  items: RetentionRadarItem[];
+};
+
+export type InstructorScorecardItem = {
+  instructorId: string;
+  displayName: string;
+  branchId: string | null;
+  branchName: string;
+  assignedSessions: number;
+  completedSessions: number;
+  completionRate: number;
+  substituteCount: number;
+  studentAttendanceRate: number;
+  averageEvaluationScore: number | null;
+  totalEvaluationsCount: number;
+};
+
+export type CourseProfitabilityItem = {
+  courseOfferingId: string;
+  courseName: string;
+  track: string;
+  branchId: string;
+  branchName: string;
+  classroomName: string;
+  enrolledCount: number;
+  capacity: number;
+  occupancyPercent: number;
+  totalBilledPiastres: number;
+  totalCollectedPiastres: number;
+  outstandingPiastres: number;
+  status: string;
+};
+
 export class ApiRequestError extends Error {
   constructor(
     message: string,
@@ -647,6 +708,15 @@ export const apiClient = {
   operationalReport: (params: { from?: string; to?: string; branchId?: string } = {}) => { const query = new URLSearchParams(); if (params.from) query.set("from", params.from); if (params.to) query.set("to", params.to); if (params.branchId) query.set("branchId", params.branchId); const suffix = query.toString() ? `?${query}` : ""; return request<OperationalReport>(`/reports/operational${suffix}`); },
   downloadOperationalReport: async (params: { from?: string; to?: string; branchId?: string } = {}) => { const query = new URLSearchParams(); if (params.from) query.set("from", params.from); if (params.to) query.set("to", params.to); if (params.branchId) query.set("branchId", params.branchId); const response = await fetch(`${API_BASE}/reports/operational.csv?${query}`, { headers: accessToken ? { authorization: `Bearer ${accessToken}` } : undefined }); if (!response.ok) throw new ApiRequestError("تعذر تصدير التقرير التشغيلي", response.status); return response.blob(); },
   downloadFinanceReport: async (params: { from?: string; to?: string; branchId?: string } = {}) => { const query = new URLSearchParams(); if (params.from) query.set("from", params.from); if (params.to) query.set("to", params.to); if (params.branchId) query.set("branchId", params.branchId); const response = await fetch(`${API_BASE}/finance/reports/summary.csv?${query}`, { headers: accessToken ? { authorization: `Bearer ${accessToken}` } : undefined }); if (!response.ok) throw new ApiRequestError("تعذر تصدير التقرير المالي", response.status); return response.blob(); },
+  retentionRadar: (branchId?: string) => request<RetentionRadarResponse>(`/reports/analytics/retention-radar${branchId ? `?branchId=${branchId}` : ""}`),
+  instructorScorecard: (branchId?: string) => request<InstructorScorecardItem[]>(`/reports/analytics/instructor-scorecard${branchId ? `?branchId=${branchId}` : ""}`),
+  courseProfitability: (branchId?: string) => request<CourseProfitabilityItem[]>(`/reports/analytics/course-profitability${branchId ? `?branchId=${branchId}` : ""}`),
+  downloadBiFeed: async (branchId?: string) => {
+    const query = branchId ? `?branchId=${branchId}` : "";
+    const response = await fetch(`${API_BASE}/reports/analytics/bi-feed.csv${query}`, { headers: accessToken ? { authorization: `Bearer ${accessToken}` } : undefined });
+    if (!response.ok) throw new ApiRequestError("تعذر تصدير بيانات التحليل للمحلل", response.status);
+    return response.blob();
+  },
   financeExpenses: (params: { status?: string; branchId?: string } = {}) => {
     const query = new URLSearchParams();
     if (params.status) query.set("status", params.status);
