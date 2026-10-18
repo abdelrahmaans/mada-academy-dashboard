@@ -74,6 +74,30 @@ export default function SecretaryDeskLive() {
   const [activeTab, setActiveTab] = useState<"pipeline" | "registration" | "followups" | "freezes" | "shifts">("pipeline");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.replace("#", "") as
+        | "pipeline"
+        | "registration"
+        | "followups"
+        | "freezes"
+        | "shifts";
+      const validTabs = ["pipeline", "registration", "followups", "freezes", "shifts"];
+      if (validTabs.includes(hash)) {
+        setActiveTab(hash);
+      }
+    };
+    handleHash();
+    window.addEventListener("hashchange", handleHash);
+    return () => window.removeEventListener("hashchange", handleHash);
+  }, []);
+
+  const selectTab = (tab: "pipeline" | "registration" | "followups" | "freezes" | "shifts") => {
+    setActiveTab(tab);
+    window.location.hash = tab === "pipeline" ? "" : tab;
+  };
+
   const [freezeModalOpen, setFreezeModalOpen] = useState(false);
   const [freezeFormData, setFreezeFormData] = useState({
     studentId: "",
@@ -368,35 +392,35 @@ export default function SecretaryDeskLive() {
           <button
             type="button"
             className={`secretary-tab-btn ${activeTab === "pipeline" ? "active" : ""}`}
-            onClick={() => setActiveTab("pipeline")}
+            onClick={() => selectTab("pipeline")}
           >
             <Users size={17} /> مسار العملاء المحتملين ({leads.length})
           </button>
           <button
             type="button"
             className={`secretary-tab-btn ${activeTab === "registration" ? "active" : ""}`}
-            onClick={() => setActiveTab("registration")}
+            onClick={() => selectTab("registration")}
           >
             <UserPlus size={17} /> تسجيل طالب فوري
           </button>
           <button
             type="button"
             className={`secretary-tab-btn ${activeTab === "followups" ? "active" : ""}`}
-            onClick={() => setActiveTab("followups")}
+            onClick={() => selectTab("followups")}
           >
             <Clock size={17} /> متابعات اليوم العاجلة ({activeLeadsCount})
           </button>
           <button
             type="button"
             className={`secretary-tab-btn ${activeTab === "freezes" ? "active" : ""}`}
-            onClick={() => setActiveTab("freezes")}
+            onClick={() => selectTab("freezes")}
           >
             <Snowflake size={17} /> طلبات التجميد والتعويض
           </button>
           <button
             type="button"
             className={`secretary-tab-btn ${activeTab === "shifts" ? "active" : ""}`}
-            onClick={() => setActiveTab("shifts")}
+            onClick={() => selectTab("shifts")}
           >
             <Wallet size={17} /> تقفيل خزينة الوردية
           </button>
