@@ -313,6 +313,90 @@ public sealed class FinanceApiTests
         Assert.DoesNotContain("finance.write", accountantMe, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Payment_WithIdempotencyKey_PreventsDoublePayment()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var client = factory.CreateClient();
+        var accountant = await TestData.CreateAccountAsync(factory, "R06_ACCOUNTANT");
+        var invoiceId = await SeedInvoiceAsync(factory, accountant.TenantId, accountant.BranchId, "Idempotent Student", 10_000);
+        TestData.Authenticate(client, await TestData.LoginAsync(client, accountant));
+
+        var idempotencyKey = $"idem-{Guid.NewGuid():N}";
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/finance/invoices/{invoiceId}/payments")
+        {
+            Content = JsonContent.Create(new { amountPiastres = 5_000, method = "CASH" })
+        };
+        request.Headers.Add("Idempotency-Key", idempotencyKey);
+
+        var firstResponse = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
+        var firstJson = await firstResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException();
+        var paymentId = firstJson.RootElement.GetProperty("data").GetProperty("payment").GetProperty("id").GetString();
+
+        // Send duplicate request with identical Idempotency-Key
+        var duplicateRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/finance/invoices/{invoiceId}/payments")
+        {
+            Content = JsonContent.Create(new { amountPiastres = 5_000, method = "CASH" })
+        };
+        duplicateRequest.Headers.Add("Idempotency-Key", idempotencyKey);
+
+        var secondResponse = await client.SendAsync(duplicateRequest);
+        Assert.Equal(HttpStatusCode.OK, secondResponse.StatusCode);
+        var secondJson = await secondResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException();
+        var duplicatePaymentId = secondJson.RootElement.GetProperty("data").GetProperty("payment").GetProperty("id").GetString();
+        var isDuplicate = secondJson.RootElement.GetProperty("data").GetProperty("isDuplicate").GetBoolean();
+
+        Assert.Equal(paymentId, duplicatePaymentId);
+        Assert.True(isDuplicate);
+
+        // Verify only 1 payment transaction exists in database
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+        var count = await db.PaymentTransactions.CountAsync(x => x.InvoiceId == invoiceId);
+        Assert.Equal(1, count);
+    }
+
+    [Fact]
+    public async Task CashierShiftSummaryAndCloseout_CalculatesDiscrepancyAndAudits()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var client = factory.CreateClient();
+        var accountant = await TestData.CreateAccountAsync(factory, "R06_ACCOUNTANT");
+        var invoiceId = await SeedInvoiceAsync(factory, accountant.TenantId, accountant.BranchId, "Shift Student", 10_000);
+        TestData.Authenticate(client, await TestData.LoginAsync(client, accountant));
+
+        // Record 3,000 CASH and 2,000 VISA
+        var p1 = await client.PostAsJsonAsync($"/api/v1/finance/invoices/{invoiceId}/payments", new { amountPiastres = 3_000, method = "CASH" });
+        Assert.Equal(HttpStatusCode.Created, p1.StatusCode);
+        var p2 = await client.PostAsJsonAsync($"/api/v1/finance/invoices/{invoiceId}/payments", new { amountPiastres = 2_000, method = "VISA" });
+        Assert.Equal(HttpStatusCode.Created, p2.StatusCode);
+
+        // Check Shift Summary
+        var summaryResponse = await client.GetAsync("/api/v1/finance/cashier/shift-summary");
+        Assert.Equal(HttpStatusCode.OK, summaryResponse.StatusCode);
+        var summaryJson = await summaryResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException();
+        var data = summaryJson.RootElement.GetProperty("data");
+        Assert.Equal(3_000, data.GetProperty("cashTotalPiastres").GetInt64());
+        Assert.Equal(2_000, data.GetProperty("visaTotalPiastres").GetInt64());
+        Assert.Equal(3_000, data.GetProperty("expectedCashDrawerPiastres").GetInt64());
+
+        // Perform Closeout with 3,000 exact cash
+        var closeoutResponse = await client.PostAsJsonAsync("/api/v1/finance/cashier/closeout", new { countedCashPiastres = 3_000, notes = "وردية مضبوطة" });
+        Assert.Equal(HttpStatusCode.OK, closeoutResponse.StatusCode);
+        var closeoutJson = await closeoutResponse.Content.ReadFromJsonAsync<JsonDocument>() ?? throw new InvalidOperationException();
+        var closeoutData = closeoutJson.RootElement.GetProperty("data");
+        Assert.Equal("BALANCED", closeoutData.GetProperty("status").GetString());
+        Assert.Equal(0, closeoutData.GetProperty("discrepancyPiastres").GetInt64());
+
+        // Verify Audit Event logged
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+        var audit = await db.AuditEvents.FirstOrDefaultAsync(x => x.Action == "CASHIER_SHIFT_CLOSED");
+        Assert.NotNull(audit);
+        Assert.Contains("BALANCED", audit.MetadataJson);
+    }
+
     private static async Task<Guid> SeedInvoiceAsync(TestApiFactory factory, Guid tenantId, Guid branchId, string studentName, int totalPiastres, Guid? studentId = null, bool createBranch = false)
     {
         using var scope = factory.Services.CreateScope();

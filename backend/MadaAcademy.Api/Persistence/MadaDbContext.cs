@@ -282,9 +282,11 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
         {
             entity.HasIndex(x => new { x.InvoiceId, x.CreatedAt });
             entity.HasIndex(x => new { x.TenantId, x.BranchId, x.ReceivedOn });
+            entity.HasIndex(x => new { x.TenantId, x.IdempotencyKey }).IsUnique().HasFilter("\"IdempotencyKey\" IS NOT NULL");
             entity.Property(x => x.Method).HasMaxLength(24).IsRequired();
             entity.Property(x => x.ExternalReference).HasMaxLength(120);
             entity.Property(x => x.Note).HasMaxLength(500);
+            entity.Property(x => x.IdempotencyKey).HasMaxLength(128);
             entity.HasOne(x => x.Invoice).WithMany(x => x.Payments).HasForeignKey(x => x.InvoiceId).OnDelete(DeleteBehavior.Restrict);
         });
         modelBuilder.Entity<PaymentEvidence>(entity =>

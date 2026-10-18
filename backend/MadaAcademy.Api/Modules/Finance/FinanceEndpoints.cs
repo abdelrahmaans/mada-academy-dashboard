@@ -27,6 +27,8 @@ public static class FinanceEndpoints
         api.MapPost("/invoices/{invoiceId:guid}/payments", CreatePaymentAsync);
         api.MapPost("/payments/{paymentId:guid}/evidence", UploadEvidenceAsync);
         api.MapGet("/payments/{paymentId:guid}/evidence", DownloadEvidenceAsync);
+        api.MapGet("/cashier/shift-summary", GetCashierShiftSummaryAsync);
+        api.MapPost("/cashier/closeout", CloseoutCashierShiftAsync);
 
         endpoints.MapGet("/api/v1/consumer/invoices", ListConsumerInvoicesAsync).RequireAuthorization("consumer");
         return endpoints;
@@ -92,19 +94,33 @@ public static class FinanceEndpoints
         if (request.ExternalReference?.Length > 120 || request.Note?.Length > 500) return Validation("payment", "Reference or note is too long.");
         if (!Guid.TryParse(context.User.FindFirstValue("sub"), out var actorId)) return Forbidden("ACTOR_REQUIRED");
 
+        var idempotencyKey = context.Request.Headers["Idempotency-Key"].FirstOrDefault()
+            ?? context.Request.Headers["X-Idempotency-Key"].FirstOrDefault()
+            ?? request.IdempotencyKey?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            var existingPayment = await db.PaymentTransactions.AsNoTracking().Include(x => x.Evidence)
+                .FirstOrDefaultAsync(x => x.TenantId == scope.TenantId && x.IdempotencyKey == idempotencyKey, cancellationToken);
+            if (existingPayment != null)
+            {
+                return Results.Ok(new { data = new { payment = ToPaymentResponse(existingPayment), invoiceId = existingPayment.InvoiceId, isDuplicate = true } });
+            }
+        }
+
         await InMemoryPaymentGate.WaitAsync(cancellationToken);
         try
         {
             if (db.Database.IsRelational())
             {
                 await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
-                var result = await SavePaymentAsync(invoiceId, request, scope, actorId, db, cancellationToken);
+                var result = await SavePaymentAsync(invoiceId, request, scope, actorId, idempotencyKey, db, cancellationToken);
                 if (result is not null) return result;
                 await transaction.CommitAsync(cancellationToken);
             }
             else
             {
-                var result = await SavePaymentAsync(invoiceId, request, scope, actorId, db, cancellationToken);
+                var result = await SavePaymentAsync(invoiceId, request, scope, actorId, idempotencyKey, db, cancellationToken);
                 if (result is not null) return result;
             }
         }
@@ -113,16 +129,28 @@ public static class FinanceEndpoints
         return Results.Created($"/api/v1/finance/payments/{payment.Id}", new { data = new { payment = ToPaymentResponse(payment), invoiceId } });
     }
 
-    private static async Task<IResult?> SavePaymentAsync(Guid invoiceId, CreatePaymentRequest request, StaffScope scope, Guid actorId, MadaDbContext db, CancellationToken cancellationToken)
+    private static async Task<IResult?> SavePaymentAsync(Guid invoiceId, CreatePaymentRequest request, StaffScope scope, Guid actorId, string? idempotencyKey, MadaDbContext db, CancellationToken cancellationToken)
     {
         var invoice = await db.Invoices.Include(x => x.Payments).SingleOrDefaultAsync(x => x.Id == invoiceId && x.TenantId == scope.TenantId && (!scope.BranchId.HasValue || x.BranchId == scope.BranchId.Value), cancellationToken);
         if (invoice is null) return NotFound("INVOICE_NOT_FOUND");
         var paid = invoice.Payments.Sum(x => (long)x.AmountPiastres);
         if (paid + request.AmountPiastres > invoice.TotalPiastres) return Conflict("PAYMENT_EXCEEDS_BALANCE");
-        var payment = new PaymentTransaction { TenantId = invoice.TenantId, BranchId = invoice.BranchId, InvoiceId = invoice.Id, AmountPiastres = request.AmountPiastres, Method = request.Method.Trim().ToUpperInvariant(), ReceivedOn = request.ReceivedOn ?? DateOnly.FromDateTime(DateTime.UtcNow), ExternalReference = request.ExternalReference?.Trim(), Note = request.Note?.Trim(), RecordedByUserId = actorId };
+        var payment = new PaymentTransaction 
+        { 
+            TenantId = invoice.TenantId, 
+            BranchId = invoice.BranchId, 
+            InvoiceId = invoice.Id, 
+            AmountPiastres = request.AmountPiastres, 
+            Method = request.Method.Trim().ToUpperInvariant(), 
+            ReceivedOn = request.ReceivedOn ?? DateOnly.FromDateTime(DateTime.UtcNow), 
+            ExternalReference = request.ExternalReference?.Trim(), 
+            Note = request.Note?.Trim(), 
+            IdempotencyKey = idempotencyKey,
+            RecordedByUserId = actorId 
+        };
         invoice.Status = paid + request.AmountPiastres == invoice.TotalPiastres ? "PAID" : "PARTIAL";
         db.PaymentTransactions.Add(payment);
-        db.AuditEvents.Add(new AuditEvent { ActorUserId = actorId, TenantId = invoice.TenantId, BranchId = invoice.BranchId, Action = "PAYMENT_RECORDED", TargetType = "PAYMENT", TargetId = payment.Id.ToString(), MetadataJson = JsonSerializer.Serialize(new { payment.AmountPiastres, payment.Method, invoice.Id }) });
+        db.AuditEvents.Add(new AuditEvent { ActorUserId = actorId, TenantId = invoice.TenantId, BranchId = invoice.BranchId, Action = "PAYMENT_RECORDED", TargetType = "PAYMENT", TargetId = payment.Id.ToString(), MetadataJson = JsonSerializer.Serialize(new { payment.AmountPiastres, payment.Method, invoice.Id, idempotencyKey }) });
         await db.SaveChangesAsync(cancellationToken);
         return null;
     }
@@ -259,6 +287,104 @@ public static class FinanceEndpoints
         scope = new StaffScope(tenantId, branch); error = Results.Ok(); return true;
     }
     private static IResult NotFound(string code) => Results.NotFound(new { error = new { code, message = "The requested financial record was not found in the current scope." } });
+    private static async Task<IResult> GetCashierShiftSummaryAsync(HttpContext context, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!TryStaffScope(context.User, out var scope, out var error)) return error;
+        if (!CanReadInvoices(context.User)) return Forbidden("SHIFT_SUMMARY_FORBIDDEN");
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var payments = await db.PaymentTransactions.AsNoTracking()
+            .Where(x => x.TenantId == scope.TenantId && (!scope.BranchId.HasValue || x.BranchId == scope.BranchId.Value) && x.ReceivedOn == today)
+            .ToListAsync(cancellationToken);
+
+        var cashTotal = payments.Where(x => x.Method == "CASH").Sum(x => (long)x.AmountPiastres);
+        var visaTotal = payments.Where(x => x.Method == "VISA").Sum(x => (long)x.AmountPiastres);
+        var instapayTotal = payments.Where(x => x.Method == "INSTAPAY").Sum(x => (long)x.AmountPiastres);
+        var vodafoneTotal = payments.Where(x => x.Method == "VODAFONE_CASH").Sum(x => (long)x.AmountPiastres);
+
+        var cashExpenses = await db.Expenses.AsNoTracking()
+            .Where(x => x.TenantId == scope.TenantId && (!scope.BranchId.HasValue || x.BranchId == scope.BranchId.Value) && x.SpentOn == today && x.Status == "APPROVED")
+            .SumAsync(x => (long)x.AmountPiastres, cancellationToken);
+
+        var expectedCashInDrawer = Math.Max(0, cashTotal - cashExpenses);
+
+        return Results.Ok(new 
+        { 
+            data = new 
+            { 
+                date = today,
+                tenantId = scope.TenantId,
+                branchId = scope.BranchId,
+                transactionCount = payments.Count,
+                cashTotalPiastres = cashTotal,
+                visaTotalPiastres = visaTotal,
+                instapayTotalPiastres = instapayTotal,
+                vodafoneTotalPiastres = vodafoneTotal,
+                cashExpensesPiastres = cashExpenses,
+                expectedCashDrawerPiastres = expectedCashInDrawer,
+                totalCollectedPiastres = cashTotal + visaTotal + instapayTotal + vodafoneTotal
+            } 
+        });
+    }
+
+    private static async Task<IResult> CloseoutCashierShiftAsync(CloseoutCashierRequest request, HttpContext context, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!TryStaffScope(context.User, out var scope, out var error)) return error;
+        if (!CanWritePayments(context.User)) return Forbidden("SHIFT_CLOSEOUT_FORBIDDEN");
+        if (!Guid.TryParse(context.User.FindFirstValue("sub"), out var actorId)) return Forbidden("ACTOR_REQUIRED");
+        if (request.CountedCashPiastres < 0) return Validation("countedCashPiastres", "Counted cash cannot be negative.");
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var cashTotal = await db.PaymentTransactions.AsNoTracking()
+            .Where(x => x.TenantId == scope.TenantId && (!scope.BranchId.HasValue || x.BranchId == scope.BranchId.Value) && x.ReceivedOn == today && x.Method == "CASH")
+            .SumAsync(x => (long)x.AmountPiastres, cancellationToken);
+
+        var cashExpenses = await db.Expenses.AsNoTracking()
+            .Where(x => x.TenantId == scope.TenantId && (!scope.BranchId.HasValue || x.BranchId == scope.BranchId.Value) && x.SpentOn == today && x.Status == "APPROVED")
+            .SumAsync(x => (long)x.AmountPiastres, cancellationToken);
+
+        var expectedCash = Math.Max(0, cashTotal - cashExpenses);
+        var discrepancy = request.CountedCashPiastres - expectedCash;
+        var status = discrepancy == 0 ? "BALANCED" : discrepancy > 0 ? "SURPLUS" : "DEFICIT";
+
+        db.AuditEvents.Add(new AuditEvent
+        {
+            ActorUserId = actorId,
+            TenantId = scope.TenantId,
+            BranchId = scope.BranchId,
+            Action = "CASHIER_SHIFT_CLOSED",
+            TargetType = "SHIFT_CLOSEOUT",
+            TargetId = $"{today:yyyyMMdd}-{scope.BranchId}",
+            Reason = request.Notes,
+            MetadataJson = JsonSerializer.Serialize(new
+            {
+                date = today,
+                expectedCash,
+                countedCash = request.CountedCashPiastres,
+                discrepancy,
+                status,
+                notes = request.Notes
+            })
+        });
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Results.Ok(new
+        {
+            data = new
+            {
+                date = today,
+                closedAt = DateTimeOffset.UtcNow,
+                closedByUserId = actorId,
+                expectedCashPiastres = expectedCash,
+                countedCashPiastres = request.CountedCashPiastres,
+                discrepancyPiastres = discrepancy,
+                status,
+                notes = request.Notes
+            }
+        });
+    }
+
     private static IResult Forbidden(string code) => Results.Problem(statusCode: 403, title: code, extensions: new Dictionary<string, object?> { ["code"] = code });
     private static IResult Conflict(string code) => Results.Conflict(new { error = new { code, message = "The financial operation could not be completed." } });
     private static IResult Validation(string field, string message) => Results.ValidationProblem(new Dictionary<string, string[]> { [field] = [message] });
@@ -268,4 +394,5 @@ public static class FinanceEndpoints
 
 public sealed record CreateInvoiceRequest(Guid StudentId, DateOnly DueDate, IReadOnlyList<CreateInvoiceLineRequest> Lines, Guid? EnrollmentId = null);
 public sealed record CreateInvoiceLineRequest(string Description, int AmountPiastres);
-public sealed record CreatePaymentRequest(int AmountPiastres, string Method, DateOnly? ReceivedOn = null, string? ExternalReference = null, string? Note = null);
+public sealed record CreatePaymentRequest(int AmountPiastres, string Method, DateOnly? ReceivedOn = null, string? ExternalReference = null, string? Note = null, string? IdempotencyKey = null);
+public sealed record CloseoutCashierRequest(long CountedCashPiastres, string? Notes = null);

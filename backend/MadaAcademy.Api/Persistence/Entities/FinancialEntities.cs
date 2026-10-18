@@ -38,6 +38,7 @@ public sealed class PaymentTransaction : EntityBase
     public DateOnly ReceivedOn { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
     public string? ExternalReference { get; set; }
     public string? Note { get; set; }
+    public string? IdempotencyKey { get; set; }
     public Guid RecordedByUserId { get; set; }
     public Invoice? Invoice { get; set; }
     public PaymentEvidence? Evidence { get; set; }
