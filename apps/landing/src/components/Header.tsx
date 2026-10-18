@@ -36,8 +36,14 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAdminLogin, onScrollToDemo
             </div>
           </a>
 
-          {/* Navigation Links - Matching Screenshots & Repo */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-[#14243A]/80">
+          {/* Navigation Links - Matching Modern Global Standards */}
+          <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-sm font-semibold text-[#14243A]/80">
+            <a 
+              href="#roles" 
+              className="hover:text-[#0D9488] transition-colors hover:underline underline-offset-8 decoration-[#0D9488] decoration-2"
+            >
+              حلول الأدوار
+            </a>
             <a 
               href="#features" 
               className="hover:text-[#0D9488] transition-colors hover:underline underline-offset-8 decoration-[#0D9488] decoration-2"
@@ -45,23 +51,23 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAdminLogin, onScrollToDemo
               المزايا
             </a>
             <a 
-              href="#workflow" 
-              className="hover:text-[#0D9488] transition-colors hover:underline underline-offset-8 decoration-[#0D9488] decoration-2"
-            >
-              سير العمل
-            </a>
-            <a 
-              href="#audience" 
-              className="hover:text-[#0D9488] transition-colors hover:underline underline-offset-8 decoration-[#0D9488] decoration-2"
-            >
-              الفئات المستهدفة
-            </a>
-            <a 
               href="#preview" 
               className="hover:text-[#0D9488] transition-colors hover:underline underline-offset-8 decoration-[#0D9488] decoration-2 flex items-center gap-1.5"
             >
               <span>المحاكي المباشر</span>
               <span className="w-2 h-2 rounded-full bg-[#0D9488] animate-ping" />
+            </a>
+            <a 
+              href="#pricing" 
+              className="hover:text-[#0D9488] transition-colors hover:underline underline-offset-8 decoration-[#0D9488] decoration-2 font-bold text-[#0D9488]"
+            >
+              الباقات والأسعار
+            </a>
+            <a 
+              href="#faq" 
+              className="hover:text-[#0D9488] transition-colors hover:underline underline-offset-8 decoration-[#0D9488] decoration-2"
+            >
+              الأسئلة الشائعة
             </a>
           </nav>
 
@@ -100,25 +106,18 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAdminLogin, onScrollToDemo
         <div className="md:hidden border-t border-[#14243A]/10 bg-white/98 backdrop-blur-lg px-5 py-5 space-y-4 shadow-lg">
           <nav className="flex flex-col space-y-3 text-sm font-semibold text-[#14243A]">
             <a
+              href="#roles"
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-2.5 rounded-lg hover:bg-[#F4F7FA] transition-colors"
+            >
+              حلول الأدوار
+            </a>
+            <a
               href="#features"
               onClick={() => setMobileMenuOpen(false)}
               className="p-2.5 rounded-lg hover:bg-[#F4F7FA] transition-colors"
             >
               المزايا
-            </a>
-            <a
-              href="#workflow"
-              onClick={() => setMobileMenuOpen(false)}
-              className="p-2.5 rounded-lg hover:bg-[#F4F7FA] transition-colors"
-            >
-              سير العمل
-            </a>
-            <a
-              href="#audience"
-              onClick={() => setMobileMenuOpen(false)}
-              className="p-2.5 rounded-lg hover:bg-[#F4F7FA] transition-colors"
-            >
-              الفئات المستهدفة
             </a>
             <a
               href="#preview"
@@ -127,6 +126,20 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAdminLogin, onScrollToDemo
             >
               <span>المحاكي المباشر</span>
               <span className="text-[10px] font-bold bg-[#0D9488]/10 text-[#0D9488] px-2 py-0.5 rounded-full">حي</span>
+            </a>
+            <a
+              href="#pricing"
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-2.5 rounded-lg hover:bg-[#F4F7FA] transition-colors font-bold text-[#0D9488]"
+            >
+              الباقات والأسعار
+            </a>
+            <a
+              href="#faq"
+              onClick={() => setMobileMenuOpen(false)}
+              className="p-2.5 rounded-lg hover:bg-[#F4F7FA] transition-colors"
+            >
+              الأسئلة الشائعة
             </a>
             <button
               onClick={() => {
