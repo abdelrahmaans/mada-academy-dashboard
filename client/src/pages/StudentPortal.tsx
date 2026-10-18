@@ -97,8 +97,22 @@ export default function StudentPortal() {
     { id: "sessions" as const, label: "جلساتي", icon: CalendarDays },
     { id: "progress" as const, label: "التقدم والإنجازات", icon: Trophy },
   ];
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.replace("#", "") as StudentTab;
+      const validTabs: StudentTab[] = ["home", "sessions", "progress"];
+      if (validTabs.includes(hash)) {
+        setTab(hash);
+      }
+    };
+    handleHash();
+    window.addEventListener("hashchange", handleHash);
+    return () => window.removeEventListener("hashchange", handleHash);
+  }, []);
+
   const select = (next: StudentTab) => {
     setTab(next);
+    window.location.hash = next === "home" ? "" : next;
     setMobileOpen(false);
   };
   useEffect(() => {

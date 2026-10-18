@@ -185,6 +185,25 @@ export default function FamilyPortal() {
     return () => { cancelled = true; };
   }, [retryKey, isParentAccount]);
   const retry = () => setRetryKey(value => value + 1);
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.replace("#", "") as PortalTab;
+      const validTabs: PortalTab[] = ["overview", "attendance", "evaluations", "invoices", "freeze"];
+      if (validTabs.includes(hash)) {
+        setTab(hash);
+      }
+    };
+    handleHash();
+    window.addEventListener("hashchange", handleHash);
+    return () => window.removeEventListener("hashchange", handleHash);
+  }, []);
+
+  const selectTab = (nextTab: PortalTab) => {
+    setTab(nextTab);
+    window.location.hash = nextTab === "overview" ? "" : nextTab;
+    setMobileOpen(false);
+  };
+
   const tabs: Array<{ id: PortalTab; label: string; icon: typeof Home }> = [
     { id: "overview", label: "ملخص الطفل", icon: Home },
     { id: "attendance", label: "الحضور", icon: CalendarDays },
@@ -194,8 +213,7 @@ export default function FamilyPortal() {
   ];
   const selectChild = (id: string) => {
     setSelectedId(id);
-    setTab("overview");
-    setMobileOpen(false);
+    selectTab("overview");
   };
   return (
     <RoleScopeProvider
@@ -243,10 +261,7 @@ export default function FamilyPortal() {
                 type="button"
                 key={item.id}
                 className={tab === item.id ? "active" : ""}
-                onClick={() => {
-                  setTab(item.id);
-                  setMobileOpen(false);
-                }}
+                onClick={() => selectTab(item.id)}
               >
                 <Icon size={18} />
                 <span>{item.label}</span>
@@ -359,7 +374,7 @@ export default function FamilyPortal() {
             </span>
           </section>}
           {!dataLoading && !dataError && !child && <div className="family-info-note" role="status">لا توجد ملفات أطفال مرتبطة بهذا الحساب. تواصل مع الأكاديمية لربط الملف الصحيح.</div>}
-          {child && tab === "overview" && <Overview child={child} onTab={setTab} liveMode={liveMode} />}
+          {child && tab === "overview" && <Overview child={child} onTab={selectTab} liveMode={liveMode} />}
           {child && tab === "attendance" && <Attendance child={child} liveMode={liveMode} />}
           {child && tab === "evaluations" && <Evaluations child={child} liveMode={liveMode} />}
           {child && tab === "invoices" && (liveMode ? <LiveInvoices invoices={child.invoices ?? []} loading={invoiceLoading} error={invoiceError} onRetry={retry} /> : <Invoices child={child} supportRequested={supportRequested} onRequestSupport={() => { setSupportRequested(true); toast.success("تم تسجيل طلب المراجعة في المعاينة فقط."); }} />)}
