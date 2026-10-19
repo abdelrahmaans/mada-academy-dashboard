@@ -87,15 +87,21 @@ export default function RoleDashboardShell({
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const roleDefinition = getRoleDefinition(roleCode);
 
-  const existingSidebar = hideSidebar || hasSidebarElement(children);
+  const hasChildrenSidebar = hasSidebarElement(children);
+  const shouldRenderSidebar = !hideSidebar && !hasChildrenSidebar;
+  const hasAnySidebar = shouldRenderSidebar || hasChildrenSidebar;
 
   const classList = ["role-dashboard-shell"];
-  if (!hideSidebar) {
+  if (hasAnySidebar) {
     classList.push("app-shell");
+    classList.push("has-sidebar");
+  } else {
+    classList.push("no-sidebar");
   }
   if (className) {
     for (const name of className.split(/\s+/)) {
       if (name && !classList.includes(name)) {
+        if (!hasAnySidebar && name === "app-shell") continue;
         classList.push(name);
       }
     }
@@ -134,7 +140,7 @@ export default function RoleDashboardShell({
           data-scope-level={scopeLevel}
         >
           {/* Logout is exclusively located in the sidebar navigation */}
-          {!existingSidebar && (
+          {shouldRenderSidebar && (
             <>
               {mobileNavOpen && (
                 <button

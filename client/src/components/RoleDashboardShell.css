@@ -4,9 +4,18 @@
 }
 
 /* Unified Shell & Main Content Layout */
-.role-dashboard-shell.app-shell {
+.role-dashboard-shell.has-sidebar {
   display: grid;
   grid-template-columns: 256px minmax(0, 1fr);
+  min-height: 100vh;
+  width: 100%;
+  direction: rtl;
+  background: #f6f8fb;
+}
+
+.role-dashboard-shell.no-sidebar,
+.role-dashboard-shell:not(.has-sidebar) {
+  display: block;
   min-height: 100vh;
   width: 100%;
   direction: rtl;

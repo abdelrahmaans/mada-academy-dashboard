@@ -198,9 +198,7 @@ function HomePreview() {
 
   return (
     <RoleDashboardShell
-      className="app-shell"
       showSessionLogout={false}
-      hideSidebar
       roleCode="R02"
       roleLabel="مدير الفرع"
       scopeLevel="branch"

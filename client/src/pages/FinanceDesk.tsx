@@ -860,8 +860,7 @@ export default function FinanceDesk() {
   return (
     <RoleDashboardShell
       demo={!liveMode}
-      className="app-shell finance-desk-shell"
-      hideSidebar
+      className="finance-desk-shell"
       roleCode={roleCode}
       roleLabel={roleLabel}
       scopeLevel="branch"
