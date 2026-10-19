@@ -29,7 +29,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import BranchManagerSidebar from "@/components/BranchManagerSidebar";
+import RoleSidebar from "@/components/RoleSidebar";
 import { TeamManagementViews } from "@/components/TeamManagementViews";
 import {
   ROLE_BY_CODE,
@@ -274,7 +274,14 @@ export default function Team() {
 
   return (
     <div className="app-shell" dir="rtl">
-      <BranchManagerSidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+      {mobileNavOpen && (
+        <button
+          className="mobile-scrim"
+          aria-label="إغلاق القائمة"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      )}
+      <RoleSidebar mobileOpen={mobileNavOpen} onCloseMobile={() => setMobileNavOpen(false)} />
 
       <main className="main-panel">
         <header className="topbar">

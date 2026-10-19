@@ -239,14 +239,15 @@ export default function CompetitionsLive({ me }: { me: AuthMe }) {
     }
   };
 
-  const sidebar = isOwner ? (
-    <R01AcademySidebar activePath="/competitions" mobileOpen={false} onClose={() => {}} />
-  ) : (
-    <BranchManagerSidebar activePath="/competitions" mobileOpen={false} onClose={() => {}} />
-  );
+  const userRoleCode = me?.role ? (me.role.replace(/_.*$/, "") as RoleCode) : (isOwner ? "R01" : "R02");
 
   return (
-    <RoleDashboardShell sidebar={sidebar}>
+    <RoleDashboardShell
+      roleCode={userRoleCode}
+      roleLabel={me.roleLabel ?? (isOwner ? "مسؤول الأكاديمية" : "إدارة الفرع")}
+      scopeLevel={isOwner ? "tenant" : "branch"}
+      scopeLabel={me.branch?.name ?? "الفرع الحالي"}
+    >
       <div className="comp-workspace" dir="rtl">
         {/* Topbar */}
         <RoleSurfaceTopbar

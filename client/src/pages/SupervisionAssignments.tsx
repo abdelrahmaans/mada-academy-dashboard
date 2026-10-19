@@ -49,8 +49,7 @@ export default function SupervisionAssignments() {
     catch (cause) { toast.error(cause instanceof Error ? cause.message : "تعذر سحب الصلاحية."); }
   };
 
-  return <RoleDashboardShell className="app-shell supervision-assignments-shell" showSessionLogout={false} hideSidebar roleCode="R02" roleLabel="مدير الفرع" scopeLevel="branch" scopeLabel="فرع واحد" demo={false}>
-    <BranchManagerSidebar open={mobileOpen} onClose={() => setMobileOpen(false)} />
+  return <RoleDashboardShell className="app-shell supervision-assignments-shell" roleCode="R02" roleLabel="مدير الفرع" scopeLevel="branch" scopeLabel="فرع واحد" demo={false}>
     <main className="main-panel" dir="rtl"><RoleSurfaceTopbar onMenu={() => setMobileOpen(true)} scopeLabel="نطاق الفرع" roleLabel="مدير الفرع" />
       <div className="workspace supervision-assignments-page">
         <header className="supervision-heading"><div><span className="supervision-kicker"><ShieldCheck size={15} /> صلاحيات المتابعة</span><h1>إدارة متابعة المجموعات</h1><p>عيّن المدرب أو مشرف المدربين لمتابعة مجموعات محددة داخل فرعك فقط.</p></div><button className="button button-secondary" onClick={() => void load()} disabled={loading}><RefreshCw size={15} /> تحديث</button></header>

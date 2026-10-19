@@ -3,11 +3,14 @@ import {
   useMemo,
 } from "react";
 import {
+  Award,
+  Banknote,
   BarChart3,
   BookOpen,
   Building2,
   CalendarCheck,
   CalendarDays,
+  CheckCircle2,
   ChevronLeft,
   CircleHelp,
   GraduationCap,
@@ -17,7 +20,10 @@ import {
   MapPin,
   Settings,
   ShieldCheck,
+  TrendingDown,
   TrendingUp,
+  Trophy,
+  UserCheck,
   UserPlus,
   Users,
   Wallet,
@@ -38,7 +44,7 @@ const ICON_BY_PATH: Record<string, ComponentType<LucideProps>> = {
   "/students": Users,
   "/classes": BookOpen,
   "/schedule": CalendarDays,
-  "/approvals": ShieldCheck,
+  "/approvals": CheckCircle2,
   "/reports": BarChart3,
   "/team": UserPlus,
   "/head-instructors": Users,
@@ -47,12 +53,19 @@ const ICON_BY_PATH: Record<string, ComponentType<LucideProps>> = {
   "/secretary-desk": CalendarCheck,
   "/finance": Wallet,
   "/finance-desk": Wallet,
+  "/finance-desk#expenses": TrendingDown,
+  "/finance-desk#shifts": Banknote,
+  "/finance-desk#payroll": UserCheck,
   "/marketing-desk": TrendingUp,
   "/academy-owner": Building2,
   "/academy/branches": MapPin,
   "/academy/classrooms": GraduationCap,
   "/academy/roles": KeyRound,
+  "/academy-owner/pnl-retention": TrendingUp,
+  "/academy/audit-trail": ShieldCheck,
+  "/competitions": Trophy,
   "/platform-console": ShieldCheck,
+  "/platform/academies/new": Building2,
   "/family-portal": Users,
   "/student-portal": GraduationCap,
   "/workspace": Layers3,
@@ -99,7 +112,7 @@ function BrandLockup() {
 }
 
 export type RoleSidebarProps = {
-  roleCode: RoleCode;
+  roleCode?: RoleCode;
   roleLabel?: string;
   tenantName?: string;
   branchName?: string;
@@ -119,21 +132,57 @@ export default function RoleSidebar({
 }: RoleSidebarProps) {
   const [location, navigate] = useLocation();
   const { me } = useAuth();
-  const roleDef = useMemo(() => getRoleDefinition(roleCode), [roleCode]);
+
+  // Extract user's genuine role from auth token if available to prevent role hijacking
+  const userRoleCode = me?.role ? (me.role.replace(/_.*$/, "") as RoleCode) : undefined;
+  const effectiveRoleCode: RoleCode = userRoleCode || roleCode || "R02";
+
+  const roleDef = useMemo(() => getRoleDefinition(effectiveRoleCode), [effectiveRoleCode]);
   const authorizedNavigation = useMemo(
-    () => getAuthorizedNavigation(roleCode, me?.permissions),
-    [roleCode, me?.permissions]
+    () => getAuthorizedNavigation(effectiveRoleCode, me?.permissions),
+    [effectiveRoleCode, me?.permissions]
   );
-  const AvatarIcon = ROLE_AVATAR_ICONS[roleCode] ?? GraduationCap;
+  const AvatarIcon = ROLE_AVATAR_ICONS[effectiveRoleCode] ?? GraduationCap;
 
   const resolvedTenantName = me?.academy?.name ?? tenantName ?? "أكاديمية مدى";
   const resolvedRoleLabel = me?.roleLabel ?? roleLabel ?? roleDef.label;
   const resolvedScope = branchName ?? scopeLabel ?? roleDef.defaultScopeLabel;
 
   const isItemActive = (path: string) => {
-    if (path === "/") return location === "/";
-    return location === path || location.startsWith(`${path}/`);
+    if (path.includes("#")) {
+      const [route, hash] = path.split("#");
+      return location === route && window.location.hash === `#${hash}`;
+    }
+    if (path === "/") return location === "/" && !window.location.hash;
+    return (location === path || location.startsWith(`${path}/`)) && !window.location.hash;
   };
+
+  const handleNavigate = (path: string) => {
+    if (path.includes("#")) {
+      const [route, hash] = path.split("#");
+      if (location === route) {
+        window.location.hash = hash;
+      } else {
+        navigate(path);
+      }
+    } else {
+      if (location === path && window.location.hash) {
+        window.location.hash = "";
+      }
+      navigate(path);
+    }
+    onCloseMobile?.();
+  };
+
+  // Group items into primary and operations/modules if applicable
+  const primaryItems = authorizedNavigation.filter(
+    (item) => !["/approvals", "/reports", "/competitions"].includes(item.path) && !item.path.includes("#")
+  );
+  const secondaryItems = authorizedNavigation.filter(
+    (item) => ["/approvals", "/reports", "/competitions"].includes(item.path) || item.path.includes("#")
+  );
+
+  const hasGroups = primaryItems.length > 0 && secondaryItems.length > 0;
 
   return (
     <aside
@@ -166,28 +215,71 @@ export default function RoleSidebar({
         </span>
       </div>
 
-      <div className="nav-caption">القائمة الرئيسية</div>
-      <nav className="primary-nav" aria-label="القائمة الرئيسية">
-        {authorizedNavigation.map(item => {
-          const Icon = ICON_BY_PATH[item.path] ?? LayoutDashboard;
-          const active = isItemActive(item.path);
-          return (
-            <button
-              key={item.path}
-              type="button"
-              className={`nav-link ${active ? "active" : ""}`}
-              aria-current={active ? "page" : undefined}
-              onClick={() => {
-                navigate(item.path);
-                onCloseMobile?.();
-              }}
-            >
-              <Icon size={19} />
-              <span>{item.label}</span>
-            </button>
-          );
-        })}
-      </nav>
+      {hasGroups ? (
+        <>
+          <div className="nav-caption">القائمة الرئيسية</div>
+          <nav className="primary-nav" aria-label="القائمة الرئيسية">
+            {primaryItems.map((item) => {
+              const Icon = ICON_BY_PATH[item.path] ?? LayoutDashboard;
+              const active = isItemActive(item.path);
+              return (
+                <button
+                  key={item.path}
+                  type="button"
+                  className={`nav-link ${active ? "active" : ""}`}
+                  aria-current={active ? "page" : undefined}
+                  onClick={() => handleNavigate(item.path)}
+                >
+                  <Icon size={19} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="nav-caption nav-caption-spaced">العمليات والأدوات</div>
+          <nav className="primary-nav" aria-label="العمليات والأدوات">
+            {secondaryItems.map((item) => {
+              const Icon = ICON_BY_PATH[item.path] ?? LayoutDashboard;
+              const active = isItemActive(item.path);
+              return (
+                <button
+                  key={item.path}
+                  type="button"
+                  className={`nav-link ${active ? "active" : ""}`}
+                  aria-current={active ? "page" : undefined}
+                  onClick={() => handleNavigate(item.path)}
+                >
+                  <Icon size={19} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </>
+      ) : (
+        <>
+          <div className="nav-caption">القائمة الرئيسية</div>
+          <nav className="primary-nav" aria-label="القائمة الرئيسية">
+            {authorizedNavigation.map((item) => {
+              const Icon = ICON_BY_PATH[item.path] ?? LayoutDashboard;
+              const active = isItemActive(item.path);
+              return (
+                <button
+                  key={item.path}
+                  type="button"
+                  className={`nav-link ${active ? "active" : ""}`}
+                  aria-current={active ? "page" : undefined}
+                  onClick={() => handleNavigate(item.path)}
+                >
+                  <Icon size={19} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </>
+      )}
 
       <div className="sidebar-spacer" />
 
@@ -216,6 +308,10 @@ export default function RoleSidebar({
         </button>
         <SessionLogoutButton className="nav-link" iconSize={19} />
       </div>
+
+      <div className="sidebar-version">
+        مدى لإدارة الأكاديميات <span>{effectiveRoleCode}</span>
+      </div>
     </aside>
   );
 }
@@ -223,4 +319,5 @@ export default function RoleSidebar({
 RoleSidebar.displayName = "RoleSidebar";
 RoleSidebar.isSidebar = true;
 RoleSidebar.__madaSidebar = true;
+
 

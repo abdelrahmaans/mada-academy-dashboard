@@ -208,8 +208,6 @@ function HomePreview() {
       tenantName="أكاديمية مدى"
       branchName={branch}
     >
-      <BranchManagerSidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
-
       <main className="main-panel">
         <header className="topbar">
           <div className="topbar-right">

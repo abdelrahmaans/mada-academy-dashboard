@@ -1,246 +1,29 @@
-import {
-  Banknote,
-  BarChart3,
-  CalendarDays,
-  CheckCircle2,
-  ChevronDown,
-  ChevronLeft,
-  CircleHelp,
-  GraduationCap,
-  LayoutDashboard,
-  LogOut,
-  ShieldCheck,
-  TrendingDown,
-  UserCheck,
-  Users,
-  UserPlus,
-  Wallet,
-  X,
-} from "lucide-react";
-import { useLocation } from "wouter";
-import { useAuth } from "@/contexts/AuthContext";
-import { getRoleDefinition } from "@/lib/roleNavigation";
-import "./BranchManagerSidebar.css";
+import RoleSidebar from "./RoleSidebar";
+import type { RoleCode } from "@/contexts/RoleScopeContext";
 
-type RoleMode = "R02" | "R06";
-type Props = { open: boolean; onClose: () => void; roleCode?: RoleMode };
-type Item = { path: string; label: string; icon: typeof LayoutDashboard };
-
-const R02_ITEMS: Item[] = [
-  { path: "/", label: "غرفة عمليات الفرع", icon: LayoutDashboard },
-  { path: "/schedule", label: "الجدول والمجموعات", icon: CalendarDays },
-  { path: "/students", label: "الطلاب والاشتراكات", icon: Users },
-  { path: "/team", label: "فريق الفرع والإشراف", icon: UserPlus },
-  { path: "/approvals", label: "الموافقات والقرارات", icon: CheckCircle2 },
-];
-
-const R06_ITEMS: Item[] = [
-  { path: "/finance-desk", label: "الملخص المالي والتحصيل", icon: Wallet },
-  { path: "/finance-desk#expenses", label: "المصاريف والعهد", icon: TrendingDown },
-  { path: "/finance-desk#shifts", label: "ورديات الكاش (الاستقبال)", icon: Banknote },
-  { path: "/finance-desk#payroll", label: "أتعاب المدربين بالحصة", icon: UserCheck },
-  { path: "/approvals", label: "الموافقات المالية", icon: CheckCircle2 },
-  { path: "/reports", label: "التقارير الشاملة", icon: BarChart3 },
-];
-
-function MadaBrand({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      className="brand-lockup branch-manager-brand"
-      aria-label="مدى"
-      onClick={onClick}
-    >
-      <span className="brand-symbol" aria-hidden="true">
-        <svg viewBox="0 0 40 40" fill="none">
-          <path
-            d="M4 12.5 12.5 8l8.2 4.5v9.4l-8.2 4.6L4 21.9v-9.4Z"
-            fill="currentColor"
-          />
-          <path
-            d="m19.3 12.5 8.2-4.5 8.5 4.5v9.4l-8.5 4.6-8.2-4.6v-9.4Z"
-            fill="currentColor"
-            opacity=".72"
-          />
-          <path
-            d="m11.5 24.1 8.3-4.6 8.2 4.6v8.2l-8.2 4.4-8.3-4.4v-8.2Z"
-            fill="currentColor"
-            opacity=".5"
-          />
-        </svg>
-      </span>
-      <span className="brand-word">مدى</span>
-    </button>
-  );
-}
-
-function NavItems({
-  items,
-  location,
-  onNavigate,
-}: {
-  items: Item[];
-  location: string;
-  onNavigate: (path: string) => void;
-}) {
-  const isItemActive = (path: string) => {
-    if (path.includes("#")) {
-      const [route, hash] = path.split("#");
-      return location === route && window.location.hash === `#${hash}`;
-    }
-    return (
-      location === path &&
-      (!window.location.hash || location !== "/finance-desk")
-    );
-  };
-
-  return (
-    <>
-      {items.map(item => {
-        const Icon = item.icon;
-        const active = isItemActive(item.path);
-        return (
-          <button
-            type="button"
-            key={item.path}
-            className={`nav-link ${active ? "active" : ""}`}
-            aria-current={active ? "page" : undefined}
-            onClick={() => onNavigate(item.path)}
-          >
-            <Icon size={19} />
-            <span>{item.label}</span>
-            {item.path === "/students" && <span className="nav-count">248</span>}
-          </button>
-        );
-      })}
-    </>
-  );
-}
-
-function registryLabel(roleCode: RoleMode, path: string, fallback: string) {
-  if (path.includes("#")) return fallback;
-  return (
-    getRoleDefinition(roleCode).navigation.find(item => item.path === path)?.label ??
-    fallback
-  );
-}
+type Props = {
+  open?: boolean;
+  mobileOpen?: boolean;
+  onClose?: () => void;
+  roleCode?: string;
+  activePath?: string;
+};
 
 export default function BranchManagerSidebar({
-  open,
+  open = false,
+  mobileOpen = false,
   onClose,
-  roleCode = "R02",
+  roleCode,
 }: Props) {
-  const [location, navigate] = useLocation();
-  const { logout } = useAuth();
-  const isAccountant = roleCode === "R06";
-  const roleDefinition = getRoleDefinition(roleCode);
-  const items = isAccountant ? R06_ITEMS : R02_ITEMS;
-  const roleItems = items.map(item => ({
-    ...item,
-    label: registryLabel(roleCode, item.path, item.label),
-  }));
-
-  const go = (target: string) => {
-    onClose();
-    if (target.includes("#")) {
-      const [path, hash] = target.split("#");
-      if (location === path) {
-        window.location.hash = hash;
-      } else {
-        navigate(target);
-      }
-    } else {
-      if (location === target && window.location.hash) {
-        window.location.hash = "";
-      }
-      navigate(target);
-    }
-  };
-
+  const isMobile = mobileOpen || open;
   return (
-    <>
-      {open && (
-        <button
-          className="mobile-scrim"
-          aria-label="إغلاق القائمة"
-          onClick={onClose}
-        />
-      )}
-      <aside
-        className={`sidebar branch-manager-sidebar ${open ? "sidebar-open" : ""}`}
-        aria-label={isAccountant ? "تنقل المحاسب" : "تنقل مدير الفرع"}
-      >
-        <div className="sidebar-top">
-          <MadaBrand onClick={() => go(isAccountant ? "/finance-desk" : "/")} />
-          <button
-            className="icon-button sidebar-close"
-            aria-label="إغلاق القائمة"
-            onClick={onClose}
-          >
-            <X size={19} />
-          </button>
-        </div>
-        <div className="academy-switcher">
-          <span className="academy-avatar">
-            {isAccountant ? <Wallet size={20} /> : <GraduationCap size={20} />}
-          </span>
-          <span className="academy-meta">
-            <strong>أكاديمية مدى</strong>
-            <small>{isAccountant ? "المحاسب · R06" : "مدير الفرع · R02"}</small>
-          </span>
-          <ChevronDown size={15} className="switcher-chevron" />
-        </div>
-        <div className="nav-caption">
-          {isAccountant ? "المساحة المالية" : "عمليات الفرع"}
-        </div>
-        <nav
-          className="primary-nav"
-          aria-label={isAccountant ? "المساحة المالية" : "عمليات الفرع"}
-        >
-          <NavItems items={roleItems} location={location} onNavigate={go} />
-        </nav>
-        <div className="sidebar-spacer" />
-        <div className="sidebar-help">
-          <span className="help-icon">
-            <CircleHelp size={18} />
-          </span>
-          <div>
-            <strong>محتاج مساعدة؟</strong>
-            <span>
-              {isAccountant ? "سياسة التحصيل والموافقات" : "دليل تشغيل الفرع"}
-            </span>
-          </div>
-          <ChevronLeft size={16} />
-        </div>
-        <div className="sidebar-bottom">
-          <button
-            type="button"
-            className="nav-link"
-            onClick={() => go(isAccountant ? "/approvals" : "/team")}
-          >
-            <ShieldCheck size={19} />
-            <span>{isAccountant ? "الموافقات" : "إدارة الفريق"}</span>
-          </button>
-          <button
-            type="button"
-            className="nav-link"
-            onClick={() => {
-              void logout().then(() => navigate("/login"));
-            }}
-          >
-            <LogOut size={19} />
-            <span>تسجيل الخروج</span>
-          </button>
-        </div>
-        <div className="sidebar-version">
-          مدى لإدارة الأكاديميات <span>{roleDefinition.code}</span>
-        </div>
-      </aside>
-    </>
+    <RoleSidebar
+      roleCode={roleCode as RoleCode}
+      mobileOpen={isMobile}
+      onCloseMobile={onClose}
+    />
   );
 }
 
-(BranchManagerSidebar as unknown as { isSidebar: boolean }).isSidebar = true;
 BranchManagerSidebar.displayName = "BranchManagerSidebar";
-
-
+(BranchManagerSidebar as unknown as { isSidebar: boolean }).isSidebar = true;

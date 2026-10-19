@@ -871,19 +871,6 @@ export default function FinanceDesk() {
       tenantName={financeMe?.academy?.name ?? "أكاديمية مدى"}
       branchName={branchContext}
     >
-      {roleCode === "R06" ? (
-        <BranchManagerSidebar
-          roleCode="R06"
-          open={mobileOpen}
-          onClose={() => setMobileOpen(false)}
-        />
-      ) : (
-        <RoleSidebar
-          roleCode="R05"
-          mobileOpen={mobileOpen}
-          onCloseMobile={() => setMobileOpen(false)}
-        />
-      )}
       <main className="main-panel">
         <header className="topbar">
           <div className="topbar-right">

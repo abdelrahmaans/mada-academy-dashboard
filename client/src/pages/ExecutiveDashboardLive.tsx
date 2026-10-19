@@ -147,8 +147,7 @@ export default function ExecutiveDashboardLive() {
     toast.success("تم تصدير تقرير مجلس الإدارة بنجاح");
   };
 
-  return <RoleDashboardShell className="app-shell executive-dashboard-shell r1-live-shell" showSessionLogout={false} hideSidebar roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية الحالية" branchName={selectedBranchName} demo={false}>
-    <R01AcademySidebar activePath="/executive-dashboard" mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+  return <RoleDashboardShell className="app-shell executive-dashboard-shell r1-live-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية الحالية" branchName={selectedBranchName} demo={false}>
     <main className="main-panel">
       <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel={selectedBranchName} />
       <div className="workspace r1-live-page" dir="rtl">

@@ -106,8 +106,7 @@ export default function HeadInstructorsLive() {
   }
 
   return (
-    <RoleDashboardShell className="app-shell r03-live-shell" showSessionLogout={false} hideSidebar roleCode="R03" roleLabel="رئيس المدربين" scopeLevel="branch" scopeLabel={`فرع واحد · ${branch}`} branchName={branch} tenantName={me.academy?.name} demo={false}>
-      <R03HeadInstructorsSidebar open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} activePath="/head-instructors" />
+    <RoleDashboardShell className="app-shell r03-live-shell" roleCode="R03" roleLabel="رئيس المدربين" scopeLevel="branch" scopeLabel={`فرع واحد · ${branch}`} branchName={branch} tenantName={me.academy?.name} demo={false}>
       <main className="main-panel" dir="rtl">
         <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel={`فرع ${branch}`} roleLabel="رئيس المدربين" />
         <div className="r03-live-page">

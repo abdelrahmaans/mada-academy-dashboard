@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
-import BranchManagerSidebar from "@/components/BranchManagerSidebar";
+import RoleSidebar from "@/components/RoleSidebar";
 import ApprovalCard, {
   APPROVAL_STATUS_LABELS,
   type ApprovalItem,
@@ -573,10 +573,16 @@ export default function Approvals() {
 
   return (
     <div className="app-shell" dir="rtl">
-      <BranchManagerSidebar
-        roleCode={isAccountant ? "R06" : "R02"}
-        open={mobileNavOpen}
-        onClose={() => setMobileNavOpen(false)}
+      {mobileNavOpen && (
+        <button
+          className="mobile-scrim"
+          aria-label="إغلاق القائمة"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      )}
+      <RoleSidebar
+        mobileOpen={mobileNavOpen}
+        onCloseMobile={() => setMobileNavOpen(false)}
       />
 
       <main className="main-panel">

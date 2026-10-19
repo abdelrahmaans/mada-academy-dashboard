@@ -112,20 +112,14 @@ export default function ReportsLive({ me }: { me: AuthMe }) {
     <RoleDashboardShell
       className="app-shell reports-live-shell"
       showSessionLogout={false}
-      hideSidebar
       roleCode={roleCode}
-      roleLabel={me.roleLabel || (isOwner ? "مسؤول الأكاديمية" : "مدير الفرع")}
+      roleLabel={me.roleLabel || (isOwner ? "مسؤول الأكاديمية" : (me.role === "R06_ACCOUNTANT" ? "المحاسب" : "مدير الفرع"))}
       scopeLevel={isOwner ? "tenant" : "branch"}
       scopeLabel={scopeLabel}
       tenantName={me.academy?.name}
       branchName={isOwner ? undefined : branchName}
       demo={false}
     >
-      {isOwner ? (
-        <R01AcademySidebar activePath="/reports" mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
-      ) : (
-        <BranchManagerSidebar roleCode={me.role === "R06_ACCOUNTANT" ? "R06" : "R02"} open={mobileOpen} onClose={() => setMobileOpen(false)} />
-      )}
       <main className="main-panel">
         {isOwner ? (
           <RoleSurfaceTopbar onMenu={() => setMobileOpen(true)} scopeLabel={scopeLabel} />
