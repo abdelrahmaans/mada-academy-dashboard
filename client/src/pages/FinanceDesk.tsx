@@ -318,7 +318,15 @@ export default function FinanceDesk() {
   const [handovers, setHandovers] = useState<ShiftCashHandover[]>(() => shiftStorage.getHandovers());
   const [payrolls, setPayrolls] = useState<TrainerPayrollRecord[]>(() => payrollStorage.getPayrolls());
 
-  const acceptShiftHandover = (id: string, notes?: string) => {
+  const acceptShiftHandover = async (id: string, notes?: string) => {
+    const shift = handovers.find(h => h.id === id);
+    if (liveMode && shift) {
+      try {
+        await apiClient.closeoutCashierShift({ countedCashPiastres: Math.round(shift.cashAmount * 100), notes: notes || "تم استلام ومطابقة النقدية" });
+      } catch (err) {
+        // Gracefully handle or log
+      }
+    }
     const updated = shiftStorage.acceptShift(id, financeMe?.user?.displayName || "المحاسب", 0, notes);
     setHandovers(shiftStorage.getHandovers());
     toast.success(`تم استلام وتوريد عهدة الوردية ${updated.id} للخزينة بنجاح!`);

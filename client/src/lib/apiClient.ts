@@ -394,6 +394,31 @@ export type CourseProfitabilityItem = {
   status: string;
 };
 
+export type CashierShiftSummary = {
+  date: string;
+  tenantId: string;
+  branchId: string | null;
+  transactionCount: number;
+  cashTotalPiastres: number;
+  visaTotalPiastres: number;
+  instapayTotalPiastres: number;
+  vodafoneTotalPiastres: number;
+  cashExpensesPiastres: number;
+  expectedCashDrawerPiastres: number;
+  totalCollectedPiastres: number;
+};
+
+export type CloseoutCashierResponse = {
+  date: string;
+  closedAt: string;
+  closedByUserId: string;
+  expectedCashPiastres: number;
+  countedCashPiastres: number;
+  discrepancyPiastres: number;
+  status: "BALANCED" | "SURPLUS" | "DEFICIT" | string;
+  notes: string | null;
+};
+
 export class ApiRequestError extends Error {
   constructor(
     message: string,
@@ -717,6 +742,8 @@ export const apiClient = {
     if (!response.ok) throw new ApiRequestError("تعذر تصدير بيانات التحليل للمحلل", response.status);
     return response.blob();
   },
+  cashierShiftSummary: () => request<CashierShiftSummary>("/finance/cashier/shift-summary"),
+  closeoutCashierShift: (input: { countedCashPiastres: number; notes?: string }) => request<CloseoutCashierResponse>("/finance/cashier/closeout", { method: "POST", body: JSON.stringify(input) }),
   financeExpenses: (params: { status?: string; branchId?: string } = {}) => {
     const query = new URLSearchParams();
     if (params.status) query.set("status", params.status);
