@@ -50,24 +50,6 @@ type RoleDashboardShellProps = Omit<HTMLAttributes<HTMLDivElement>, "role"> & {
   onCloseMobile?: () => void;
 };
 
-function hasSidebarElement(nodes: ReactNode): boolean {
-  return Children.toArray(nodes).some(child => {
-    if (!isValidElement(child)) return false;
-    if (child.type === "aside") {
-      const cls = String((child.props as { className?: string })?.className || "");
-      if (cls.includes("sidebar") && !cls.includes("panel") && !cls.includes("detail") && !cls.includes("secondary")) return true;
-      return false;
-    }
-    const type = child.type as any;
-    if (typeof type === "function" || typeof type === "object") {
-      if (type?.isSidebar || type?.__madaSidebar) return true;
-      const fnName = type?.displayName || type?.name || "";
-      if (typeof fnName === "string" && (fnName === "RoleSidebar" || fnName === "BranchManagerSidebar" || fnName === "R01AcademySidebar" || fnName === "R03HeadInstructorsSidebar")) return true;
-    }
-    return false;
-  });
-}
-
 export default function RoleDashboardShell({
   children,
   className,
@@ -97,9 +79,8 @@ export default function RoleDashboardShell({
     onCloseMobile?.();
   };
 
-  const hasChildrenSidebar = hasSidebarElement(children);
-  const shouldRenderSidebar = !hideSidebar && !hasChildrenSidebar;
-  const hasAnySidebar = shouldRenderSidebar || hasChildrenSidebar;
+  const shouldRenderSidebar = !hideSidebar;
+  const hasAnySidebar = shouldRenderSidebar;
 
   const classList = ["role-dashboard-shell"];
   if (hasAnySidebar) {
