@@ -42,6 +42,10 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
     public DbSet<Lead> Leads => Set<Lead>();
     public DbSet<MarketingCampaign> MarketingCampaigns => Set<MarketingCampaign>();
     public DbSet<MarketingContentItem> MarketingContentItems => Set<MarketingContentItem>();
+    public DbSet<Competition> Competitions => Set<Competition>();
+    public DbSet<CompetitionTeam> CompetitionTeams => Set<CompetitionTeam>();
+    public DbSet<CompetitionTeamMember> CompetitionTeamMembers => Set<CompetitionTeamMember>();
+    public DbSet<CompetitionAward> CompetitionAwards => Set<CompetitionAward>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -382,6 +386,50 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
             entity.Property(x => x.SubmittedByRole).HasMaxLength(64).IsRequired();
             entity.Property(x => x.State).HasMaxLength(32).IsRequired();
             entity.Property(x => x.Reason).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<Competition>(entity =>
+        {
+            entity.HasIndex(x => new { x.TenantId, x.Status });
+            entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Organizer).HasMaxLength(160).IsRequired();
+            entity.Property(x => x.Season).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Track).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Location).HasMaxLength(200);
+            entity.Property(x => x.Notes).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<CompetitionTeam>(entity =>
+        {
+            entity.HasIndex(x => new { x.TenantId, x.BranchId, x.CompetitionId });
+            entity.Property(x => x.Name).HasMaxLength(160).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.ProjectTitle).HasMaxLength(200);
+            entity.Property(x => x.ProjectDescription).HasMaxLength(1000);
+            entity.HasOne<Competition>().WithMany().HasForeignKey(x => x.CompetitionId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Branch>().WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CompetitionTeamMember>(entity =>
+        {
+            entity.HasIndex(x => new { x.TeamId, x.StudentId }).IsUnique();
+            entity.Property(x => x.RoleInTeam).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            entity.HasOne<CompetitionTeam>().WithMany().HasForeignKey(x => x.TeamId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Student>().WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CompetitionAward>(entity =>
+        {
+            entity.HasIndex(x => new { x.TenantId, x.IsPublishedToHallOfFame });
+            entity.HasIndex(x => new { x.TenantId, x.BranchId });
+            entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.CertificateUrl).HasMaxLength(500);
+            entity.Property(x => x.PhotosJson).HasMaxLength(2000);
+            entity.HasOne<Competition>().WithMany().HasForeignKey(x => x.CompetitionId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<CompetitionTeam>().WithMany().HasForeignKey(x => x.TeamId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Branch>().WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

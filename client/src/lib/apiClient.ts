@@ -419,6 +419,74 @@ export type CloseoutCashierResponse = {
   notes: string | null;
 };
 
+export type CompetitionSummaryItem = {
+  id: string;
+  name: string;
+  organizer: string;
+  season: string;
+  track: string;
+  ageMin: number;
+  ageMax: number;
+  registrationDeadline: string | null;
+  eventDate: string | null;
+  location: string | null;
+  status: string;
+  teamsCount: number;
+  awardsCount: number;
+  createdAt: string;
+};
+
+export type CompetitionDetailItem = CompetitionSummaryItem & {
+  notes: string | null;
+};
+
+export type CompetitionTeamMemberItem = {
+  id: string;
+  teamId: string;
+  studentId: string;
+  studentName: string;
+  studentCode: string;
+  roleInTeam: string;
+  joinedAt: string;
+  status: string;
+};
+
+export type CompetitionTeamItem = {
+  id: string;
+  competitionId: string;
+  branchId: string;
+  branchName: string;
+  name: string;
+  coachInstructorId: string;
+  coachName: string;
+  classroomId: string | null;
+  kitId: string | null;
+  kitCode: string | null;
+  projectTitle: string | null;
+  projectDescription: string | null;
+  status: string;
+  members: CompetitionTeamMemberItem[];
+  createdAt: string;
+};
+
+export type HallOfFameCardItem = {
+  id: string;
+  title: string;
+  rank: number | null;
+  awardDate: string;
+  competitionName: string;
+  organizer: string;
+  season: string;
+  track: string;
+  teamName: string;
+  projectTitle: string | null;
+  coachName: string;
+  branchName: string;
+  studentNames: string[];
+  certificateUrl: string | null;
+  photosJson: string | null;
+};
+
 export class ApiRequestError extends Error {
   constructor(
     message: string,
@@ -795,6 +863,29 @@ export const apiClient = {
   registerStudent: (input: DirectStudentInput) => request<ConvertLeadResult>("/students/register", { method: "POST", body: JSON.stringify(input) }),
   listSchedulingGroups: () => request<{ items: SchedulingGroupRecord[]; total: number }>("/scheduling/groups"),
   activateWaitlistedEnrollment: (studentId: string, enrollmentId: string) => request<ActivateEnrollmentResult>(`/students/${studentId}/enrollments/${enrollmentId}/activate`, { method: "POST" }),
+  competitions: (params: { status?: string; track?: string; season?: string } = {}) => {
+    const query = new URLSearchParams();
+    if (params.status) query.set("status", params.status);
+    if (params.track) query.set("track", params.track);
+    if (params.season) query.set("season", params.season);
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return request<CompetitionSummaryItem[]>(`/competitions${suffix}`);
+  },
+  competitionDetail: (id: string) => request<CompetitionDetailItem>(`/competitions/${id}`),
+  createCompetition: (input: { name: string; organizer: string; season?: string; track?: string; ageMin?: number; ageMax?: number; registrationDeadline?: string; eventDate?: string; location?: string; notes?: string }) =>
+    request<CompetitionDetailItem>("/competitions", { method: "POST", body: JSON.stringify(input) }),
+  competitionTeams: (competitionId: string) => request<CompetitionTeamItem[]>(`/competitions/${competitionId}/teams`),
+  createCompetitionTeam: (competitionId: string, input: { name: string; coachInstructorId?: string; branchId?: string; classroomId?: string; kitId?: string; projectTitle?: string; projectDescription?: string }) =>
+    request<CompetitionTeamItem>(`/competitions/${competitionId}/teams`, { method: "POST", body: JSON.stringify(input) }),
+  updateCompetitionTeamStatus: (teamId: string, status: string) =>
+    request<string>(`/competitions/teams/${teamId}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  addCompetitionTeamMember: (teamId: string, input: { studentId: string; roleInTeam?: string }) =>
+    request<CompetitionTeamMemberItem>(`/competitions/teams/${teamId}/members`, { method: "POST", body: JSON.stringify(input) }),
+  removeCompetitionTeamMember: (teamId: string, studentId: string) =>
+    request<boolean>(`/competitions/teams/${teamId}/members/${studentId}`, { method: "DELETE" }),
+  createCompetitionAward: (input: { teamId: string; title: string; rank?: number; awardDate?: string; certificateUrl?: string; photosJson?: string; isPublishedToHallOfFame?: boolean }) =>
+    request<{ id: string }>(`/competitions/awards`, { method: "POST", body: JSON.stringify(input) }),
+  hallOfFame: () => request<HallOfFameCardItem[]>("/competitions/hall-of-fame"),
   logout: async () => {
     const refreshToken = localStorage.getItem(REFRESH_KEY);
     if (refreshToken && accessToken) await request<void>("/auth/logout", { method: "POST", body: JSON.stringify({ refreshToken }) }, false).catch(() => undefined);

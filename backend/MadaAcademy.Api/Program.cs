@@ -3,8 +3,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.RateLimiting;
 using MadaAcademy.Api.Auth;
-using MadaAcademy.Api.Modules.Identity;
+using MadaAcademy.Api.Modules.Competitions;
 using MadaAcademy.Api.Modules.Finance;
+using MadaAcademy.Api.Modules.Identity;
 using MadaAcademy.Api.Modules.Operations;
 using MadaAcademy.Api.Modules.Platform;
 using MadaAcademy.Api.Modules.Reports;
@@ -143,6 +144,7 @@ app.MapMadaExpenseEndpoints();
 app.MapMadaPlatformAdminEndpoints();
 app.MapMadaOperationalReportEndpoints();
 app.MapMadaAnalyticsEndpoints();
+app.MapMadaCompetitionEndpoints();
 
 app.MapMadaAuthEndpoints();
 if (app.Environment.IsDevelopment())
