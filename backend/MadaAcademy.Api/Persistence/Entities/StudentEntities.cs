@@ -43,3 +43,24 @@ public sealed class GuardianStudentLink : EntityBase
     public required string Relationship { get; set; }
     public string Status { get; set; } = "ACTIVE";
 }
+
+public sealed class SubscriptionFreezeRequest : EntityBase
+{
+    public Guid TenantId { get; set; }
+    public Guid BranchId { get; set; }
+    public Guid StudentId { get; set; }
+    public Guid? CourseOfferingId { get; set; }
+    public DateOnly StartDate { get; set; }
+    public DateOnly EndDate { get; set; }
+    public string Reason { get; set; } = "TRAVEL";
+    public string? ReasonText { get; set; }
+    public string Status { get; set; } = "PENDING";
+    public string SubmittedByRole { get; set; } = "R08_PARENT";
+    public string? SubmittedByName { get; set; }
+    public int AffectedSessionsCount { get; set; } = 1;
+    public int MakeUpCreditsAwarded { get; set; } = 1;
+    public Guid? DecidedByUserId { get; set; }
+    public string? DecidedByName { get; set; }
+    public string? DecisionNote { get; set; }
+    public DateTimeOffset? DecidedAt { get; set; }
+}

@@ -134,6 +134,7 @@ app.MapMadaClassroomSchedulingEndpoints();
 app.MapMadaSessionWorkflowEndpoints();
 app.MapGroupSupervisionEndpoints();
 app.MapMadaOperationalEndpoints();
+app.MapMadaFreezeEndpoints();
 app.MapMadaBulkImportEndpoints();
 app.MapMadaLeadEndpoints();
 app.MapMadaMarketingEndpoints();

@@ -310,7 +310,8 @@ export default function Approvals() {
       apiClient.listNotifications(),
       apiClient.invoiceCorrections(),
       apiClient.financeExpenses({ status: "ALL" }),
-    ]).then(([approvalResult, notificationResult, correctionResult, expenseResult]) => {
+      apiClient.freezeRequests(),
+    ]).then(([approvalResult, notificationResult, correctionResult, expenseResult, freezeResult]) => {
       if (approvalResult.status === "rejected") {
         setRequests([]);
         setNotifications([]);
@@ -329,7 +330,9 @@ export default function Approvals() {
       const expenses = expenseResult.status === "fulfilled"
         ? expenseResult.value.items.map(expenseFromApi)
         : [];
-      const freezes = freezeStorage.getRequests().map(freezeFromStorage);
+      const freezes = freezeResult.status === "fulfilled"
+        ? freezeResult.value.map(freezeFromStorage)
+        : freezeStorage.getRequests().map(freezeFromStorage);
       setRequests([...supported.map(approvalFromApi), ...corrections, ...expenses, ...freezes]);
       setNotifications(notifications);
 
@@ -473,7 +476,11 @@ export default function Approvals() {
     if (item.live && liveMode) {
       try {
         if (item.kind === "freeze") {
-          freezeStorage.decideRequest(id, status === "approved" ? "APPROVED" : "REJECTED", me?.user?.displayName || "مدير الفرع", decisionNote.trim());
+          try {
+            await apiClient.decideFreezeRequest(id, status === "approved" ? "APPROVED" : "REJECTED", decisionNote.trim());
+          } catch {
+            freezeStorage.decideRequest(id, status === "approved" ? "APPROVED" : "REJECTED", me?.user?.displayName || "مدير الفرع", decisionNote.trim());
+          }
         } else if (item.kind === "expense") {
           if (status === "approved") await apiClient.approveFinanceExpense(id, decisionNote.trim());
           else await apiClient.rejectFinanceExpense(id, decisionNote.trim());

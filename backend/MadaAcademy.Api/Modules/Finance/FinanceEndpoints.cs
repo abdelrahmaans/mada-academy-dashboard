@@ -29,6 +29,8 @@ public static class FinanceEndpoints
         api.MapGet("/payments/{paymentId:guid}/evidence", DownloadEvidenceAsync);
         api.MapGet("/cashier/shift-summary", GetCashierShiftSummaryAsync);
         api.MapPost("/cashier/closeout", CloseoutCashierShiftAsync);
+        api.MapGet("/instructor-payroll", GetInstructorPayrollAsync);
+        api.MapPost("/cashier/deposit-to-safe", DepositCashierSafeAsync);
 
         endpoints.MapGet("/api/v1/consumer/invoices", ListConsumerInvoicesAsync).RequireAuthorization("consumer");
         return endpoints;
@@ -385,6 +387,115 @@ public static class FinanceEndpoints
         });
     }
 
+    private static async Task<IResult> GetInstructorPayrollAsync(
+        HttpContext context, MadaDbContext db, string? month, Guid? branchId, CancellationToken cancellationToken)
+    {
+        if (!TryStaffScope(context.User, out var scope, out var error)) return error;
+        if (!context.User.IsInRole("R01_ACADEMY_OWNER") && !context.User.IsInRole("R02_BRANCH_MANAGER") && !context.User.IsInRole("R06_ACCOUNTANT"))
+            return Forbidden("PAYROLL_READ_FORBIDDEN");
+
+        var targetBranchId = branchId ?? scope.BranchId;
+
+        DateOnly startMonth;
+        if (!string.IsNullOrWhiteSpace(month) && DateOnly.TryParseExact(month.Trim() + "-01", "yyyy-MM-dd", out var parsed))
+            startMonth = parsed;
+        else
+            startMonth = new DateOnly(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+
+        var nextMonth = startMonth.AddMonths(1);
+        var startUtc = new DateTimeOffset(startMonth.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+        var endUtc = new DateTimeOffset(nextMonth.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+
+        var instructors = await (from m in db.Memberships.AsNoTracking()
+                                 join u in db.UserAccounts.AsNoTracking() on m.UserAccountId equals u.Id
+                                 join b in db.Branches.AsNoTracking() on m.BranchId equals b.Id into branchJoin
+                                 from b in branchJoin.DefaultIfEmpty()
+                                 where m.TenantId == scope.TenantId && m.Status == "ACTIVE" &&
+                                       (m.RoleCode == "R04_INSTRUCTOR" || m.RoleCode == "R03_HEAD_INSTRUCTORS") &&
+                                       (!scope.BranchId.HasValue || m.BranchId == scope.BranchId.Value) &&
+                                       (!targetBranchId.HasValue || m.BranchId == targetBranchId.Value)
+                                 select new {
+                                     InstructorId = u.Id,
+                                     InstructorName = u.DisplayName ?? "Instructor",
+                                     RoleCode = m.RoleCode,
+                                     BranchId = m.BranchId ?? Guid.Empty,
+                                     BranchName = b != null ? b.Name : "Main Branch"
+                                 }).Distinct().ToListAsync(cancellationToken);
+
+        var completedSessions = await db.AcademySessions.AsNoTracking()
+            .Where(s => s.TenantId == scope.TenantId &&
+                        s.Status == "COMPLETED" &&
+                        s.StartAt >= startUtc && s.StartAt < endUtc &&
+                        (!scope.BranchId.HasValue || s.BranchId == scope.BranchId.Value) &&
+                        (!targetBranchId.HasValue || s.BranchId == targetBranchId.Value))
+            .Select(s => new {
+                s.Id,
+                ActualInstructorId = s.SubstituteInstructorId.HasValue ? s.SubstituteInstructorId.Value : s.InstructorId,
+                s.SessionNumber,
+                s.StartAt
+            })
+            .ToListAsync(cancellationToken);
+
+        var sessionsByInstructor = completedSessions
+            .GroupBy(s => s.ActualInstructorId)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var defaultRatePiastres = 20_000L;
+
+        var result = instructors.Select(ins =>
+        {
+            var sessionsCount = sessionsByInstructor.GetValueOrDefault(ins.InstructorId, 0);
+            var rate = ins.RoleCode == "R03_HEAD_INSTRUCTORS" ? 25_000L : defaultRatePiastres;
+            var earned = sessionsCount * rate;
+
+            return new
+            {
+                id = $"PAY-{startMonth:yyyy-MM}-{ins.InstructorId:N}"[..18],
+                instructorId = ins.InstructorId,
+                instructorName = ins.InstructorName,
+                branchId = ins.BranchId,
+                branchName = ins.BranchName,
+                month = startMonth.ToString("yyyy-MM"),
+                completedSessionsCount = sessionsCount,
+                ratePerSession = (int)(rate / 100),
+                ratePerSessionPiastres = rate,
+                baseSalary = 0,
+                bonusAmount = 0,
+                deductionAmount = 0,
+                netPayable = (int)(earned / 100),
+                netPayablePiastres = earned,
+                status = "CALCULATED"
+            };
+        }).OrderByDescending(x => x.completedSessionsCount).ThenBy(x => x.instructorName).ToArray();
+
+        return Results.Ok(new { data = new { items = result, total = result.Length, month = startMonth.ToString("yyyy-MM") } });
+    }
+
+    private static async Task<IResult> DepositCashierSafeAsync(
+        DepositCashierSafeRequest request, HttpContext context, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!TryStaffScope(context.User, out var scope, out var error)) return error;
+        if (!Guid.TryParse(context.User.FindFirstValue("sub"), out var actorId)) return Forbidden("ACTOR_REQUIRED");
+
+        var branchId = scope.BranchId;
+        if (!branchId.HasValue) return Conflict("BRANCH_REQUIRED");
+
+        db.AuditEvents.Add(new AuditEvent
+        {
+            TenantId = scope.TenantId,
+            BranchId = branchId.Value,
+            ActorUserId = actorId,
+            Action = "CASHIER_SAFE_DEPOSIT",
+            TargetType = "FINANCE_DRAWER",
+            TargetId = branchId.Value.ToString(),
+            Reason = request.Notes?.Trim() ?? "توريد نقدية الدرج إلى الخزينة الرئيسية",
+            MetadataJson = JsonSerializer.Serialize(new { amountPiastres = request.AmountPiastres, depositedAt = DateTimeOffset.UtcNow })
+        });
+
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.Ok(new { data = new { status = "DEPOSITED", amountPiastres = request.AmountPiastres, depositedAt = DateTimeOffset.UtcNow } });
+    }
+
     private static IResult Forbidden(string code) => Results.Problem(statusCode: 403, title: code, extensions: new Dictionary<string, object?> { ["code"] = code });
     private static IResult Conflict(string code) => Results.Conflict(new { error = new { code, message = "The financial operation could not be completed." } });
     private static IResult Validation(string field, string message) => Results.ValidationProblem(new Dictionary<string, string[]> { [field] = [message] });
@@ -396,3 +507,4 @@ public sealed record CreateInvoiceRequest(Guid StudentId, DateOnly DueDate, IRea
 public sealed record CreateInvoiceLineRequest(string Description, int AmountPiastres);
 public sealed record CreatePaymentRequest(int AmountPiastres, string Method, DateOnly? ReceivedOn = null, string? ExternalReference = null, string? Note = null, string? IdempotencyKey = null);
 public sealed record CloseoutCashierRequest(long CountedCashPiastres, string? Notes = null);
+public sealed record DepositCashierSafeRequest(long AmountPiastres, string? Notes = null);

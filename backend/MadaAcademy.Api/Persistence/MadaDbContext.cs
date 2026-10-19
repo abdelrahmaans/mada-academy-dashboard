@@ -46,6 +46,7 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
     public DbSet<CompetitionTeam> CompetitionTeams => Set<CompetitionTeam>();
     public DbSet<CompetitionTeamMember> CompetitionTeamMembers => Set<CompetitionTeamMember>();
     public DbSet<CompetitionAward> CompetitionAwards => Set<CompetitionAward>();
+    public DbSet<SubscriptionFreezeRequest> SubscriptionFreezeRequests => Set<SubscriptionFreezeRequest>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -429,6 +430,21 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
             entity.Property(x => x.PhotosJson).HasMaxLength(2000);
             entity.HasOne<Competition>().WithMany().HasForeignKey(x => x.CompetitionId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne<CompetitionTeam>().WithMany().HasForeignKey(x => x.TeamId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Branch>().WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SubscriptionFreezeRequest>(entity =>
+        {
+            entity.HasIndex(x => new { x.TenantId, x.BranchId, x.Status });
+            entity.HasIndex(x => new { x.TenantId, x.StudentId });
+            entity.Property(x => x.Reason).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.ReasonText).HasMaxLength(500);
+            entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.SubmittedByRole).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.SubmittedByName).HasMaxLength(160);
+            entity.Property(x => x.DecidedByName).HasMaxLength(160);
+            entity.Property(x => x.DecisionNote).HasMaxLength(500);
+            entity.HasOne<Student>().WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<Branch>().WithMany().HasForeignKey(x => x.BranchId).OnDelete(DeleteBehavior.Restrict);
         });
     }

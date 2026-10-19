@@ -886,6 +886,23 @@ export const apiClient = {
   createCompetitionAward: (input: { teamId: string; title: string; rank?: number; awardDate?: string; certificateUrl?: string; photosJson?: string; isPublishedToHallOfFame?: boolean }) =>
     request<{ id: string }>(`/competitions/awards`, { method: "POST", body: JSON.stringify(input) }),
   hallOfFame: () => request<HallOfFameCardItem[]>("/competitions/hall-of-fame"),
+  freezeRequests: (status?: string) => request<SubscriptionFreezeRequest[]>(`/operations/freeze-requests${status ? `?status=${encodeURIComponent(status)}` : ""}`),
+  createFreezeRequest: (input: { studentId: string; courseOfferingId?: string; startDate: string; endDate: string; reason?: string; reasonText?: string; notes?: string }) =>
+    request<SubscriptionFreezeRequest>("/operations/freeze-requests", { method: "POST", body: JSON.stringify(input) }),
+  decideFreezeRequest: (id: string, decision: "APPROVED" | "REJECTED", note?: string) =>
+    request<SubscriptionFreezeRequest>(`/operations/freeze-requests/${id}/decision`, { method: "POST", body: JSON.stringify({ decision, note }) }),
+  consumerFreezeRequests: () => request<SubscriptionFreezeRequest[]>("/consumer/freeze-requests"),
+  createConsumerFreezeRequest: (input: { studentId: string; courseOfferingId?: string; startDate: string; endDate: string; reason?: string; reasonText?: string; notes?: string }) =>
+    request<SubscriptionFreezeRequest>("/consumer/freeze-requests", { method: "POST", body: JSON.stringify(input) }),
+  instructorPayroll: (params?: { month?: string; branchId?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.month) query.set("month", params.month);
+    if (params?.branchId) query.set("branchId", params.branchId);
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    return request<InstructorPayrollItem[]>(`/finance/payroll/instructors${suffix}`);
+  },
+  depositCashierSafe: (input: { amountPiastres: number; notes?: string }) =>
+    request<{ success: boolean; depositedPiastres: number; timestamp: string }>("/finance/cashier/deposit-to-safe", { method: "POST", body: JSON.stringify(input) }),
   logout: async () => {
     const refreshToken = localStorage.getItem(REFRESH_KEY);
     if (refreshToken && accessToken) await request<void>("/auth/logout", { method: "POST", body: JSON.stringify({ refreshToken }) }, false).catch(() => undefined);
@@ -959,6 +976,7 @@ export type ConvertLeadInput = {
   discountPercent?: number;
   createInvoice?: boolean;
   joinWaitlistIfFull?: boolean;
+  referredByStudentId?: string;
 };
 
 export type DirectStudentInput = {
@@ -970,6 +988,17 @@ export type DirectStudentInput = {
   discountPercent?: number;
   createInvoice?: boolean;
   joinWaitlistIfFull?: boolean;
+  referredByStudentId?: string;
+};
+
+export type InstructorPayrollItem = {
+  instructorId: string;
+  instructorName: string;
+  totalSessions: number;
+  completedSessions: number;
+  substituteSessionsCount: number;
+  totalCompensationPiastres: number;
+  sessionRatePiastres: number;
 };
 
 export type ConvertLeadResult = {

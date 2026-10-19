@@ -144,6 +144,8 @@ export default function SecretaryDeskLive() {
     createInvoice: true,
   });
 
+  const [serverFreezes, setServerFreezes] = useState<SubscriptionFreezeRequest[]>([]);
+
   const branchName =
     me?.branches?.find(branch => branch.id === me?.branchId)?.name ??
     me?.branches?.[0]?.name ??
@@ -157,11 +159,13 @@ export default function SecretaryDeskLive() {
       apiClient.listLeads(),
       apiClient.listSchedulingGroups(),
       apiClient.listStudents(),
-    ]).then(([leadsRes, groupsRes, studentsRes]) => {
+      apiClient.freezeRequests(),
+    ]).then(([leadsRes, groupsRes, studentsRes, freezesRes]) => {
       if (!active) return;
       if (leadsRes.status === "fulfilled") setLeads(leadsRes.value.items);
       if (groupsRes.status === "fulfilled") setGroups(groupsRes.value.items);
       if (studentsRes.status === "fulfilled") setStudents(studentsRes.value.items);
+      if (freezesRes.status === "fulfilled") setServerFreezes(freezesRes.value);
       setLoading(false);
     });
 
@@ -670,6 +674,19 @@ export default function SecretaryDeskLive() {
                     <option value={20}>خصم شريك أو تفوق (20%)</option>
                   </select>
                 </label>
+
+                <label>
+                  <span>ترشيح بواسطة طالب سفير / إحالة زميل</span>
+                  <select
+                    value={directRegistration.referredByStudentId ?? ""}
+                    onChange={e => setDirectRegistration({ ...directRegistration, referredByStudentId: e.target.value || undefined })}
+                  >
+                    <option value="">بدون ترشيح (تسجيل مباشر)</option>
+                    {students.map(s => (
+                      <option key={s.id} value={s.id}>{s.fullName} ({s.code || "طالب"})</option>
+                    ))}
+                  </select>
+                </label>
               </div>
 
               <div className="form-checkbox">
@@ -764,8 +781,8 @@ export default function SecretaryDeskLive() {
 
         {/* TAB 4: Subscription Freezes & Make-up Sessions */}
         {activeTab === "freezes" && (() => {
-          const allFreezes = freezeStorage.getRequests();
-          const handleSecretaryFreezeSubmit = (e: React.FormEvent) => {
+          const allFreezes = serverFreezes.length > 0 ? serverFreezes : freezeStorage.getRequests();
+          const handleSecretaryFreezeSubmit = async (e: React.FormEvent) => {
             e.preventDefault();
             const student = students.find(s => s.id === freezeFormData.studentId);
             if (!student) {
@@ -777,18 +794,30 @@ export default function SecretaryDeskLive() {
               return;
             }
             const group = groups.find(g => g.branchId === student.branchId);
-            freezeStorage.createRequest({
-              studentId: student.id,
-              studentName: student.fullName,
-              courseName: group?.courseName || "برنامج تدريبي",
-              branchName: branchName,
-              startDate: freezeFormData.startDate,
-              endDate: freezeFormData.endDate,
-              reason: freezeFormData.reason,
-              reasonText: freezeFormData.reasonText,
-              submittedByRole: "R05_SECRETARY",
-              submittedByName: `${me?.user?.displayName || "موظف الاستقبال"} (السكرتارية)`,
-            });
+            try {
+              const created = await apiClient.createFreezeRequest({
+                studentId: student.id,
+                courseOfferingId: group?.id,
+                startDate: freezeFormData.startDate,
+                endDate: freezeFormData.endDate,
+                reason: freezeFormData.reason,
+                reasonText: freezeFormData.reasonText,
+              });
+              setServerFreezes(prev => [created, ...prev]);
+            } catch {
+              freezeStorage.createRequest({
+                studentId: student.id,
+                studentName: student.fullName,
+                courseName: group?.courseName || "برنامج تدريبي",
+                branchName: branchName,
+                startDate: freezeFormData.startDate,
+                endDate: freezeFormData.endDate,
+                reason: freezeFormData.reason,
+                reasonText: freezeFormData.reasonText,
+                submittedByRole: "R05_SECRETARY",
+                submittedByName: `${me?.user?.displayName || "موظف الاستقبال"} (السكرتارية)`,
+              });
+            }
             setFreezeModalOpen(false);
             setFreezeFormData({
               studentId: "",

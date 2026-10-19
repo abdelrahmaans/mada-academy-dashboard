@@ -572,11 +572,47 @@ function FreezeSection({ child, liveMode }: { child: ChildData; liveMode: boolea
     reasonText: "",
   });
 
-  const handleCreate = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (liveMode) {
+      apiClient.consumerFreezeRequests()
+        .then(res => {
+          const matching = res.filter(r => r.studentId === child.id);
+          setRequests(matching.length > 0 ? matching : freezeStorage.getRequests().filter(r => r.studentId === child.id));
+        })
+        .catch(() => {
+          setRequests(freezeStorage.getRequests().filter(r => r.studentId === child.id));
+        });
+    }
+  }, [child.id, liveMode]);
+
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.reasonText.trim()) {
       toast.error("يرجى كتابة سبب التجميد بالتفصيل");
       return;
+    }
+    if (liveMode) {
+      try {
+        const liveCreated = await apiClient.createConsumerFreezeRequest({
+          studentId: child.id,
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          reason: formData.reason,
+          reasonText: formData.reasonText,
+        });
+        setRequests(prev => [liveCreated, ...prev]);
+        setModalOpen(false);
+        setFormData({
+          startDate: new Date().toISOString().split("T")[0],
+          endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+          reason: "TRAVEL",
+          reasonText: "",
+        });
+        toast.success("تم إرسال طلب التجميد بنجاح إلى مدير الفرع للمراجعة");
+        return;
+      } catch {
+        // Fallback to offline storage if backend is unreachable
+      }
     }
     const created = freezeStorage.createRequest({
       studentId: child.id,

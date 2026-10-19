@@ -318,11 +318,45 @@ export default function FinanceDesk() {
   const [handovers, setHandovers] = useState<ShiftCashHandover[]>(() => shiftStorage.getHandovers());
   const [payrolls, setPayrolls] = useState<TrainerPayrollRecord[]>(() => payrollStorage.getPayrolls());
 
+  useEffect(() => {
+    if (liveMode) {
+      const now = new Date();
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      apiClient.instructorPayroll({ month: currentMonth })
+        .then(items => {
+          if (items && items.length > 0) {
+            const livePayrolls: TrainerPayrollRecord[] = items.map((item, idx) => {
+              const netPayable = Math.round(item.totalCompensationPiastres / 100);
+              const ratePerSession = Math.round(item.sessionRatePiastres / 100);
+              return {
+                id: `PAY-LIVE-${idx + 1}`,
+                instructorId: item.instructorId,
+                instructorName: item.instructorName + (item.substituteSessionsCount > 0 ? ` (${item.substituteSessionsCount} كبديل)` : ""),
+                month: currentMonth,
+                completedSessionsCount: item.completedSessions,
+                ratePerSession: ratePerSession,
+                baseSalary: 0,
+                bonusAmount: 0,
+                deductionAmount: 0,
+                netPayable: netPayable,
+                status: "SUBMITTED" as const,
+              };
+            });
+            const localPayrolls = payrollStorage.getPayrolls();
+            const merged = [...livePayrolls, ...localPayrolls.filter(lp => lp.status === "PAID")];
+            setPayrolls(merged);
+          }
+        })
+        .catch(() => undefined);
+    }
+  }, [liveMode]);
+
   const acceptShiftHandover = async (id: string, notes?: string) => {
     const shift = handovers.find(h => h.id === id);
     if (liveMode && shift) {
       try {
         await apiClient.closeoutCashierShift({ countedCashPiastres: Math.round(shift.cashAmount * 100), notes: notes || "تم استلام ومطابقة النقدية" });
+        await apiClient.depositCashierSafe({ amountPiastres: Math.round(shift.cashAmount * 100), notes: `توريد عهدة وردية ${shift.id} إلى الخزينة الرئيسية` });
       } catch (err) {
         // Gracefully handle or log
       }

@@ -35,7 +35,8 @@ public static class OperationalEndpoints
                     student.FullName,
                     student.DateOfBirth,
                     student.Status,
-                    db.StudentEnrollments.Count(enrollment => enrollment.StudentId == student.Id && enrollment.Status == "ACTIVE")))
+                    db.StudentEnrollments.Count(enrollment => enrollment.StudentId == student.Id && enrollment.Status == "ACTIVE"),
+                    student.ReferredByStudentId))
                 .ToListAsync(cancellationToken);
 
             return TypedResults.Ok(new ApiEnvelope<StudentListResponse>(
@@ -264,11 +265,11 @@ public static class OperationalEndpoints
         if (string.IsNullOrWhiteSpace(fullName) || fullName.Length > 160) return Validation("fullName", "Full name is required and must be at most 160 characters.");
         if (request.DateOfBirth.HasValue && request.DateOfBirth.Value > DateOnly.FromDateTime(DateTime.UtcNow)) return Validation("dateOfBirth", "Date of birth cannot be in the future.");
         var actorId = Actor(user); if (!actorId.HasValue) return Problem(403, "ACTOR_REQUIRED", "The authenticated staff identity is missing.");
-        var student = new Student { TenantId = scope.TenantId, BranchId = scope.BranchId.Value, FullName = fullName, DateOfBirth = request.DateOfBirth, Status = "ACTIVE" };
+        var student = new Student { TenantId = scope.TenantId, BranchId = scope.BranchId.Value, FullName = fullName, DateOfBirth = request.DateOfBirth, Status = "ACTIVE", ReferredByStudentId = request.ReferredByStudentId };
         db.Students.Add(student);
-        db.AuditEvents.Add(new AuditEvent { ActorUserId = actorId, TenantId = scope.TenantId, BranchId = scope.BranchId, Action = "STUDENT_CREATED", TargetType = "STUDENT", TargetId = student.Id.ToString(), MetadataJson = JsonSerializer.Serialize(new { student.FullName, student.DateOfBirth }) });
+        db.AuditEvents.Add(new AuditEvent { ActorUserId = actorId, TenantId = scope.TenantId, BranchId = scope.BranchId, Action = "STUDENT_CREATED", TargetType = "STUDENT", TargetId = student.Id.ToString(), MetadataJson = JsonSerializer.Serialize(new { student.FullName, student.DateOfBirth, student.ReferredByStudentId }) });
         await db.SaveChangesAsync(cancellationToken);
-        return Results.Created($"/api/v1/students/{student.Id}", new { data = new StudentListItem(student.Id, student.BranchId, student.FullName, student.DateOfBirth, student.Status, 0) });
+        return Results.Created($"/api/v1/students/{student.Id}", new { data = new StudentListItem(student.Id, student.BranchId, student.FullName, student.DateOfBirth, student.Status, 0, student.ReferredByStudentId) });
     }
 
     private static async Task<IResult> UpdateStudentAsync(Guid studentId, UpdateStudentRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
@@ -501,8 +502,8 @@ public static class OperationalEndpoints
 
 public sealed record ApiEnvelope<T>(T Data);
 public sealed record StudentListResponse(IReadOnlyList<StudentListItem> Items, int Total, string ScopeLevel, Guid? BranchId);
-public sealed record StudentListItem(Guid Id, Guid BranchId, string FullName, DateOnly? DateOfBirth, string Status, int ActiveEnrollmentCount);
-public sealed record CreateStudentRequest(string? FullName, DateOnly? DateOfBirth);
+public sealed record StudentListItem(Guid Id, Guid BranchId, string FullName, DateOnly? DateOfBirth, string Status, int ActiveEnrollmentCount, Guid? ReferredByStudentId = null);
+public sealed record CreateStudentRequest(string? FullName, DateOnly? DateOfBirth, Guid? ReferredByStudentId = null);
 public sealed record UpdateStudentRequest(string? FullName, DateOnly? DateOfBirth);
 public sealed record StudentEnrollmentItem(Guid Id, Guid CourseOfferingId, string? CourseName, DateOnly StartDate, DateOnly EndDate, int FinalPricePiastres, string Status, int MaxStudents, int ActiveEnrollmentCount);
 public sealed record CreateStudentEnrollmentRequest(Guid CourseOfferingId, int FinalPricePiastres);

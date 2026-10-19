@@ -250,7 +250,8 @@ public static class LeadEndpoints
                 BranchId = lead.BranchId,
                 FullName = lead.ChildName.Trim(),
                 DateOfBirth = request.DateOfBirth,
-                Status = "ACTIVE"
+                Status = "ACTIVE",
+                ReferredByStudentId = request.ReferredByStudentId
             };
             db.Students.Add(student);
 
@@ -357,7 +358,8 @@ public static class LeadEndpoints
                 BranchId = branchId.Value,
                 FullName = request.FullName.Trim(),
                 DateOfBirth = request.DateOfBirth,
-                Status = "ACTIVE"
+                Status = "ACTIVE",
+                ReferredByStudentId = request.ReferredByStudentId
             };
             db.Students.Add(student);
 
@@ -450,8 +452,8 @@ public sealed record LeadListResponse(IReadOnlyList<LeadItem> Items, int Total, 
 public sealed record LeadItem(Guid Id, Guid BranchId, string ChildName, string ParentName, string Phone, string Channel, Guid? CampaignId, string? Notes, string Status, Guid? CourseOfferingId, string? CourseName, Guid? ConvertedStudentId, DateTimeOffset CreatedAt);
 public sealed record CreateLeadRequest(string ChildName, string ParentName, string Phone, string? Channel, string? Notes, Guid? CourseOfferingId, Guid? BranchId, Guid? CampaignId);
 public sealed record UpdateLeadStatusRequest(string Status);
-public sealed record ConvertLeadRequest(Guid? CourseOfferingId, DateOnly? DateOfBirth, int? DiscountPercent, bool CreateInvoice = true, bool JoinWaitlistIfFull = true);
-public sealed record DirectStudentRegistrationRequest(string FullName, string? Phone, Guid? BranchId, Guid? CourseOfferingId, DateOnly? DateOfBirth, int? DiscountPercent, bool CreateInvoice = true, bool JoinWaitlistIfFull = true);
+public sealed record ConvertLeadRequest(Guid? CourseOfferingId, DateOnly? DateOfBirth, int? DiscountPercent, bool CreateInvoice = true, bool JoinWaitlistIfFull = true, Guid? ReferredByStudentId = null);
+public sealed record DirectStudentRegistrationRequest(string FullName, string? Phone, Guid? BranchId, Guid? CourseOfferingId, DateOnly? DateOfBirth, int? DiscountPercent, bool CreateInvoice = true, bool JoinWaitlistIfFull = true, Guid? ReferredByStudentId = null);
 public sealed record ConvertLeadResponse(Guid StudentId, Guid? LeadId, Guid? EnrollmentId, Guid? InvoiceId, string? InvoiceNumber, string StudentName, string EnrollmentStatus);
 public sealed record PublicLeadRequest(string Kind, string Name, string Email, string Phone, string? Company = null, string? TeamSize = null, string? TrainingNeed = null, string? Track = null, string? Goal = null, string? AcademyName = null, string? BranchCount = null, string? OperationalNeed = null);
 public sealed record PublicLeadReceipt(Guid LeadId, string Kind);
