@@ -150,7 +150,11 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     homePath: "/family-portal",
     backPath: "/family-portal",
     navigation: [
-      { path: "/family-portal", label: "بوابة الأسرة", purpose: "children, attendance, evaluations, invoices", permission: "consumer.students.read" },
+      { path: "/family-portal", label: "ملخص الأبناء", purpose: "children, overview", permission: "consumer.students.read" },
+      { path: "/family-portal#attendance", label: "سجل الحضور والانتظام", purpose: "attendance records", permission: "consumer.students.read" },
+      { path: "/family-portal#evaluations", label: "التقييمات والمتابعة", purpose: "evaluations", permission: "consumer.students.read" },
+      { path: "/family-portal#invoices", label: "الفواتير والأقساط", purpose: "invoices, payments", permission: "consumer.students.read" },
+      { path: "/family-portal#freeze", label: "تجميد وتعويض", purpose: "freeze, makeup credits", permission: "consumer.students.read" },
     ],
   },
   R09: {
@@ -162,7 +166,9 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     homePath: "/student-portal",
     backPath: "/student-portal",
     navigation: [
-      { path: "/student-portal", label: "مساحة الطالب", purpose: "learning, sessions, achievements", permission: "consumer.self.read" },
+      { path: "/student-portal", label: "رحلتي التعليمية", purpose: "learning path, overview", permission: "consumer.self.read" },
+      { path: "/student-portal#sessions", label: "جلساتي ومواعيدي", purpose: "sessions schedule", permission: "consumer.self.read" },
+      { path: "/student-portal#progress", label: "التقدم والإنجازات", purpose: "progress, achievements", permission: "consumer.self.read" },
     ],
   },
 };

@@ -78,7 +78,7 @@ describe("role navigation scopes", () => {
     for (const definition of Object.values(ROLE_DEFINITIONS)) {
       expect(appPaths.has(definition.homePath), `${definition.code} home path ${definition.homePath}`).toBe(true);
       for (const item of definition.navigation) {
-        expect(appPaths.has(item.path), `${definition.code} navigation path ${item.path}`).toBe(true);
+        expect(appPaths.has(item.path.split("#")[0]), `${definition.code} navigation path ${item.path}`).toBe(true);
       }
     }
   });

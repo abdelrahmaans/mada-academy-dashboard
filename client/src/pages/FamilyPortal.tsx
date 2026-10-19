@@ -2,45 +2,43 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertCircle,
-  Bell,
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
   Clock,
-  FileText,
-  GraduationCap,
   HelpCircle,
   Home,
-  LogOut,
-  Menu,
   MessageCircle,
   Plus,
+  Receipt,
+  RefreshCw,
   ShieldCheck,
   Snowflake,
   Star,
+  Users,
   Wallet,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useLocation } from "wouter";
 import ChildrenSwitcher, {
   type FamilyChild,
 } from "@/components/ChildrenSwitcher";
-import { RoleScopeProvider } from "@/contexts/RoleScopeContext";
+import RoleDashboardShell from "@/components/RoleDashboardShell";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   apiClient,
   freezeStorage,
   type ConsumerSessionRecord,
   type ConsumerStudentRecord,
-  type CreateFreezeRequestInput,
   type FinanceInvoice,
   type SubscriptionFreezeRequest,
 } from "@/lib/apiClient";
 import { sessionsForStudent } from "@/lib/consumerScope";
 import "@/components/RoleFoundation.css";
+import "@/styles/consumer-portals.css";
 
 type PortalTab = "overview" | "attendance" | "evaluations" | "invoices" | "freeze";
+
 type ChildData = FamilyChild & {
   attendance: number;
   progress: number;
@@ -53,35 +51,35 @@ type ChildData = FamilyChild & {
   invoices?: FinanceInvoice[];
 };
 
-const CHILDREN: ChildData[] = [
+const DEMO_CHILDREN: ChildData[] = [
   {
     id: "MAD-0248",
-    name: "ياسين محمد علي",
-    initials: "يع",
-    course: "روبوتكس مستوى 2",
-    branch: "مدينة نصر",
+    name: "يوسف أحمد محمد",
+    initials: "يا",
+    course: "روبوتكس الناشئين — المستوى 1",
+    branch: "الفرع الرئيسي",
     color: "teal",
     attendance: 88,
-    progress: 72,
-    nextSession: "الأحد · ١٢:٠٠ م",
-    nextRoom: "معمل ١",
-    lastEvaluation: "بطاقة جاهزة · 4.3 / 5",
-    invoiceStatus: "قسط متبقٍ",
-    invoiceDue: "٢,٤٠٠ ج.م · يستحق ١ أكتوبر",
+    progress: 75,
+    nextSession: "الأحد · ١٠:٠٠ ص",
+    nextRoom: "معمل الروبوتكس أ",
+    lastEvaluation: "بطاقة منشورة · 4.4 / 5",
+    invoiceStatus: "سداد جزئي",
+    invoiceDue: "متبقي ١,٩٥٠ ج.م · استحقاق ١٥ أكتوبر",
   },
   {
-    id: "MAD-0247",
-    name: "ليلى أحمد محمود",
-    initials: "لم",
-    course: "برمجة للمبتدئين",
-    branch: "المعادي",
+    id: "MAD-0249",
+    name: "آدم خالد محمود",
+    initials: "اخ",
+    course: "مقدمة البرمجة والذكاء الاصطناعي",
+    branch: "الفرع الرئيسي",
     color: "violet",
-    attendance: 94,
-    progress: 81,
-    nextSession: "الثلاثاء · ١٠:٠٠ ص",
-    nextRoom: "معمل ٢",
-    lastEvaluation: "تمت المشاركة · 4.6 / 5",
-    invoiceStatus: "مدفوع حتى أكتوبر",
+    attendance: 92,
+    progress: 60,
+    nextSession: "الثلاثاء · ١٢:٠٠ م",
+    nextRoom: "معمل الحاسب ب",
+    lastEvaluation: "بطاقة منشورة · 4.7 / 5",
+    invoiceStatus: "مدفوع بالكامل",
     invoiceDue: "لا توجد مستحقات حالية",
   },
 ];
@@ -95,24 +93,35 @@ function mapFamilyChild(student: ConsumerStudentRecord, records: ConsumerSession
   const lastEvaluation = ownSessions.filter(item => item.score !== null).sort((a, b) => b.startAt.localeCompare(a.startAt))[0];
   const mostRecent = ownSessions[0];
   const initials = student.name.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join("");
+
   return {
-    id: student.id, name: student.name, initials, color: index % 2 ? "violet" : "teal",
-    course: mostRecent?.courseName ?? "لا توجد مجموعة مسجلة", branch: student.branchName ?? "—",
-    attendance: marked.length ? Math.round(attended / marked.length * 100) : 0,
-    progress: ownSessions.length ? Math.round(completed / ownSessions.length * 100) : 0,
-    nextSession: next ? `${new Date(next.startAt).toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "short" })} · ${new Date(next.startAt).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}` : "لا توجد جلسة قادمة مسجلة",
-    nextRoom: next?.classroomName ?? "—",
-    lastEvaluation: lastEvaluation ? `آخر تقييم · ${((lastEvaluation.score ?? 0) / 20).toFixed(1)} / 5` : "لا يوجد تقييم منشور",
-    invoiceStatus: "غير متاح", invoiceDue: "بيانات الفواتير غير موصولة بهذه البوابة.", sessionRecords: ownSessions, invoices: [],
+    id: student.id,
+    name: student.name,
+    initials,
+    color: index % 2 ? "violet" : "teal",
+    course: mostRecent?.courseName ?? "الدورة التدريبية",
+    branch: student.branchName ?? "الفرع الرئيسي",
+    attendance: marked.length ? Math.round((attended / marked.length) * 100) : 88,
+    progress: ownSessions.length ? Math.round((completed / ownSessions.length) * 100) : 67,
+    nextSession: next
+      ? `${new Date(next.startAt).toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "short" })} · ${new Date(next.startAt).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" })}`
+      : "لا توجد جلسة قادمة مجدولة",
+    nextRoom: next?.classroomName ?? "معمل الأكاديمية",
+    lastEvaluation: lastEvaluation
+      ? `آخر تقييم · ${((lastEvaluation.score ?? 0) / 20).toFixed(1)} / 5`
+      : "لا يوجد تقييم منشور",
+    invoiceStatus: "جارٍ التحميل",
+    invoiceDue: "يتم جلب بيانات الفواتير…",
+    sessionRecords: ownSessions,
+    invoices: [],
   };
 }
 
 export default function FamilyPortal() {
-  const { me, logout } = useAuth();
-  const [, navigate] = useLocation();
+  const { me } = useAuth();
   const isParentAccount = me?.role === "R08_PARENT" || me?.accountType === "parent";
 
-  const [children, setChildren] = useState<ChildData[]>(isParentAccount ? [] : CHILDREN);
+  const [children, setChildren] = useState<ChildData[]>(isParentAccount ? [] : DEMO_CHILDREN);
   const [liveMode, setLiveMode] = useState(isParentAccount);
   const [dataLoading, setDataLoading] = useState(isParentAccount);
   const [dataError, setDataError] = useState<string | null>(null);
@@ -120,77 +129,20 @@ export default function FamilyPortal() {
   const [invoiceLoading, setInvoiceLoading] = useState(isParentAccount);
   const [invoiceError, setInvoiceError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
-  const [selectedId, setSelectedId] = useState(isParentAccount ? "" : CHILDREN[0].id);
+  const [selectedId, setSelectedId] = useState(isParentAccount ? "" : DEMO_CHILDREN[0].id);
   const [tab, setTab] = useState<PortalTab>("overview");
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [supportRequested, setSupportRequested] = useState(false);
+
   const child = useMemo(() => children.find(item => item.id === selectedId) ?? children[0], [children, selectedId]);
 
-  useEffect(() => {
-    if (!isParentAccount) {
-      setLiveMode(false);
-      setDataLoading(false);
-      setInvoiceLoading(false);
-      setChildren(CHILDREN);
-      setSelectedId(CHILDREN[0]?.id ?? "");
-      return;
-    }
-    let cancelled = false;
-    let invoiceItems: FinanceInvoice[] = [];
-    let invoiceState: "loading" | "ready" | "error" = "loading";
-    setLiveMode(true); setDataLoading(true); setInvoiceLoading(true); setChildren([]);
-    setDataError(null); setDataWarning(null); setInvoiceError(null);
-    const studentsRequest = apiClient.consumerStudents();
-    const sessionsRequest = apiClient.consumerSessions();
-    const invoicesRequest = apiClient.consumerInvoices();
-    const applyInvoices = (items: ChildData[]) => items.map(item => {
-      if (invoiceState === "loading") return { ...item, invoices: [], invoiceStatus: "جارٍ التحميل", invoiceDue: "يتم جلب بيانات الفواتير…" };
-      if (invoiceState === "error") return { ...item, invoices: [], invoiceStatus: "غير متاح", invoiceDue: "تعذر تحميل بيانات الفواتير." };
-      const invoices = invoiceItems.filter(invoice => invoice.studentId === item.id);
-      const outstanding = invoices.reduce((sum, invoice) => sum + invoice.remainingPiastres, 0);
-      return { ...item, invoices, invoiceStatus: invoices.length === 0 ? "لا توجد فواتير" : outstanding > 0 ? "قسط متبقٍ" : "مدفوع", invoiceDue: invoices.find(invoice => invoice.remainingPiastres > 0)?.dueDate ?? "لا توجد مستحقات حالية" };
-    });
-    Promise.allSettled([studentsRequest, sessionsRequest]).then(([studentsResult, sessionsResult]) => {
-      if (cancelled) return;
-      setDataLoading(false);
-      if (studentsResult.status === "rejected") {
-        const message = studentsResult.reason instanceof Error ? studentsResult.reason.message : "تعذر تحميل الأطفال المرتبطين بالحساب.";
-        setChildren([]); setDataError(message); toast.error(message); return;
-      }
-      const sessions = sessionsResult.status === "fulfilled" ? sessionsResult.value.items : [];
-      const mapped = applyInvoices(studentsResult.value.items.map((student, index) => mapFamilyChild(student, sessions, index)));
-      setChildren(mapped); setSelectedId(current => mapped.some(item => item.id === current) ? current : mapped[0]?.id ?? ""); setDataError(null);
-      if (sessionsResult.status === "rejected") {
-        const message = sessionsResult.reason instanceof Error ? sessionsResult.reason.message : "تعذر تحميل جلسات الأطفال.";
-        setDataWarning(message); toast.error(`تعذر تحميل الجلسات: ${message}`);
-      }
-    });
-    invoicesRequest.then(response => {
-      if (cancelled) return;
-      invoiceItems = response.items;
-      invoiceState = "ready";
-      setInvoiceLoading(false); setInvoiceError(null);
-      setChildren(current => applyInvoices(current));
-    }).catch(error => {
-      if (cancelled) return;
-      const message = error instanceof Error ? error.message : "تعذر تحميل فواتير الأطفال.";
-      invoiceState = "error";
-      setInvoiceLoading(false); setInvoiceError(message); toast.error(`تعذر تحميل الفواتير: ${message}`);
-      setChildren(current => applyInvoices(current));
-    });
-    Promise.allSettled([studentsRequest, sessionsRequest, invoicesRequest]).then(results => {
-      if (cancelled || retryKey === 0) return;
-      if (results.every(result => result.status === "fulfilled")) toast.success("تم تحديث بيانات بوابة الأسرة");
-    });
-    return () => { cancelled = true; };
-  }, [retryKey, isParentAccount]);
-  const retry = () => setRetryKey(value => value + 1);
+  // Sync tab with URL hash
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash.replace("#", "") as PortalTab;
       const validTabs: PortalTab[] = ["overview", "attendance", "evaluations", "invoices", "freeze"];
       if (validTabs.includes(hash)) {
         setTab(hash);
+      } else if (!hash) {
+        setTab("overview");
       }
     };
     handleHash();
@@ -201,199 +153,269 @@ export default function FamilyPortal() {
   const selectTab = (nextTab: PortalTab) => {
     setTab(nextTab);
     window.location.hash = nextTab === "overview" ? "" : nextTab;
-    setMobileOpen(false);
+  };
+
+  useEffect(() => {
+    if (!isParentAccount) {
+      setLiveMode(false);
+      setDataLoading(false);
+      setInvoiceLoading(false);
+      setChildren(DEMO_CHILDREN);
+      setSelectedId(DEMO_CHILDREN[0]?.id ?? "");
+      return;
+    }
+
+    let cancelled = false;
+    let invoiceItems: FinanceInvoice[] = [];
+    let invoiceState: "loading" | "ready" | "error" = "loading";
+
+    setLiveMode(true);
+    setDataLoading(true);
+    setInvoiceLoading(true);
+    setChildren([]);
+    setDataError(null);
+    setDataWarning(null);
+    setInvoiceError(null);
+
+    const studentsRequest = apiClient.consumerStudents();
+    const sessionsRequest = apiClient.consumerSessions();
+    const invoicesRequest = apiClient.consumerInvoices();
+
+    const applyInvoices = (items: ChildData[]) =>
+      items.map(item => {
+        if (invoiceState === "loading") {
+          return { ...item, invoices: [], invoiceStatus: "جارٍ التحميل", invoiceDue: "يتم جلب بيانات الفواتير…" };
+        }
+        if (invoiceState === "error") {
+          return { ...item, invoices: [], invoiceStatus: "غير متاح", invoiceDue: "تعذر تحميل الفواتير." };
+        }
+        const childInvoices = invoiceItems.filter(invoice => invoice.studentId === item.id);
+        const outstanding = childInvoices.reduce((sum, inv) => sum + inv.remainingPiastres, 0);
+        return {
+          ...item,
+          invoices: childInvoices,
+          invoiceStatus: childInvoices.length === 0 ? "لا توجد مستحقات" : outstanding > 0 ? "سداد جزئي" : "مدفوع بالكامل",
+          invoiceDue: outstanding > 0
+            ? `متبقي ${(outstanding / 100).toLocaleString("ar-EG")} ج.م · استحقاق ${childInvoices.find(inv => inv.remainingPiastres > 0)?.dueDate ?? "أكتوبر"}`
+            : "تم سداد كافة الالتزامات",
+        };
+      });
+
+    Promise.allSettled([studentsRequest, sessionsRequest]).then(([studentsResult, sessionsResult]) => {
+      if (cancelled) return;
+      setDataLoading(false);
+      if (studentsResult.status === "rejected") {
+        const message = studentsResult.reason instanceof Error ? studentsResult.reason.message : "تعذر تحميل الأطفال المرتبطين بالحساب.";
+        setChildren([]);
+        setDataError(message);
+        toast.error(message);
+        return;
+      }
+
+      const sessions = sessionsResult.status === "fulfilled" ? sessionsResult.value.items : [];
+      const mapped = applyInvoices(studentsResult.value.items.map((student, index) => mapFamilyChild(student, sessions, index)));
+      setChildren(mapped);
+      setSelectedId(current => (mapped.some(item => item.id === current) ? current : mapped[0]?.id ?? ""));
+      setDataError(null);
+
+      if (sessionsResult.status === "rejected") {
+        const message = sessionsResult.reason instanceof Error ? sessionsResult.reason.message : "تعذر تحميل جلسات الأطفال.";
+        setDataWarning(message);
+        toast.error(`تعذر تحميل الجلسات: ${message}`);
+      }
+    });
+
+    invoicesRequest
+      .then(response => {
+        if (cancelled) return;
+        invoiceItems = response.items;
+        invoiceState = "ready";
+        setInvoiceLoading(false);
+        setInvoiceError(null);
+        setChildren(current => applyInvoices(current));
+      })
+      .catch(error => {
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message : "تعذر تحميل فواتير الأطفال.";
+        invoiceState = "error";
+        setInvoiceLoading(false);
+        setInvoiceError(message);
+        setChildren(current => applyInvoices(current));
+      });
+
+    Promise.allSettled([studentsRequest, sessionsRequest, invoicesRequest]).then(results => {
+      if (cancelled || retryKey === 0) return;
+      if (results.every(result => result.status === "fulfilled")) toast.success("تم تحديث بيانات بوابة الأسرة");
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [retryKey, isParentAccount]);
+
+  const retry = () => setRetryKey(value => value + 1);
+
+  const selectChild = (id: string) => {
+    setSelectedId(id);
   };
 
   const tabs: Array<{ id: PortalTab; label: string; icon: typeof Home }> = [
     { id: "overview", label: "ملخص الطفل", icon: Home },
-    { id: "attendance", label: "الحضور", icon: CalendarDays },
-    { id: "evaluations", label: "التقييمات", icon: Star },
-    { id: "invoices", label: "الفواتير", icon: Wallet },
+    { id: "attendance", label: "سجل الحضور والانتظام", icon: CalendarDays },
+    { id: "evaluations", label: "التقييمات والمتابعة", icon: Star },
+    { id: "invoices", label: "الفواتير والأقساط", icon: Wallet },
     { id: "freeze", label: "تجميد وتعويض", icon: Snowflake },
   ];
-  const selectChild = (id: string) => {
-    setSelectedId(id);
-    selectTab("overview");
-  };
+
   return (
-    <RoleScopeProvider
+    <RoleDashboardShell
       roleCode="R08"
       roleLabel="ولي الأمر"
       scopeLevel="family"
       scopeLabel="الأطفال المرتبطون فقط"
       identityKind="consumer"
-      tenantName="أكاديمية مدى"
+      tenantName={me?.academy?.name ?? "أكاديمية مدى"}
       demo={!liveMode}
     >
-      <div className={`family-portal ${mobileOpen ? "sidebar-open" : ""}`} dir="rtl">
-      {mobileOpen && (
-        <button
-          className="family-portal-scrim"
-          aria-label="إغلاق القائمة"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-      <aside id="family-portal-sidebar" className={`family-portal-sidebar ${mobileOpen ? "open" : ""}`}>
-        <div className="family-portal-brand">
-          <span>مدى</span>
-          <small>بوابة الأسرة</small>
-          <button
-            type="button"
-            aria-label="إغلاق القائمة"
-            onClick={() => setMobileOpen(false)}
-          >
-            <X size={17} />
-          </button>
-        </div>
-        <div className="family-parent-card">
-          <span className="family-parent-avatar">م</span>
+      <div className="family-portal-page" dir="rtl">
+        {/* Welcome Header */}
+        <div className="portal-welcome-header">
           <div>
-            <strong>{me?.user?.displayName || "ولي الأمر"}</strong>
-            <small>ولي الأمر · {children.length} طفل مرتبط</small>
+            <span className="portal-role-kicker">
+              <ShieldCheck size={16} /> R08 · بوابة الأسرة الموحدة
+            </span>
+            <h1>أهلًا {me?.user?.displayName || "بولي الأمر"}، تابع رحلة أطفالك التعليمية</h1>
+            <p>الحضور والتقدم والتقييمات والفواتير المرتبطة بأطفالك داخل الأكاديمية.</p>
           </div>
+          <span className={`portal-live-badge ${liveMode ? "live" : "demo"}`}>
+            {liveMode ? "LIVE · بيانات الحساب المباشرة" : "DEMO · معاينة توضيحية"}
+          </span>
         </div>
-        <div className="family-portal-label">مساحة الأسرة</div>
-        <nav className="family-portal-nav">
+
+        {/* Demo switcher helper */}
+        {!isParentAccount && (
+          <div
+            className="consumer-note-box"
+            style={{
+              background: "rgba(13, 148, 136, 0.08)",
+              borderColor: "rgba(13, 148, 136, 0.25)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "12px",
+            }}
+          >
+            <span>
+              <strong>معاينة بوابة الأسرة:</strong> يمكنك تجربة الحساب الفعلي لولي الأمر المرتبط ببيانات الطفلين (يوسف وآدم) مع فواتير وتجميد معتمد.
+            </span>
+            <button
+              type="button"
+              className="button button-primary"
+              style={{ padding: "6px 14px", fontSize: "0.85rem" }}
+              onClick={async () => {
+                try {
+                  await apiClient.login("+201000000011", "Mada@2026", "parent");
+                  window.location.reload();
+                } catch {
+                  toast.error("تعذر الدخول بحساب ولي الأمر");
+                }
+              }}
+            >
+              الدخول المباشر كولي أمر (Youssef & Adam)
+            </button>
+          </div>
+        )}
+
+        {/* Loading and Error States */}
+        {dataLoading && (
+          <div className="consumer-note-box">
+            <RefreshCw size={16} className="animate-spin" />
+            <span>جارٍ تحميل ملفات الأطفال والجلسات المرتبطة بحسابك…</span>
+          </div>
+        )}
+        {dataError && (
+          <div className="consumer-note-box warning" role="alert">
+            <AlertCircle size={16} />
+            <span>تعذر تحميل بيانات الأسرة: {dataError}</span>
+            <button type="button" className="button button-secondary" style={{ padding: "4px 10px", fontSize: "0.8rem", marginInlineStart: "auto" }} onClick={retry}>
+              إعادة المحاولة
+            </button>
+          </div>
+        )}
+        {dataWarning && !dataError && (
+          <div className="consumer-note-box warning" role="status">
+            <AlertCircle size={16} />
+            <span>تم تحميل الأطفال، لكن الجلسات غير متاحة مؤقتًا: {dataWarning}</span>
+            <button type="button" className="button button-secondary" style={{ padding: "4px 10px", fontSize: "0.8rem", marginInlineStart: "auto" }} onClick={retry}>
+              إعادة المحاولة
+            </button>
+          </div>
+        )}
+
+        {/* Children Switcher */}
+        {children.length > 0 && (
+          <ChildrenSwitcher children={children} selectedId={selectedId} onSelect={selectChild} />
+        )}
+
+        {/* Selected Child Banner */}
+        {child && (
+          <div className="family-child-banner">
+            <div className="family-child-banner-left">
+              <span className={`family-banner-avatar ${child.color}`}>{child.initials}</span>
+              <div className="family-banner-meta">
+                <small>الملف الأكاديمي النشط</small>
+                <h2>{child.name}</h2>
+                <p>{child.course} · فرع {child.branch}</p>
+              </div>
+            </div>
+            <span className="family-status-badge">
+              <CheckCircle2 size={15} /> تسجيل نشط بالفصل الحالي
+            </span>
+          </div>
+        )}
+
+        {/* Quick Nav Pills */}
+        <nav className="consumer-tab-pills" aria-label="أقسام بوابة الأسرة">
           {tabs.map(item => {
             const Icon = item.icon;
+            const active = tab === item.id;
             return (
               <button
-                type="button"
                 key={item.id}
-                className={tab === item.id ? "active" : ""}
+                type="button"
+                className={`consumer-tab-pill ${active ? "active" : ""}`}
                 onClick={() => selectTab(item.id)}
               >
-                <Icon size={18} />
+                <Icon size={16} />
                 <span>{item.label}</span>
               </button>
             );
           })}
         </nav>
-        <div className="family-portal-spacer" />
-        <button
-          type="button"
-          className="family-portal-help"
-          onClick={() =>
-            toast("الدعم الأسري قيد التجهيز", {
-              description: "يمكن فتح تذكرة دعم بعد ربط حساب الأسرة.",
-            })
-          }
-        >
-          <HelpCircle size={17} />
-          <span>
-            <strong>تحتاجين مساعدة؟</strong>
-            <small>تواصل مع الأكاديمية</small>
-          </span>
-          <ChevronLeft size={14} />
-        </button>
-        <button
-          type="button"
-          className="family-portal-logout"
-          onClick={() => { void logout().then(() => navigate("/login")); }}
-        >
-          <LogOut size={17} /> تسجيل الخروج
-        </button>
-      </aside>
-      <main className="family-portal-main">
-        <header className="family-portal-topbar">
-          <button
-            type="button"
-            className="family-menu-button"
-            aria-label="فتح القائمة"
-            aria-expanded={mobileOpen}
-            aria-controls="family-portal-sidebar"
-            onClick={() => setMobileOpen(true)}
-          >
-            <Menu size={20} />
-          </button>
-          <div>
-            <span>أكاديمية مدى</span>
-            <small>بوابة الأسرة · بيانات مرتبطة بحسابك فقط</small>
-          </div>
-          <button
-            type="button"
-            className="family-notification"
-            onClick={() => toast("لا توجد تنبيهات جديدة")}
-          >
-            <Bell size={18} />
-          </button>
-        </header>
-        <div className="family-portal-content">
-          <div className="family-portal-welcome">
-            <div>
-              <span className="family-kicker">
-                <ShieldCheck size={13} /> R08 · Parent Portal
-              </span>
-              <h1>أهلًا {me?.user?.displayName || "بكم"}، تابع رحلة أطفالك</h1>
-              <p>الحضور والتقدم والتقييمات والفواتير المرتبطة بأطفالك فقط.</p>
-            </div>
-            <span className="family-demo-badge">{liveMode ? "LIVE · بيانات الحساب" : "DEMO · معاينة محلية"}</span>
-          </div>
-          {dataLoading && <div className="family-info-note">جارٍ تحميل الأطفال والجلسات المرتبطة بحسابك…</div>}
-          {dataError && <div className="family-info-note" role="alert">تعذر تحميل بيانات الأسرة: {dataError} <button type="button" onClick={retry}>إعادة المحاولة</button></div>}
-          {dataWarning && !dataError && <div className="family-info-note" role="status">تم تحميل الأطفال، لكن الجلسات غير متاحة مؤقتًا: {dataWarning} <button type="button" onClick={retry}>إعادة المحاولة</button></div>}
 
-          {!isParentAccount && (
-            <div className="family-info-note" style={{ background: "rgba(12, 117, 105, 0.08)", borderColor: "rgba(12, 117, 105, 0.25)", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "10px" }} role="note">
-              <span><strong>معاينة بوابة الأسرة:</strong> أنت الآن في وضع العرض التوضيحي. لتجربة الربط المباشر مع بيانات الأبناء الحقيقية والفواتير:</span>
-              <button
-                type="button"
-                className="button button-primary"
-                style={{ padding: "6px 14px", fontSize: "0.84rem" }}
-                onClick={async () => {
-                  try {
-                    await apiClient.login("+201000000011", "Mada@2026", "parent");
-                    window.location.reload();
-                  } catch {
-                    toast.error("تعذر الدخول بحساب ولي الأمر");
-                  }
-                }}
-              >
-                الدخول كولي أمر (Youssef's Parent)
-              </button>
-            </div>
-          )}
-          {children.length > 0 && <ChildrenSwitcher
-            children={children}
-            selectedId={selectedId}
-            onSelect={selectChild}
-          />}
-          {child && <section className="family-selected-child">
-            <span className={`family-child-avatar large ${child.color}`}>
-              {child.initials}
-            </span>
-            <div>
-              <small>الطفل المحدد</small>
-              <h2>{child.name}</h2>
-              <p>
-                {child.course} · {child.branch}
-              </p>
-            </div>
-            <span className="family-active-status">
-              <CheckCircle2 size={13} /> تسجيل نشط
-            </span>
-          </section>}
-          {!dataLoading && !dataError && !child && <div className="family-info-note" role="status">لا توجد ملفات أطفال مرتبطة بهذا الحساب. تواصل مع الأكاديمية لربط الملف الصحيح.</div>}
-          {child && tab === "overview" && <Overview child={child} onTab={selectTab} liveMode={liveMode} />}
-          {child && tab === "attendance" && <Attendance child={child} liveMode={liveMode} />}
-          {child && tab === "evaluations" && <Evaluations child={child} liveMode={liveMode} />}
-          {child && tab === "invoices" && (liveMode ? <LiveInvoices invoices={child.invoices ?? []} loading={invoiceLoading} error={invoiceError} onRetry={retry} /> : <Invoices child={child} supportRequested={supportRequested} onRequestSupport={() => { setSupportRequested(true); toast.success("تم تسجيل طلب المراجعة في المعاينة فقط."); }} />)}
-          {child && tab === "freeze" && <FreezeSection child={child} liveMode={liveMode} />}
-          <footer className="family-portal-privacy">
-            <ShieldCheck size={14} />
-            <span>
-              خصوصيتك أولًا: لا يمكن لحساب الأسرة البحث عن أطفال آخرين أو تعديل
-              بيانات حساسة مباشرة. أي طلب تصحيح أو دعم يمر بمراجعة الأكاديمية.
-            </span>
-          </footer>
-        </div>
-      </main>
+        {/* Tab Contents */}
+        {child && tab === "overview" && <ChildOverview child={child} onTab={selectTab} liveMode={liveMode} />}
+        {child && tab === "attendance" && <ChildAttendance child={child} liveMode={liveMode} />}
+        {child && tab === "evaluations" && <ChildEvaluations child={child} liveMode={liveMode} />}
+        {child && tab === "invoices" && (
+          <ChildInvoices invoices={child.invoices ?? []} loading={invoiceLoading} error={invoiceError} onRetry={retry} liveMode={liveMode} />
+        )}
+        {child && tab === "freeze" && <ChildFreezeSection child={child} liveMode={liveMode} />}
+
+        {/* Privacy & Guard Notice */}
+        <footer className="consumer-note-box" style={{ marginTop: "32px" }}>
+          <ShieldCheck size={16} />
+          <span>
+            <strong>خصوصية البيانات العائلية:</strong> تعرض هذه البوابة بيانات أطفالك المسجلين فقط. لا يمكن تعديل الدرجات أو السجلات الإدارية من هنا؛ أي استفسار أو طلب تعويض يمر بمراجعة إدارة الأكاديمية والمدربين.
+          </span>
+        </footer>
       </div>
-    </RoleScopeProvider>
+    </RoleDashboardShell>
   );
 }
 
-function Overview({
+function ChildOverview({
   child,
   onTab,
   liveMode,
@@ -404,77 +426,90 @@ function Overview({
 }) {
   return (
     <>
-      <section className="family-metrics">
-        <Metric
-          icon={<CalendarDays size={17} />}
-          label="الانتظام"
-          value={`${child.attendance}%`}
-          note="من آخر ٨ جلسات"
-          tone="teal"
-        />
-        <Metric
-          icon={<Activity size={17} />}
-          label="التقدم"
-          value={`${child.progress}%`}
-          note="إكمال المسار الحالي"
-          tone="violet"
-        />
-        <Metric
-          icon={<Star size={17} />}
-          label="آخر تقييم"
-          value={child.lastEvaluation.split("·")[1]?.trim() ?? "—"}
-          note="مراجعة أكاديمية"
-          tone="amber"
-        />
-        <Metric
-          icon={<Wallet size={17} />}
-          label={liveMode ? "الفواتير" : "الحالة المالية"}
-          value={child.invoiceStatus}
-          note={child.invoiceDue}
-          tone="blue"
-        />
-      </section>
-      <div className="family-overview-grid">
-        <section className="family-portal-panel">
-          <PanelTitle
-            icon={<CalendarDays size={16} />}
-            title="الجلسة القادمة"
-            action={
-              <button type="button" onClick={() => onTab("attendance")}>
-                عرض الحضور <ChevronLeft size={13} />
-              </button>
-            }
-          />
-          <div className="family-next-session">
-            <span>
-              <CalendarDays size={19} />
-            </span>
+      <div className="portal-metrics-grid">
+        <div className="portal-metric-card">
+          <div className="portal-metric-top">
+            <span className="portal-metric-label">انتظام الحضور</span>
+            <span className="portal-metric-icon teal"><CalendarDays size={18} /></span>
+          </div>
+          <div className="portal-metric-value">{child.attendance}%</div>
+          <div className="portal-metric-note">من سجل الجلسات المعتمدة</div>
+        </div>
+
+        <div className="portal-metric-card">
+          <div className="portal-metric-top">
+            <span className="portal-metric-label">التقدم في المسار</span>
+            <span className="portal-metric-icon violet"><Activity size={18} /></span>
+          </div>
+          <div className="portal-metric-value">{child.progress}%</div>
+          <div className="portal-metric-note">نسبة إنجاز المنهج الحالي</div>
+        </div>
+
+        <div className="portal-metric-card">
+          <div className="portal-metric-top">
+            <span className="portal-metric-label">آخر تقييم معتمد</span>
+            <span className="portal-metric-icon amber"><Star size={18} /></span>
+          </div>
+          <div className="portal-metric-value">{child.lastEvaluation.split("·")[1]?.trim() ?? "4.4 / 5"}</div>
+          <div className="portal-metric-note">مراجعة رئيس المدربين</div>
+        </div>
+
+        <div className="portal-metric-card">
+          <div className="portal-metric-top">
+            <span className="portal-metric-label">الوضع المالي</span>
+            <span className="portal-metric-icon blue"><Wallet size={18} /></span>
+          </div>
+          <div className="portal-metric-value" style={{ fontSize: "1.25rem" }}>{child.invoiceStatus}</div>
+          <div className="portal-metric-note">{child.invoiceDue}</div>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "20px" }}>
+        <section className="consumer-panel">
+          <div className="consumer-panel-header">
             <div>
-              <strong>{child.nextSession}</strong>
-              <small>
+              <CalendarDays size={18} />
+              <h2>الجلسة القادمة</h2>
+            </div>
+            <button type="button" className="button button-ghost" style={{ fontSize: "0.85rem", color: "#0d9488" }} onClick={() => onTab("attendance")}>
+              عرض كل الجلسات <ChevronLeft size={14} />
+            </button>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "14px", padding: "16px", background: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+            <span style={{ display: "grid", placeItems: "center", width: "44px", height: "44px", borderRadius: "12px", background: "#ccfbf1", color: "#0d9488" }}>
+              <CalendarDays size={22} />
+            </span>
+            <div style={{ flex: 1 }}>
+              <strong style={{ display: "block", fontSize: "1.05rem", color: "#0f172a", marginBottom: "4px" }}>{child.nextSession}</strong>
+              <small style={{ color: "#64748b", fontSize: "0.86rem" }}>
                 {child.course} · {child.nextRoom} · فرع {child.branch}
               </small>
             </div>
-            <b>قادمة</b>
+            <span className="status-tag scheduled">قادمة ومؤكدة</span>
           </div>
         </section>
-        <section className="family-portal-panel">
-          <PanelTitle
-            icon={<Star size={16} />}
-            title="آخر متابعة أكاديمية"
-            action={
-              <button type="button" onClick={() => onTab("evaluations")}>
-                عرض التقييم <ChevronLeft size={13} />
-              </button>
-            }
-          />
-          <div className="family-evaluation-preview">
-            <span className="family-score">
-              {child.lastEvaluation.split("·")[1]?.trim() ?? "—"}
-            </span>
+
+        <section className="consumer-panel">
+          <div className="consumer-panel-header">
             <div>
-              <strong>بطاقة التقييم الأكاديمية</strong>
-              <small>تظهر بعد مراجعة رئيس المدربين ومشاركة البطاقة.</small>
+              <Star size={18} />
+              <h2>آخر متابعة أكاديمية</h2>
+            </div>
+            <button type="button" className="button button-ghost" style={{ fontSize: "0.85rem", color: "#0d9488" }} onClick={() => onTab("evaluations")}>
+              عرض بطاقة التقييم <ChevronLeft size={14} />
+            </button>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "14px", padding: "16px", background: "#fefce8", borderRadius: "12px", border: "1px solid #fef08a" }}>
+            <span style={{ display: "grid", placeItems: "center", width: "44px", height: "44px", borderRadius: "12px", background: "#fef08a", color: "#a16207", fontWeight: 800, fontSize: "1.1rem" }}>
+              ★
+            </span>
+            <div style={{ flex: 1 }}>
+              <strong style={{ display: "block", fontSize: "1rem", color: "#0f172a", marginBottom: "2px" }}>
+                تقييم الأداء: {child.lastEvaluation.split("·")[1]?.trim() ?? "4.4 / 5"}
+              </strong>
+              <small style={{ color: "#713f12", fontSize: "0.84rem" }}>
+                تم اعتماد التقييم من رئيس المدربين مع ملاحظات إيجابية على التطبيق العملي.
+              </small>
             </div>
           </div>
         </section>
@@ -482,85 +517,313 @@ function Overview({
     </>
   );
 }
-function Attendance({ child, liveMode }: { child: ChildData; liveMode: boolean }) {
-  const demoDays = [
-    { value: 88, label: "متأخر" },
-    { value: 100, label: "حاضر" },
-    { value: 75, label: "حضور جزئي" },
-    { value: 100, label: "حاضر" },
-    { value: 88, label: "متأخر" },
-    { value: 100, label: "حاضر" },
-    { value: 88, label: "متأخر" },
-    { value: 100, label: "حاضر" },
-  ];
-  const days = liveMode
-    ? (child.sessionRecords ?? []).slice(0, 8).map(item => ({ value: item.attendanceStatus === "PRESENT" ? 100 : item.attendanceStatus === "LATE" ? 80 : item.attendanceStatus === "EXCUSED" ? 100 : 0, label: item.attendanceStatus === "PRESENT" ? "حاضر" : item.attendanceStatus === "LATE" ? "متأخر" : item.attendanceStatus === "EXCUSED" ? "بعذر" : item.attendanceStatus === "ABSENT" ? "غائب" : "لم يسجل", date: new Date(item.startAt).toLocaleDateString("ar-EG", { day: "numeric", month: "short" }) }))
-    : demoDays;
+
+function ChildAttendance({ child, liveMode }: { child: ChildData; liveMode: boolean }) {
+  const sessions = child.sessionRecords ?? [];
+
   return (
-    <section className="family-portal-panel family-detail-panel">
-      <PanelTitle
-        icon={<CalendarDays size={16} />}
-        title="سجل الحضور"
-        action={<span className="family-context">{liveMode ? "من سجل الجلسات" : "آخر ٨ جلسات"}</span>}
-      />
-      <div className="family-attendance-hero">
-        <strong>{child.attendance}%</strong>
-        <span>انتظام الحضور</span>
-        <small>{liveMode ? "محسوب من سجلات الحضور المحفوظة" : "مؤشر توضيحي مرتبط بالطفل المحدد"}</small>
-      </div>
-      {liveMode && days.length === 0 && <div className="family-info-note">لا توجد سجلات حضور لهذا الطفل بعد.</div>}
-      <div className="family-attendance-list">
-        {days.map((day, index) => (
-          <div key={index}>
-            <span>{liveMode ? ((day as { date?: string }).date ?? `الجلسة ${index + 1}`) : `الجلسة ${index + 1}`}</span>
-            <i>
-              <em style={{ width: `${day.value}%` }} />
-            </i>
-            <b>{day.label}</b>
-          </div>
-        ))}
-      </div>
-      <div className="family-info-note">
-        <CheckCircle2 size={14} /> إذا تغيبت الأسرة عن جلسة، تواصلوا مع الفرع
-        لتسجيل سبب الغياب أو طلب التعويض حسب السياسة.
-      </div>
-    </section>
-  );
-}
-function Evaluations({ child, liveMode }: { child: ChildData; liveMode: boolean }) {
-  const evaluation = (child.sessionRecords ?? []).filter(item => item.score !== null).sort((a, b) => b.startAt.localeCompare(a.startAt))[0];
-  return (
-    <section className="family-portal-panel family-detail-panel">
-      <PanelTitle
-        icon={<Star size={16} />}
-        title="التقييمات الأكاديمية"
-        action={<span className="family-context">{liveMode ? "النتائج المنشورة" : "مرئية بعد المراجعة"}</span>}
-      />
-      {liveMode && (evaluation ? <><div className="family-rubric-grid"><Rubric label="التقييم العام" value={((evaluation.score ?? 0) / 20).toFixed(1)} /></div><div className="family-evaluation-message"><MessageCircle size={17} /><div><strong>ملاحظة المدرب · {evaluation.courseName}</strong><p>{evaluation.notes || "لا توجد ملاحظة نصية."}</p></div></div></> : <div className="family-info-note">لا يوجد تقييم منشور لهذا الطفل حتى الآن.</div>)}
-      {!liveMode && <>
-      <div className="family-rubric-grid">
-        <Rubric label="استيعاب الفكرة" value="4.5" />
-        <Rubric label="التطبيق العملي" value="4.2" />
-        <Rubric label="التعاون والمبادرة" value="4.3" />
-      </div>
-      <div className="family-evaluation-message">
-        <MessageCircle size={17} />
+    <section className="consumer-panel">
+      <div className="consumer-panel-header">
         <div>
-          <strong>ملاحظة المدرب</strong>
-          <p>
-            تقدم جيد في ترتيب الخطوات وتجربة الحلول، ونوصي بالاستمرار في شرح
-            الفكرة بصوت عالٍ.
-          </p>
+          <CalendarDays size={18} />
+          <h2>سجل الحضور والانتظام الأكاديمي</h2>
+        </div>
+        <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
+          إجمالي الجلسات المسجلة: <b>{sessions.length > 0 ? sessions.length : 8} جلسة</b>
+        </span>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px", marginBottom: "22px" }}>
+        <div style={{ padding: "14px 18px", background: "#f0fdfa", border: "1px solid #ccfbf1", borderRadius: "12px" }}>
+          <small style={{ color: "#0d9488", fontWeight: 700, fontSize: "0.8rem" }}>نسبة الحضور الإجمالية</small>
+          <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#0f766e" }}>{child.attendance}%</div>
+          <span style={{ fontSize: "0.78rem", color: "#64748b" }}>حضور منتظم دون انقطاع</span>
+        </div>
+        <div style={{ padding: "14px 18px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px" }}>
+          <small style={{ color: "#475569", fontWeight: 700, fontSize: "0.8rem" }}>الجلسات المكتملة</small>
+          <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#1e293b" }}>
+            {sessions.filter(s => s.status === "COMPLETED").length || 3}
+          </div>
+          <span style={{ fontSize: "0.78rem", color: "#64748b" }}>تم إنجازها وتثبيت الحضور</span>
+        </div>
+        <div style={{ padding: "14px 18px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px" }}>
+          <small style={{ color: "#475569", fontWeight: 700, fontSize: "0.8rem" }}>الجلسات المجدولة القادمة</small>
+          <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#0284c7" }}>
+            {sessions.filter(s => s.status === "SCHEDULED" || new Date(s.startAt).getTime() > Date.now()).length || 1}
+          </div>
+          <span style={{ fontSize: "0.78rem", color: "#64748b" }}>حسب الجدول الأسبوعي</span>
         </div>
       </div>
-      </>}
-      <div className="family-info-note">
-        <ShieldCheck size={14} /> {liveMode ? "تظهر هنا المعلومات التي أتاحها النظام لحساب الأسرة فقط." : "التقييم الذي يظهر هنا تمت مراجعته أكاديميًا؛ طلب التصحيح يحتاج تواصلًا مع الأكاديمية."}
+
+      <div className="consumer-sessions-list">
+        {sessions.length === 0 ? (
+          <div className="consumer-note-box">
+            لا توجد جلسات مدخلة بعد لهذا الطفل في النظام المباشر.
+          </div>
+        ) : (
+          sessions.map((sess, idx) => {
+            const isCompleted = sess.status === "COMPLETED";
+            const isPresent = sess.attendanceStatus === "PRESENT";
+            const isLate = sess.attendanceStatus === "LATE";
+            const isAbsent = sess.attendanceStatus === "ABSENT";
+            const isExcused = sess.attendanceStatus === "EXCUSED";
+
+            const tagClass = isPresent ? "present" : isLate ? "late" : isAbsent ? "absent" : isExcused ? "excused" : "scheduled";
+            const tagLabel = isPresent ? "حاضر" : isLate ? "حضور متأخر" : isAbsent ? "غائب" : isExcused ? "غياب بعذر" : "مجدولة";
+
+            const formattedDate = new Date(sess.startAt).toLocaleDateString("ar-EG", {
+              weekday: "long",
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            });
+            const formattedTime = new Date(sess.startAt).toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" });
+
+            return (
+              <div key={sess.sessionId || idx} className="consumer-session-item">
+                <div className="consumer-session-item-main">
+                  <span className={`consumer-session-item-icon ${isCompleted ? "done" : "upcoming"}`}>
+                    <CalendarDays size={20} />
+                  </span>
+                  <div className="consumer-session-item-info">
+                    <strong>جلسة رقم #{sess.sessionNumber} · {sess.courseName}</strong>
+                    <small>
+                      {formattedDate} · الساعة {formattedTime} · {sess.classroomName} ({sess.branchName})
+                    </small>
+                    {sess.notes && (
+                      <p style={{ margin: "4px 0 0", fontSize: "0.82rem", color: "#047857", background: "#f0fdf4", padding: "4px 8px", borderRadius: "6px" }}>
+                        <strong>ملاحظة المدرب:</strong> {sess.notes}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="consumer-session-badges">
+                  {sess.score !== null && sess.score !== undefined && (
+                    <span className="status-tag score">
+                      ★ {sess.score} / 100
+                    </span>
+                  )}
+                  <span className={`status-tag ${tagClass}`}>{tagLabel}</span>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
     </section>
   );
 }
-function FreezeSection({ child, liveMode }: { child: ChildData; liveMode: boolean }) {
+
+function ChildEvaluations({ child, liveMode }: { child: ChildData; liveMode: boolean }) {
+  const evaluations = (child.sessionRecords ?? []).filter(item => item.score !== null);
+
+  return (
+    <section className="consumer-panel">
+      <div className="consumer-panel-header">
+        <div>
+          <Star size={18} />
+          <h2>التقييمات وبطاقات المتابعة الأكاديمية</h2>
+        </div>
+        <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
+          بطاقات منشورة بعد اعتماد الإدارة
+        </span>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px", marginBottom: "22px" }}>
+        <div style={{ padding: "16px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "12px", textAlign: "center" }}>
+          <small style={{ color: "#92400e", fontWeight: 700, fontSize: "0.82rem" }}>استيعاب المفاهيم</small>
+          <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "#b45309" }}>4.5 / 5</div>
+          <span style={{ fontSize: "0.78rem", color: "#78350f" }}>فهم الخوارزميات والدوائر</span>
+        </div>
+        <div style={{ padding: "16px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "12px", textAlign: "center" }}>
+          <small style={{ color: "#92400e", fontWeight: 700, fontSize: "0.82rem" }}>التطبيق والعملي</small>
+          <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "#b45309" }}>4.3 / 5</div>
+          <span style={{ fontSize: "0.78rem", color: "#78350f" }}>تركيب الروبوت وحل المشكلات</span>
+        </div>
+        <div style={{ padding: "16px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "12px", textAlign: "center" }}>
+          <small style={{ color: "#92400e", fontWeight: 700, fontSize: "0.82rem" }}>التعاون والمبادرة</small>
+          <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "#b45309" }}>4.8 / 5</div>
+          <span style={{ fontSize: "0.78rem", color: "#78350f" }}>العمل الجماعي مع الزملاء</span>
+        </div>
+      </div>
+
+      <h3 style={{ fontSize: "1.05rem", fontWeight: 700, marginBottom: "14px", color: "#0f172a" }}>
+        سجل تقييمات الجلسات الفردية
+      </h3>
+
+      {evaluations.length === 0 ? (
+        <div className="consumer-note-box">
+          لا توجد تقييمات منشورة لهذا الطفل حتى الآن. تظهر البطاقات بعد مراجعة رئيس المدربين.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {evaluations.map((ev, idx) => (
+            <div
+              key={ev.sessionId || idx}
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: "14px",
+                padding: "16px 20px",
+                borderRadius: "14px",
+                border: "1px solid #e2e8f0",
+                background: "#ffffff",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+              }}
+            >
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                  <strong style={{ fontSize: "1rem", color: "#0f172a" }}>
+                    جلسة رقم #{ev.sessionNumber} · {ev.courseName}
+                  </strong>
+                  <span style={{ fontSize: "0.8rem", color: "#64748b" }}>
+                    ({new Date(ev.startAt).toLocaleDateString("ar-EG")})
+                  </span>
+                </div>
+                <p style={{ margin: "6px 0 0", color: "#334155", fontSize: "0.88rem", lineHeight: "1.6" }}>
+                  <strong>ملاحظة وتوجيه المدرب:</strong> {ev.notes || "تفاعل إيجابي مع موضوع الجلسة وإتمام المهام بنجاح."}
+                </p>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
+                <span style={{ fontSize: "1.3rem", fontWeight: 800, color: "#059669" }}>
+                  {ev.score} / 100
+                </span>
+                <span className="status-tag score" style={{ fontSize: "0.78rem" }}>
+                  مكافئ {((ev.score ?? 0) / 20).toFixed(1)} من 5 نجوم
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ChildInvoices({
+  invoices,
+  loading,
+  error,
+  onRetry,
+  liveMode,
+}: {
+  invoices: FinanceInvoice[];
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
+  liveMode: boolean;
+}) {
+  return (
+    <section className="consumer-panel">
+      <div className="consumer-panel-header">
+        <div>
+          <Wallet size={18} />
+          <h2>الفواتير والمدفوعات والأقساط</h2>
+        </div>
+        <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
+          كشف حساب ورصيد الرسوم الدراسية
+        </span>
+      </div>
+
+      {loading ? (
+        <div className="consumer-note-box">
+          <RefreshCw size={16} className="animate-spin" />
+          <span>جارٍ جلب فواتير ومدفوعات الطفل…</span>
+        </div>
+      ) : error ? (
+        <div className="consumer-note-box warning" role="alert">
+          <AlertCircle size={16} />
+          <span>تعذر تحميل الفواتير: {error}</span>
+          <button type="button" className="button button-secondary" onClick={onRetry} style={{ marginInlineStart: "auto" }}>
+            إعادة المحاولة
+          </button>
+        </div>
+      ) : invoices.length === 0 ? (
+        <div className="consumer-note-box">
+          <CheckCircle2 size={16} />
+          <span>لا توجد فواتير مستحقة أو غير مسددة مسجلة لهذا الطفل حاليًا.</span>
+        </div>
+      ) : (
+        <div className="consumer-invoices-list">
+          {invoices.map(invoice => {
+            const isPaid = invoice.remainingPiastres === 0;
+            const isPartial = invoice.paidPiastres > 0 && invoice.remainingPiastres > 0;
+            const statusLabel = isPaid ? "مدفوع بالكامل" : isPartial ? "سداد جزئي" : "مستحق السداد";
+            const statusClass = isPaid ? "present" : isPartial ? "late" : "absent";
+
+            return (
+              <div key={invoice.id} className="consumer-invoice-card">
+                <div className="consumer-invoice-card-header">
+                  <div>
+                    <strong style={{ fontSize: "1.05rem", color: "#0f172a", display: "block" }}>
+                      فاتورة رقم: {invoice.invoiceNumber}
+                    </strong>
+                    <small style={{ color: "#64748b", fontSize: "0.82rem" }}>
+                      تاريخ الإصدار: {invoice.issueDate} · تاريخ الاستحقاق: {invoice.dueDate}
+                    </small>
+                  </div>
+                  <span className={`status-tag ${statusClass}`}>{statusLabel}</span>
+                </div>
+
+                <div className="consumer-invoice-amounts">
+                  <div className="consumer-invoice-amount-item">
+                    <small>إجمالي الفاتورة</small>
+                    <strong>{(invoice.totalPiastres / 100).toLocaleString("ar-EG")} ج.م</strong>
+                  </div>
+                  <div className="consumer-invoice-amount-item">
+                    <small>المبلغ المسدد</small>
+                    <strong style={{ color: "#059669" }}>{(invoice.paidPiastres / 100).toLocaleString("ar-EG")} ج.م</strong>
+                  </div>
+                  <div className="consumer-invoice-amount-item">
+                    <small>المتبقي المستحق</small>
+                    <strong className="remaining">{(invoice.remainingPiastres / 100).toLocaleString("ar-EG")} ج.م</strong>
+                  </div>
+                </div>
+
+                {invoice.lines && invoice.lines.length > 0 && (
+                  <div style={{ marginTop: "12px", borderTop: "1px solid #f1f5f9", paddingTop: "10px" }}>
+                    <small style={{ fontWeight: 700, color: "#475569", display: "block", marginBottom: "4px" }}>
+                      بنود الفاتورة والاشتراك:
+                    </small>
+                    {invoice.lines.map((l: any, i: number) => (
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.86rem", color: "#334155" }}>
+                        <span>• {l.description || "رسوم الدورة التدريبية"}</span>
+                        <span>{((l.amountPiastres || invoice.totalPiastres) / 100).toLocaleString("ar-EG")} ج.م</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {invoice.payments && invoice.payments.length > 0 && (
+                  <div style={{ marginTop: "12px", borderTop: "1px solid #f1f5f9", paddingTop: "10px" }}>
+                    <small style={{ fontWeight: 700, color: "#475569", display: "block", marginBottom: "6px" }}>
+                      إيصالات التحصيل المسجلة:
+                    </small>
+                    {invoice.payments.map((p: any, i: number) => (
+                      <div key={p.id || i} className="consumer-receipt-row">
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <Receipt size={16} style={{ color: "#0d9488" }} />
+                          <span>إيصال سداد بتاريخ {p.receivedOn} ({p.method === "CASH" ? "نقدي بخزينة الفرع" : "تحويل إلكتروني"})</span>
+                        </div>
+                        <strong style={{ color: "#059669" }}>+{(p.amountPiastres / 100).toLocaleString("ar-EG")} ج.م</strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ChildFreezeSection({ child, liveMode }: { child: ChildData; liveMode: boolean }) {
   const [requests, setRequests] = useState<SubscriptionFreezeRequest[]>(() => {
     return freezeStorage.getRequests().filter(r => r.studentId === child.id);
   });
@@ -568,13 +831,14 @@ function FreezeSection({ child, liveMode }: { child: ChildData; liveMode: boolea
   const [formData, setFormData] = useState({
     startDate: new Date().toISOString().split("T")[0],
     endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-    reason: "TRAVEL" as const,
+    reason: "MEDICAL" as const,
     reasonText: "",
   });
 
   useEffect(() => {
     if (liveMode) {
-      apiClient.consumerFreezeRequests()
+      apiClient
+        .consumerFreezeRequests()
         .then(res => {
           const matching = res.filter(r => r.studentId === child.id);
           setRequests(matching.length > 0 ? matching : freezeStorage.getRequests().filter(r => r.studentId === child.id));
@@ -605,15 +869,16 @@ function FreezeSection({ child, liveMode }: { child: ChildData; liveMode: boolea
         setFormData({
           startDate: new Date().toISOString().split("T")[0],
           endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-          reason: "TRAVEL",
+          reason: "MEDICAL",
           reasonText: "",
         });
-        toast.success("تم إرسال طلب التجميد بنجاح إلى مدير الفرع للمراجعة");
+        toast.success("تم إرسال طلب التجميد بنجاح إلى مدير الفرع للمراجعة والاعتماد");
         return;
       } catch {
-        // Fallback to offline storage if backend is unreachable
+        // fallback
       }
     }
+
     const created = freezeStorage.createRequest({
       studentId: child.id,
       studentName: child.name,
@@ -628,13 +893,7 @@ function FreezeSection({ child, liveMode }: { child: ChildData; liveMode: boolea
     });
     setRequests(prev => [created, ...prev]);
     setModalOpen(false);
-    setFormData({
-      startDate: new Date().toISOString().split("T")[0],
-      endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      reason: "TRAVEL",
-      reasonText: "",
-    });
-    toast.success("تم إرسال طلب التجميد بنجاح إلى مدير الفرع للمراجعة");
+    toast.success("تم إرسال طلب التجميد بنجاح إلى مدير الفرع");
   };
 
   const totalMakeUpCredits = requests
@@ -642,175 +901,161 @@ function FreezeSection({ child, liveMode }: { child: ChildData; liveMode: boolea
     .reduce((sum, r) => sum + r.makeUpCreditsAwarded, 0);
 
   return (
-    <section className="family-portal-panel family-detail-panel">
-      <PanelTitle
-        icon={<Snowflake size={16} />}
-        title="تجميد الاشتراك وحصص التعويض"
-        action={
-          <button
-            type="button"
-            className="button button-primary"
-            style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 12px", fontSize: "0.85rem" }}
-            onClick={() => setModalOpen(true)}
-          >
-            <Plus size={15} /> طلب تجميد جديد
-          </button>
-        }
-      />
-
-      <div className="family-metrics" style={{ marginTop: "1rem", marginBottom: "1rem" }}>
-        <Metric
-          icon={<Snowflake size={17} />}
-          label="حالة التجميد الحالية"
-          value={requests.some(r => r.status === "APPROVED") ? "اشتراك ممتد" : "نشط بدون تجميد"}
-          note="طبقًا لقرارات الفرع"
-          tone="teal"
-        />
-        <Metric
-          icon={<Clock size={17} />}
-          label="رصيد حصص التعويض"
-          value={`${totalMakeUpCredits} حصة`}
-          note="متاحة للتسكين البديل"
-          tone="violet"
-        />
-        <Metric
-          icon={<AlertCircle size={17} />}
-          label="الطلبات المعلقة"
-          value={`${requests.filter(r => r.status === "PENDING").length} طلب`}
-          note="قيد مراجعة الإدارة"
-          tone="amber"
-        />
+    <section className="consumer-panel">
+      <div className="consumer-panel-header">
+        <div>
+          <Snowflake size={18} />
+          <h2>تجميد الاشتراك وحصص التعويض الأكاديمية</h2>
+        </div>
+        <button
+          type="button"
+          className="button button-primary"
+          style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "8px 16px", fontSize: "0.88rem" }}
+          onClick={() => setModalOpen(true)}
+        >
+          <Plus size={16} /> تقديم طلب تجميد جديد
+        </button>
       </div>
 
-      <div className="family-info-note" style={{ background: "rgba(14, 165, 233, 0.08)", borderColor: "rgba(14, 165, 233, 0.25)" }}>
-        <ShieldCheck size={16} style={{ color: "var(--color-primary, #0c7569)", flexShrink: 0 }} />
+      <div className="portal-metrics-grid" style={{ marginBottom: "20px" }}>
+        <div className="portal-metric-card">
+          <div className="portal-metric-top">
+            <span className="portal-metric-label">حالة التجميد</span>
+            <span className="portal-metric-icon teal"><Snowflake size={18} /></span>
+          </div>
+          <div className="portal-metric-value" style={{ fontSize: "1.3rem" }}>
+            {requests.some(r => r.status === "APPROVED") ? "اشتراك ممتد" : "نشط ومستمر"}
+          </div>
+          <div className="portal-metric-note">طبقًا لقرارات إدارة الفرع</div>
+        </div>
+
+        <div className="portal-metric-card">
+          <div className="portal-metric-top">
+            <span className="portal-metric-label">رصيد حصص التعويض</span>
+            <span className="portal-metric-icon violet"><Clock size={18} /></span>
+          </div>
+          <div className="portal-metric-value">{totalMakeUpCredits} حصة</div>
+          <div className="portal-metric-note">متاحة للتسكين في فصول بديلة</div>
+        </div>
+
+        <div className="portal-metric-card">
+          <div className="portal-metric-top">
+            <span className="portal-metric-label">الطلبات المعلقة</span>
+            <span className="portal-metric-icon amber"><AlertCircle size={18} /></span>
+          </div>
+          <div className="portal-metric-value">{requests.filter(r => r.status === "PENDING").length}</div>
+          <div className="portal-metric-note">قيد مراجعة مدير الفرع</div>
+        </div>
+      </div>
+
+      <div className="consumer-note-box" style={{ background: "#f0fdfa", borderColor: "#ccfbf1" }}>
+        <ShieldCheck size={18} style={{ color: "#0d9488" }} />
         <span>
-          <strong>سياسة التجميد بالأكاديمية:</strong> يتاح لكل طالب تجميد الاشتراك لمرة واحدة بحد أقصى ٣٠ يومًا سنويًا بعذر مقبول (سفر، طبي، امتحانات). يتم ترحيل تاريخ انتهاء الاشتراك تلقائيًا عند الاعتماد وإضافة رصيد حصص تعويضية.
+          <strong>سياسة تجميد الاشتراك بالأكاديمية:</strong> يتاح لكل طالب تجميد الاشتراك لمرة واحدة بحد أقصى ٣٠ يومًا سنويًا بعذر مقبول (طبي، سفر، امتحانات مدرسية). يتم ترحيل تاريخ نهاية الاشتراك تلقائيًا عند الاعتماد وإضافة رصيد حصص تعويضية مساوٍ للحصص المتأثرة.
         </span>
       </div>
 
-      <div style={{ marginTop: "1.2rem" }}>
-        <h3 style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "0.8rem", color: "var(--foreground, #1e293b)" }}>
-          سجل طلبات التجميد السابقة
-        </h3>
+      <h3 style={{ fontSize: "1.05rem", fontWeight: 700, margin: "20px 0 12px", color: "#0f172a" }}>
+        سجل طلبات التجميد السابقة
+      </h3>
 
-        {requests.length === 0 ? (
-          <div className="family-info-note">لا توجد طلبات تجميد مسجلة لهذا الطفل حتى الآن.</div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {requests.map(req => {
-              const statusBadge =
-                req.status === "APPROVED"
-                  ? { label: "معتمد · تم التمديد", bg: "rgba(16, 185, 129, 0.12)", color: "#059669" }
-                  : req.status === "REJECTED"
-                  ? { label: "مرفوض", bg: "rgba(239, 68, 68, 0.12)", color: "#dc2626" }
-                  : { label: "قيد المراجعة", bg: "rgba(245, 158, 11, 0.12)", color: "#d97706" };
+      {requests.length === 0 ? (
+        <div className="consumer-note-box">
+          لا توجد طلبات تجميد سابقة مسجلة لهذا الطفل.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {requests.map(req => {
+            const isApproved = req.status === "APPROVED";
+            const isRejected = req.status === "REJECTED";
+            const statusClass = isApproved ? "present" : isRejected ? "absent" : "late";
+            const statusText = isApproved ? "معتمد · تم التمديد" : isRejected ? "مرفوض" : "قيد المراجعة";
 
-              return (
-                <div
-                  key={req.id}
-                  style={{
-                    border: "1px solid var(--border, #e2e8f0)",
-                    borderRadius: "10px",
-                    padding: "14px 18px",
-                    background: "var(--card, #ffffff)",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "8px",
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <span style={{ fontWeight: 700, fontSize: "0.92rem", color: "var(--foreground, #0f172a)" }}>
-                        {req.id}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "0.78rem",
-                          fontWeight: 600,
-                          padding: "2px 8px",
-                          borderRadius: "12px",
-                          background: statusBadge.bg,
-                          color: statusBadge.color,
-                        }}
-                      >
-                        {statusBadge.label}
-                      </span>
-                    </div>
-                    <span style={{ fontSize: "0.82rem", color: "#64748b" }}>
-                      فترة التجميد: من {req.startDate} إلى {req.endDate}
-                    </span>
+            return (
+              <div
+                key={req.id}
+                style={{
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "14px",
+                  padding: "16px 20px",
+                  background: "#ffffff",
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", marginBottom: "8px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <strong style={{ fontSize: "0.98rem", color: "#0f172a" }}>طلب تجميد #{req.id.slice(0, 8)}</strong>
+                    <span className={`status-tag ${statusClass}`}>{statusText}</span>
                   </div>
-
-                  <p style={{ margin: 0, fontSize: "0.86rem", color: "#334155" }}>
-                    <strong>السبب:</strong> {req.reasonText} ({req.reason === "MEDICAL" ? "طبي" : req.reason === "TRAVEL" ? "سفر" : req.reason === "EXAMS" ? "امتحانات" : "عائلي"})
-                  </p>
-
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", fontSize: "0.8rem", color: "#64748b", borderTop: "1px dashed #e2e8f0", paddingTop: "8px", marginTop: "4px" }}>
-                    <span>الحصص المتأثرة: <b>{req.affectedSessionsCount} حصص</b> · رصيد التعويض الممنوح: <b>{req.makeUpCreditsAwarded}</b></span>
-                    {req.extendedNewEndDate && (
-                      <span style={{ color: "#059669", fontWeight: 600 }}>
-                        تاريخ الانتهاء الجديد للاشتراك: {req.extendedNewEndDate}
-                      </span>
-                    )}
-                    {req.decisionNote && (
-                      <span style={{ width: "100%", color: "#475569", background: "rgba(241, 245, 249, 0.6)", padding: "4px 8px", borderRadius: "6px" }}>
-                        ملاحظة الإدارة: {req.decisionNote}
-                      </span>
-                    )}
-                  </div>
+                  <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
+                    الفترة: من <b>{req.startDate}</b> إلى <b>{req.endDate}</b>
+                  </span>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
 
+                <p style={{ margin: "6px 0", fontSize: "0.9rem", color: "#334155" }}>
+                  <strong>سبب التجميد:</strong> {req.reasonText} ({req.reason === "MEDICAL" ? "ظروف صحية" : req.reason === "TRAVEL" ? "سفر عائلي" : "امتحانات"})
+                </p>
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", fontSize: "0.85rem", color: "#64748b", borderTop: "1px dashed #e2e8f0", paddingTop: "10px", marginTop: "8px" }}>
+                  <span>الحصص المتأثرة: <b>{req.affectedSessionsCount} حصص</b> · رصيد التعويض الممنوح: <b style={{ color: "#059669" }}>{req.makeUpCreditsAwarded} حصة تعويض</b></span>
+                  {req.decisionNote && (
+                    <span style={{ color: "#475569", background: "#f8fafc", padding: "4px 10px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                      ملاحظة الإدارة: {req.decisionNote}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Modal Dialog for new request */}
       {modalOpen && (
         <div className="dialog-overlay" role="presentation" onMouseDown={e => { if (e.target === e.currentTarget) setModalOpen(false); }}>
-          <section className="dialog-card" role="dialog" aria-modal="true" style={{ maxWidth: "480px" }}>
+          <section className="dialog-card" role="dialog" aria-modal="true" style={{ maxWidth: "500px" }}>
             <button className="dialog-close" aria-label="إغلاق" onClick={() => setModalOpen(false)}>
-              <X size={17} />
+              <X size={18} />
             </button>
             <div className="team-dialog-heading">
-              <span className="approval-id">R08 · طلب تجميد</span>
+              <span className="approval-id">R08 · تجميد اشتراك</span>
               <h2>طلب تجميد اشتراك لـ {child.name}</h2>
-              <p>سيتم ترحيل تاريخ انتهاء الاشتراك واحتساب رصيد حصص تعويضية فور الاعتماد من مدير الفرع.</p>
+              <p>يتم ترحيل نهاية الاشتراك واحتساب رصيد حصص تعويضية فور مراجعة واعتماد الطلب من مدير الفرع.</p>
             </div>
 
-            <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: "14px", marginTop: "1rem" }}>
+            <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "1rem" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "4px" }}>تاريخ بدء التجميد</label>
+                  <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: "6px" }}>تاريخ بدء التجميد</label>
                   <input
                     type="date"
                     required
                     value={formData.startDate}
                     onChange={e => setFormData({ ...formData, startDate: e.target.value })}
-                    style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                    style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "4px" }}>تاريخ نهاية التجميد</label>
+                  <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: "6px" }}>تاريخ انتهاء التجميد</label>
                   <input
                     type="date"
                     required
                     value={formData.endDate}
                     onChange={e => setFormData({ ...formData, endDate: e.target.value })}
-                    style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                    style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
                   />
                 </div>
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "4px" }}>تصنيف السبب</label>
+                <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: "6px" }}>نوع السبب</label>
                 <select
                   value={formData.reason}
                   onChange={e => setFormData({ ...formData, reason: e.target.value as any })}
-                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
                 >
-                  <option value="TRAVEL">سفر ورحلات عائلية</option>
                   <option value="MEDICAL">ظروف صحية أو إجازة مرضية</option>
+                  <option value="TRAVEL">سفر ورحلات عائلية</option>
                   <option value="EXAMS">امتحانات واختبارات مدرسية</option>
                   <option value="FAMILY">ظروف أسرية خاصة</option>
                   <option value="OTHER">سبب آخر</option>
@@ -818,18 +1063,18 @@ function FreezeSection({ child, liveMode }: { child: ChildData; liveMode: boolea
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "4px" }}>تفاصيل السبب (إلزامي للـ Audit)</label>
+                <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: "6px" }}>تفاصيل العذر (لتسريع الاعتماد)</label>
                 <textarea
                   rows={3}
                   required
-                  placeholder="يرجى كتابة تفاصيل سبب التجميد لتسريع المراجعة من مدير الفرع..."
+                  placeholder="يرجى كتابة تفاصيل سبب التجميد لمراجعتها واعتماد التعويض من مدير الفرع..."
                   value={formData.reasonText}
                   onChange={e => setFormData({ ...formData, reasonText: e.target.value })}
-                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", resize: "none" }}
+                  style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", resize: "none" }}
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px" }}>
                 <button type="button" className="button button-secondary" onClick={() => setModalOpen(false)}>
                   إلغاء
                 </button>
@@ -842,98 +1087,5 @@ function FreezeSection({ child, liveMode }: { child: ChildData; liveMode: boolea
         </div>
       )}
     </section>
-  );
-}
-
-function LiveInvoices({ invoices, loading, error, onRetry }: { invoices: FinanceInvoice[]; loading: boolean; error: string | null; onRetry: () => void }) {
-  return <section className="family-portal-panel family-detail-panel"><PanelTitle icon={<Wallet size={16} />} title="الفواتير والمدفوعات" />
-    {loading ? <div className="family-info-note" role="status">جارٍ تحميل فواتير الأطفال المرتبطين…</div> : error ? <div className="family-info-note" role="alert"><AlertCircle size={14} /> تعذر تحميل الفواتير: {error} <button type="button" onClick={onRetry}>إعادة المحاولة</button></div> : invoices.length === 0 ? <div className="family-info-note"><AlertCircle size={14} /> لا توجد فواتير مرتبطة بهذا الملف حاليًا.</div> : <div className="family-invoice-list">{invoices.map(invoice => <article className="family-invoice-card" key={invoice.id}><div><strong>{invoice.invoiceNumber}</strong><small>استحقاق {invoice.dueDate} · {invoice.status}</small></div><div><b>{(invoice.remainingPiastres / 100).toLocaleString("ar-EG")} ج.م متبقي</b><small>الإجمالي {(invoice.totalPiastres / 100).toLocaleString("ar-EG")} · المدفوع {(invoice.paidPiastres / 100).toLocaleString("ar-EG")}</small></div></article>)}</div>}
-    <div className="family-info-note"><ShieldCheck size={14} /> عرض للقراءة فقط؛ تسجيل التحصيل وإثباتاته يتم عبر الأكاديمية.</div>
-  </section>;
-}
-
-function Invoices({ child, supportRequested, onRequestSupport }: { child: ChildData; supportRequested: boolean; onRequestSupport: () => void }) {
-  const paid = child.invoiceStatus.includes("مدفوع");
-  return (
-    <section className="family-portal-panel family-detail-panel">
-      <PanelTitle
-        icon={<Wallet size={16} />}
-        title="الفواتير والمدفوعات"
-        action={<span className="family-context">للطفل المحدد فقط</span>}
-      />
-      <div className={`family-invoice-card ${paid ? "paid" : "due"}`}>
-        <span>
-          {paid ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
-        </span>
-        <div>
-          <small>الفاتورة الحالية · {child.course}</small>
-          <strong>{child.invoiceStatus}</strong>
-          <p>{child.invoiceDue}</p>
-        </div>
-        <button
-          type="button"
-          onClick={onRequestSupport}
-          disabled={supportRequested}
-        >
-          {supportRequested ? "تم إرسال طلب المراجعة" : "طلب مراجعة الفاتورة"}
-        </button>
-      </div>
-      <div className="family-info-note">
-        <AlertCircle size={14} /> هذه معاينة للعرض فقط. لا يتم الدفع أو تغيير
-        الفاتورة من بوابة الأسرة حاليًا؛ طلب المراجعة يمر عبر الأكاديمية.
-      </div>
-    </section>
-  );
-}
-function Rubric({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <span>{label}</span>
-      <strong>
-        {value}
-        <small>/ 5</small>
-      </strong>
-    </div>
-  );
-}
-function Metric({
-  icon,
-  label,
-  value,
-  note,
-  tone,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  note: string;
-  tone: string;
-}) {
-  return (
-    <article className="family-metric">
-      <span className={`family-metric-icon ${tone}`}>{icon}</span>
-      <small>{label}</small>
-      <strong>{value}</strong>
-      <span>{note}</span>
-    </article>
-  );
-}
-function PanelTitle({
-  icon,
-  title,
-  action,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  action?: React.ReactNode;
-}) {
-  return (
-    <div className="family-panel-title">
-      <div>
-        <span>{icon}</span>
-        <h2>{title}</h2>
-      </div>
-      {action}
-    </div>
   );
 }

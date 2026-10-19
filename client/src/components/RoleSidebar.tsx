@@ -1,6 +1,8 @@
 import {
   type ComponentType,
+  useEffect,
   useMemo,
+  useState,
 } from "react";
 import {
   Award,
@@ -14,12 +16,15 @@ import {
   ChevronLeft,
   CircleHelp,
   GraduationCap,
+  Home,
   KeyRound,
   Layers3,
   LayoutDashboard,
   MapPin,
   Settings,
   ShieldCheck,
+  Snowflake,
+  Star,
   TrendingDown,
   TrendingUp,
   Trophy,
@@ -67,7 +72,13 @@ const ICON_BY_PATH: Record<string, ComponentType<LucideProps>> = {
   "/platform-console": ShieldCheck,
   "/platform/academies/new": Building2,
   "/family-portal": Users,
-  "/student-portal": GraduationCap,
+  "/family-portal#attendance": CalendarDays,
+  "/family-portal#evaluations": Star,
+  "/family-portal#invoices": Wallet,
+  "/family-portal#freeze": Snowflake,
+  "/student-portal": Home,
+  "/student-portal#sessions": CalendarDays,
+  "/student-portal#progress": Trophy,
   "/workspace": Layers3,
 };
 
@@ -148,13 +159,21 @@ export default function RoleSidebar({
   const resolvedRoleLabel = me?.roleLabel ?? roleLabel ?? roleDef.label;
   const resolvedScope = branchName ?? scopeLabel ?? roleDef.defaultScopeLabel;
 
+  const [currentHash, setCurrentHash] = useState(() => (typeof window !== "undefined" ? window.location.hash : ""));
+
+  useEffect(() => {
+    const onHashChange = () => setCurrentHash(window.location.hash);
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
   const isItemActive = (path: string) => {
     if (path.includes("#")) {
       const [route, hash] = path.split("#");
-      return location === route && window.location.hash === `#${hash}`;
+      return location === route && currentHash === `#${hash}`;
     }
-    if (path === "/") return location === "/" && !window.location.hash;
-    return (location === path || location.startsWith(`${path}/`)) && !window.location.hash;
+    if (path === "/") return location === "/" && !currentHash;
+    return (location === path || location.startsWith(`${path}/`)) && !currentHash;
   };
 
   const handleNavigate = (path: string) => {
@@ -162,27 +181,58 @@ export default function RoleSidebar({
       const [route, hash] = path.split("#");
       if (location === route) {
         window.location.hash = hash;
+        setCurrentHash(`#${hash}`);
       } else {
         navigate(path);
+        setCurrentHash(`#${hash}`);
       }
     } else {
       if (location === path && window.location.hash) {
         window.location.hash = "";
+        setCurrentHash("");
       }
       navigate(path);
+      setCurrentHash("");
     }
     onCloseMobile?.();
   };
 
   // Group items into primary and operations/modules if applicable
-  const primaryItems = authorizedNavigation.filter(
-    (item) => !["/approvals", "/reports", "/competitions"].includes(item.path) && !item.path.includes("#")
-  );
-  const secondaryItems = authorizedNavigation.filter(
-    (item) => ["/approvals", "/reports", "/competitions"].includes(item.path) || item.path.includes("#")
-  );
+  const primaryItems = authorizedNavigation.filter((item) => {
+    if (effectiveRoleCode === "R08") {
+      return ["/family-portal", "/family-portal#attendance", "/family-portal#evaluations"].includes(item.path);
+    }
+    if (effectiveRoleCode === "R09") {
+      return ["/student-portal", "/student-portal#sessions"].includes(item.path);
+    }
+    return !["/approvals", "/reports", "/competitions"].includes(item.path) && !item.path.includes("#");
+  });
+
+  const secondaryItems = authorizedNavigation.filter((item) => {
+    if (effectiveRoleCode === "R08") {
+      return ["/family-portal#invoices", "/family-portal#freeze"].includes(item.path);
+    }
+    if (effectiveRoleCode === "R09") {
+      return ["/student-portal#progress"].includes(item.path);
+    }
+    return ["/approvals", "/reports", "/competitions"].includes(item.path) || item.path.includes("#");
+  });
 
   const hasGroups = primaryItems.length > 0 && secondaryItems.length > 0;
+
+  const primaryCaption =
+    effectiveRoleCode === "R08"
+      ? "المتابعة الأكاديمية"
+      : effectiveRoleCode === "R09"
+      ? "المساحة التعليمية"
+      : "القائمة الرئيسية";
+
+  const secondaryCaption =
+    effectiveRoleCode === "R08"
+      ? "الخدمات والماليات"
+      : effectiveRoleCode === "R09"
+      ? "الإنجازات والتقدم"
+      : "العمليات والأدوات";
 
   return (
     <aside
@@ -217,8 +267,8 @@ export default function RoleSidebar({
 
       {hasGroups ? (
         <>
-          <div className="nav-caption">القائمة الرئيسية</div>
-          <nav className="primary-nav" aria-label="القائمة الرئيسية">
+          <div className="nav-caption">{primaryCaption}</div>
+          <nav className="primary-nav" aria-label={primaryCaption}>
             {primaryItems.map((item) => {
               const Icon = ICON_BY_PATH[item.path] ?? LayoutDashboard;
               const active = isItemActive(item.path);
@@ -237,8 +287,8 @@ export default function RoleSidebar({
             })}
           </nav>
 
-          <div className="nav-caption nav-caption-spaced">العمليات والأدوات</div>
-          <nav className="primary-nav" aria-label="العمليات والأدوات">
+          <div className="nav-caption nav-caption-spaced">{secondaryCaption}</div>
+          <nav className="primary-nav" aria-label={secondaryCaption}>
             {secondaryItems.map((item) => {
               const Icon = ICON_BY_PATH[item.path] ?? LayoutDashboard;
               const active = isItemActive(item.path);
