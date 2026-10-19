@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "http": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:5000",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "MADA_JWT_SIGNING_KEY": "development-only-mada-jwt-key-change-before-production-2026",
+        "MADA_DATABASE_MODE": "memory",
+        "MADA_SEED_DEMO_DATA": "true",
+        "MADA_ENABLE_DEV_ENDPOINTS": "true"
+      }
+    }
+  }
+}

@@ -30,6 +30,7 @@ public static class FinanceEndpoints
         api.MapGet("/cashier/shift-summary", GetCashierShiftSummaryAsync);
         api.MapPost("/cashier/closeout", CloseoutCashierShiftAsync);
         api.MapGet("/instructor-payroll", GetInstructorPayrollAsync);
+        api.MapGet("/payroll/instructors", GetInstructorPayrollAsync);
         api.MapPost("/cashier/deposit-to-safe", DepositCashierSafeAsync);
 
         endpoints.MapGet("/api/v1/consumer/invoices", ListConsumerInvoicesAsync).RequireAuthorization("consumer");

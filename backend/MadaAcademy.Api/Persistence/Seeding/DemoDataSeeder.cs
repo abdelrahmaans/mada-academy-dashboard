@@ -63,7 +63,7 @@ public static class DemoDataSeeder
         var template = new CourseTemplate { Id = Guid.Parse("30000000-0000-0000-0000-000000000001"), TenantId = tenantId, Name = "Junior Robotics — Level 1", Track = "robotics", Type = "hard", AgeGroup = "8-12", Level = "beginner", TotalSessions = 8, SessionDurationHours = 1.5m, BasePricePiastres = 320000, Status = "PUBLISHED" };
         var offering = new CourseOffering { Id = Guid.Parse("40000000-0000-0000-0000-000000000001"), TenantId = tenantId, BranchId = mainBranchId, CourseTemplateId = template.Id, InstructorId = users[9].Id, ClassroomId = classroomMain.Id, StartDate = new DateOnly(2026, 10, 1), EndDate = new DateOnly(2026, 11, 30), WeeklyScheduleJson = "{\"days\":[\"SATURDAY\"],\"start\":\"10:00\",\"end\":\"11:30\"}", Status = "ACTIVE", MaxStudents = 12 };
 
-        var session1 = new AcademySession { Id = Guid.Parse("50000000-0000-0000-0000-000000000001"), TenantId = tenantId, BranchId = mainBranchId, CourseOfferingId = offering.Id, SessionNumber = 1, StartAt = new DateTimeOffset(2026, 10, 3, 10, 0, 0, TimeSpan.Zero), EndAt = new DateTimeOffset(2026, 10, 3, 11, 30, 0, TimeSpan.Zero), InstructorId = users[9].Id, ClassroomId = classroomMain.Id, Type = "REGULAR", Status = "SCHEDULED" };
+        var session1 = new AcademySession { Id = Guid.Parse("50000000-0000-0000-0000-000000000001"), TenantId = tenantId, BranchId = mainBranchId, CourseOfferingId = offering.Id, SessionNumber = 1, StartAt = new DateTimeOffset(2026, 10, 3, 10, 0, 0, TimeSpan.Zero), EndAt = new DateTimeOffset(2026, 10, 3, 11, 30, 0, TimeSpan.Zero), InstructorId = users[9].Id, ClassroomId = classroomMain.Id, Type = "REGULAR", Status = "COMPLETED", CompletedAt = new DateTimeOffset(2026, 10, 3, 11, 45, 0, TimeSpan.Zero) };
         var session2 = new AcademySession { Id = Guid.Parse("50000000-0000-0000-0000-000000000002"), TenantId = tenantId, BranchId = mainBranchId, CourseOfferingId = offering.Id, SessionNumber = 2, StartAt = new DateTimeOffset(2026, 10, 10, 10, 0, 0, TimeSpan.Zero), EndAt = new DateTimeOffset(2026, 10, 10, 11, 30, 0, TimeSpan.Zero), InstructorId = users[9].Id, ClassroomId = classroomMain.Id, Type = "REGULAR", Status = "SCHEDULED" };
         var session3 = new AcademySession { Id = Guid.Parse("50000000-0000-0000-0000-000000000003"), TenantId = tenantId, BranchId = mainBranchId, CourseOfferingId = offering.Id, SessionNumber = 3, StartAt = new DateTimeOffset(2026, 9, 26, 10, 0, 0, TimeSpan.Zero), EndAt = new DateTimeOffset(2026, 9, 26, 11, 30, 0, TimeSpan.Zero), InstructorId = users[9].Id, ClassroomId = classroomMain.Id, Type = "REGULAR", Status = "COMPLETED", CompletedAt = new DateTimeOffset(2026, 9, 26, 11, 45, 0, TimeSpan.Zero) };
         var kit = new Kit { Id = Guid.Parse("60000000-0000-0000-0000-000000000001"), TenantId = tenantId, BranchId = mainBranchId, Name = "MRT Essential Kit", QuantityAvailable = 18, TrackIndividually = false };
@@ -88,6 +88,7 @@ public static class DemoDataSeeder
         db.AddRange(attendance);
         db.Add(new StudentAccountLink { Id = Guid.Parse("91000000-0000-0000-0000-000000000001"), TenantId = tenantId, StudentId = students[1].Id, UserAccountId = users[11].Id, CreatedByUserId = users[1].Id });
         db.Add(new GuardianStudentLink { Id = Guid.Parse("92000000-0000-0000-0000-000000000001"), TenantId = tenantId, StudentId = students[0].Id, UserAccountId = users[10].Id, CreatedByUserId = users[1].Id, Relationship = "ولي الأمر", Status = "ACTIVE" });
+        db.Add(new GuardianStudentLink { Id = Guid.Parse("92000000-0000-0000-0000-000000000002"), TenantId = tenantId, StudentId = students[2].Id, UserAccountId = users[10].Id, CreatedByUserId = users[1].Id, Relationship = "ولي الأمر", Status = "ACTIVE" });
         db.Add(new SessionEvaluation { Id = Guid.Parse("93000000-0000-0000-0000-000000000001"), SessionId = session3.Id, StudentId = students[0].Id, InstructorId = users[9].Id, Score = 88, Notes = "تقدم واضح في التطبيق العملي", Status = "PUBLISHED", SubmittedAt = new DateTimeOffset(2026, 9, 26, 12, 0, 0, TimeSpan.Zero), ReviewedByUserId = users[3].Id, ReviewedAt = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero), PublishedAt = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero) });
         db.Add(new StateTransitionEvent { Id = Guid.Parse("94000000-0000-0000-0000-000000000001"), AggregateType = "SESSION_EVALUATION", AggregateId = "93000000-0000-0000-0000-000000000001", FromState = "SUBMITTED", ToState = "PUBLISHED", ActorUserId = users[3].Id });
         if (!await db.Leads.AnyAsync(item => item.TenantId == tenantId, cancellationToken))
@@ -183,7 +184,15 @@ public static class DemoDataSeeder
             db.GuardianStudentLinks.Add(new GuardianStudentLink { Id = Guid.Parse("92000000-0000-0000-0000-000000000001"), TenantId = tenantId, StudentId = firstStudentId, UserAccountId = parentId, CreatedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000002"), Relationship = "ولي الأمر", Status = "ACTIVE" });
         var thirdStudentId = Guid.Parse("70000000-0000-0000-0000-000000000003");
         var fourthStudentId = Guid.Parse("70000000-0000-0000-0000-000000000004");
+        if (!await db.GuardianStudentLinks.AnyAsync(item => item.StudentId == thirdStudentId && item.UserAccountId == parentId, cancellationToken))
+            db.GuardianStudentLinks.Add(new GuardianStudentLink { Id = Guid.Parse("92000000-0000-0000-0000-000000000002"), TenantId = tenantId, StudentId = thirdStudentId, UserAccountId = parentId, CreatedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000002"), Relationship = "ولي الأمر", Status = "ACTIVE" });
         var session1Id = Guid.Parse("50000000-0000-0000-0000-000000000001");
+        var s1Entity = await db.AcademySessions.SingleOrDefaultAsync(x => x.Id == session1Id, cancellationToken);
+        if (s1Entity is not null && s1Entity.Status != "COMPLETED")
+        {
+            s1Entity.Status = "COMPLETED";
+            s1Entity.CompletedAt = new DateTimeOffset(2026, 10, 3, 11, 45, 0, TimeSpan.Zero);
+        }
         var heliopolisBranchId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
         var helioClassroomId = Guid.Parse("20000000-0000-0000-0000-000000000002");
         var helioStudentId = Guid.Parse("70000000-0000-0000-0000-000000000007");
