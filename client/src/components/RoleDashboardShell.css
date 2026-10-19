@@ -34,6 +34,31 @@
   flex-direction: column;
 }
 
+/* Full width page layout next to sidebar across all roles */
+.role-dashboard-shell .workspace,
+.role-dashboard-shell .workspace-main,
+.role-dashboard-shell .r1-live-page,
+.role-dashboard-shell .secretary-live-workspace,
+.role-dashboard-shell .finance-desk-content,
+.role-dashboard-shell .family-portal-content,
+.role-dashboard-shell .student-content {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 24px 34px 36px !important;
+  box-sizing: border-box !important;
+}
+
+/* Ensure topbar is 100% width and aligns perfectly with content padding */
+.role-dashboard-shell .topbar,
+.role-dashboard-shell .r1-live-topbar,
+.role-dashboard-shell .family-portal-topbar,
+.role-dashboard-shell .student-topbar {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding-inline: 34px !important;
+}
+
 .shell-mobile-trigger {
   display: none;
 }

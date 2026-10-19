@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   CircleHelp,
+  CreditCard,
   GraduationCap,
   Home,
   KeyRound,
@@ -58,6 +59,7 @@ const ICON_BY_PATH: Record<string, ComponentType<LucideProps>> = {
   "/secretary-desk": CalendarCheck,
   "/finance": Wallet,
   "/finance-desk": Wallet,
+  "/finance-desk#collections": CreditCard,
   "/finance-desk#expenses": TrendingDown,
   "/finance-desk#shifts": Banknote,
   "/finance-desk#payroll": UserCheck,
@@ -205,6 +207,9 @@ export default function RoleSidebar({
     if (effectiveRoleCode === "R09") {
       return ["/student-portal", "/student-portal#sessions"].includes(item.path);
     }
+    if (effectiveRoleCode === "R06") {
+      return ["/finance-desk", "/finance-desk#collections", "/finance-desk#expenses"].includes(item.path);
+    }
     return !["/approvals", "/reports", "/competitions"].includes(item.path) && !item.path.includes("#");
   });
 
@@ -214,6 +219,9 @@ export default function RoleSidebar({
     }
     if (effectiveRoleCode === "R09") {
       return ["/student-portal#progress"].includes(item.path);
+    }
+    if (effectiveRoleCode === "R06") {
+      return ["/finance-desk#shifts", "/finance-desk#payroll", "/approvals", "/reports"].includes(item.path);
     }
     return ["/approvals", "/reports", "/competitions"].includes(item.path) || item.path.includes("#");
   });
@@ -225,6 +233,8 @@ export default function RoleSidebar({
       ? "المتابعة الأكاديمية"
       : effectiveRoleCode === "R09"
       ? "المساحة التعليمية"
+      : effectiveRoleCode === "R06"
+      ? "المالية والتحصيل"
       : "القائمة الرئيسية";
 
   const secondaryCaption =
@@ -232,6 +242,8 @@ export default function RoleSidebar({
       ? "الخدمات والماليات"
       : effectiveRoleCode === "R09"
       ? "الإنجازات والتقدم"
+      : effectiveRoleCode === "R06"
+      ? "العمليات والتقارير"
       : "العمليات والأدوات";
 
   return (
