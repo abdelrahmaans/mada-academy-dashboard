@@ -26,7 +26,9 @@
 .role-dashboard-shell > main,
 .role-dashboard-shell > .main-panel,
 .role-dashboard-shell > .comp-workspace,
-.role-dashboard-shell > .workspace-main {
+.role-dashboard-shell > .workspace-main,
+.app-shell > main,
+.app-shell > .main-panel {
   min-width: 0;
   width: 100%;
   min-height: 100vh;
@@ -41,10 +43,34 @@
 .role-dashboard-shell .secretary-live-workspace,
 .role-dashboard-shell .finance-desk-content,
 .role-dashboard-shell .family-portal-content,
-.role-dashboard-shell .student-content {
+.role-dashboard-shell .student-content,
+.role-dashboard-shell .family-portal-page,
+.role-dashboard-shell .student-portal-page,
+.role-dashboard-shell .instructor-content,
+.role-dashboard-shell .academic-content,
+.role-dashboard-shell .academy-owner-content,
+.role-dashboard-shell .pc-content,
+.role-dashboard-shell .pc-live-content,
+.role-dashboard-shell .r03-live-page,
+.app-shell .workspace,
+.app-shell .workspace-main,
+.app-shell .r1-live-page,
+.app-shell .secretary-live-workspace,
+.app-shell .finance-desk-content,
+.app-shell .family-portal-content,
+.app-shell .student-content,
+.app-shell .family-portal-page,
+.app-shell .student-portal-page,
+.app-shell .instructor-content,
+.app-shell .academic-content,
+.app-shell .academy-owner-content,
+.app-shell .pc-content,
+.app-shell .pc-live-content,
+.app-shell .r03-live-page {
   width: 100% !important;
   max-width: 100% !important;
   margin: 0 !important;
+  margin-inline: 0 !important;
   padding: 24px 34px 36px !important;
   box-sizing: border-box !important;
 }
@@ -53,7 +79,11 @@
 .role-dashboard-shell .topbar,
 .role-dashboard-shell .r1-live-topbar,
 .role-dashboard-shell .family-portal-topbar,
-.role-dashboard-shell .student-topbar {
+.role-dashboard-shell .student-topbar,
+.app-shell .topbar,
+.app-shell .r1-live-topbar,
+.app-shell .family-portal-topbar,
+.app-shell .student-topbar {
   width: 100% !important;
   box-sizing: border-box !important;
   padding-inline: 34px !important;

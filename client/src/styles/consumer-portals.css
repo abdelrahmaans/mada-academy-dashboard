@@ -2,12 +2,13 @@
 
 :where(.family-portal-page, .student-portal-page) {
   width: 100%;
-  max-width: 1380px;
-  margin: 0 auto;
-  padding: clamp(20px, 3vw, 36px) clamp(16px, 3vw, 40px) 60px;
+  max-width: 100%;
+  margin: 0;
+  padding: 24px 34px 60px;
   color: #1e293b;
   font-family: Cairo, Inter, system-ui, sans-serif;
   direction: rtl;
+  box-sizing: border-box;
 }
 
 /* Page Header & Welcome Banner */

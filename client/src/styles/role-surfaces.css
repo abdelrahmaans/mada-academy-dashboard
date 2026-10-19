@@ -3,7 +3,7 @@
 :where(.family-portal,.student-portal) { display:grid; grid-template-columns:260px minmax(0,1fr); direction:rtl; }
 :where(.family-portal-sidebar,.student-portal-sidebar) { position:sticky; top:0; height:100vh; padding:24px 18px; background:#10283a; color:#fff; display:flex; flex-direction:column; gap:18px; z-index:10; }
 :where(.family-portal-main,.student-portal-main) { min-width:0; min-height:100vh; }
-:where(.family-portal-content,.student-content) { max-width:1440px; margin:auto; padding:30px clamp(18px,4vw,56px) 48px; }
+:where(.family-portal-content,.student-content) { width:100%; max-width:100%; margin:0; padding:24px 34px 48px; box-sizing:border-box; }
 :where(.family-portal-nav,.student-nav) { display:grid; gap:6px; }
 :where(.family-portal-nav button,.student-nav button) { display:flex; align-items:center; gap:10px; width:100%; padding:11px 12px; border:0; border-radius:12px; background:transparent; color:#d8e6ee; text-align:right; cursor:pointer; }
 :where(.family-portal-nav button:hover,.student-nav button:hover,.family-portal-nav button.active,.student-nav button.active) { background:#1d5269; color:#fff; }

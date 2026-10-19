@@ -79,11 +79,13 @@
 }
 
 .pc-live-content {
-  width: min(1320px, 100%);
-  margin: 0 auto;
-  padding: 24px 30px 40px;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 24px 34px 40px;
   display: grid;
   gap: 18px;
+  box-sizing: border-box;
 }
 
 .pc-live-eyebrow {
