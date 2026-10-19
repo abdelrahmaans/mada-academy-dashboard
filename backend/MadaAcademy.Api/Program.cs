@@ -148,8 +148,34 @@ app.MapMadaAnalyticsEndpoints();
 app.MapMadaCompetitionEndpoints();
 
 app.MapMadaAuthEndpoints();
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || builder.Configuration["MADA_ENABLE_DEV_ENDPOINTS"] == "true")
+{
     app.MapMadaDevelopmentAuthEndpoints();
+    app.MapPost("/api/v1/dev/reset-and-seed", async (MadaDbContext db, CancellationToken cancellationToken) =>
+    {
+        await DemoDataSeeder.ResetAndSeedAsync(db, cancellationToken);
+        return Results.Ok(new
+        {
+            success = true,
+            message = "تم تصفية وتفريغ قاعدة البيانات وإعادة زرع البيانات التجريبية الشاملة بنجاح.",
+            defaultPassword = "Mada@2026",
+            logins = new[]
+            {
+                new { role = "R00_PLATFORM_ADMIN", phone = "+201000000001", name = "أ. عبد الرحمن شريف (مسؤول المنصة)" },
+                new { role = "R01_ACADEMY_OWNER", phone = "+201000000002", name = "د. أحمد البشبيشي (مالك الأكاديمية)" },
+                new { role = "R02_BRANCH_MANAGER", phone = "+201000000003", name = "م. كريم الشناوي (مدير فرع المعادي)" },
+                new { role = "R03_HEAD_INSTRUCTORS", phone = "+201000000004", name = "م. مريم حسن (كبير المدربين)" },
+                new { role = "R04_INSTRUCTOR", phone = "+201000000010", name = "ك. عمر سامح (مدرب الروبوتكس)" },
+                new { role = "R04_SUBSTITUTE", phone = "+201000000013", name = "ك. يوسف عماد (مدرب البرمجة والبديل)" },
+                new { role = "R05_SECRETARY", phone = "+201000000005", name = "أ. هبة محمود (سكرتارية المعادي)" },
+                new { role = "R06_ACCOUNTANT", phone = "+201000000006", name = "أ. أحمد ممدوح (محاسب المعادي)" },
+                new { role = "R07_MEDIA_MANAGER", phone = "+201000000007", name = "أ. سلمى عادل (مسؤول الميديا والتسويق)" },
+                new { role = "R08_PARENT", phone = "+201000000011", name = "م. أحمد كمال (ولي أمر يوسف)" },
+                new { role = "R09_STUDENT", phone = "+201000000012", name = "لينة عمر (طالبة)" }
+            }
+        });
+    }).AllowAnonymous();
+}
 
 app.MapGet("/api/v1/tenants/{tenantId:guid}/scope-check", (Guid tenantId, HttpContext context) =>
 {

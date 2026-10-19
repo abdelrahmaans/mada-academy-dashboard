@@ -198,4 +198,28 @@ public sealed class DataGapsWorkflowTests
             Assert.Equal(ambassadorStudentId, newStudent.ReferredByStudentId);
         }
     }
+
+    [Fact]
+    public async Task ResetAndSeed_DevEndpoint_WipesAndReseeds_AllEntitiesCleanly()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var client = factory.CreateClient();
+
+        var res = await client.PostAsync("/api/v1/dev/reset-and-seed", null);
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+
+        // Assert all modules have seeded data
+        Assert.True(await db.Tenants.AnyAsync(t => t.Slug == "mada-demo-academy"));
+        Assert.True(await db.Branches.CountAsync() >= 2);
+        Assert.True(await db.UserAccounts.CountAsync() >= 12);
+        Assert.True(await db.Students.CountAsync() >= 6);
+        Assert.True(await db.SubscriptionFreezeRequests.AnyAsync(f => f.Status == "APPROVED"));
+        Assert.True(await db.Competitions.AnyAsync());
+        Assert.True(await db.CompetitionTeams.AnyAsync());
+        Assert.True(await db.CompetitionAwards.AnyAsync());
+        Assert.True(await db.AuditEvents.AnyAsync(a => a.Action == "CASHIER_SAFE_DEPOSIT"));
+    }
 }

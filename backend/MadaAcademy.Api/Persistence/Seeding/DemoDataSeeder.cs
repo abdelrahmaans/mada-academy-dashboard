@@ -13,6 +13,8 @@ public static class DemoDataSeeder
         {
             await EnsureCoreSliceAsync(db, existingTenant.Id, cancellationToken);
             await EnsureFinanceSliceAsync(db, existingTenant.Id, cancellationToken);
+            await EnsureCompetitionsSliceAsync(db, existingTenant.Id, cancellationToken);
+            await EnsureFreezesSliceAsync(db, existingTenant.Id, cancellationToken);
             return;
         }
 
@@ -138,6 +140,8 @@ public static class DemoDataSeeder
         await db.SaveChangesAsync(cancellationToken);
         await EnsureCoreSliceAsync(db, tenantId, cancellationToken);
         await EnsureFinanceSliceAsync(db, tenantId, cancellationToken);
+        await EnsureCompetitionsSliceAsync(db, tenantId, cancellationToken);
+        await EnsureFreezesSliceAsync(db, tenantId, cancellationToken);
     }
 
     private static async Task EnsureCoreSliceAsync(MadaDbContext db, Guid tenantId, CancellationToken cancellationToken)
@@ -323,6 +327,172 @@ public static class DemoDataSeeder
                 db.AuditEvents.Add(new AuditEvent { ActorUserId = approval.DecidedByUserId!.Value, TenantId = tenantId, BranchId = heliopolisBranchId, Action = "EXPENSE_APPROVED", TargetType = "EXPENSE", TargetId = heliopolisExpenseId.ToString(), Reason = reason });
         }
 
+        if (!await db.AuditEvents.AnyAsync(item => item.TenantId == tenantId && item.Action == "CASHIER_SAFE_DEPOSIT", cancellationToken))
+        {
+            db.AuditEvents.Add(new AuditEvent
+            {
+                TenantId = tenantId,
+                BranchId = mainBranchId,
+                ActorUserId = Guid.Parse("10000000-0000-0000-0000-000000000006"),
+                Action = "CASHIER_SAFE_DEPOSIT",
+                TargetType = "SAFE",
+                TargetId = mainBranchId.ToString(),
+                Reason = "توريد نقدية شفت الخزينة الصباحي إلى الخزينة الرئيسية بمبلغ 6400 جنيه",
+                CreatedAt = DateTimeOffset.UtcNow.AddDays(-1)
+            });
+        }
+
         await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static async Task EnsureCompetitionsSliceAsync(MadaDbContext db, Guid tenantId, CancellationToken cancellationToken)
+    {
+        var competitionId = Guid.Parse("c1000000-0000-0000-0000-000000000001");
+        if (!await db.Competitions.AnyAsync(c => c.Id == competitionId, cancellationToken))
+        {
+            var mainBranchId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+            var classroomId = Guid.Parse("20000000-0000-0000-0000-000000000001");
+            var kitId = Guid.Parse("60000000-0000-0000-0000-000000000001");
+            var coachId = Guid.Parse("10000000-0000-0000-0000-000000000010");
+            var student1Id = Guid.Parse("70000000-0000-0000-0000-000000000001");
+            var student2Id = Guid.Parse("70000000-0000-0000-0000-000000000002");
+
+            var competition = new Competition
+            {
+                Id = competitionId,
+                TenantId = tenantId,
+                Name = "بطولة الجمهورية للروبوتات WRO Egypt 2026",
+                Organizer = "الاتحاد المصري للروبوتات",
+                Season = "2026/2027",
+                Track = "robotics",
+                AgeMin = 8,
+                AgeMax = 15,
+                RegistrationDeadline = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(15)),
+                EventDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(30)),
+                Location = "القرية الذكية - صالة المؤتمرات",
+                Status = "ACTIVE",
+                Notes = "تأهيل للبطولة العربية",
+                CreatedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000002")
+            };
+
+            var team = new CompetitionTeam
+            {
+                Id = Guid.Parse("c2000000-0000-0000-0000-000000000001"),
+                TenantId = tenantId,
+                BranchId = mainBranchId,
+                CompetitionId = competition.Id,
+                Name = "Mada Robo Warriors",
+                CoachInstructorId = coachId,
+                ClassroomId = classroomId,
+                KitId = kitId,
+                ProjectTitle = "Autonomous Bot",
+                Status = "CONFIRMED"
+            };
+
+            var award = new CompetitionAward
+            {
+                Id = Guid.Parse("c3000000-0000-0000-0000-000000000001"),
+                TenantId = tenantId,
+                BranchId = mainBranchId,
+                CompetitionId = competition.Id,
+                TeamId = team.Id,
+                Title = "المركز الأول والكأس الذهبي في الفئة الهندسية",
+                Rank = 1,
+                AwardDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-10)),
+                IsPublishedToHallOfFame = true
+            };
+
+            db.Add(competition);
+            db.Add(team);
+            db.Add(new CompetitionTeamMember { TeamId = team.Id, StudentId = student1Id, RoleInTeam = "CAPTAIN", Status = "ACTIVE" });
+            db.Add(new CompetitionTeamMember { TeamId = team.Id, StudentId = student2Id, RoleInTeam = "PROGRAMMER", Status = "ACTIVE" });
+            db.Add(award);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    private static async Task EnsureFreezesSliceAsync(MadaDbContext db, Guid tenantId, CancellationToken cancellationToken)
+    {
+        var freezeId = Guid.Parse("f1000000-0000-0000-0000-000000000001");
+        if (!await db.SubscriptionFreezeRequests.AnyAsync(f => f.Id == freezeId, cancellationToken))
+        {
+            var mainBranchId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+            var studentId = Guid.Parse("70000000-0000-0000-0000-000000000003");
+            var offeringId = Guid.Parse("40000000-0000-0000-0000-000000000001");
+
+            db.SubscriptionFreezeRequests.Add(new SubscriptionFreezeRequest
+            {
+                Id = freezeId,
+                TenantId = tenantId,
+                BranchId = mainBranchId,
+                StudentId = studentId,
+                CourseOfferingId = offeringId,
+                StartDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-7)),
+                EndDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7)),
+                Reason = "MEDICAL",
+                ReasonText = "إجازة مرضية معتمدة وتقارير طبية",
+                Status = "APPROVED",
+                SubmittedByRole = "R08_PARENT",
+                SubmittedByName = "ولي الأمر",
+                AffectedSessionsCount = 2,
+                MakeUpCreditsAwarded = 2,
+                DecidedAt = DateTime.UtcNow.AddDays(-6),
+                DecidedByName = "Main Branch Manager",
+                DecisionNote = "معتمد وإضافة رصيد تعويض"
+            });
+            await db.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    public static async Task ResetAndSeedAsync(MadaDbContext db, CancellationToken cancellationToken = default)
+    {
+        if (db.Database.IsRelational())
+        {
+            await db.Database.ExecuteSqlRawAsync(@"
+                DO $$ DECLARE
+                    r RECORD;
+                BEGIN
+                    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = current_schema() AND tablename NOT LIKE '__EF%') LOOP
+                        EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' CASCADE';
+                    END LOOP;
+                END $$;
+            ", cancellationToken);
+        }
+        else
+        {
+            db.Competitions.RemoveRange(db.Competitions);
+            db.CompetitionTeams.RemoveRange(db.CompetitionTeams);
+            db.CompetitionTeamMembers.RemoveRange(db.CompetitionTeamMembers);
+            db.CompetitionAwards.RemoveRange(db.CompetitionAwards);
+            db.SubscriptionFreezeRequests.RemoveRange(db.SubscriptionFreezeRequests);
+            db.AuditEvents.RemoveRange(db.AuditEvents);
+            db.StateTransitions.RemoveRange(db.StateTransitions);
+            db.ApprovalRequests.RemoveRange(db.ApprovalRequests);
+            db.Expenses.RemoveRange(db.Expenses);
+            db.PaymentTransactions.RemoveRange(db.PaymentTransactions);
+            db.InvoiceLines.RemoveRange(db.InvoiceLines);
+            db.Invoices.RemoveRange(db.Invoices);
+            db.SessionEvaluations.RemoveRange(db.SessionEvaluations);
+            db.SessionAttendances.RemoveRange(db.SessionAttendances);
+            db.KitAssignments.RemoveRange(db.KitAssignments);
+            db.Kits.RemoveRange(db.Kits);
+            db.AcademySessions.RemoveRange(db.AcademySessions);
+            db.StudentEnrollments.RemoveRange(db.StudentEnrollments);
+            db.CourseOfferings.RemoveRange(db.CourseOfferings);
+            db.CourseTemplates.RemoveRange(db.CourseTemplates);
+            db.Classrooms.RemoveRange(db.Classrooms);
+            db.GuardianStudentLinks.RemoveRange(db.GuardianStudentLinks);
+            db.StudentAccountLinks.RemoveRange(db.StudentAccountLinks);
+            db.Students.RemoveRange(db.Students);
+            db.Leads.RemoveRange(db.Leads);
+            db.MarketingCampaigns.RemoveRange(db.MarketingCampaigns);
+            db.Memberships.RemoveRange(db.Memberships);
+            db.Branches.RemoveRange(db.Branches);
+            db.Tenants.RemoveRange(db.Tenants);
+            db.UserAccounts.RemoveRange(db.UserAccounts);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        await SeedAsync(db, cancellationToken);
     }
 }

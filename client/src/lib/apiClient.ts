@@ -903,6 +903,8 @@ export const apiClient = {
   },
   depositCashierSafe: (input: { amountPiastres: number; notes?: string }) =>
     request<{ success: boolean; depositedPiastres: number; timestamp: string }>("/finance/cashier/deposit-to-safe", { method: "POST", body: JSON.stringify(input) }),
+  resetAndSeedDemoData: () =>
+    request<{ success: boolean; message: string; defaultPassword: string; logins: Array<{ role: string; phone: string; name: string }> }>("/dev/reset-and-seed", { method: "POST" }),
   logout: async () => {
     const refreshToken = localStorage.getItem(REFRESH_KEY);
     if (refreshToken && accessToken) await request<void>("/auth/logout", { method: "POST", body: JSON.stringify({ refreshToken }) }, false).catch(() => undefined);
