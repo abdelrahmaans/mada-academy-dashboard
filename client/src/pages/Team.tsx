@@ -29,7 +29,9 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import RoleSidebar from "@/components/RoleSidebar";
+import RoleDashboardShell from "@/components/RoleDashboardShell";
+import { getRoleDefinition } from "@/lib/roleNavigation";
+import { useAuth } from "@/contexts/AuthContext";
 import { TeamManagementViews } from "@/components/TeamManagementViews";
 import {
   ROLE_BY_CODE,
@@ -272,17 +274,25 @@ export default function Team() {
     toast.success("تم تنزيل نسخة CSV من الفريق الظاهر");
   };
 
-  return (
-    <div className="app-shell" dir="rtl">
-      {mobileNavOpen && (
-        <button
-          className="mobile-scrim"
-          aria-label="إغلاق القائمة"
-          onClick={() => setMobileNavOpen(false)}
-        />
-      )}
-      <RoleSidebar mobileOpen={mobileNavOpen} onCloseMobile={() => setMobileNavOpen(false)} />
+  const { me } = useAuth();
+  const userRoleCode = me?.role ? (me.role.replace(/_.*$/, "") as RoleCode) : undefined;
+  const activeRoleCode: RoleCode = userRoleCode || "R02";
+  const roleDef = getRoleDefinition(activeRoleCode);
+  const branchContext = me?.branchId ? me.branches?.find(b => b.id === me.branchId)?.name : branch;
 
+  return (
+    <RoleDashboardShell
+      className="app-shell team-shell"
+      roleCode={activeRoleCode}
+      roleLabel={me?.roleLabel || roleDef.label}
+      scopeLevel={roleDef.scopeLevel}
+      scopeLabel={roleDef.defaultScopeLabel}
+      tenantName={me?.academy?.name}
+      branchName={branchContext}
+      demo
+      mobileOpen={mobileNavOpen}
+      onCloseMobile={() => setMobileNavOpen(false)}
+    >
       <main className="main-panel">
         <header className="topbar">
           <div className="topbar-right">
@@ -411,6 +421,6 @@ export default function Team() {
           />
         </div>
       </main>
-    </div>
+    </RoleDashboardShell>
   );
 }

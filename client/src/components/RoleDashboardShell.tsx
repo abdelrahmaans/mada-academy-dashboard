@@ -46,24 +46,23 @@ type RoleDashboardShellProps = Omit<HTMLAttributes<HTMLDivElement>, "role"> & {
   demo?: boolean;
   hideSidebar?: boolean;
   showSessionLogout?: boolean;
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
 };
 
 function hasSidebarElement(nodes: ReactNode): boolean {
   return Children.toArray(nodes).some(child => {
     if (!isValidElement(child)) return false;
-    if (child.type === "aside") return true;
+    if (child.type === "aside") {
+      const cls = String((child.props as { className?: string })?.className || "");
+      if (cls.includes("sidebar") && !cls.includes("panel") && !cls.includes("detail") && !cls.includes("secondary")) return true;
+      return false;
+    }
     const type = child.type as any;
     if (typeof type === "function" || typeof type === "object") {
       if (type?.isSidebar || type?.__madaSidebar) return true;
       const fnName = type?.displayName || type?.name || "";
-      if (typeof fnName === "string" && fnName.toLowerCase().includes("sidebar")) return true;
-    }
-    if (typeof child.props === "object" && child.props !== null) {
-      const cls = String((child.props as { className?: string }).className || "");
-      if (cls.includes("sidebar")) return true;
-      if ("children" in child.props && child.props.children) {
-        if (hasSidebarElement(child.props.children as ReactNode)) return true;
-      }
+      if (typeof fnName === "string" && (fnName === "RoleSidebar" || fnName === "BranchManagerSidebar" || fnName === "R01AcademySidebar" || fnName === "R03HeadInstructorsSidebar")) return true;
     }
     return false;
   });
@@ -82,10 +81,21 @@ export default function RoleDashboardShell({
   demo = true,
   hideSidebar = false,
   showSessionLogout = false,
+  mobileOpen,
+  onCloseMobile,
   ...props
 }: RoleDashboardShellProps) {
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [internalMobileNavOpen, setInternalMobileNavOpen] = useState(false);
+  const isMobileNavOpen = mobileOpen !== undefined ? mobileOpen : internalMobileNavOpen;
   const roleDefinition = getRoleDefinition(roleCode);
+
+  const handleOpenMobile = () => {
+    setInternalMobileNavOpen(true);
+  };
+  const handleCloseMobile = () => {
+    setInternalMobileNavOpen(false);
+    onCloseMobile?.();
+  };
 
   const hasChildrenSidebar = hasSidebarElement(children);
   const shouldRenderSidebar = !hideSidebar && !hasChildrenSidebar;
@@ -121,9 +131,9 @@ export default function RoleDashboardShell({
     >
       <RoleShellContext.Provider
         value={{
-          mobileNavOpen,
-          openMobileNav: () => setMobileNavOpen(true),
-          closeMobileNav: () => setMobileNavOpen(false),
+          mobileNavOpen: isMobileNavOpen,
+          openMobileNav: handleOpenMobile,
+          closeMobileNav: handleCloseMobile,
         }}
       >
         <div
@@ -142,12 +152,12 @@ export default function RoleDashboardShell({
           {/* Logout is exclusively located in the sidebar navigation */}
           {shouldRenderSidebar && (
             <>
-              {mobileNavOpen && (
+              {isMobileNavOpen && (
                 <button
                   type="button"
                   className="mobile-scrim"
                   aria-label="إغلاق القائمة"
-                  onClick={() => setMobileNavOpen(false)}
+                  onClick={handleCloseMobile}
                 />
               )}
               <RoleSidebar
@@ -156,14 +166,14 @@ export default function RoleDashboardShell({
                 tenantName={tenantName}
                 branchName={branchName}
                 scopeLabel={scopeLabel}
-                mobileOpen={mobileNavOpen}
-                onCloseMobile={() => setMobileNavOpen(false)}
+                mobileOpen={isMobileNavOpen}
+                onCloseMobile={handleCloseMobile}
               />
               <button
                 type="button"
                 className="shell-mobile-trigger"
                 aria-label="فتح القائمة الرئيسية"
-                onClick={() => setMobileNavOpen(true)}
+                onClick={handleOpenMobile}
               >
                 <Menu size={22} />
               </button>

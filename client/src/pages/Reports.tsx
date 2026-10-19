@@ -33,7 +33,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { apiClient } from "@/lib/apiClient";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleSidebar from "@/components/RoleSidebar";
-import { getRoleBackPath } from "@/lib/roleNavigation";
+import { getRoleBackPath, getRoleDefinition } from "@/lib/roleNavigation";
+import type { RoleCode } from "@/contexts/RoleScopeContext";
 import ReportsLive from "./ReportsLive";
 
 type Branch = "مدينة نصر";
@@ -211,19 +212,25 @@ function ReportsPreview() {
   const formatMoney = (value: number) =>
     new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
 
+  const { me } = useAuth();
+  const userRoleCode = me?.role ? (me.role.replace(/_.*$/, "") as RoleCode) : undefined;
+  const activeRoleCode: RoleCode = userRoleCode || "R02";
+  const roleDef = getRoleDefinition(activeRoleCode);
+  const branchContext = me?.branchId ? me.branches?.find(b => b.id === me.branchId)?.name : branch;
+
   return (
     <RoleDashboardShell
       className="app-shell reports-preview-shell"
-      hideSidebar
-      roleCode="R02"
-      roleLabel="مدير الفرع"
-      scopeLevel="branch"
-      scopeLabel="فرع واحد · بيانات توضيحية"
-      tenantName="أكاديمية مدى"
-      branchName={branch}
+      roleCode={activeRoleCode}
+      roleLabel={me?.roleLabel || roleDef.label}
+      scopeLevel={roleDef.scopeLevel}
+      scopeLabel={roleDef.defaultScopeLabel}
+      tenantName={me?.academy?.name || "أكاديمية مدى"}
+      branchName={branchContext}
       demo
+      mobileOpen={mobileNavOpen}
+      onCloseMobile={() => setMobileNavOpen(false)}
     >
-      <RoleSidebar roleCode="R02" mobileOpen={mobileNavOpen} onCloseMobile={() => setMobileNavOpen(false)} />
       <main className="main-panel">
         <header className="topbar">
           <div className="topbar-right">

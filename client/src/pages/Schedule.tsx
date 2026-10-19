@@ -926,13 +926,13 @@ function SchedulePage() {
     { key: "cancelled", label: "ملغاة" },
   ];
 
-  const roleCode = me?.role === "R03_HEAD_INSTRUCTORS" ? "R03" : me?.role === "R04_INSTRUCTOR" ? "R04" : me?.role === "R05_SECRETARY" ? "R05" : "R02";
+  const userRoleCode = me?.role ? (me.role.replace(/_.*$/, "") as RoleCode) : undefined;
+  const roleCode: RoleCode = userRoleCode || "R02";
   const roleDefinition = getRoleDefinition(roleCode);
 
   return (
     <RoleDashboardShell
       className="app-shell schedule-shell"
-      hideSidebar
       roleCode={roleCode}
       roleLabel={me?.roleLabel || roleDefinition.label}
       scopeLevel={roleDefinition.scopeLevel}
@@ -940,10 +940,9 @@ function SchedulePage() {
       tenantName={me?.academy?.name}
       branchName={me?.branchId ? me.branches?.find(branchItem => branchItem.id === me.branchId)?.name : undefined}
       demo={!liveMode}
+      mobileOpen={mobileNavOpen}
+      onCloseMobile={() => setMobileNavOpen(false)}
     >
-      <RoleSidebar roleCode={roleCode} roleLabel={me?.roleLabel || roleDefinition.label} mobileOpen={mobileNavOpen} onCloseMobile={() => setMobileNavOpen(false)} />
-
-
       <main className="main-panel">
         <header className="topbar">
           <div className="topbar-right">
