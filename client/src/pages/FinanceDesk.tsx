@@ -936,6 +936,9 @@ export default function FinanceDesk() {
                 <option>الشيخ زايد</option>
               </select>
             </label>
+          </div>
+
+          <div className="topbar-left">
             <button
               type="button"
               className="finance-topbar-info-btn"
