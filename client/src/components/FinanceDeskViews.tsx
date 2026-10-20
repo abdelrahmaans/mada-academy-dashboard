@@ -67,17 +67,21 @@ export const EXPENSE_LABEL: Record<ExpenseStatus, string> = {
 };
 
 export function money(value: number) {
+  const num = typeof value === "number" && !isNaN(value) ? value : 0;
   return new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 2,
-  }).format(value);
+  }).format(num);
 }
 
 export function invoiceStatus(invoice: Invoice): InvoiceStatus {
+  if (!invoice) return "unpaid";
   if (invoice.status) return invoice.status;
-  if (invoice.collected >= invoice.total) return "paid";
-  if (invoice.collected === 0 && invoice.due.includes("سبتمبر"))
+  const collected = typeof invoice.collected === "number" ? invoice.collected : 0;
+  const total = typeof invoice.total === "number" ? invoice.total : 0;
+  if (collected >= total && total > 0) return "paid";
+  if (invoice.due && typeof invoice.due === "string" && invoice.due.includes("سبتمبر") && collected === 0)
     return "overdue";
-  return invoice.collected > 0 ? "partial" : "unpaid";
+  return collected > 0 ? "partial" : "unpaid";
 }
 
 export function NavButton({
@@ -163,12 +167,13 @@ export function Overview({
   onCreateInvoice?: () => void;
   scopeHint: string;
 }) {
-  const submittedShifts = handovers.filter(h => h.status === "SUBMITTED");
-  const waitingExpenses = pendingExpenses.filter(e => e.status === "pending");
-  const payablePayrolls = payrolls.filter(p => p.status === "SUBMITTED");
-  const totalPayrollObligations = payablePayrolls.reduce((sum, p) => sum + p.netPayable, 0);
+  const submittedShifts = (handovers || []).filter(h => h && h.status === "SUBMITTED");
+  const waitingExpenses = (pendingExpenses || []).filter(e => e && e.status === "pending");
+  const payablePayrolls = (payrolls || []).filter(p => p && p.status === "SUBMITTED");
+  const totalPayrollObligations = payablePayrolls.reduce((sum, p) => sum + (p.netPayable || 0), 0);
 
-  const overdueInvoices = invoices.filter(inv => {
+  const overdueInvoices = (invoices || []).filter(inv => {
+    if (!inv) return false;
     const status = invoiceStatus(inv);
     return status === "overdue" || status === "unpaid" || status === "partial";
   });
@@ -315,10 +320,10 @@ export function Overview({
                     <div key={shift.id} className="finance-action-item">
                       <div className="finance-action-item-info">
                         <strong>
-                          وردية {shift.id} · {shift.receptionistName}
+                          وردية {shift.id} · {shift.submittedByName || shift.submittedByUserId || "موظف الاستقبال"}
                         </strong>
                         <small>
-                          فرع {shift.branchName} · الكاش المحصل:{" "}
+                          فرع {shift.branchName || "الفرع"} · الكاش المحصل:{" "}
                           <b style={{ color: "#0f766e" }}>{money(shift.cashAmount)} ج.م</b>
                           {shift.status === "DISCREPANCY" && (
                             <span style={{ color: "#dc2626", marginInlineStart: 6 }}>
@@ -480,11 +485,11 @@ export function Overview({
                     <div key={inv.id} className="finance-action-item">
                       <div className="finance-action-item-info">
                         <strong>
-                          {inv.student} · {inv.course}
+                          {inv.student || "طالب"} {inv.course ? `· ${inv.course}` : ""}
                         </strong>
                         <small>
-                          فرع {inv.branch} · المتبقي:{" "}
-                          <b style={{ color: "#b91c1c" }}>{money(inv.total - inv.collected)} ج.م</b>
+                          فرع {inv.branch || ""} · المتبقي:{" "}
+                          <b style={{ color: "#b91c1c" }}>{money((inv.total || 0) - (inv.collected || 0))} ج.م</b>
                         </small>
                       </div>
                       <div className="finance-action-item-actions">

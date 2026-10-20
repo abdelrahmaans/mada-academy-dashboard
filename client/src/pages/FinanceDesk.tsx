@@ -1011,15 +1011,15 @@ export default function FinanceDesk() {
           )}
           {(!liveMode || workspaceState === "ready") && view === "overview" && (
             <Overview
-              collected={collected}
-              outstanding={outstanding}
-              expenses={approvedExpenses}
-              net={net}
-              pending={pendingCount}
-              handovers={handovers}
-              payrolls={payrolls}
-              invoices={scopedInvoices}
-              pendingExpenses={scopedExpenses}
+              collected={collected || 0}
+              outstanding={outstanding || 0}
+              expenses={approvedExpenses || 0}
+              net={net || 0}
+              pending={pendingCount || 0}
+              handovers={handovers || []}
+              payrolls={payrolls || []}
+              invoices={scopedInvoices || []}
+              pendingExpenses={scopedExpenses || []}
               onCollections={() => selectView("collections")}
               onExpenses={() => selectView("expenses")}
               onReports={() => selectView("reports")}
