@@ -936,9 +936,16 @@ export default function FinanceDesk() {
                 <option>الشيخ زايد</option>
               </select>
             </label>
-            <span className="finance-desk-scope">
-              <ShieldCheck size={14} /> نطاق الفروع المصرح بها · فصل الإنشاء عن الاعتماد
-            </span>
+            <button
+              type="button"
+              className="finance-topbar-info-btn"
+              onClick={() => setShowScopeInfo(true)}
+              title="السياسات والضوابط المالية ونطاق الدور"
+              aria-label="السياسات والضوابط المالية ونطاق الدور"
+            >
+              <Info size={15} />
+              <span>السياسات والضوابط</span>
+            </button>
           </div>
         </header>
         <div className="workspace finance-desk-content">
@@ -954,26 +961,14 @@ export default function FinanceDesk() {
             title={VIEW_TITLES[view]}
             description={VIEW_COPY[view]}
             actions={
-              <div className="finance-desk-header-actions">
-                <span className="finance-desk-date">
-                  <CalendarDays size={14} />
-                  {new Intl.DateTimeFormat("ar-EG", {
-                    month: "long",
-                    year: "numeric",
-                  }).format(new Date())}{" "}
-                  · {branchContext}
-                </span>
-                <button
-                  type="button"
-                  className="finance-info-trigger"
-                  onClick={() => setShowScopeInfo(true)}
-                  title="السياسات والضوابط المالية ونطاق الحساب"
-                  aria-label="السياسات والضوابط المالية"
-                >
-                  <Info size={15} />
-                  <span>السياسات والنطاق</span>
-                </button>
-              </div>
+              <span className="finance-desk-date">
+                <CalendarDays size={14} />
+                {new Intl.DateTimeFormat("ar-EG", {
+                  month: "long",
+                  year: "numeric",
+                }).format(new Date())}{" "}
+                · {branchContext}
+              </span>
             }
           />
           {liveMode && workspaceState === "loading" && (
