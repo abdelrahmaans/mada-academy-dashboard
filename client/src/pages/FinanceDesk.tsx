@@ -64,6 +64,7 @@ import {
   apiClient,
   shiftStorage,
   payrollStorage,
+  generateTrainerSessions,
   type AuthMe,
   type FinanceExpense,
   type FinanceInvoice,
@@ -341,6 +342,7 @@ export default function FinanceDesk() {
                 deductionAmount: 0,
                 netPayable: netPayable,
                 status: "SUBMITTED" as const,
+                sessions: generateTrainerSessions(item.instructorId, item.instructorName, item.completedSessions, ratePerSession),
               };
             });
             const localPayrolls = payrollStorage.getPayrolls();

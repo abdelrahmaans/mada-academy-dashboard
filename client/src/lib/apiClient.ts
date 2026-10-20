@@ -1231,7 +1231,7 @@ export type TrainerPayrollRecord = {
 };
 
 const SHIFT_STORAGE_KEY = "mada_shift_handovers_v1";
-const PAYROLL_STORAGE_KEY = "mada_trainer_payrolls_v1";
+const PAYROLL_STORAGE_KEY = "mada_trainer_payrolls_v3";
 
 const DEFAULT_SHIFTS: ShiftCashHandover[] = [
   {
@@ -1285,6 +1285,46 @@ const DEFAULT_SHIFTS: ShiftCashHandover[] = [
   },
 ];
 
+export function generateTrainerSessions(
+  instructorId: string,
+  instructorName: string,
+  count: number,
+  rate: number
+): TrainerSessionDetail[] {
+  const courses = [
+    { name: "Junior Robotics · Level 1", group: "مجموعة السبت 4 عصراً", room: "معمل الروبوتكس 1", time: "04:00 - 06:00" },
+    { name: "دوائر إلكترونية وتطبيقات عملية", group: "مجموعة الإثنين 4 عصراً", room: "قاعة الإلكترونيات", time: "04:00 - 06:00" },
+    { name: "برمجة بايثون والذكاء الاصطناعي", group: "مجموعة الأربعاء 6 مساءً", room: "معمل البرمجة 2", time: "06:00 - 08:00" },
+    { name: "متحكمات دقيقة Arduino وتصميم النماذج", group: "مجموعة الخميس 5 مساءً", room: "معمل الابتكار", time: "05:00 - 07:00" },
+    { name: "الذكاء الاصطناعي وتعلم الآلة", group: "مجموعة المتقدمين الجمعة", room: "معمل AI 1", time: "02:00 - 04:00" },
+    { name: "تطوير ألعاب وتطبيقات الموبايل", group: "مجموعة الأحد 5 مساءً", room: "قاعة البرمجيات", time: "05:00 - 07:00" },
+  ];
+
+  const prefix = instructorId.replace(/[^a-zA-Z0-9]/g, "") || "SES";
+  const result: TrainerSessionDetail[] = [];
+
+  for (let i = 1; i <= count; i++) {
+    const course = courses[(i - 1) % courses.length];
+    const day = Math.min(28, 1 + Math.floor((i - 1) * (26 / Math.max(1, count - 1))));
+    const dateStr = `2026-10-${String(day).padStart(2, "0")}`;
+    const attendance = 7 + ((i * 3) % 4);
+
+    result.push({
+      sessionId: `${prefix}-${String(i).padStart(3, "0")}`,
+      courseName: course.name,
+      groupName: course.group,
+      date: dateStr,
+      time: course.time,
+      room: course.room,
+      attendanceCount: attendance,
+      rate,
+      approvedByHead: true,
+    });
+  }
+
+  return result;
+}
+
 const DEFAULT_PAYROLLS: TrainerPayrollRecord[] = [
   {
     id: "PAY-2026-10-01",
@@ -1300,14 +1340,7 @@ const DEFAULT_PAYROLLS: TrainerPayrollRecord[] = [
     deductionReason: "",
     netPayable: 4800,
     status: "SUBMITTED",
-    sessions: [
-      { sessionId: "SES-101", courseName: "Junior Robotics · Level 1", groupName: "مجموعة السبت 4 عصراً", date: "2026-10-03", time: "04:00 - 06:00", room: "معمل الروبوتكس 1", attendanceCount: 8, rate: 200, approvedByHead: true },
-      { sessionId: "SES-102", courseName: "Junior Robotics · Level 1", groupName: "مجموعة الثلاثاء 5 مساءً", date: "2026-10-06", time: "05:00 - 07:00", room: "معمل الروبوتكس 1", attendanceCount: 8, rate: 200, approvedByHead: true },
-      { sessionId: "SES-103", courseName: "روبوتكس متقدم", groupName: "مجموعة الأحد 6 مساءً", date: "2026-10-08", time: "06:00 - 08:00", room: "معمل الذكاء 2", attendanceCount: 7, rate: 200, approvedByHead: true },
-      { sessionId: "SES-104", courseName: "Junior Robotics · Level 1", groupName: "مجموعة السبت 4 عصراً", date: "2026-10-10", time: "04:00 - 06:00", room: "معمل الروبوتكس 1", attendanceCount: 8, rate: 200, approvedByHead: true },
-      { sessionId: "SES-105", courseName: "روبوتكس متقدم", groupName: "مجموعة الأحد 6 مساءً", date: "2026-10-15", time: "06:00 - 08:00", room: "معمل الذكاء 2", attendanceCount: 7, rate: 200, approvedByHead: true },
-      { sessionId: "SES-106", courseName: "Junior Robotics · Level 1", groupName: "مجموعة الثلاثاء 5 مساءً", date: "2026-10-17", time: "05:00 - 07:00", room: "معمل الروبوتكس 1", attendanceCount: 8, rate: 200, approvedByHead: true },
-    ],
+    sessions: generateTrainerSessions("SES-1", "عمر سامح", 22, 200),
   },
   {
     id: "PAY-2026-10-02",
@@ -1323,12 +1356,7 @@ const DEFAULT_PAYROLLS: TrainerPayrollRecord[] = [
     deductionReason: "خصم تأخير عن بدء جلسة يوم 8 أكتوبر معتمد من مدير الفرع",
     netPayable: 3400,
     status: "APPROVED",
-    sessions: [
-      { sessionId: "SES-201", courseName: "دوائر إلكترونية", groupName: "مجموعة السبت 12 ظهراً", date: "2026-10-03", time: "12:00 - 02:00", room: "قاعة الإلكترونيات", attendanceCount: 6, rate: 200, approvedByHead: true },
-      { sessionId: "SES-202", courseName: "دوائر إلكترونية", groupName: "مجموعة الإثنين 4 عصراً", date: "2026-10-05", time: "04:00 - 06:00", room: "قاعة الإلكترونيات", attendanceCount: 7, rate: 200, approvedByHead: true },
-      { sessionId: "SES-203", courseName: "برمجة بايثون", groupName: "مجموعة الأربعاء 6 مساءً", date: "2026-10-07", time: "06:00 - 08:00", room: "معمل بايثون", attendanceCount: 9, rate: 200, approvedByHead: true },
-      { sessionId: "SES-204", courseName: "دوائر إلكترونية", groupName: "مجموعة السبت 12 ظهراً", date: "2026-10-10", time: "12:00 - 02:00", room: "قاعة الإلكترونيات", attendanceCount: 6, rate: 200, approvedByHead: true },
-    ],
+    sessions: generateTrainerSessions("SES-2", "يوسف عماد", 18, 200),
   },
   {
     id: "PAY-2026-10-03",
@@ -1347,10 +1375,7 @@ const DEFAULT_PAYROLLS: TrainerPayrollRecord[] = [
     paidAt: "2026-10-15T12:00:00Z",
     paymentMethod: "INSTAPAY",
     paymentReference: "IPN-984210",
-    sessions: [
-      { sessionId: "SES-301", courseName: "الذكاء الاصطناعي والشبكات", groupName: "مجموعة المتقدمين", date: "2026-10-02", time: "05:00 - 07:00", room: "معمل AI 1", attendanceCount: 8, rate: 250, approvedByHead: true },
-      { sessionId: "SES-302", courseName: "الذكاء الاصطناعي والشبكات", groupName: "مجموعة المتقدمين", date: "2026-10-09", time: "05:00 - 07:00", room: "معمل AI 1", attendanceCount: 8, rate: 250, approvedByHead: true },
-    ],
+    sessions: generateTrainerSessions("SES-3", "مريم حسن", 16, 250),
   },
 ];
 
@@ -1408,7 +1433,17 @@ export const payrollStorage = {
         localStorage.setItem(PAYROLL_STORAGE_KEY, JSON.stringify(DEFAULT_PAYROLLS));
         return DEFAULT_PAYROLLS;
       }
-      return JSON.parse(raw);
+      let list: TrainerPayrollRecord[] = raw ? JSON.parse(raw) : DEFAULT_PAYROLLS;
+      list = list.map(item => {
+        if (!item.sessions || item.sessions.length < item.completedSessionsCount) {
+          return {
+            ...item,
+            sessions: generateTrainerSessions(item.instructorId, item.instructorName, item.completedSessionsCount, item.ratePerSession),
+          };
+        }
+        return item;
+      });
+      return list;
     } catch {
       return DEFAULT_PAYROLLS;
     }

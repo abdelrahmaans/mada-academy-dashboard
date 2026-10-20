@@ -106,7 +106,7 @@ export default function ReportsLive({ me }: { me: AuthMe }) {
     }
   };
 
-  const money = (piastres: number) => new Intl.NumberFormat("ar-EG", { style: "currency", currency: "EGP", maximumFractionDigits: 2 }).format(piastres / 100);
+  const money = (piastres: number) => `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(piastres / 100)} ج.م`;
 
   return (
     <RoleDashboardShell
@@ -216,11 +216,11 @@ export default function ReportsLive({ me }: { me: AuthMe }) {
               {activeTab === "overview" && report && operationalReport && (
                 <>
                   <section className="reports-live-stat-grid" aria-label="المؤشرات التشغيلية المسجلة">
-                    <FinanceStat icon={<Users size={18} />} label="الطلاب النشطون" value={new Intl.NumberFormat("ar-EG").format(operationalReport.activeStudents)} tone="blue" />
-                    <FinanceStat icon={<Activity size={18} />} label="التسجيلات النشطة" value={new Intl.NumberFormat("ar-EG").format(operationalReport.activeEnrollments)} tone="teal" />
+                    <FinanceStat icon={<Users size={18} />} label="الطلاب النشطون" value={new Intl.NumberFormat("en-US").format(operationalReport.activeStudents)} tone="blue" />
+                    <FinanceStat icon={<Activity size={18} />} label="التسجيلات النشطة" value={new Intl.NumberFormat("en-US").format(operationalReport.activeEnrollments)} tone="teal" />
                     <FinanceStat icon={<Activity size={18} />} label="نسبة الحضور" value={operationalReport.attendancePercent === null ? "—" : `${operationalReport.attendancePercent}%`} tone="violet" />
-                    <FinanceStat icon={<CircleAlert size={18} />} label="إثباتات ناقصة" value={new Intl.NumberFormat("ar-EG").format(operationalReport.paymentsMissingEvidence)} tone="amber" />
-                    <FinanceStat icon={<Wallet size={18} />} label="مصروفات معلقة" value={new Intl.NumberFormat("ar-EG").format(operationalReport.pendingExpenses)} tone="navy" />
+                    <FinanceStat icon={<CircleAlert size={18} />} label="إثباتات ناقصة" value={new Intl.NumberFormat("en-US").format(operationalReport.paymentsMissingEvidence)} tone="amber" />
+                    <FinanceStat icon={<Wallet size={18} />} label="مصروفات معلقة" value={new Intl.NumberFormat("en-US").format(operationalReport.pendingExpenses)} tone="navy" />
                   </section>
 
                   <section className="reports-live-policy">
@@ -261,7 +261,7 @@ export default function ReportsLive({ me }: { me: AuthMe }) {
                             {report.branches.map(branch => (
                               <tr key={branch.branchId}>
                                 <td><strong>{branch.branchName}</strong></td>
-                                <td>{new Intl.NumberFormat("ar-EG").format(branch.invoiceCount)}</td>
+                                <td>{new Intl.NumberFormat("en-US").format(branch.invoiceCount)}</td>
                                 <td>{money(branch.collectedPiastres)}</td>
                                 <td>{money(branch.approvedExpensesPiastres)}</td>
                                 <td><strong>{money(branch.netPiastres)}</strong></td>
