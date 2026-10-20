@@ -107,6 +107,10 @@ class ErrorBoundary extends Component<Props, State> {
 
   handleGoToLogin = () => {
     clearTokens();
+    try {
+      localStorage.removeItem("mada_auth_token");
+      sessionStorage.clear();
+    } catch {}
     window.location.href = "/login";
   };
 
@@ -115,6 +119,24 @@ class ErrorBoundary extends Component<Props, State> {
   };
 
   handleGoHome = () => {
+    const session = getSessionMetadata();
+    const roleCode = session.roleCode;
+    if (roleCode === "R06" || roleCode?.startsWith("R06")) {
+      window.location.href = "/finance-desk";
+      return;
+    }
+    if (roleCode === "R05" || roleCode?.startsWith("R05")) {
+      window.location.href = "/secretary-desk";
+      return;
+    }
+    if (roleCode === "R04" || roleCode?.startsWith("R04")) {
+      window.location.href = "/instructor-desk";
+      return;
+    }
+    if (roleCode === "R03" || roleCode?.startsWith("R03")) {
+      window.location.href = "/head-instructors";
+      return;
+    }
     window.location.href = "/";
   };
 
@@ -203,40 +225,41 @@ class ErrorBoundary extends Component<Props, State> {
             </div>
 
             {/* Action Buttons: Return to Login & Reload Page */}
-            <div className="flex flex-wrap items-center justify-center gap-3 w-full">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full">
               <button
                 type="button"
                 onClick={this.handleGoToLogin}
                 className={cn(
-                  "flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all shadow-sm",
+                  "w-full sm:flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold text-sm transition-all shadow-md",
                   "bg-teal-600 text-white hover:bg-teal-700 active:scale-98 cursor-pointer"
                 )}
               >
-                <LogIn size={16} />
-                <span>الرجوع لتسجيل الدخول</span>
+                <LogIn size={17} />
+                <span>تسجيل الدخول من جديد (حماية الجلسة)</span>
               </button>
 
               <button
                 type="button"
                 onClick={this.handleReload}
                 className={cn(
-                  "flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all",
+                  "w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition-all",
                   "bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 active:scale-98 cursor-pointer"
                 )}
               >
                 <RotateCcw size={16} />
-                <span>إعادة تحميل الصفحة</span>
+                <span>إعادة تحميل</span>
               </button>
 
               <button
                 type="button"
                 onClick={this.handleGoHome}
                 className={cn(
-                  "flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all cursor-pointer"
+                  "w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition-all",
+                  "bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 hover:text-slate-900 active:scale-98 cursor-pointer"
                 )}
               >
                 <Home size={16} />
-                <span>الرئيسية</span>
+                <span>مساحتي الرئيسية</span>
               </button>
             </div>
 

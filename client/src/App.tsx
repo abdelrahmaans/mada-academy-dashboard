@@ -7,6 +7,8 @@ import { Redirect, Route, Switch, Router as WouterRouter } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { useAuth } from "./contexts/AuthContext";
+import { ROLE_DEFINITIONS } from "./lib/roleNavigation";
 import { subscribeApiErrors } from "./lib/apiClient";
 
 const Home = lazy(() => import("./pages/Home"));
@@ -77,6 +79,24 @@ function Guard({
   return <ProtectedRoute roles={roles} permission={permission} anyOfPermissions={anyOfPermissions}>{children}</ProtectedRoute>;
 }
 
+function SmartRoleHome() {
+  const { me, loading } = useAuth();
+  if (loading) return <div className="route-loading">جارٍ التحقق من الجلسة…</div>;
+  if (!me) return <Redirect to="/login" />;
+  const normalizedRole = me.role.match(/^R\d+/)?.[0] ?? me.role;
+  const roleDefinition = ROLE_DEFINITIONS[normalizedRole as keyof typeof ROLE_DEFINITIONS];
+  const homePath = roleDefinition?.homePath ?? "/workspace";
+
+  if (homePath === "/") {
+    return (
+      <Guard roles={["R02_BRANCH_MANAGER"]} permission="branch.read">
+        <Home />
+      </Guard>
+    );
+  }
+  return <Redirect to={homePath} />;
+}
+
 const APP_ROUTES = [
   ["/login", Login],
   ["/accept-invitation", ConsumerInvitationAccept],
@@ -86,7 +106,7 @@ const APP_ROUTES = [
   ["/academy/branches", ProtectedAcademyBranches],
   ["/academy/classrooms", ProtectedAcademyClassrooms],
   ["/academy/audit-trail", ProtectedAcademyAuditTrail],
-  ["/", () => <Guard roles={["R02_BRANCH_MANAGER"]} permission="branch.read"><Home /></Guard>],
+  ["/", SmartRoleHome],
   ["/students", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R05_SECRETARY"]} anyOfPermissions={["students.read", "students.create"]}><Students /></Guard>],
   ["/classes", () => <Guard roles={["R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS"]} permission="sessions.read"><Classes /></Guard>],
   ["/schedule", () => <Guard roles={["R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS", "R04_INSTRUCTOR", "R05_SECRETARY"]} anyOfPermissions={["sessions.read", "sessions.assigned.read"]}><Schedule /></Guard>],

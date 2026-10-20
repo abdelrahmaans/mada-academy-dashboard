@@ -305,48 +305,197 @@
 .dialog-info svg { flex: none; color: #0d9488; margin-top: 2px; }
 .approval-expense-rejection-notice span { display: grid; gap: 2px; }
 .approval-expense-rejection-notice small { color: #7b8f95; font-size: 11px; }
-.auth-locked-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 15% 10%, #e4f7f4, transparent 34%), #f5fafb; color: #29444f; }
-.auth-locked-page section { display: grid; justify-items: center; gap: 12px; width: min(480px, 100%); padding: 34px 28px; border: 1px solid #dbe9ea; border-radius: 20px; background: #fff; box-shadow: 0 18px 50px rgb(27 70 82 / 10%); text-align: center; }
-.auth-locked-page section > svg { padding: 12px; width: 54px; height: 54px; border-radius: 16px; color: #b45353; background: #fff0f0; }
-.auth-locked-page h1 { margin: 0; color: #29444f; font-size: clamp(22px, 4vw, 30px); }
-.auth-locked-page p { margin: 0; color: #71878d; font-size: 14px; line-height: 1.8; }
-.auth-locked-page-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; margin-top: 6px; }
-.auth-locked-page-actions button { min-height: 42px; padding: 0 16px; border: 1px solid #cfe5e4; border-radius: 10px; color: #0b776f; background: #f4fbfa; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
-.auth-locked-page-actions button:first-child { border-color: #0d9488; color: #fff; background: #0d9488; }
-.auth-locked-page-actions button:focus-visible { outline: 3px solid rgb(13 148 136 / 24%); outline-offset: 2px; }
-@media (max-width: 560px) {
-  .dialog-overlay { padding: 10px; align-items: end; }
-  .dialog-card { max-height: calc(100vh - 20px); padding: 20px 16px; border-radius: 16px 16px 0 0; }
-  .approval-dialog-actions { flex-direction: column-reverse; }
-  .approval-dialog-actions .button { width: 100%; justify-content: center; }
-  .auth-locked-page section { padding: 28px 20px; }
-  .auth-locked-page-actions { width: 100%; flex-direction: column; }
-  .auth-locked-page-actions button { width: 100%; }
+/* Access denied: actionable role-aware recovery surface */
+.auth-locked-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: radial-gradient(circle at 15% 10%, #e0f2fe, transparent 35%),
+              radial-gradient(circle at 85% 90%, #ecfdf5, transparent 35%),
+              #f8fafc;
+  color: #1e293b;
+  font-family: inherit;
 }
 
-/* Access denied: actionable role-aware recovery surface */
-.auth-locked-page section { width: min(560px, 100%); gap: 14px; padding: 30px clamp(20px, 5vw, 42px); border-color: #cfe4e4; box-shadow: 0 24px 70px rgb(18 65 76 / 13%); }
-.auth-locked-page-brand { display: flex; align-items: center; gap: 9px; align-self: stretch; color: #789097; font-size: 12px; font-weight: 800; }
-.auth-locked-page-logo { display: inline-grid; width: 38px; height: 30px; place-items: center; border-radius: 9px; color: #fff; background: linear-gradient(145deg, #0d9488, #176b78); font-size: 15px; }
-.auth-locked-page-mark { display: grid; width: 68px; height: 68px; place-items: center; border: 8px solid #e7f7f4; border-radius: 24px; color: #b45353; background: #fff3f2; }
-.auth-locked-page-code { padding: 5px 10px; border: 1px solid #d8eceb; border-radius: 999px; color: #0d837a; background: #f2fbfa; font-size: 11px; font-weight: 900; }
-.auth-locked-page h1 { font-size: clamp(24px, 4vw, 32px); letter-spacing: -.4px; }
-.auth-locked-page p { max-width: 45ch; font-size: 14px; }
-.auth-locked-page p strong { color: #29444f; }
-.auth-locked-page-actions { width: 100%; display: grid; grid-template-columns: 1.25fr 1fr 1fr; gap: 8px; margin-top: 8px; }
-.auth-locked-page-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 46px; padding: 0 11px; border-color: #d6e8e8; color: #47646c; background: #f8fcfc; font-size: 12px; }
-.auth-locked-page-actions button:hover { border-color: #9bd6d0; color: #0b776f; background: #f1faf9; }
-.auth-locked-page-actions button.auth-locked-primary { border-color: #0d9488; color: #fff; background: linear-gradient(135deg, #0d9488, #08776f); box-shadow: 0 8px 18px rgb(13 148 136 / 18%); }
-.auth-locked-page-actions button.auth-locked-primary:hover { color: #fff; background: linear-gradient(135deg, #087d74, #06655f); }
-.auth-locked-logout { display: inline-flex; align-items: center; gap: 6px; border: 0; color: #a65050; background: transparent; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
-.auth-locked-logout:hover { color: #8e3535; text-decoration: underline; }
-.auth-locked-logout:disabled { cursor: wait; opacity: .65; }
-.auth-locked-page-hint { max-width: 46ch; color: #8a9da2; font-size: 11px; line-height: 1.7; }
-@media (max-width: 620px) {
-  .auth-locked-page { padding: 14px; }
-  .auth-locked-page section { padding: 25px 18px; }
-  .auth-locked-page-actions { grid-template-columns: 1fr; }
-  .auth-locked-page-actions button { width: 100%; }
+.auth-locked-page section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 520px;
+  padding: 36px 32px;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+  text-align: center;
+}
+
+.auth-locked-page-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  align-self: center;
+  color: #64748b;
+  font-size: 12.5px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.auth-locked-page-logo {
+  display: inline-grid;
+  width: 40px;
+  height: 32px;
+  place-items: center;
+  border-radius: 10px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #0d9488, #0f766e);
+  font-size: 15px;
+  font-weight: 900;
+  box-shadow: 0 3px 10px rgba(13, 148, 136, 0.25);
+}
+
+.auth-locked-page-mark {
+  display: grid;
+  width: 68px;
+  height: 68px;
+  place-items: center;
+  border: 8px solid #fef2f2;
+  border-radius: 24px;
+  color: #dc2626;
+  background: #fee2e2;
+  margin-bottom: 4px;
+}
+
+.auth-locked-page-code {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border: 1px solid #ccfbf1;
+  border-radius: 999px;
+  color: #0f766e;
+  background: #f0fdfa;
+  font-size: 11.5px;
+  font-weight: 800;
+}
+
+.auth-locked-page h1 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.auth-locked-page p {
+  margin: 0;
+  color: #475569;
+  font-size: 13.5px;
+  line-height: 1.8;
+  max-width: 44ch;
+}
+
+.auth-locked-page p strong {
+  color: #0f172a;
+}
+
+.auth-locked-page-actions {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.auth-locked-page-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.auth-locked-page-actions button.auth-locked-primary {
+  border: 1px solid #0d9488;
+  color: #ffffff;
+  background: linear-gradient(135deg, #0d9488, #0f766e);
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.25);
+}
+
+.auth-locked-page-actions button.auth-locked-primary:hover {
+  background: linear-gradient(135deg, #0f766e, #115e59);
+  transform: translateY(-1px);
+}
+
+.auth-locked-page-actions button.auth-locked-secondary {
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  background: #f8fafc;
+}
+
+.auth-locked-page-actions button.auth-locked-secondary:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+.auth-locked-logout-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  color: #b91c1c;
+  background: #fff5f5;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-top: 4px;
+}
+
+.auth-locked-logout-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.auth-locked-logout-btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.auth-locked-page-hint {
+  max-width: 44ch;
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+@media (max-width: 520px) {
+  .auth-locked-page {
+    padding: 16px;
+  }
+  .auth-locked-page section {
+    padding: 28px 20px;
+  }
+  .auth-locked-page-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Finance surface readability pass: keep the existing visual identity, remove tiny operational text */
