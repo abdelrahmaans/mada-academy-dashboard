@@ -1,7 +1,7 @@
 import { Component, type ReactNode } from "react";
-import { AlertTriangle, RotateCcw, LogIn, Home, KeyRound, ShieldAlert, ChevronDown } from "lucide-react";
+import { AlertTriangle, RotateCcw, LogIn, Home, KeyRound, ShieldAlert, ChevronDown, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { clearTokens } from "@/lib/apiClient";
+import { clearTokens, refreshAccessToken } from "@/lib/apiClient";
 import { ROLE_DEFINITIONS, type RoleCode } from "@/lib/roleNavigation";
 
 interface Props {
@@ -11,6 +11,8 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  refreshing: boolean;
+  refreshError: string | null;
 }
 
 type SessionMetadata = {
@@ -98,12 +100,35 @@ function getSessionMetadata(): SessionMetadata {
 class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, refreshing: false, refreshError: null };
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    return { hasError: true, error, refreshing: false, refreshError: null };
   }
+
+  handleRefreshToken = async () => {
+    this.setState({ refreshing: true, refreshError: null });
+    try {
+      const ok = await refreshAccessToken();
+      if (ok) {
+        this.setState({ hasError: false, error: null, refreshing: false });
+        window.location.reload();
+      } else {
+        clearTokens();
+        this.setState({
+          refreshing: false,
+          refreshError: "انتهت صلاحية جلسة العمل كلياً. يُرجى تسجيل الدخول مجدداً لبدء جلسة جديدة.",
+        });
+      }
+    } catch {
+      clearTokens();
+      this.setState({
+        refreshing: false,
+        refreshError: "تعذر الاتصال بالخادم لتجديد الجلسة. يُرجى تسجيل الدخول مجدداً.",
+      });
+    }
+  };
 
   handleGoToLogin = () => {
     clearTokens();
@@ -161,7 +186,7 @@ class ErrorBoundary extends Component<Props, State> {
             </p>
 
             {/* Auth / Session Card - Only details shown */}
-            <div className="w-full bg-slate-50 border border-slate-200/90 rounded-xl p-4 sm:p-5 mb-6 text-right">
+            <div className="w-full bg-slate-50 border border-slate-200/90 rounded-xl p-4 sm:p-5 mb-5 text-right">
               <div className="flex items-center gap-2 mb-3 pb-2.5 border-b border-slate-200 text-slate-800 font-semibold text-sm">
                 <KeyRound size={17} className="text-teal-600" />
                 <span>حالة المصادقة وجلسة العمل (Auth Session)</span>
@@ -178,7 +203,7 @@ class ErrorBoundary extends Component<Props, State> {
                   ) : session.isExpired ? (
                     <span className="inline-flex items-center gap-1.5 text-rose-600 font-medium">
                       <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                      منتهية الصلاحية — يلزم إعادة الدخول
+                      منتهية الصلاحية — يلزم تجديد التوكن أو الدخول
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1.5 text-emerald-700 font-medium">
@@ -224,55 +249,80 @@ class ErrorBoundary extends Component<Props, State> {
               </div>
             </div>
 
-            {/* Action Buttons: Return to Login & Reload Page */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full">
-              <button
-                type="button"
-                onClick={this.handleGoToLogin}
-                className={cn(
-                  "w-full sm:flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold text-sm transition-all shadow-md",
-                  "bg-teal-600 text-white hover:bg-teal-700 active:scale-98 cursor-pointer"
-                )}
-              >
-                <LogIn size={17} />
-                <span>تسجيل الدخول من جديد (حماية الجلسة)</span>
-              </button>
+            {/* Refresh error message if any */}
+            {this.state.refreshError && (
+              <div className="w-full p-3 mb-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                <AlertTriangle size={16} className="flex-shrink-0 text-rose-600" />
+                <span>{this.state.refreshError}</span>
+              </div>
+            )}
 
-              <button
-                type="button"
-                onClick={this.handleReload}
-                className={cn(
-                  "w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition-all",
-                  "bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 active:scale-98 cursor-pointer"
-                )}
-              >
-                <RotateCcw size={16} />
-                <span>إعادة تحميل</span>
-              </button>
+            {/* Action Buttons: Refresh Token, Return to Login & Reload Page */}
+            <div className="flex flex-col gap-2.5 w-full">
+              {session.hasToken && (
+                <button
+                  type="button"
+                  onClick={this.handleRefreshToken}
+                  disabled={this.state.refreshing}
+                  className={cn(
+                    "w-full flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold text-sm transition-all shadow-sm",
+                    "bg-emerald-600 text-white hover:bg-emerald-700 active:scale-98 cursor-pointer disabled:opacity-70"
+                  )}
+                >
+                  <RefreshCw size={17} className={this.state.refreshing ? "animate-spin" : ""} />
+                  <span>{this.state.refreshing ? "جارٍ تجديد التوكن وتحديث الصلاحية…" : "تجديد الجلسة وتحديث التوكن الآن (Refresh Token)"}</span>
+                </button>
+              )}
 
-              <button
-                type="button"
-                onClick={this.handleGoHome}
-                className={cn(
-                  "w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-semibold text-sm transition-all",
-                  "bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 hover:text-slate-900 active:scale-98 cursor-pointer"
-                )}
-              >
-                <Home size={16} />
-                <span>مساحتي الرئيسية</span>
-              </button>
+              <div className="flex flex-wrap items-center justify-center gap-2.5 w-full">
+                <button
+                  type="button"
+                  onClick={this.handleGoToLogin}
+                  className={cn(
+                    "flex-1 min-w-[150px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all",
+                    "bg-teal-600 text-white hover:bg-teal-700 active:scale-98 cursor-pointer"
+                  )}
+                >
+                  <LogIn size={16} />
+                  <span>تسجيل الدخول من جديد</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={this.handleReload}
+                  className={cn(
+                    "flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all",
+                    "bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 active:scale-98 cursor-pointer"
+                  )}
+                >
+                  <RotateCcw size={15} />
+                  <span>إعادة تحميل</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={this.handleGoHome}
+                  className={cn(
+                    "flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all",
+                    "bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 hover:text-slate-900 active:scale-98 cursor-pointer"
+                  )}
+                >
+                  <Home size={15} />
+                  <span>مساحتي الرئيسية</span>
+                </button>
+              </div>
             </div>
 
-            {/* Discreet collapsible for dev investigation - hidden/closed by default */}
-            {process.env.NODE_ENV !== "production" && this.state.error && (
-              <details className="w-full mt-6 text-xs text-slate-400 border-t border-slate-200/80 pt-3">
+            {/* Discreet collapsible for dev investigation - ALWAYS expandable */}
+            {Boolean(this.state.error) && (
+              <details className="w-full mt-5 text-xs text-slate-400 border-t border-slate-200/80 pt-3" open={Boolean(this.state.error)}>
                 <summary className="cursor-pointer hover:text-slate-600 font-medium select-none flex items-center gap-1">
                   <ChevronDown size={14} />
-                  <span>تفاصيل تقنية (للمطورين فقط)</span>
+                  <span>تفاصيل سبب التوقف الفني: {this.state.error?.message}</span>
                 </summary>
                 <div className="mt-2 p-3 bg-slate-900 text-slate-200 rounded-lg overflow-x-auto text-[11px] font-mono leading-relaxed" dir="ltr">
-                  <div className="text-rose-400 font-bold mb-1">{this.state.error.name}: {this.state.error.message}</div>
-                  <pre className="whitespace-pre-wrap opacity-75">{this.state.error.stack}</pre>
+                  <div className="text-rose-400 font-bold mb-1">{this.state.error?.name}: {this.state.error?.message}</div>
+                  <pre className="whitespace-pre-wrap opacity-75">{this.state.error?.stack}</pre>
                 </div>
               </details>
             )}

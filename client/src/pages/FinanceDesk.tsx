@@ -226,7 +226,8 @@ function mapFinanceInvoice(invoice: FinanceInvoice): Invoice {
   };
 }
 
-function financeInvoiceStatus(status: string): InvoiceStatus {
+function financeInvoiceStatus(status?: string | null): InvoiceStatus {
+  if (!status || typeof status !== "string") return "unpaid";
   switch (status.toUpperCase()) {
     case "PAID":
       return "paid";
@@ -238,16 +239,18 @@ function financeInvoiceStatus(status: string): InvoiceStatus {
       return "unpaid";
   }
 }
+
 function mapFinanceExpense(expense: FinanceExpense): Expense {
+  const rawStatus = typeof expense.status === "string" ? expense.status.toLowerCase() : "pending";
   return {
-    id: expense.id,
-    description: expense.description,
-    branch: expense.branchName ?? expense.branchId,
-    category: expense.category,
-    amount: expense.amountPiastres / 100,
-    date: expense.spentOn,
-    status: expense.status.toLowerCase() as ExpenseStatus,
-    createdBy: expense.createdByUserId,
+    id: expense.id || "",
+    description: expense.description || "بند مصروف",
+    branch: expense.branchName ?? expense.branchId ?? "الفرع الرئيسي",
+    category: expense.category || "عام",
+    amount: typeof expense.amountPiastres === "number" ? expense.amountPiastres / 100 : 0,
+    date: expense.spentOn || "",
+    status: (rawStatus === "approved" || rawStatus === "rejected" ? rawStatus : "pending") as ExpenseStatus,
+    createdBy: expense.createdByUserId || "",
     reason: expense.approvalReason ?? undefined,
     evidenceStatus: expense.evidenceStatus,
     evidenceFileName: expense.evidenceFileName,

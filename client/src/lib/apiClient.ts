@@ -535,7 +535,7 @@ export function clearTokens() {
   localStorage.removeItem(REFRESH_KEY);
 }
 
-async function refreshAccessToken(): Promise<boolean> {
+export async function refreshAccessToken(): Promise<boolean> {
   const refreshToken = localStorage.getItem(REFRESH_KEY);
   if (!refreshToken) return false;
   const response = await fetch(`${API_BASE}/auth/refresh`, {
@@ -1286,10 +1286,10 @@ const DEFAULT_SHIFTS: ShiftCashHandover[] = [
 ];
 
 export function generateTrainerSessions(
-  instructorId: string,
-  instructorName: string,
-  count: number,
-  rate: number
+  instructorId: string = "SES",
+  instructorName: string = "مدرب",
+  count: number = 0,
+  rate: number = 0
 ): TrainerSessionDetail[] {
   const courses = [
     { name: "Junior Robotics · Level 1", group: "مجموعة السبت 4 عصراً", room: "معمل الروبوتكس 1", time: "04:00 - 06:00" },
@@ -1300,7 +1300,7 @@ export function generateTrainerSessions(
     { name: "تطوير ألعاب وتطبيقات الموبايل", group: "مجموعة الأحد 5 مساءً", room: "قاعة البرمجيات", time: "05:00 - 07:00" },
   ];
 
-  const prefix = instructorId.replace(/[^a-zA-Z0-9]/g, "") || "SES";
+  const prefix = (instructorId || "SES").replace(/[^a-zA-Z0-9]/g, "") || "SES";
   const result: TrainerSessionDetail[] = [];
 
   for (let i = 1; i <= count; i++) {
