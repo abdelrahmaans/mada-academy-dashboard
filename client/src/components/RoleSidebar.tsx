@@ -42,6 +42,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getAuthorizedNavigation, getRoleDefinition } from "@/lib/roleNavigation";
 import type { RoleCode } from "@/contexts/RoleScopeContext";
 import SessionLogoutButton from "./SessionLogoutButton";
+import SettingsModal from "./SettingsModal";
 
 const ICON_BY_PATH: Record<string, ComponentType<LucideProps>> = {
   "/": LayoutDashboard,
@@ -145,6 +146,7 @@ export default function RoleSidebar({
 }: RoleSidebarProps) {
   const [location, navigate] = useLocation();
   const { me } = useAuth();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Extract user's genuine role from auth token if available to prevent role hijacking
   const userRoleCode = me?.role ? (me.role.replace(/_.*$/, "") as RoleCode) : undefined;
@@ -361,9 +363,10 @@ export default function RoleSidebar({
           type="button"
           className="nav-link"
           onClick={() => {
-            toast.info("الإعدادات قيد التجهيز في المرحلة التالية");
+            setSettingsOpen(true);
             onCloseMobile?.();
           }}
+          aria-label="فتح الإعدادات"
         >
           <Settings size={19} />
           <span>الإعدادات</span>
@@ -374,6 +377,8 @@ export default function RoleSidebar({
       <div className="sidebar-version">
         مدى لإدارة الأكاديميات <span>{effectiveRoleCode}</span>
       </div>
+
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </aside>
   );
 }
