@@ -654,6 +654,12 @@ export const apiClient = {
   },
   getPlatformPayments: (tenantId?: string) => platformSaaSStorage.getPayments(tenantId),
   getPlatformTenantExtra: (tenantId: string, defaultPlan?: string) => platformSaaSStorage.getTenantExtra(tenantId, defaultPlan),
+  getPlatformDemoLeads: () => platformSaaSStorage.getDemoLeads(),
+  updatePlatformDemoLeadStatus: (id: string, status: PlatformDemoLead["status"]) => platformSaaSStorage.updateDemoLeadStatus(id, status),
+  addPlatformDemoLead: (input: Omit<PlatformDemoLead, "id" | "createdAt" | "status">) => platformSaaSStorage.addDemoLead(input),
+  startEmergencyImpersonation: (tenantId: string, tenantName: string, reason: string) => platformSaaSStorage.startEmergencyImpersonation(tenantId, tenantName, reason),
+  endEmergencyImpersonation: () => platformSaaSStorage.endEmergencyImpersonation(),
+  getEmergencyImpersonation: () => platformSaaSStorage.getEmergencyImpersonation(),
   platformAcademyMembers: (tenantId: string, search = "") => { const query = new URLSearchParams(); if (search.trim()) query.set("search", search.trim()); const suffix = query.toString() ? `?${query.toString()}` : ""; return request<{ items: PlatformMember[]; total: number; tenantId: string }>(`/platform/academies/${tenantId}/members${suffix}`); },
   changePlatformMemberStatus: (tenantId: string, membershipId: string, status: "ACTIVE" | "REVOKED", reason: string) => request<{ membershipId: string; userId: string; status: string; revokedSessions: number }>(`/platform/academies/${tenantId}/members/${membershipId}/status`, { method: "PATCH", body: JSON.stringify({ status, reason }) }),
   revokePlatformUserSessions: (tenantId: string, userId: string, reason: string) => request<{ userId: string; tenantId: string; revokedCount: number }>(`/platform/academies/${tenantId}/users/${userId}/sessions/revoke`, { method: "POST", body: JSON.stringify({ reason }) }),
@@ -2206,5 +2212,107 @@ export const platformSaaSStorage = {
       generatedAt: new Date().toISOString(),
     };
   },
+  getDemoLeads: (): PlatformDemoLead[] => {
+    try {
+      const raw = localStorage.getItem("mada_platform_demo_leads");
+      if (!raw) {
+        localStorage.setItem("mada_platform_demo_leads", JSON.stringify(DEFAULT_DEMO_LEADS));
+        return DEFAULT_DEMO_LEADS;
+      }
+      return JSON.parse(raw);
+    } catch {
+      return DEFAULT_DEMO_LEADS;
+    }
+  },
+  updateDemoLeadStatus: (id: string, status: PlatformDemoLead["status"]): PlatformDemoLead[] => {
+    const list = platformSaaSStorage.getDemoLeads();
+    const updated = list.map(l => l.id === id ? { ...l, status } : l);
+    localStorage.setItem("mada_platform_demo_leads", JSON.stringify(updated));
+    return updated;
+  },
+  addDemoLead: (input: Omit<PlatformDemoLead, "id" | "createdAt" | "status">): PlatformDemoLead => {
+    const list = platformSaaSStorage.getDemoLeads();
+    const newLead: PlatformDemoLead = {
+      ...input,
+      id: `LEAD-2026-${String(list.length + 1).padStart(3, "0")}`,
+      status: "NEW",
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [newLead, ...list];
+    localStorage.setItem("mada_platform_demo_leads", JSON.stringify(updated));
+    return newLead;
+  },
+  startEmergencyImpersonation: (tenantId: string, tenantName: string, reason: string): void => {
+    const session = {
+      tenantId,
+      tenantName,
+      reason,
+      startedAt: Date.now(),
+    };
+    sessionStorage.setItem("mada_emergency_impersonation", JSON.stringify(session));
+  },
+  endEmergencyImpersonation: (): void => {
+    sessionStorage.removeItem("mada_emergency_impersonation");
+  },
+  getEmergencyImpersonation: () => {
+    try {
+      const raw = sessionStorage.getItem("mada_emergency_impersonation");
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  },
 };
+
+export type PlatformDemoLead = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  academyName: string;
+  branchCount: string;
+  operationalNeed: string;
+  notes?: string;
+  status: "NEW" | "CONTACTED" | "DEMO_SCHEDULED" | "CONVERTED" | "REJECTED";
+  createdAt: string;
+};
+
+const DEFAULT_DEMO_LEADS: PlatformDemoLead[] = [
+  {
+    id: "LEAD-2026-001",
+    name: "م. طارق السعيد",
+    email: "tarek@champion-academy.com",
+    phone: "+201023456789",
+    academyName: "أكاديمية الأبطال للسباحة والجمباز",
+    branchCount: "3",
+    operationalNeed: "تشتت إدارة الفروع وتعدد الجداول وحساب رواتب المدربين",
+    notes: "مهتمون بتفعيل فروع المعادي والتجمع ونظام حساب الحصص التلقائي",
+    status: "NEW",
+    createdAt: "2026-10-20T14:30:00.000Z",
+  },
+  {
+    id: "LEAD-2026-002",
+    name: "كابتن سيف الدين علاء",
+    email: "seif@elite-sports.eg",
+    phone: "+201145678901",
+    academyName: "إيليت أكاديمي لكرة القدم",
+    branchCount: "2",
+    operationalNeed: "متابعة حضور الطلاب وتحصيل الاشتراكات من أولياء الأمور",
+    notes: "يرغبون في تجربة بوابة ولي الأمر وبوابة الطالب",
+    status: "CONTACTED",
+    createdAt: "2026-10-19T11:15:00.000Z",
+  },
+  {
+    id: "LEAD-2026-003",
+    name: "أ. ميادة بدر",
+    email: "mayada@star-gymnastics.org",
+    phone: "+201278901234",
+    academyName: "نادي النجوم للرياضات التنافسية",
+    branchCount: "1",
+    operationalNeed: "إدارة الخزينة ومسيرات الرواتب للمدربين",
+    notes: "طلب عرض توضيحي مباشر (Online Demo)",
+    status: "DEMO_SCHEDULED",
+    createdAt: "2026-10-18T16:45:00.000Z",
+  },
+];
 

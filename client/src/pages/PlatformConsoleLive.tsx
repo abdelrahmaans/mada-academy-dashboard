@@ -20,9 +20,11 @@ import {
   KeyRound,
   LayoutDashboard,
   LifeBuoy,
+  Lightbulb,
   LockKeyhole,
   Megaphone,
   Menu,
+  MessageCircle,
   Plus,
   RefreshCw,
   Search,
@@ -34,6 +36,7 @@ import {
   Ticket,
   TrendingDown,
   TrendingUp,
+  UserPlus,
   UserRoundX,
   Users,
   Wallet,
@@ -51,6 +54,7 @@ import {
   platformSaaSStorage,
   type PlatformAcademy,
   type PlatformActivity,
+  type PlatformDemoLead,
   type PlatformMember,
   type PlatformOverview,
   type PlatformPaymentRecord,
@@ -59,12 +63,13 @@ import {
 } from "@/lib/apiClient";
 import "./PlatformConsoleLive.css";
 
-// 5 Consolidated, High-Impact Business Views for R00 (No Fluff)
+// 6 Consolidated, High-Impact Business Views for R00 (Super Admin)
 type View =
   | "overview"    // لوحة التحكم والتنبيهات العاجلة
   | "academies"   // سجل الأكاديميات والباقات وإدارة الفروع
+  | "leads"       // طلبات المعاينة والعملاء الجدد (Landing Page Leads)
   | "billing"     // فواتير الاشتراكات والتحصيل المالي
-  | "support"     // مركز الدعم واستعادة حسابات الملاك
+  | "support"     // مركز التذاكر والاقتراحات والدعم
   | "system";     // الخوادم وسجل التدقيق الأمني
 
 interface NavItem {
@@ -76,8 +81,9 @@ interface NavItem {
 const nav: NavItem[] = [
   { id: "overview", label: "لوحة التحكم والتنبيهات", icon: LayoutDashboard },
   { id: "academies", label: "سجل الأكاديميات والباقات", icon: Building2 },
+  { id: "leads", label: "طلبات المعاينة (Leads)", icon: Sparkles },
   { id: "billing", label: "التحصيل والاشتراكات", icon: CreditCard },
-  { id: "support", label: "مركز الدعم واستعادة الحسابات", icon: LifeBuoy },
+  { id: "support", label: "التذاكر والاقتراحات", icon: LifeBuoy },
   { id: "system", label: "الخوادم وسجل التدقيق", icon: ShieldCheck },
 ];
 
@@ -89,7 +95,8 @@ interface SupportTicket {
   requesterRole: string;
   requesterPhone: string;
   subject: string;
-  category: "اشتراكات وخطط" | "مشكلة تقنية" | "تفعيل فروع" | "استفسار تشغيلي";
+  type?: "issue" | "suggestion" | "billing";
+  category: "اشتراكات وخطط" | "مشكلة تقنية" | "اقتراح ميزة جديدة" | "تفعيل فروع" | "استفسار تشغيلي";
   priority: "urgent" | "high" | "medium" | "low";
   status: "new" | "inProgress" | "waiting" | "resolved";
   createdAt: string;
@@ -459,6 +466,128 @@ export default function PlatformConsoleLive() {
 
   // Show/Hide Role RBAC Guide
   const [rbacExpanded, setRbacExpanded] = useState(false);
+
+  // Leads & Landing Page Demo Requests
+  const [leads, setLeads] = useState<PlatformDemoLead[]>(() => apiClient.getPlatformDemoLeads());
+  const [leadFilter, setLeadFilter] = useState<"ALL" | "NEW" | "CONTACTED" | "DEMO_SCHEDULED" | "CONVERTED">("ALL");
+  const [leadSearch, setLeadSearch] = useState("");
+
+  // Emergency Super Access (View-As Impersonation) State
+  const [impersonationAcademy, setImpersonationAcademy] = useState<PlatformAcademy | null>(null);
+  const [impersonationReason, setImpersonationReason] = useState("");
+
+  // New Ticket / Suggestion Modal State
+  const [newTicketModalOpen, setNewTicketModalOpen] = useState(false);
+  const [newTicketAcademyId, setNewTicketAcademyId] = useState("");
+  const [newTicketType, setNewTicketType] = useState<"issue" | "suggestion" | "billing">("issue");
+  const [newTicketCategory, setNewTicketCategory] = useState<SupportTicket["category"]>("مشكلة تقنية");
+  const [newTicketPriority, setNewTicketPriority] = useState<SupportTicket["priority"]>("high");
+  const [newTicketSubject, setNewTicketSubject] = useState("");
+  const [newTicketDescription, setNewTicketDescription] = useState("");
+  const [ticketFilter, setTicketFilter] = useState<"ALL" | "ISSUE" | "SUGGESTION" | "BILLING">("ALL");
+
+  const handleLeadStatusChange = (leadId: string, status: PlatformDemoLead["status"]) => {
+    const updated = apiClient.updatePlatformDemoLeadStatus(leadId, status);
+    setLeads(updated);
+    toast.success("تم تحديث حالة طلب المعاينة");
+  };
+
+  const handleWhatsAppLeadChat = (lead: PlatformDemoLead) => {
+    const cleanPhone = lead.phone.replace(/[^0-9]/g, "");
+    const msg = `السلام عليكم أستاذ ${lead.name}، معك إدارة منصة مدى لتشغيل الأكاديميات بخصوص طلبكم لمعاينة النظام لأكاديمية ${lead.academyName}. يسعدنا ترتيب موعد العرض التوضيحي المباشر (Demo) معكم.`;
+    const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
+    window.open(url, "_blank");
+  };
+
+  const handleStartEmergencyImpersonation = () => {
+    if (!impersonationAcademy) return;
+    if (!reasonValid(impersonationReason)) {
+      toast.error("يرجى كتابة سبب رسمي واضح ومفصل للتدخل الطارئ (4 أحرف على الأقل).");
+      return;
+    }
+
+    apiClient.startEmergencyImpersonation(
+      impersonationAcademy.id,
+      impersonationAcademy.name,
+      impersonationReason.trim()
+    );
+
+    const auditItem: PlatformActivity = {
+      id: `EV-SUPER-${Date.now()}`,
+      action: "SUPER_ACCESS_SESSION_STARTED",
+      targetType: "TENANT",
+      actorName: "Super Admin (R00)",
+      tenantName: impersonationAcademy.name,
+      createdAt: new Date().toISOString(),
+    };
+    setActivity((prev) => [auditItem, ...prev]);
+
+    toast.success(`تم بدء جلسة فحص الطوارئ للأكاديمية: ${impersonationAcademy.name}`, {
+      description: "راية الفحص البرتقالية ستظهر أعلى الشاشة مع زر إنهاء الجلسة والعودة للمنصة.",
+    });
+
+    setImpersonationAcademy(null);
+    setImpersonationReason("");
+    navigate("/academy-owner");
+  };
+
+  const handleCreateNewTicket = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTicketSubject.trim()) {
+      toast.error("يرجى كتابة عنوان التذكرة أو الاقتراح.");
+      return;
+    }
+    if (!newTicketDescription.trim()) {
+      toast.error("يرجى كتابة تفاصيل الطلب أو الاقتراح.");
+      return;
+    }
+    const targetAcademy = academies.find((a) => a.id === newTicketAcademyId) || academies[0];
+    const newId = `TCK-${800 + tickets.length + 1}`;
+    const newTicket: SupportTicket = {
+      id: newId,
+      academyId: targetAcademy?.id || "demo-academy-01",
+      academyName: targetAcademy?.name || "أكاديمية مدى النموذجية",
+      requesterName: "مسؤول المنصة المركزي · R00",
+      requesterRole: "مسؤول المنصة",
+      requesterPhone: "+201000000000",
+      subject: newTicketSubject.trim(),
+      type: newTicketType,
+      category: newTicketCategory,
+      priority: newTicketPriority,
+      status: "new",
+      createdAt: "الآن",
+      description: newTicketDescription.trim(),
+    };
+
+    setTickets((prev) => [newTicket, ...prev]);
+    toast.success("تم تسجيل التذكرة / الاقتراح بنجاح");
+    setNewTicketModalOpen(false);
+    setNewTicketSubject("");
+    setNewTicketDescription("");
+  };
+
+  const filteredLeads = useMemo(() => {
+    return leads.filter((lead) => {
+      const matchesFilter = leadFilter === "ALL" || lead.status === leadFilter;
+      const q = leadSearch.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        lead.name.toLowerCase().includes(q) ||
+        lead.academyName.toLowerCase().includes(q) ||
+        lead.phone.includes(q) ||
+        lead.email.toLowerCase().includes(q);
+      return matchesFilter && matchesSearch;
+    });
+  }, [leads, leadFilter, leadSearch]);
+
+  const filteredTickets = useMemo(() => {
+    return tickets.filter((ticket) => {
+      if (ticketFilter === "ISSUE") return ticket.category === "مشكلة تقنية" || ticket.type === "issue";
+      if (ticketFilter === "SUGGESTION") return ticket.category === "اقتراح ميزة جديدة" || ticket.type === "suggestion";
+      if (ticketFilter === "BILLING") return ticket.category === "اشتراكات وخطط" || ticket.type === "billing";
+      return true;
+    });
+  }, [tickets, ticketFilter]);
 
   const selectedTenant = academies.find((item) => item.id === selectedTenantId) ?? null;
 
@@ -1542,6 +1671,17 @@ export default function PlatformConsoleLive() {
                             >
                               استعادة المالك
                             </button>
+                            <button
+                              type="button"
+                              style={{ color: "#c2410c", borderColor: "#fed7aa", background: "#fff7ed" }}
+                              onClick={() => {
+                                setImpersonationAcademy(row);
+                                setImpersonationReason("");
+                              }}
+                              title="دخول فحص الطوارئ للأكاديمية وحل المشاكل التشغيلية من الداخل"
+                            >
+                              <ShieldAlert size={12} style={{ display: "inline", verticalAlign: "middle", marginLeft: "2px" }} /> فحص طارئ
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -1550,6 +1690,174 @@ export default function PlatformConsoleLive() {
                       <tr>
                         <td colSpan={5} className="pc-live-empty-cell">
                           لا توجد أكاديميات مطابقة لمعايير البحث.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {/* ========================================================= */}
+          {/* VIEW: LEADS & LANDING DEMO REQUESTS (طلبات المعاينة)      */}
+          {/* ========================================================= */}
+          {!loading && !error && view === "leads" && (
+            <section className="pc-live-card">
+              <header>
+                <div>
+                  <h2>طلبات المعاينة والعملاء الجدد (Landing Page Leads & Demos)</h2>
+                  <p>
+                    الطلبات الواردة فوراً من نموذج المعاينة في الصفحة الرئيسية (Landing Page) مع إمكانية التواصل عبر واتساب والتفعيل التجريبي بنقرة واحدة.
+                  </p>
+                </div>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <span className="pc-live-boundary">
+                    <Sparkles size={14} /> {filteredLeads.length} طلبات مسجلة
+                  </span>
+                </div>
+              </header>
+
+              {/* Filter Tabs & Search */}
+              <div className="pc-live-filter-bar" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", marginBottom: "16px" }}>
+                <div className="pc-live-search" style={{ flex: 1, minWidth: "220px" }}>
+                  <Search size={15} />
+                  <input
+                    type="search"
+                    placeholder="ابحث باسم المسؤول، الأكاديمية، الهاتف، أو البريد..."
+                    value={leadSearch}
+                    onChange={(e) => setLeadSearch(e.target.value)}
+                  />
+                </div>
+                <div className="pc-filter-tabs" style={{ display: "flex", gap: "6px" }}>
+                  {[
+                    { id: "ALL", label: "الكل" },
+                    { id: "NEW", label: "جديد 🚨" },
+                    { id: "CONTACTED", label: "تم التواصل" },
+                    { id: "DEMO_SCHEDULED", label: "موعد ديمو 📅" },
+                    { id: "CONVERTED", label: "تم التحويل لعميل ✅" },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      className={`pc-filter-tab ${leadFilter === tab.id ? "active" : ""}`}
+                      onClick={() => setLeadFilter(tab.id as typeof leadFilter)}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Leads Table */}
+              <div className="pc-live-table-wrap">
+                <table className="pc-live-table">
+                  <thead>
+                    <tr>
+                      <th>معرف الطلب</th>
+                      <th>الأكاديمية والمسؤول</th>
+                      <th>بيانات التواصل</th>
+                      <th>الفروع والاحتياج التشغيلي</th>
+                      <th>حالة الطلب</th>
+                      <th>تاريخ الورود</th>
+                      <th>الإجراءات الفورية</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredLeads.map((lead) => (
+                      <tr key={lead.id}>
+                        <td>
+                          <span style={{ fontFamily: "monospace", fontWeight: 700, color: "#475569" }}>
+                            {lead.id}
+                          </span>
+                        </td>
+                        <td>
+                          <strong>{lead.academyName}</strong>
+                          <small style={{ display: "block", color: "#64748b" }}>
+                            المسؤول: {lead.name}
+                          </small>
+                        </td>
+                        <td>
+                          <div style={{ display: "grid", gap: "2px" }}>
+                            <span style={{ direction: "ltr", textAlign: "right", fontWeight: 600 }}>{lead.phone}</span>
+                            <small style={{ color: "#64748b" }}>{lead.email}</small>
+                          </div>
+                        </td>
+                        <td>
+                          <div>
+                            <span style={{ background: "#f1f5f9", padding: "2px 6px", borderRadius: "4px", fontSize: "11px", fontWeight: 600 }}>
+                              {lead.branchCount} فروع
+                            </span>
+                            <small style={{ display: "block", color: "#475569", marginTop: "3px" }}>
+                              {lead.operationalNeed}
+                            </small>
+                            {lead.notes && (
+                              <small style={{ display: "block", color: "#94a3b8", fontStyle: "italic" }}>
+                                ملاحظة: {lead.notes}
+                              </small>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <select
+                            value={lead.status}
+                            onChange={(e) => handleLeadStatusChange(lead.id, e.target.value as PlatformDemoLead["status"])}
+                            style={{
+                              padding: "4px 8px",
+                              borderRadius: "6px",
+                              fontSize: "12px",
+                              border: "1px solid #cbd5e1",
+                              fontWeight: 600,
+                              background:
+                                lead.status === "NEW" ? "#fef2f2" :
+                                lead.status === "CONVERTED" ? "#f0fdf4" :
+                                lead.status === "DEMO_SCHEDULED" ? "#eff6ff" : "#fff",
+                              color:
+                                lead.status === "NEW" ? "#b91c1c" :
+                                lead.status === "CONVERTED" ? "#15803d" :
+                                lead.status === "DEMO_SCHEDULED" ? "#1d4ed8" : "#334155",
+                            }}
+                          >
+                            <option value="NEW">جديد (New)</option>
+                            <option value="CONTACTED">تم التواصل (Contacted)</option>
+                            <option value="DEMO_SCHEDULED">مجدول للعرض (Demo Scheduled)</option>
+                            <option value="CONVERTED">تم التحويل لعميل (Converted)</option>
+                            <option value="REJECTED">مرفوض / غير مهتم</option>
+                          </select>
+                        </td>
+                        <td>
+                          <small>{fmtDate(lead.createdAt)}</small>
+                        </td>
+                        <td>
+                          <div className="pc-live-row-actions">
+                            <button
+                              type="button"
+                              style={{ color: "#15803d", borderColor: "#bbf7d0", background: "#f0fdf4" }}
+                              onClick={() => handleWhatsAppLeadChat(lead)}
+                              title="فتح محادثة واتساب فورية لترتيب الديمو"
+                            >
+                              <MessageCircle size={13} style={{ display: "inline", verticalAlign: "middle", marginLeft: "2px" }} /> واتساب
+                            </button>
+                            <button
+                              type="button"
+                              className="pc-live-link"
+                              onClick={() => {
+                                toast.info(`تجهيز إنشاء الحساب التجريبي لأكاديمية ${lead.academyName}`);
+                                setLeadFilter("ALL");
+                                setLeadSearch(lead.name);
+                              }}
+                              title="متابعة أو تفعيل الأكاديمية"
+                            >
+                              <UserPlus size={13} style={{ display: "inline", verticalAlign: "middle", marginLeft: "2px" }} /> متابعة الطلب
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {filteredLeads.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="pc-live-empty-cell">
+                          لا توجد طلبات معاينة مطابقة لمعايير البحث.
                         </td>
                       </tr>
                     )}
@@ -1777,24 +2085,65 @@ export default function PlatformConsoleLive() {
               <section className="pc-live-card">
                 <header>
                   <div>
-                    <h2>تذاكر الدعم الفني للأكاديميات</h2>
+                    <h2>تذاكر الدعم الفني والاقتراحات</h2>
                     <p>
-                      الطلبات والاستفسارات المرفوعة من مسؤولي الأكاديميات والمديرين.
+                      البلاغات التقنية، طلبات الميزات الجديدة، واستفسارات الباقات والاشتراكات من الأكاديميات.
                     </p>
                   </div>
-                  <span className="pc-live-boundary">
-                    <LifeBuoy size={14} /> {tickets.length} تذاكر مسجلة
-                  </span>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    <button
+                      type="button"
+                      className="pc-live-primary"
+                      onClick={() => {
+                        setNewTicketAcademyId(academies[0]?.id || "demo-academy-01");
+                        setNewTicketType("issue");
+                        setNewTicketCategory("مشكلة تقنية");
+                        setNewTicketPriority("high");
+                        setNewTicketSubject("");
+                        setNewTicketDescription("");
+                        setNewTicketModalOpen(true);
+                      }}
+                      style={{ padding: "6px 14px", fontSize: "12px", gap: "6px" }}
+                    >
+                      <Plus size={14} /> تسجيل تذكرة / اقتراح جديد
+                    </button>
+                    <span className="pc-live-boundary">
+                      <LifeBuoy size={14} /> {filteredTickets.length} تذاكر مسجلة
+                    </span>
+                  </div>
                 </header>
 
+                {/* Filter Tabs */}
+                <div style={{ display: "flex", gap: "8px", marginBottom: "16px", padding: "0 4px", flexWrap: "wrap" }}>
+                  {[
+                    { id: "ALL", label: "الكل" },
+                    { id: "ISSUE", label: "أعطال وبلاغات تقنية 🚨" },
+                    { id: "SUGGESTION", label: "اقتراحات وميزات جديدة 💡" },
+                    { id: "BILLING", label: "اشتراكات وباقات 💳" },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      className={`pc-filter-tab ${ticketFilter === tab.id ? "active" : ""}`}
+                      onClick={() => setTicketFilter(tab.id as typeof ticketFilter)}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="pc-ticket-grid">
-                  {tickets.map((ticket) => {
+                  {filteredTickets.map((ticket) => {
                     const priority = ticketPriorityLabels[ticket.priority];
                     const status = ticketStatusLabels[ticket.status];
                     return (
                       <article className="pc-ticket-card" key={ticket.id}>
                         <span className={`pc-ticket-icon ${priority.class}`}>
-                          <LifeBuoy size={18} />
+                          {ticket.category === "اقتراح ميزة جديدة" || ticket.type === "suggestion" ? (
+                            <Lightbulb size={18} />
+                          ) : (
+                            <LifeBuoy size={18} />
+                          )}
                         </span>
                         <div className="pc-ticket-main">
                           <strong>{ticket.subject}</strong>
@@ -2882,7 +3231,21 @@ export default function PlatformConsoleLive() {
                 <Copy size={14} /> نسخ تقرير الفحص الفني
               </button>
 
-              <div style={{ display: "flex", gap: 8 }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  className="pc-live-primary"
+                  style={{ background: "#ea580c", borderColor: "#ea580c" }}
+                  onClick={() => {
+                    const target = inspectionAcademy;
+                    setInspectionAcademy(null);
+                    setImpersonationAcademy(target);
+                    setImpersonationReason("");
+                  }}
+                  title="دخول فحص الطوارئ للأكاديمية ومعاينة الشاشات من الداخل"
+                >
+                  <ShieldAlert size={14} /> فحص طارئ (Super Access)
+                </button>
                 <button
                   type="button"
                   className="pc-live-primary"
@@ -3095,6 +3458,226 @@ export default function PlatformConsoleLive() {
                 إغلاق
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: EMERGENCY SUPER ACCESS (VIEW-AS)                   */}
+      {/* ========================================================= */}
+      {impersonationAcademy && (
+        <div
+          className="pc-ticket-detail-modal"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setImpersonationAcademy(null);
+          }}
+        >
+          <div className="pc-ticket-dialog" dir="rtl" style={{ maxWidth: "540px" }}>
+            <div className="pc-ticket-dialog-head" style={{ borderBottom: "1px solid #fed7aa", paddingBottom: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: "#ea580c", color: "#fff", display: "grid", placeItems: "center" }}>
+                  <ShieldAlert size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, color: "#9a3412" }}>دخول فحص الطوارئ (Super Access · R00)</h3>
+                  <small style={{ color: "#c2410c" }}>معاينة وحل المشاكل التشغيلية من داخل مساحة الأكاديمية</small>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="pc-ticket-dialog-close"
+                onClick={() => setImpersonationAcademy(null)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: "16px 0", display: "grid", gap: "14px" }}>
+              <div style={{ background: "#fffbeb", border: "1px solid #fef3c7", padding: "12px 14px", borderRadius: "8px", fontSize: "12px", lineHeight: "1.7", color: "#92400e" }}>
+                <strong>الأكاديمية المستهدفة:</strong> {impersonationAcademy.name} ({impersonationAcademy.id})<br />
+                <strong>تنبيه حوكمة وأمان:</strong> ستدخل إلى واجهات التشغيل الخاصة بالأكاديمية في وضع فحص طارئ لمعاينة الخلل وحله. يتم توثيق هذا الإجراء وتوقيت بدئه في سجل التدقيق الأمني (Audit Log).
+              </div>
+
+              <label style={{ display: "grid", gap: "6px", fontSize: "12px" }}>
+                <span style={{ fontWeight: 700, color: "#1e293b" }}>
+                  سبب التدخل الطارئ (إلزامي لمكافحة التلاعب) <span style={{ color: "#dc2626" }}>*</span>
+                </span>
+                <textarea
+                  rows={3}
+                  placeholder="مثال: فحص مشكلة شفت الخزينة المعلق، أو معالجة خطأ في رصد درجات الطلاب بناءً على تذكرة الدعم TCK-801..."
+                  value={impersonationReason}
+                  onChange={(e) => setImpersonationReason(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    borderRadius: "8px",
+                    border: "1px solid #cbd5e1",
+                    fontSize: "12px",
+                    fontFamily: "inherit",
+                    boxSizing: "border-box",
+                  }}
+                />
+                <small style={{ color: "#64748b" }}>
+                  يجب ألا يقل السبب عن 4 أحرف لضمان توثيق الحوكمة.
+                </small>
+              </label>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", paddingTop: "12px", borderTop: "1px solid #f1f5f9" }}>
+              <button
+                type="button"
+                className="pc-live-link"
+                onClick={() => setImpersonationAcademy(null)}
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                className="pc-live-primary"
+                style={{ background: "#ea580c", borderColor: "#ea580c" }}
+                onClick={handleStartEmergencyImpersonation}
+                disabled={!reasonValid(impersonationReason)}
+              >
+                بدء جلسة فحص الطوارئ والانتقال للمساحة ⬅
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODAL: NEW SUPPORT TICKET / FEATURE SUGGESTION            */}
+      {/* ========================================================= */}
+      {newTicketModalOpen && (
+        <div
+          className="pc-ticket-detail-modal"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setNewTicketModalOpen(false);
+          }}
+        >
+          <div className="pc-ticket-dialog" dir="rtl" style={{ maxWidth: "560px" }}>
+            <div className="pc-ticket-dialog-head">
+              <div>
+                <h3 style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <Sparkles size={18} color="#0d9488" />
+                  تسجيل تذكرة دعم أو اقتراح ميزة جديدة
+                </h3>
+                <small style={{ color: "#64748b" }}>
+                  توثيق البلاغات التقنية ومقترحات التطوير مع جدولتها ومتابعتها
+                </small>
+              </div>
+              <button
+                type="button"
+                className="pc-ticket-dialog-close"
+                onClick={() => setNewTicketModalOpen(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateNewTicket} style={{ display: "grid", gap: "12px", paddingTop: "10px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <label style={{ display: "grid", gap: "6px", fontSize: "12px" }}>
+                  <span style={{ fontWeight: 600 }}>الأكاديمية المعنية</span>
+                  <select
+                    value={newTicketAcademyId}
+                    onChange={(e) => setNewTicketAcademyId(e.target.value)}
+                    style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "12px" }}
+                  >
+                    {academies.map((a) => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label style={{ display: "grid", gap: "6px", fontSize: "12px" }}>
+                  <span style={{ fontWeight: 600 }}>نوع المعاملة</span>
+                  <select
+                    value={newTicketType}
+                    onChange={(e) => {
+                      const t = e.target.value as "issue" | "suggestion" | "billing";
+                      setNewTicketType(t);
+                      if (t === "suggestion") setNewTicketCategory("اقتراح ميزة جديدة");
+                      else if (t === "billing") setNewTicketCategory("اشتراكات وخطط");
+                      else setNewTicketCategory("مشكلة تقنية");
+                    }}
+                    style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "12px" }}
+                  >
+                    <option value="issue">بلاغ عطل أو مشكلة تقنية 🚨</option>
+                    <option value="suggestion">اقتراح ميزة جديدة أو فكرة 💡</option>
+                    <option value="billing">استفسار مالي أو باقة 💳</option>
+                  </select>
+                </label>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <label style={{ display: "grid", gap: "6px", fontSize: "12px" }}>
+                  <span style={{ fontWeight: 600 }}>التصنيف</span>
+                  <input
+                    value={newTicketCategory}
+                    onChange={(e) => setNewTicketCategory(e.target.value)}
+                    placeholder="مثال: تسجيل الحضور الذاتي، الفواتير..."
+                    style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "12px" }}
+                  />
+                </label>
+
+                <label style={{ display: "grid", gap: "6px", fontSize: "12px" }}>
+                  <span style={{ fontWeight: 600 }}>الأولوية والأهمية</span>
+                  <select
+                    value={newTicketPriority}
+                    onChange={(e) => setNewTicketPriority(e.target.value as SupportTicket["priority"])}
+                    style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "12px" }}
+                  >
+                    <option value="high">مرتفعة / حرجة 🔴</option>
+                    <option value="medium">متوسطة 🟡</option>
+                    <option value="low">منخفضة 🟢</option>
+                  </select>
+                </label>
+              </div>
+
+              <label style={{ display: "grid", gap: "6px", fontSize: "12px" }}>
+                <span style={{ fontWeight: 600 }}>عنوان التذكرة / الاقتراح <span style={{ color: "#dc2626" }}>*</span></span>
+                <input
+                  required
+                  value={newTicketSubject}
+                  onChange={(e) => setNewTicketSubject(e.target.value)}
+                  placeholder="مثال: إضافة زر لتصدير كشف الدرجات إلى ملف Excel مباشرة..."
+                  style={{ padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "12px" }}
+                />
+              </label>
+
+              <label style={{ display: "grid", gap: "6px", fontSize: "12px" }}>
+                <span style={{ fontWeight: 600 }}>تفاصيل الطلب وسيناريو الاستخدام <span style={{ color: "#dc2626" }}>*</span></span>
+                <textarea
+                  required
+                  rows={4}
+                  value={newTicketDescription}
+                  onChange={(e) => setNewTicketDescription(e.target.value)}
+                  placeholder="اشرح المشكلة بالتفصيل، أو الفائدة التشغيلية للميزة المقترحة..."
+                  style={{ padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "12px", fontFamily: "inherit" }}
+                />
+              </label>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "6px" }}>
+                <button
+                  type="button"
+                  className="pc-live-link"
+                  onClick={() => setNewTicketModalOpen(false)}
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  className="pc-live-primary"
+                >
+                  تسجيل وحفظ التذكرة
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

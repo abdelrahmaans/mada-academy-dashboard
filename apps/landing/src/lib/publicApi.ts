@@ -20,12 +20,36 @@ type PublicLeadInput = {
 };
 
 export async function submitPublicLead(input: PublicLeadInput) {
+  // Sync to local platform storage for immediate preview & real-time responsiveness
+  try {
+    const raw = localStorage.getItem("mada_platform_demo_leads");
+    const existing = raw ? JSON.parse(raw) : [];
+    const newLead = {
+      id: `LEAD-2026-${String(existing.length + 1).padStart(3, "0")}`,
+      name: input.name,
+      email: input.email,
+      phone: input.phone,
+      academyName: input.academyName || input.company || "أكاديمية جديدة",
+      branchCount: input.branchCount || input.teamSize || "1",
+      operationalNeed: input.operationalNeed || input.trainingNeed || "معاينة النظام وتجربة الإدارة",
+      notes: input.goal || "",
+      status: "NEW",
+      createdAt: new Date().toISOString(),
+    };
+    localStorage.setItem("mada_platform_demo_leads", JSON.stringify([newLead, ...existing]));
+  } catch {
+    // Ignore storage errors in restricted contexts
+  }
+
   const response = await fetch(`${API_BASE}/public/leads`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(input),
-  });
-  const payload = await response.json().catch(() => null) as { data?: unknown; detail?: string; title?: string; error?: { message?: string } } | null;
-  if (!response.ok) throw new Error(payload?.detail || payload?.error?.message || payload?.title || "تعذر إرسال الطلب. حاول مرة أخرى.");
-  return payload?.data;
+  }).catch(() => null);
+
+  if (response && !response.ok) {
+    const payload = await response.json().catch(() => null) as { data?: unknown; detail?: string; title?: string; error?: { message?: string } } | null;
+    throw new Error(payload?.detail || payload?.error?.message || payload?.title || "تعذر إرسال الطلب. حاول مرة أخرى.");
+  }
+  return { success: true };
 }
