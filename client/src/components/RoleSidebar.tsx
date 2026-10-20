@@ -221,7 +221,7 @@ export default function RoleSidebar({
       return ["/student-portal#progress"].includes(item.path);
     }
     if (effectiveRoleCode === "R06") {
-      return ["/finance-desk#shifts", "/finance-desk#payroll", "/approvals", "/reports"].includes(item.path);
+      return ["/finance-desk#shifts", "/finance-desk#payroll", "/reports"].includes(item.path);
     }
     return ["/approvals", "/reports", "/competitions"].includes(item.path) || item.path.includes("#");
   });

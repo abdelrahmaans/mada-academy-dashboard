@@ -14,6 +14,7 @@ import {
   CreditCard,
   FileCheck2,
   FileText,
+  Info,
   LayoutDashboard,
   LogOut,
   MapPin,
@@ -319,6 +320,7 @@ export default function FinanceDesk() {
 
   const [handovers, setHandovers] = useState<ShiftCashHandover[]>(() => shiftStorage.getHandovers());
   const [payrolls, setPayrolls] = useState<TrainerPayrollRecord[]>(() => payrollStorage.getPayrolls());
+  const [showScopeInfo, setShowScopeInfo] = useState(false);
 
   useEffect(() => {
     if (liveMode) {
@@ -929,32 +931,35 @@ export default function FinanceDesk() {
             title={VIEW_TITLES[view]}
             description={VIEW_COPY[view]}
             actions={
-              <span className="finance-desk-date">
-                <CalendarDays size={14} />
-                {new Intl.DateTimeFormat("ar-EG", {
-                  month: "long",
-                  year: "numeric",
-                }).format(new Date())}{" "}
-                · {branchContext}
-              </span>
+              <div className="finance-desk-header-actions">
+                <span className="finance-desk-date">
+                  <CalendarDays size={14} />
+                  {new Intl.DateTimeFormat("ar-EG", {
+                    month: "long",
+                    year: "numeric",
+                  }).format(new Date())}{" "}
+                  · {branchContext}
+                </span>
+                <button
+                  type="button"
+                  className="finance-info-trigger"
+                  onClick={() => setShowScopeInfo(true)}
+                  title="السياسات والضوابط المالية ونطاق الحساب"
+                  aria-label="السياسات والضوابط المالية"
+                >
+                  <Info size={15} />
+                  <span>السياسات والنطاق</span>
+                </button>
+              </div>
             }
           />
-          <RoleScopeCard className="finance-desk-scope-card" />
-          {/* Navigation tabs removed - primary navigation is driven by RoleSidebar */}
-          <div className="finance-desk-banner" role="status" aria-live="polite">
-            {!liveMode && (
-              <>
-                <AlertCircle size={15} />
-                <span>
-                  <strong>DEMO · معاينة محلية:</strong> البيانات والعمليات هنا
-                  غير محفوظة على الـAPI.
-                </span>
-              </>
-            )}
-            {liveMode && workspaceState === "loading" && (
+          {liveMode && workspaceState === "loading" && (
+            <div className="finance-desk-banner" role="status" aria-live="polite">
               <span>جار تحميل بيانات المالية الحية ضمن صلاحيات الحساب…</span>
-            )}
-            {liveMode && workspaceState === "error" && (
+            </div>
+          )}
+          {liveMode && workspaceState === "error" && (
+            <div className="finance-desk-banner" role="status" aria-live="polite">
               <span>
                 تعذر تحميل البيانات المالية. لم يتم عرض بيانات معاينة.{" "}
                 {loadError}{" "}
@@ -965,23 +970,15 @@ export default function FinanceDesk() {
                   إعادة المحاولة
                 </button>
               </span>
-            )}
-            {liveMode && workspaceState === "forbidden" && (
+            </div>
+          )}
+          {liveMode && workspaceState === "forbidden" && (
+            <div className="finance-desk-banner" role="status" aria-live="polite">
               <span>
                 هذه المساحة متاحة فقط لدوري R05 السكرتير وR06 المحاسب.
               </span>
-            )}
-            {(!liveMode || workspaceState === "ready") && (
-              <>
-                <ShieldCheck size={15} />
-                <span>
-                  <strong>قاعدة مالية:</strong> الفاتورة المحصلة لا تعدّل
-                  مباشرة، والمصروف المرفوض لا يدخل الإجماليات المعتمدة. كل قرار
-                  يحتفظ بسبب وسجل.
-                </span>
-              </>
-            )}
-          </div>
+            </div>
+          )}
           {liveMode && workspaceState !== "ready" && (
             <section className="finance-desk-panel" role="status">
               {workspaceState === "loading"
@@ -1121,6 +1118,100 @@ export default function FinanceDesk() {
         liveMode={liveMode}
         workspaceState={workspaceState}
       />
+      {showScopeInfo && (
+        <div
+          className="finance-info-modal-backdrop"
+          role="presentation"
+          onClick={e => {
+            if (e.target === e.currentTarget) setShowScopeInfo(false);
+          }}
+        >
+          <div
+            className="finance-info-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="finance-scope-info-title"
+          >
+            <div className="finance-info-modal-header">
+              <div className="finance-info-modal-title">
+                <span>
+                  <ShieldCheck size={20} />
+                </span>
+                <h2 id="finance-scope-info-title">
+                  نطاق الدور والسياسات المالية
+                </h2>
+              </div>
+              <button
+                type="button"
+                className="finance-info-modal-close"
+                onClick={() => setShowScopeInfo(false)}
+                aria-label="إغلاق"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="finance-info-section">
+              <span className="finance-info-section-title">
+                <MapPin size={15} /> بطاقة الدور والنطاق المصرح
+              </span>
+              <RoleScopeCard compact />
+            </div>
+
+            <div className="finance-info-section">
+              <span className="finance-info-section-title">
+                <ShieldCheck size={15} /> مبدأ الرقابة وفصل الصلاحيات
+              </span>
+              <div className="finance-info-policy-list">
+                <div className="finance-info-policy-item">
+                  <CheckCircle2 size={16} />
+                  <div>
+                    <strong>فصل الإنشاء عن الاعتماد:</strong> لا يعتمد الموظف الإجراءات التي يقوم بإنشائها، وتدقيق العمليات المالية يمر عبر المحاسب ومدير الفرع.
+                  </div>
+                </div>
+                <div className="finance-info-policy-item">
+                  <CheckCircle2 size={16} />
+                  <div>
+                    <strong>نطاق الفرع المحدد ({branchContext}):</strong> العمليات والقيود محصورة فقط داخل الفروع المصرح بها لحسابك وفق الصلاحيات المعطاة.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="finance-info-section">
+              <span className="finance-info-section-title">
+                <Banknote size={15} /> السياسات والضوابط المالية الإلزامية
+              </span>
+              <div className="finance-info-policy-list">
+                <div className="finance-info-policy-item">
+                  <FileText size={16} />
+                  <div>
+                    <strong>حماية الفواتير وسندات القبض:</strong> الفاتورة المحصلة لا تعدّل أو تحذف مباشرة للحفاظ على تسلسل القيود والشفافية المحاسبية.
+                  </div>
+                </div>
+                <div className="finance-info-policy-item">
+                  <TrendingDown size={16} />
+                  <div>
+                    <strong>اعتماد المصروفات والبنود:</strong> المصروف المرفوض يُستبعد تماماً من الإجماليات المعتمدة والصافي، مع وجوب تسجيل سبب موثق للقرار.
+                  </div>
+                </div>
+                <div className="finance-info-policy-item">
+                  <Wallet size={16} />
+                  <div>
+                    <strong>تسليم عهد وورديات الاستقبال:</strong> يُشترط مطابقة النقدية الفعلية مع إجمالي سندات القبض واعتماد المحاسب قبل إغلاق الوردية.
+                  </div>
+                </div>
+                <div className="finance-info-policy-item">
+                  <UserCheck size={16} />
+                  <div>
+                    <strong>مسيرات رواتب المدربين:</strong> احتساب آلي وفق الحصص المنفذة المعتمدة بحضور الطلاب، وإقفال تام للمسير فور الصرف لمنع أي تعديل لاحق.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </RoleDashboardShell>
   );
 }

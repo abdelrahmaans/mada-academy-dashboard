@@ -1206,10 +1206,6 @@ export function ShiftsView({
         />
       </div>
 
-      <div className="finance-report-note" style={{ marginBottom: "1.2rem" }}>
-        <ShieldCheck size={16} /> <strong>ضابط الرقابة والـ Audit:</strong> يمنع خروج موظف الاستقبال من الفرع قبل اعتماد المحاسب استلام الكاش الفعلي ومطابقته مع إجمالي سندات القبض المسجلة بالسيستم.
-      </div>
-
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {handovers.map(shift => {
           const isPending = shift.status === "SUBMITTED";
@@ -1599,10 +1595,6 @@ export function PayrollView({
           hint="تم تسليمها للمدربين"
           tone="blue"
         />
-      </div>
-
-      <div className="finance-report-note" style={{ marginBottom: "1.2rem" }}>
-        <ShieldCheck size={16} /> <strong>لوجيك الاحتساب المالي:</strong> يُحسب المستحق آلياً كـ (عدد الحصص المنفذة بالفعل × سعر الحصة المتفق عليه) + الراتب الأساسي + المكافآت - الخصومات، بعد اعتماد رئيس المدربين لاكتمال الحصص.
       </div>
 
       {/* Table in full-width responsive horizontal container */}
