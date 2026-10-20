@@ -801,18 +801,23 @@
 .finance-action-card-title {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   font-size: 13.5px;
   font-weight: 800;
   color: #0f172a;
 }
 
-.finance-action-card-title span {
+.finance-action-card-title > span:first-child,
+.finance-action-card-title > span.shifts,
+.finance-action-card-title > span.expenses,
+.finance-action-card-title > span.payroll,
+.finance-action-card-title > span.invoices {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
+  flex-shrink: 0;
 }
 
 .finance-action-card-title span.shifts {
@@ -833,6 +838,17 @@
 .finance-action-card-title span.invoices {
   background: #f0fdf4;
   color: #16a34a;
+}
+
+.finance-action-card-title > span:last-child,
+.finance-action-card-title .finance-action-title-text {
+  display: inline-block;
+  width: auto;
+  height: auto;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0f172a;
+  white-space: nowrap;
 }
 
 .finance-action-items-list {

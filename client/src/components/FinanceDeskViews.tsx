@@ -303,7 +303,9 @@ export function Overview({
                     <span className="shifts">
                       <Wallet size={16} />
                     </span>
-                    <span>ورديات الاستقبال بانتظار استلام الكاش ({submittedShifts.length})</span>
+                    <span className="finance-action-title-text">
+                      ورديات الاستقبال بانتظار استلام الكاش ({submittedShifts.length})
+                    </span>
                   </div>
                   {onShifts && (
                     <button
@@ -359,7 +361,9 @@ export function Overview({
                     <span className="expenses">
                       <TrendingDown size={16} />
                     </span>
-                    <span>طلبات المصروفات بانتظار الاعتماد ({waitingExpenses.length})</span>
+                    <span className="finance-action-title-text">
+                      طلبات المصروفات بانتظار الاعتماد ({waitingExpenses.length})
+                    </span>
                   </div>
                   <button
                     type="button"
@@ -419,7 +423,9 @@ export function Overview({
                     <span className="payroll">
                       <UserCheck size={16} />
                     </span>
-                    <span>مسيرات رواتب المدربين الجاهزة للصرف ({payablePayrolls.length})</span>
+                    <span className="finance-action-title-text">
+                      مسيرات رواتب المدربين الجاهزة للصرف ({payablePayrolls.length})
+                    </span>
                   </div>
                   {onPayroll && (
                     <button
@@ -470,7 +476,9 @@ export function Overview({
                     <span className="invoices">
                       <CreditCard size={16} />
                     </span>
-                    <span>فواتير وأقساط مستحقة للتحصيل ({overdueInvoices.length})</span>
+                    <span className="finance-action-title-text">
+                      فواتير وأقساط مستحقة للتحصيل ({overdueInvoices.length})
+                    </span>
                   </div>
                   <button
                     type="button"
