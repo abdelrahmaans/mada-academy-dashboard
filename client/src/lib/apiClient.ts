@@ -1166,6 +1166,17 @@ export const freezeStorage = {
   },
 };
 
+export type ShiftReceiptDetail = {
+  id: string;
+  receiptNumber: string;
+  studentName: string;
+  invoiceNumber: string;
+  courseName: string;
+  amount: number;
+  paymentMethod: "CASH" | "VISA" | "INSTAPAY" | "VODAFONE_CASH";
+  time: string;
+};
+
 export type ShiftCashHandover = {
   id: string;
   branchName: string;
@@ -1182,6 +1193,21 @@ export type ShiftCashHandover = {
   discrepancyAmount?: number;
   notes?: string;
   createdAt: string;
+  openingFloat?: number;
+  pettyExpenses?: number;
+  receipts?: ShiftReceiptDetail[];
+};
+
+export type TrainerSessionDetail = {
+  sessionId: string;
+  courseName: string;
+  groupName: string;
+  date: string;
+  time: string;
+  room: string;
+  attendanceCount: number;
+  rate: number;
+  approvedByHead: boolean;
 };
 
 export type TrainerPayrollRecord = {
@@ -1193,12 +1219,15 @@ export type TrainerPayrollRecord = {
   ratePerSession: number;
   baseSalary: number;
   bonusAmount: number;
+  bonusReason?: string;
   deductionAmount: number;
+  deductionReason?: string;
   netPayable: number;
   status: "DRAFT" | "SUBMITTED" | "APPROVED" | "PAID";
   paidAt?: string;
   paymentMethod?: string;
   paymentReference?: string;
+  sessions?: TrainerSessionDetail[];
 };
 
 const SHIFT_STORAGE_KEY = "mada_shift_handovers_v1";
@@ -1212,12 +1241,22 @@ const DEFAULT_SHIFTS: ShiftCashHandover[] = [
     shiftName: "MORNING",
     submittedByUserId: "SEC-01",
     submittedByName: "هبة محمود (استقبال)",
+    openingFloat: 500,
+    pettyExpenses: 0,
     cashAmount: 6400,
     electronicAmount: 4800,
     totalReceiptsCount: 6,
     status: "SUBMITTED",
-    notes: "تحصيل فواتير اشتراكات كاش من أولياء الأمور الصباحية",
+    notes: "تحصيل فواتير واشتراكات كاش من أولياء الأمور الصباحية",
     createdAt: "2026-10-17T13:30:00Z",
+    receipts: [
+      { id: "rcp-1", receiptNumber: "REC-2026-091", studentName: "يوسف أحمد", invoiceNumber: "MAD-MAIN-2026-0001", courseName: "Junior Robotics · Level 1", amount: 1250, paymentMethod: "CASH", time: "10:15 ص" },
+      { id: "rcp-2", receiptNumber: "REC-2026-092", studentName: "ملك حسام", invoiceNumber: "MAD-ZAY-2026-0902", courseName: "روبوتكس مستوى 1", amount: 1950, paymentMethod: "CASH", time: "11:00 ص" },
+      { id: "rcp-3", receiptNumber: "REC-2026-093", studentName: "زياد طارق", invoiceNumber: "MAD-NSR-2026-0904", courseName: "دوائر إلكترونية", amount: 1600, paymentMethod: "CASH", time: "11:45 ص" },
+      { id: "rcp-4", receiptNumber: "REC-2026-094", studentName: "ريم أسامة", invoiceNumber: "MAD-NSR-2026-0908", courseName: "روبوتكس مستوى 2", amount: 1600, paymentMethod: "CASH", time: "12:30 م" },
+      { id: "rcp-5", receiptNumber: "REC-2026-095", studentName: "فريدة حسن", invoiceNumber: "MAD-MAD-2026-0905", courseName: "برمجة للمبتدئين", amount: 2400, paymentMethod: "VISA", time: "12:50 م" },
+      { id: "rcp-6", receiptNumber: "REC-2026-096", studentName: "كريم مدحت", invoiceNumber: "MAD-NSR-2026-0909", courseName: "تطوير ألعاب", amount: 2400, paymentMethod: "INSTAPAY", time: "01:10 م" },
+    ],
   },
   {
     id: "SHF-2026-100",
@@ -1226,14 +1265,23 @@ const DEFAULT_SHIFTS: ShiftCashHandover[] = [
     shiftName: "EVENING",
     submittedByUserId: "SEC-02",
     submittedByName: "سارة خالد (استقبال)",
+    openingFloat: 500,
+    pettyExpenses: 150,
     cashAmount: 8200,
     electronicAmount: 6500,
     totalReceiptsCount: 9,
     status: "ACCEPTED",
     receivedByName: "أحمد محمود (المحاسب)",
     receivedAt: "2026-10-16T21:15:00Z",
-    notes: "تم استلام النقدية بالكامل ومطابقة السندات",
+    notes: "تم استلام النقدية بالكامل ومطابقة السندات وتوريدها للخزينة",
     createdAt: "2026-10-16T20:45:00Z",
+    receipts: [
+      { id: "rcp-7", receiptNumber: "REC-2026-081", studentName: "ياسين محمد علي", invoiceNumber: "MAD-NSR-2026-0908", courseName: "روبوتكس مستوى 2", amount: 2400, paymentMethod: "CASH", time: "05:15 م" },
+      { id: "rcp-8", receiptNumber: "REC-2026-082", studentName: "عمر خالد", invoiceNumber: "MAD-NSR-2026-0904", courseName: "دوائر إلكترونية", amount: 1500, paymentMethod: "CASH", time: "06:00 م" },
+      { id: "rcp-9", receiptNumber: "REC-2026-083", studentName: "حسام الدين فهمي", invoiceNumber: "MAD-NSR-2026-0910", courseName: "بايثون للشباب", amount: 4300, paymentMethod: "CASH", time: "07:20 م" },
+      { id: "rcp-10", receiptNumber: "REC-2026-084", studentName: "سلمى شريف", invoiceNumber: "MAD-NSR-2026-0911", courseName: "روبوتكس متقدم", amount: 3500, paymentMethod: "VISA", time: "08:00 م" },
+      { id: "rcp-11", receiptNumber: "REC-2026-085", studentName: "نور الدين سامح", invoiceNumber: "MAD-NSR-2026-0912", courseName: "ذكاء اصطناعي", amount: 3000, paymentMethod: "INSTAPAY", time: "08:30 م" },
+    ],
   },
 ];
 
@@ -1247,9 +1295,19 @@ const DEFAULT_PAYROLLS: TrainerPayrollRecord[] = [
     ratePerSession: 200,
     baseSalary: 0,
     bonusAmount: 400,
+    bonusReason: "مكافأة تميز في متابعة مشاريع الروبوتكس معتمدة من مدير الفرع",
     deductionAmount: 0,
+    deductionReason: "",
     netPayable: 4800,
     status: "SUBMITTED",
+    sessions: [
+      { sessionId: "SES-101", courseName: "Junior Robotics · Level 1", groupName: "مجموعة السبت 4 عصراً", date: "2026-10-03", time: "04:00 - 06:00", room: "معمل الروبوتكس 1", attendanceCount: 8, rate: 200, approvedByHead: true },
+      { sessionId: "SES-102", courseName: "Junior Robotics · Level 1", groupName: "مجموعة الثلاثاء 5 مساءً", date: "2026-10-06", time: "05:00 - 07:00", room: "معمل الروبوتكس 1", attendanceCount: 8, rate: 200, approvedByHead: true },
+      { sessionId: "SES-103", courseName: "روبوتكس متقدم", groupName: "مجموعة الأحد 6 مساءً", date: "2026-10-08", time: "06:00 - 08:00", room: "معمل الذكاء 2", attendanceCount: 7, rate: 200, approvedByHead: true },
+      { sessionId: "SES-104", courseName: "Junior Robotics · Level 1", groupName: "مجموعة السبت 4 عصراً", date: "2026-10-10", time: "04:00 - 06:00", room: "معمل الروبوتكس 1", attendanceCount: 8, rate: 200, approvedByHead: true },
+      { sessionId: "SES-105", courseName: "روبوتكس متقدم", groupName: "مجموعة الأحد 6 مساءً", date: "2026-10-15", time: "06:00 - 08:00", room: "معمل الذكاء 2", attendanceCount: 7, rate: 200, approvedByHead: true },
+      { sessionId: "SES-106", courseName: "Junior Robotics · Level 1", groupName: "مجموعة الثلاثاء 5 مساءً", date: "2026-10-17", time: "05:00 - 07:00", room: "معمل الروبوتكس 1", attendanceCount: 8, rate: 200, approvedByHead: true },
+    ],
   },
   {
     id: "PAY-2026-10-02",
@@ -1260,9 +1318,17 @@ const DEFAULT_PAYROLLS: TrainerPayrollRecord[] = [
     ratePerSession: 200,
     baseSalary: 0,
     bonusAmount: 0,
+    bonusReason: "",
     deductionAmount: 200,
+    deductionReason: "خصم تأخير عن بدء جلسة يوم 8 أكتوبر معتمد من مدير الفرع",
     netPayable: 3400,
     status: "APPROVED",
+    sessions: [
+      { sessionId: "SES-201", courseName: "دوائر إلكترونية", groupName: "مجموعة السبت 12 ظهراً", date: "2026-10-03", time: "12:00 - 02:00", room: "قاعة الإلكترونيات", attendanceCount: 6, rate: 200, approvedByHead: true },
+      { sessionId: "SES-202", courseName: "دوائر إلكترونية", groupName: "مجموعة الإثنين 4 عصراً", date: "2026-10-05", time: "04:00 - 06:00", room: "قاعة الإلكترونيات", attendanceCount: 7, rate: 200, approvedByHead: true },
+      { sessionId: "SES-203", courseName: "برمجة بايثون", groupName: "مجموعة الأربعاء 6 مساءً", date: "2026-10-07", time: "06:00 - 08:00", room: "معمل بايثون", attendanceCount: 9, rate: 200, approvedByHead: true },
+      { sessionId: "SES-204", courseName: "دوائر إلكترونية", groupName: "مجموعة السبت 12 ظهراً", date: "2026-10-10", time: "12:00 - 02:00", room: "قاعة الإلكترونيات", attendanceCount: 6, rate: 200, approvedByHead: true },
+    ],
   },
   {
     id: "PAY-2026-10-03",
@@ -1273,12 +1339,18 @@ const DEFAULT_PAYROLLS: TrainerPayrollRecord[] = [
     ratePerSession: 250,
     baseSalary: 3000,
     bonusAmount: 500,
+    bonusReason: "مكافأة إشراف متميز واعتماد خطط الكورسات الشهرية",
     deductionAmount: 0,
+    deductionReason: "",
     netPayable: 7500,
     status: "PAID",
     paidAt: "2026-10-15T12:00:00Z",
     paymentMethod: "INSTAPAY",
     paymentReference: "IPN-984210",
+    sessions: [
+      { sessionId: "SES-301", courseName: "الذكاء الاصطناعي والشبكات", groupName: "مجموعة المتقدمين", date: "2026-10-02", time: "05:00 - 07:00", room: "معمل AI 1", attendanceCount: 8, rate: 250, approvedByHead: true },
+      { sessionId: "SES-302", courseName: "الذكاء الاصطناعي والشبكات", groupName: "مجموعة المتقدمين", date: "2026-10-09", time: "05:00 - 07:00", room: "معمل AI 1", attendanceCount: 8, rate: 250, approvedByHead: true },
+    ],
   },
 ];
 
@@ -1347,6 +1419,23 @@ export const payrollStorage = {
   approvePayroll: (id: string): TrainerPayrollRecord => {
     const list = payrollStorage.getPayrolls();
     const updated = list.map(item => item.id === id ? { ...item, status: "APPROVED" as const } : item);
+    payrollStorage.savePayrolls(updated);
+    return updated.find(item => item.id === id)!;
+  },
+  updateAdjustments: (id: string, bonus: number, bonusReason: string, deduction: number, deductionReason: string): TrainerPayrollRecord => {
+    const list = payrollStorage.getPayrolls();
+    const updated = list.map(item => {
+      if (item.id !== id) return item;
+      const net = (item.completedSessionsCount * item.ratePerSession) + item.baseSalary + bonus - deduction;
+      return {
+        ...item,
+        bonusAmount: bonus,
+        bonusReason: bonusReason || item.bonusReason,
+        deductionAmount: deduction,
+        deductionReason: deductionReason || item.deductionReason,
+        netPayable: Math.max(0, net),
+      };
+    });
     payrollStorage.savePayrolls(updated);
     return updated.find(item => item.id === id)!;
   },

@@ -47,6 +47,7 @@ import {
   invoiceStatus,
   money,
 } from "@/components/FinanceDeskViews";
+import "@/components/FinanceDeskEnhanced.css";
 import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
@@ -376,6 +377,18 @@ export default function FinanceDesk() {
     payrollStorage.markPaid(id, method, reference);
     setPayrolls(payrollStorage.getPayrolls());
     toast.success(`تم تسجيل صرف الراتب عبر ${method} بنجاح!`);
+  };
+
+  const updateTrainerPayrollAdjustments = (
+    id: string,
+    bonus: number,
+    bonusReason: string,
+    deduction: number,
+    deductionReason: string
+  ) => {
+    payrollStorage.updateAdjustments(id, bonus, bonusReason, deduction, deductionReason);
+    setPayrolls(payrollStorage.getPayrolls());
+    toast.success("تم تحديث المكافآت والخصومات للمدرب وتعديل الصافي المستحق");
   };
 
   const getEvidenceUploadGuard = (key: string) => {
@@ -925,94 +938,7 @@ export default function FinanceDesk() {
             }
           />
           <RoleScopeCard className="finance-desk-scope-card" />
-          <div className="finance-desk-tabs" role="tablist" aria-label="أقسام المكتب المالي">
-            {canAccessFinanceView(activeAccess, "overview") && (
-              <button
-                type="button"
-                role="tab"
-                aria-selected={view === "overview"}
-                className={`finance-tab-btn ${view === "overview" ? "active" : ""}`}
-                onClick={() => selectView("overview")}
-              >
-                <LayoutDashboard size={15} />
-                <span>ملخص مالي</span>
-              </button>
-            )}
-            {canAccessFinanceView(activeAccess, "collections") && (
-              <button
-                type="button"
-                role="tab"
-                aria-selected={view === "collections"}
-                className={`finance-tab-btn ${view === "collections" ? "active" : ""}`}
-                onClick={() => selectView("collections")}
-              >
-                <CreditCard size={15} />
-                <span>الفواتير والتحصيل</span>
-                <span className="finance-tab-badge">{scopedInvoices.length}</span>
-              </button>
-            )}
-            {canAccessFinanceView(activeAccess, "expenses") && (
-              <button
-                type="button"
-                role="tab"
-                aria-selected={view === "expenses"}
-                className={`finance-tab-btn ${view === "expenses" ? "active" : ""}`}
-                onClick={() => selectView("expenses")}
-              >
-                <TrendingDown size={15} />
-                <span>المصاريف</span>
-                {pendingCount > 0 && (
-                  <span className="finance-tab-badge amber">{pendingCount}</span>
-                )}
-              </button>
-            )}
-            {canAccessFinanceView(activeAccess, "shifts") && (
-              <button
-                type="button"
-                role="tab"
-                aria-selected={view === "shifts"}
-                className={`finance-tab-btn ${view === "shifts" ? "active" : ""}`}
-                onClick={() => selectView("shifts")}
-              >
-                <Banknote size={15} />
-                <span>ورديات الاستقبال (الكاش)</span>
-                {handovers.filter(h => h.status === "SUBMITTED").length > 0 && (
-                  <span className="finance-tab-badge teal">
-                    {handovers.filter(h => h.status === "SUBMITTED").length}
-                  </span>
-                )}
-              </button>
-            )}
-            {canAccessFinanceView(activeAccess, "payroll") && (
-              <button
-                type="button"
-                role="tab"
-                aria-selected={view === "payroll"}
-                className={`finance-tab-btn ${view === "payroll" ? "active" : ""}`}
-                onClick={() => selectView("payroll")}
-              >
-                <UserCheck size={15} />
-                <span>أتعاب المدربين بالحصة</span>
-                {payrolls.filter(p => p.status !== "PAID").length > 0 && (
-                  <span className="finance-tab-badge blue">
-                    {payrolls.filter(p => p.status !== "PAID").length}
-                  </span>
-                )}
-              </button>
-            )}
-            {canAccessFinanceView(activeAccess, "reports") && (
-              <button
-                type="button"
-                role="tab"
-                aria-selected={view === "reports"}
-                className={`finance-tab-btn ${view === "reports" ? "active" : ""}`}
-                onClick={() => selectView("reports")}
-              >
-                <BarChart3 size={15} />
-                <span>التقارير</span>
-              </button>
-            )}
-          </div>
+          {/* Navigation tabs removed - primary navigation is driven by RoleSidebar */}
           <div className="finance-desk-banner" role="status" aria-live="polite">
             {!liveMode && (
               <>
@@ -1151,6 +1077,7 @@ export default function FinanceDesk() {
                 payrolls={payrolls}
                 onApprove={approveTrainerPayroll}
                 onPay={payTrainerPayroll}
+                onUpdateAdjustments={updateTrainerPayrollAdjustments}
               />
             )}
           {(!liveMode || workspaceState === "ready") &&

@@ -128,7 +128,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
       { path: "/finance-desk#collections", label: "الفواتير والتحصيل", purpose: "invoices and collections", anyOfPermissions: ["invoices.read", "payments.create"] },
       { path: "/finance-desk#expenses", label: "المصاريف والبنود", purpose: "manage expenses", anyOfPermissions: ["finance.expenses.read", "finance.expenses.create"] },
       { path: "/finance-desk#shifts", label: "ورديات الاستقبال (الكاش)", purpose: "shifts cash handover", permission: "finance.read" },
-      { path: "/finance-desk#payroll", label: "أتعاب المدربين بالحصة", purpose: "trainer payroll calculation", permission: "finance.read" },
+      { path: "/finance-desk#payroll", label: "مصاريف ومستحقات المدربين", purpose: "trainer payroll calculation", permission: "finance.read" },
       { path: "/approvals", label: "الموافقات والاعتمادات", purpose: "finance decisions", permission: "finance.expenses.approve" },
       { path: "/reports", label: "التقارير المالية المجمعة", purpose: "finance and operational read-only reports", permission: "reports.read" },
     ],
