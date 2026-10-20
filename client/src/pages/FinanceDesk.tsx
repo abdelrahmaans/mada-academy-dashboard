@@ -258,6 +258,7 @@ function mapFinanceExpense(expense: FinanceExpense): Expense {
 }
 export default function FinanceDesk() {
   const [, navigate] = useLocation();
+  const [liveMode] = useState(() => apiClient.hasSession());
   const [view, setView] = useState<View>(() => {
     const rawHash = typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
     const validViews: View[] = [
