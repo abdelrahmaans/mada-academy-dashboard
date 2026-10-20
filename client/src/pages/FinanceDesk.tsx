@@ -255,10 +255,21 @@ function mapFinanceExpense(expense: FinanceExpense): Expense {
 }
 export default function FinanceDesk() {
   const [, navigate] = useLocation();
-  const [liveMode] = useState(() => apiClient.hasSession());
-  const [view, setView] = useState<View>(() =>
-    liveMode ? "collections" : "overview"
-  );
+  const [view, setView] = useState<View>(() => {
+    const rawHash = typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
+    const validViews: View[] = [
+      "overview",
+      "collections",
+      "expenses",
+      "shifts",
+      "payroll",
+      "reports",
+    ];
+    if (rawHash && validViews.includes(rawHash as View)) {
+      return rawHash as View;
+    }
+    return "overview";
+  });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [branch, setBranch] = useState("مدينة نصر");
   const [query, setQuery] = useState("");
@@ -552,14 +563,20 @@ export default function FinanceDesk() {
   const selectView = (next: View) => {
     if (!canAccessFinanceView(activeAccess, next)) return;
     setView(next);
-    window.location.hash = next === "overview" ? "" : next;
+    if (next === "overview") {
+      if (window.location.hash) {
+        history.replaceState(null, "", window.location.pathname);
+      }
+    } else {
+      window.location.hash = next;
+    }
     setMobileOpen(false);
     setQuery("");
   };
 
   useEffect(() => {
     const handleHash = () => {
-      const hash = window.location.hash.replace("#", "") as View;
+      const rawHash = window.location.hash.replace("#", "");
       const validViews: View[] = [
         "overview",
         "collections",
@@ -568,8 +585,12 @@ export default function FinanceDesk() {
         "payroll",
         "reports",
       ];
-      if (validViews.includes(hash) && canAccessFinanceView(activeAccess, hash)) {
-        setView(hash);
+      const targetView: View = rawHash && validViews.includes(rawHash as View)
+        ? (rawHash as View)
+        : (activeAccess.canViewOverview ? "overview" : activeAccess.initialView);
+
+      if (canAccessFinanceView(activeAccess, targetView)) {
+        setView(targetView);
       }
     };
     handleHash();
@@ -995,9 +1016,19 @@ export default function FinanceDesk() {
               expenses={approvedExpenses}
               net={net}
               pending={pendingCount}
+              handovers={handovers}
+              payrolls={payrolls}
+              invoices={scopedInvoices}
+              pendingExpenses={scopedExpenses}
               onCollections={() => selectView("collections")}
               onExpenses={() => selectView("expenses")}
               onReports={() => selectView("reports")}
+              onShifts={() => selectView("shifts")}
+              onPayroll={() => selectView("payroll")}
+              onAcceptShift={acceptShiftHandover}
+              onApproveExpense={approveExpense}
+              onRejectExpense={id => setRejecting(id)}
+              onCreateInvoice={() => setInvoiceDialogOpen(true)}
               scopeHint={liveMode ? "الفرع الحالي" : "كل الفروع · هذا الشهر"}
             />
           )}
