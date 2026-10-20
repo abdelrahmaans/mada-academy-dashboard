@@ -134,7 +134,9 @@ function Router() {
 function ApiFeedbackBridge() {
   useEffect(() => subscribeApiErrors(({ error, path }) => {
     if (path.startsWith("/auth/") || path.startsWith("/consumer-invitations/")) return;
-    if (error.status === 401) {
+    if (error.status === 0) {
+      toast.error("تعذر الاتصال بالخادم. تأكد من تشغيل الـ Backend (pnpm backend:dev).", { id: "mada-api-offline" });
+    } else if (error.status === 401) {
       toast.error("انتهت جلسة الدخول، سجّل الدخول مرة أخرى.", { id: "mada-session-expired" });
     } else if (error.status === 403) {
       toast.error("ليس لديك صلاحية لتنفيذ هذا الإجراء.", { id: "mada-api-forbidden" });

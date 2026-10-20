@@ -5,6 +5,8 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite --host",
+    "backend:dev": "dotnet run --project backend/MadaAcademy.Api/MadaAcademy.Api.csproj --launch-profile http",
+    "dev:backend": "dotnet run --project backend/MadaAcademy.Api/MadaAcademy.Api.csproj --launch-profile http",
     "build": "vite build",
     "backend:restore": "dotnet restore backend/MadaAcademy.Api/MadaAcademy.Api.csproj",
     "backend:build": "dotnet build backend/MadaAcademy.Api/MadaAcademy.Api.csproj --configuration Release --no-restore",
