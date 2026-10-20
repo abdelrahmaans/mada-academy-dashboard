@@ -79,8 +79,26 @@ export default function RoleDashboardShell({
     onCloseMobile?.();
   };
 
+  let hasChildrenSidebar = false;
+  Children.forEach(children, child => {
+    if (isValidElement(child)) {
+      if (
+        child.type === "aside" ||
+        (typeof child.type === "string" && child.type === "aside") ||
+        (child.props as any)?.className?.includes("sidebar")
+      ) {
+        hasChildrenSidebar = true;
+      }
+    }
+  });
+
+  const isCustomShellWithSidebar =
+    className?.includes("pc-live-shell") ||
+    className?.includes("platform-console") ||
+    hasChildrenSidebar;
+
   const shouldRenderSidebar = !hideSidebar;
-  const hasAnySidebar = shouldRenderSidebar;
+  const hasAnySidebar = shouldRenderSidebar || isCustomShellWithSidebar;
 
   const classList = ["role-dashboard-shell"];
   if (hasAnySidebar) {
@@ -92,7 +110,6 @@ export default function RoleDashboardShell({
   if (className) {
     for (const name of className.split(/\s+/)) {
       if (name && !classList.includes(name)) {
-        if (!hasAnySidebar && name === "app-shell") continue;
         classList.push(name);
       }
     }

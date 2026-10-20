@@ -24,6 +24,7 @@ import {
   RefreshCw,
   Search,
   Server,
+  Settings,
   ShieldAlert,
   ShieldCheck,
   Sparkles,
@@ -41,6 +42,7 @@ import PageHeader from "@/components/PageHeader";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import SessionLogoutButton from "@/components/SessionLogoutButton";
+import SettingsModal from "@/components/SettingsModal";
 import {
   apiClient,
   platformSaaSStorage,
@@ -388,6 +390,7 @@ export default function PlatformConsoleLive() {
   const [, navigate] = useLocation();
   const [view, setView] = useState<View>("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [overview, setOverview] = useState<PlatformOverview | null>(null);
   const [academies, setAcademies] = useState<PlatformAcademy[]>([]);
   const [, setRoles] = useState<PlatformRole[]>([]);
@@ -936,6 +939,18 @@ export default function PlatformConsoleLive() {
         </div>
 
         <div className="sidebar-bottom">
+          <button
+            type="button"
+            className="nav-link"
+            onClick={() => {
+              setSettingsOpen(true);
+              setMobileOpen(false);
+            }}
+            aria-label="فتح الإعدادات"
+          >
+            <Settings size={19} />
+            <span>الإعدادات</span>
+          </button>
           <SessionLogoutButton className="nav-link" iconSize={19} />
         </div>
 
@@ -2607,6 +2622,7 @@ export default function PlatformConsoleLive() {
           </div>
         </div>
       )}
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </RoleDashboardShell>
   );
 }

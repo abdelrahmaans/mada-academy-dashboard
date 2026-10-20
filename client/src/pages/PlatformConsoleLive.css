@@ -1,11 +1,23 @@
-.pc-live-shell {
-  display: grid;
-  grid-template-columns: 248px minmax(0, 1fr);
+.pc-live-shell,
+.role-dashboard-shell.pc-live-shell {
+  display: grid !important;
+  grid-template-columns: 256px minmax(0, 1fr) !important;
   min-height: 100vh;
+  width: 100%;
   background: var(--mada-ui-page, #f5f7f8);
   color: #17212b;
   direction: rtl;
   font-family: inherit;
+}
+
+.pc-live-shell > .sidebar {
+  width: 256px !important;
+  min-width: 256px !important;
+  max-width: 256px !important;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  overflow-y: auto;
 }
 
 .pc-live-main {

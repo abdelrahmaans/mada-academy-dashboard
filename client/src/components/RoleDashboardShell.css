@@ -4,22 +4,36 @@
 }
 
 /* Unified Shell & Main Content Layout */
-.role-dashboard-shell.has-sidebar {
-  display: grid;
-  grid-template-columns: 256px minmax(0, 1fr);
+.role-dashboard-shell.has-sidebar,
+.role-dashboard-shell.pc-live-shell,
+.role-dashboard-shell.platform-console {
+  display: grid !important;
+  grid-template-columns: 256px minmax(0, 1fr) !important;
   min-height: 100vh;
   width: 100%;
   direction: rtl;
   background: #f6f8fb;
 }
 
-.role-dashboard-shell.no-sidebar,
-.role-dashboard-shell:not(.has-sidebar) {
+.role-dashboard-shell.no-sidebar:not(.pc-live-shell):not(.platform-console),
+.role-dashboard-shell:not(.has-sidebar):not(.pc-live-shell):not(.platform-console) {
   display: block;
   min-height: 100vh;
   width: 100%;
   direction: rtl;
   background: #f6f8fb;
+}
+
+.role-dashboard-shell.has-sidebar > .sidebar,
+.role-dashboard-shell.pc-live-shell > .sidebar,
+.role-dashboard-shell.platform-console > .sidebar {
+  width: 256px !important;
+  min-width: 256px !important;
+  max-width: 256px !important;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  overflow-y: auto;
 }
 
 /* Ensure the page next to the sidebar takes full available width with standard spacing */
