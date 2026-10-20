@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient } from "@/lib/apiClient";
 
+import { clearTokens } from "@/lib/apiClient";
+
 type SessionLogoutButtonProps = {
   className?: string;
   iconSize?: number;
@@ -24,6 +26,11 @@ export default function SessionLogoutButton({
       } catch {
         // ignore
       }
+      clearTokens();
+      try {
+        localStorage.removeItem("mada_auth_token");
+        sessionStorage.clear();
+      } catch {}
       toast.success("تم تسجيل الخروج بنجاح");
     }
     navigate("/login");

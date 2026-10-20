@@ -53,8 +53,6 @@ import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
-import SessionLogoutButton from "@/components/SessionLogoutButton";
-import SettingsModal from "@/components/SettingsModal";
 import BranchManagerSidebar from "@/components/BranchManagerSidebar";
 import RoleSidebar from "@/components/RoleSidebar";
 import {
@@ -337,7 +335,6 @@ export default function FinanceDesk() {
   const [handovers, setHandovers] = useState<ShiftCashHandover[]>(() => shiftStorage.getHandovers());
   const [payrolls, setPayrolls] = useState<TrainerPayrollRecord[]>(() => payrollStorage.getPayrolls());
   const [showScopeInfo, setShowScopeInfo] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     if (liveMode) {
@@ -943,22 +940,6 @@ export default function FinanceDesk() {
               <ShieldCheck size={14} /> نطاق الفروع المصرح بها · فصل الإنشاء عن الاعتماد
             </span>
           </div>
-
-          <div className="topbar-left" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button
-              type="button"
-              className="finance-topbar-settings-btn"
-              title="الإعدادات وتفاصيل الحساب"
-              onClick={() => setSettingsOpen(true)}
-            >
-              <Settings size={15} />
-              <span>الإعدادات</span>
-            </button>
-            <SessionLogoutButton
-              className="finance-topbar-logout-btn"
-              iconSize={15}
-            />
-          </div>
         </header>
         <div className="workspace finance-desk-content">
           <PageHeader
@@ -1264,7 +1245,6 @@ export default function FinanceDesk() {
           </div>
         </div>
       )}
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </RoleDashboardShell>
   );
 }

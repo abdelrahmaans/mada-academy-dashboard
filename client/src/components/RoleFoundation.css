@@ -527,6 +527,56 @@
 .finance-desk-shell .finance-desk-modal textarea { font-size: 11px; }
 .finance-desk-shell .finance-reject-link { font-size: 10px; }
 
+/* Sidebar bottom actions styling (Single unified home for Settings & Logout) */
+.sidebar .sidebar-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 10px 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+  margin-top: auto;
+}
+
+.sidebar .sidebar-bottom .nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  color: #cbd5e1;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.sidebar .sidebar-bottom .nav-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateX(-2px);
+}
+
+.sidebar .sidebar-bottom .nav-link:active {
+  transform: scale(0.98);
+}
+
+.sidebar .sidebar-bottom .session-logout-button {
+  color: #fca5a5;
+}
+
+.sidebar .sidebar-bottom .session-logout-button:hover {
+  background: rgba(239, 68, 68, 0.14);
+  color: #fecaca;
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
 /* Unified Operational Tab Navigation */
 .finance-desk-tabs,
 .pnl-tabs-nav {
