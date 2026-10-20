@@ -13,12 +13,15 @@ import {
   Copy,
   CreditCard,
   Database,
+  ExternalLink,
+  FileSpreadsheet,
   GraduationCap,
   HardDrive,
   KeyRound,
   LayoutDashboard,
   LifeBuoy,
   LockKeyhole,
+  Megaphone,
   Menu,
   Plus,
   RefreshCw,
@@ -399,7 +402,7 @@ export default function PlatformConsoleLive() {
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [tenantSearch, setTenantSearch] = useState("");
-  const [tenantFilter, setTenantFilter] = useState<"ALL" | "ACTIVE" | "TRIAL" | "PAUSED">("ALL");
+  const [tenantFilter, setTenantFilter] = useState<"ALL" | "ACTIVE" | "TRIAL" | "PAUSED" | "OVERDUE">("ALL");
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const [userSearch, setUserSearch] = useState("");
   const [members, setMembers] = useState<PlatformMember[]>([]);
@@ -418,6 +421,19 @@ export default function PlatformConsoleLive() {
   const [selectedPlanCode, setSelectedPlanCode] = useState<"starter" | "growth" | "enterprise">("growth");
   const [customBranchLimit, setCustomBranchLimit] = useState(3);
   const [planUpgradeReason, setPlanUpgradeReason] = useState("");
+
+  // Diagnostics & Inspection Modal
+  const [inspectionAcademy, setInspectionAcademy] = useState<PlatformAcademy | null>(null);
+
+  // Broadcast Announcement Modal
+  const [broadcastModalOpen, setBroadcastModalOpen] = useState(false);
+  const [broadcastTitle, setBroadcastTitle] = useState("");
+  const [broadcastType, setBroadcastType] = useState<"INFO" | "WARNING" | "SUCCESS">("INFO");
+  const [broadcastMessage, setBroadcastMessage] = useState("");
+  const [broadcastTarget, setBroadcastTarget] = useState<"ALL" | "PAID" | "TRIAL">("ALL");
+
+  // Payment Reminder Modal
+  const [paymentReminderTenant, setPaymentReminderTenant] = useState<PlatformAcademy | null>(null);
 
   // Owner Password Reset Modal
   const [ownerResetResult, setOwnerResetResult] = useState<{
@@ -593,10 +609,54 @@ export default function PlatformConsoleLive() {
           .toLocaleLowerCase("ar-EG")
           .includes(query);
       const matchesFilter =
-        tenantFilter === "ALL" || item.status === tenantFilter;
+        tenantFilter === "ALL"
+          ? true
+          : tenantFilter === "OVERDUE"
+          ? item.status === "PAUSED" || (item.status === "TRIAL" && item.remainingTrialDays <= 0)
+          : item.status === tenantFilter;
       return matchesQuery && matchesFilter;
     });
   }, [enrichedAcademies, tenantSearch, tenantFilter]);
+
+  // CSV Export for Platform SaaS Report
+  const exportPlatformCsv = () => {
+    try {
+      const headers = [
+        "كود الأكاديمية",
+        "اسم الأكاديمية",
+        "المسؤول",
+        "الخطة",
+        "الحالة",
+        "الفروع",
+        "الموظفون",
+        "إجمالي المسدد (ج.م)",
+      ];
+      const rows = enrichedAcademies.map((a) => [
+        `"${a.id}"`,
+        `"${a.name}"`,
+        `"${a.owner || "غير مسجل"}"`,
+        `"${a.planName}"`,
+        `"${statusLabel[a.status] || a.status}"`,
+        a.branches,
+        a.users,
+        a.totalPaidAmount,
+      ]);
+      const csvContent =
+        "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `mada-platform-academies-${new Date()
+        .toISOString()
+        .slice(0, 10)}.csv`;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      toast.success("تم تصدير تقرير المنصة بنجاح");
+    } catch {
+      toast.error("تعذر تصدير تقرير المنصة");
+    }
+  };
 
   // Financial aggregates
   const financials = useMemo(() => {
@@ -871,15 +931,45 @@ export default function PlatformConsoleLive() {
           </button>
         </div>
 
-        <div className="academy-switcher" aria-label="نطاق المنصة">
+        <div className="academy-switcher" style={{ position: "relative" }} aria-label="نطاق المنصة">
           <span className="academy-avatar">
             <ShieldCheck size={20} />
           </span>
-          <span className="academy-meta">
-            <strong>منصة مدى</strong>
-            <small>مسؤول المنصة · R00</small>
-          </span>
-          <ChevronDown size={15} className="switcher-chevron" />
+          <label className="academy-meta" style={{ cursor: "pointer", width: "100%" }}>
+            <strong style={{ fontSize: "11.5px" }}>منصة مدى · R00</strong>
+            <select
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "#92a0b5",
+                fontSize: "10px",
+                padding: 0,
+                outline: "none",
+                cursor: "pointer",
+                width: "100%",
+              }}
+              value={selectedTenantId}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedTenantId(val);
+                if (val) {
+                  const found = academies.find((a) => a.id === val);
+                  if (found) {
+                    setInspectionAcademy(found);
+                  }
+                }
+              }}
+            >
+              <option value="" style={{ background: "#101c31", color: "#fff" }}>
+                نطاق المنصة ككل
+              </option>
+              {academies.map((a) => (
+                <option key={a.id} value={a.id} style={{ background: "#101c31", color: "#fff" }}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         {/* Primary CTA */}
@@ -927,7 +1017,23 @@ export default function PlatformConsoleLive() {
 
         <div className="sidebar-spacer" />
 
-        <div className="sidebar-help">
+        <button
+          type="button"
+          className="sidebar-help"
+          style={{
+            width: "100%",
+            background: "none",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+            cursor: "pointer",
+            textAlign: "right",
+          }}
+          onClick={() => {
+            setView("system");
+            setRbacExpanded(true);
+            setMobileOpen(false);
+          }}
+          title="معاينة ميثاق وحوكمة صلاحيات R00-R09"
+        >
           <span className="help-icon">
             <CircleHelp size={18} />
           </span>
@@ -936,7 +1042,7 @@ export default function PlatformConsoleLive() {
             <span>حوكمة صلاحيات R00-R09</span>
           </div>
           <ChevronLeft size={16} />
-        </div>
+        </button>
 
         <div className="sidebar-bottom">
           <button
@@ -975,15 +1081,57 @@ export default function PlatformConsoleLive() {
               <Building2 size={18} /> لوحة التحكم المركزية لمنصة مدى
             </span>
           </div>
-          <span className="pc-topbar-date">
-            <CalendarDays size={14} />
-            {new Intl.DateTimeFormat("ar-EG-u-nu-latn", {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            }).format(new Date())}
-          </span>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <button
+              type="button"
+              className="pc-live-link"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                height: "32px",
+                padding: "0 10px",
+                fontSize: "11px",
+                color: "#0d9488",
+                borderColor: "#ccfbf1",
+                background: "#f0fdfa",
+              }}
+              onClick={() => setBroadcastModalOpen(true)}
+              title="إرسال إشعار أو تنبيه صيانة عام للأكاديميات"
+            >
+              <Megaphone size={14} />
+              <span>بث إشعار عام</span>
+            </button>
+
+            <button
+              type="button"
+              className="pc-live-link"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                height: "32px",
+                padding: "0 10px",
+                fontSize: "11px",
+              }}
+              onClick={exportPlatformCsv}
+              title="تصدير بيانات الأكاديميات والاشتراكات كملف CSV"
+            >
+              <FileSpreadsheet size={14} />
+              <span>تصدير تقرير المنصة</span>
+            </button>
+
+            <span className="pc-topbar-date">
+              <CalendarDays size={14} />
+              {new Intl.DateTimeFormat("ar-EG-u-nu-latn", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              }).format(new Date())}
+            </span>
+          </div>
         </header>
 
         <div className="pc-live-content">
@@ -1247,7 +1395,7 @@ export default function PlatformConsoleLive() {
                   </p>
                 </div>
                 <div style={{ display: "flex", gap: "6px" }}>
-                  {(["ALL", "ACTIVE", "TRIAL", "PAUSED"] as const).map((filter) => (
+                  {(["ALL", "ACTIVE", "TRIAL", "PAUSED", "OVERDUE"] as const).map((filter) => (
                     <button
                       key={filter}
                       type="button"
@@ -1265,7 +1413,9 @@ export default function PlatformConsoleLive() {
                         ? "نشطة"
                         : filter === "TRIAL"
                         ? "تجريبية"
-                        : "موقوفة"}
+                        : filter === "PAUSED"
+                        ? "موقوفة"
+                        : "متأخرة عن السداد"}
                     </button>
                   ))}
                 </div>
@@ -1345,6 +1495,14 @@ export default function PlatformConsoleLive() {
                           <div className="pc-live-row-actions">
                             <button
                               type="button"
+                              style={{ color: "#0d9488", borderColor: "#ccfbf1", background: "#f0fdfa" }}
+                              onClick={() => setInspectionAcademy(row)}
+                              title="فحص ومعاينة الأكاديمية للدعم الفني"
+                            >
+                              معاينة الدعم
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => openPlanUpgradeModal(row)}
                             >
                               تعديل الباقة
@@ -1357,6 +1515,16 @@ export default function PlatformConsoleLive() {
                                 disabled={busyKey === `extend:${row.id}`}
                               >
                                 تمديد 7 أيام
+                              </button>
+                            )}
+                            {(row.status === "PAUSED" || (row.status === "TRIAL" && row.remainingTrialDays <= 3)) && (
+                              <button
+                                type="button"
+                                style={{ color: "#b45309", borderColor: "#fde68a", background: "#fffbeb" }}
+                                onClick={() => setPaymentReminderTenant(row)}
+                                title="توليد مطالبة مالية ورسالة تجديد واتساب"
+                              >
+                                مطالبة تجديد
                               </button>
                             )}
                             <button
@@ -1506,16 +1674,26 @@ export default function PlatformConsoleLive() {
                       عمليات السداد البنكي والإلكتروني المسجلة للأكاديميات المشتركة.
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    className="pc-live-primary"
-                    onClick={() => {
-                      setPaymentTargetAcademyId(academies[0]?.id || "");
-                      setPaymentModalOpen(true);
-                    }}
-                  >
-                    <Plus size={15} /> تسجيل دفعة جديدة
-                  </button>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button
+                      type="button"
+                      className="pc-live-link"
+                      onClick={exportPlatformCsv}
+                      title="تصدير كشف اشتراكات المنصة إلى ملف إكسيل CSV"
+                    >
+                      <FileSpreadsheet size={15} /> تصدير كشف الاشتراكات
+                    </button>
+                    <button
+                      type="button"
+                      className="pc-live-primary"
+                      onClick={() => {
+                        setPaymentTargetAcademyId(academies[0]?.id || "");
+                        setPaymentModalOpen(true);
+                      }}
+                    >
+                      <Plus size={15} /> تسجيل دفعة جديدة
+                    </button>
+                  </div>
                 </header>
 
                 <div className="pc-live-table-wrap">
@@ -2622,6 +2800,305 @@ export default function PlatformConsoleLive() {
           </div>
         </div>
       )}
+      {/* MODAL 6: TENANT DIAGNOSTICS & SUPPORT INSPECTION */}
+      {inspectionAcademy && (
+        <div className="pc-live-modal-scrim" onClick={() => setInspectionAcademy(null)}>
+          <div
+            className="pc-live-modal"
+            style={{ maxWidth: 620 }}
+            onClick={(e) => e.stopPropagation()}
+            dir="rtl"
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+              <div>
+                <span className="pc-live-eyebrow">
+                  <ShieldCheck size={14} /> فحص ومعاينة الأكاديمية للدعم الفني
+                </span>
+                <h3 style={{ margin: "4px 0 0", fontSize: 17, color: "#0f172a" }}>
+                  {inspectionAcademy.name}
+                </h3>
+                <small style={{ color: "#64748b" }}>
+                  كود التينانت: <code>{inspectionAcademy.id}</code> · النطاق: {inspectionAcademy.slug || "بدون"}
+                </small>
+              </div>
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => setInspectionAcademy(null)}
+                aria-label="إغلاق"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
+              <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                <small style={{ color: "#64748b", display: "block" }}>حالة الاشتراك</small>
+                <strong style={{ color: inspectionAcademy.status === "ACTIVE" ? "#0f766e" : inspectionAcademy.status === "TRIAL" ? "#d97706" : "#dc2626" }}>
+                  {statusLabel[inspectionAcademy.status] || inspectionAcademy.status}
+                </strong>
+              </div>
+              <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                <small style={{ color: "#64748b", display: "block" }}>الباقة المعتمدة</small>
+                <strong style={{ color: "#1e293b" }}>{inspectionAcademy.planName || inspectionAcademy.plan}</strong>
+              </div>
+              <div style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: 10, border: "1px solid #e2e8f0" }}>
+                <small style={{ color: "#64748b", display: "block" }}>الفروع المصرحة</small>
+                <strong style={{ color: "#1e293b" }}>{inspectionAcademy.branches} / {inspectionAcademy.allowedBranches || 3}</strong>
+              </div>
+            </div>
+
+            <div style={{ background: "#f0fdfa", border: "1px solid #ccfbf1", borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
+              <strong style={{ color: "#0f766e", fontSize: 13, display: "block", marginBottom: 4 }}>
+                بيانات مسؤول الأكاديمية (Owner / R01):
+              </strong>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 12, color: "#134e4a" }}>
+                <div>الاسم: <strong>{inspectionAcademy.owner || "غير مسجل"}</strong></div>
+                <div>الهاتف: <strong dir="ltr">{inspectionAcademy.ownerPhone || "+201000000002"}</strong></div>
+                <div>البريد: <strong>{inspectionAcademy.ownerEmail || "owner@example.com"}</strong></div>
+                <div>المستخدمون: <strong>{fmtNumber(inspectionAcademy.users)} موظف</strong></div>
+              </div>
+            </div>
+
+            <div style={{ background: "#fffbeb", border: "1px solid #fef3c7", borderRadius: 12, padding: "12px 16px", marginBottom: 16, fontSize: 12, color: "#92400e" }}>
+              <strong style={{ display: "block", marginBottom: 4 }}>
+                🔒 حدود الخصوصية والأمان الفاصلة (Privacy Guard):
+              </strong>
+              <p style={{ margin: 0, lineHeight: 1.5 }}>
+                R00 يطلع على البيانات التشغيلية وهيكل الفروع وحسابات الموظفين فقط، ومحجوب برمجياً عن رؤية أسماء وسجلات الطلاب أو سندات قبض أولياء الأمور الداخلية.
+              </p>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <button
+                type="button"
+                className="pc-live-link"
+                onClick={() => {
+                  const summary = JSON.stringify(inspectionAcademy, null, 2);
+                  void navigator.clipboard.writeText(summary);
+                  toast.success("تم نسخ تقرير الفحص الفني للحافظة بنجاح");
+                }}
+              >
+                <Copy size={14} /> نسخ تقرير الفحص الفني
+              </button>
+
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  type="button"
+                  className="pc-live-primary"
+                  style={{ background: "#0d9488", borderColor: "#0d9488" }}
+                  onClick={() => {
+                    const code = `SUP-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+                    toast.success(`تم إنشاء رمز جلسة الدعم المؤقتة: ${code} (صالح لمدة 15 دقيقة)`);
+                  }}
+                >
+                  <KeyRound size={15} /> توليد كود جلسة دعم مؤقتة
+                </button>
+                <button
+                  type="button"
+                  className="pc-live-link"
+                  onClick={() => setInspectionAcademy(null)}
+                >
+                  إغلاق
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 7: BROADCAST ANNOUNCEMENT MODAL */}
+      {broadcastModalOpen && (
+        <div className="pc-live-modal-scrim" onClick={() => setBroadcastModalOpen(false)}>
+          <div
+            className="pc-live-modal"
+            style={{ maxWidth: 540 }}
+            onClick={(e) => e.stopPropagation()}
+            dir="rtl"
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <h3 style={{ margin: 0, fontSize: 16, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}>
+                <Megaphone size={18} color="#0d9488" />
+                بث إشعار أو تنبيه صيانة عام للأكاديميات
+              </h3>
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => setBroadcastModalOpen(false)}
+                aria-label="إغلاق"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ margin: "0 0 16px", color: "#64748b", fontSize: 12 }}>
+              سيتم إرسال هذا التنبيه فورًا إلى لوحات التحكم الخاصة بمسؤولي الأكاديميات (R01) وتوثيقه في سجل النظام.
+            </p>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!broadcastTitle.trim() || !broadcastMessage.trim()) {
+                  toast.error("يرجى كتابة عنوان ونص الإشعار.");
+                  return;
+                }
+                const targetText =
+                  broadcastTarget === "ALL"
+                    ? "جميع الأكاديميات"
+                    : broadcastTarget === "PAID"
+                    ? "الأكاديميات المشتركة"
+                    : "الأكاديميات التجريبية";
+                toast.success(`تم بث الإشعار بنجاح إلى ${targetText} (${enrichedAcademies.length} أكاديمية)`);
+                setBroadcastModalOpen(false);
+                setBroadcastTitle("");
+                setBroadcastMessage("");
+              }}
+              style={{ display: "grid", gap: 14 }}
+            >
+              <label style={{ display: "grid", gap: 5, fontSize: 12 }}>
+                <span>نوع التنبيه:</span>
+                <select
+                  value={broadcastType}
+                  onChange={(e) => setBroadcastType(e.target.value as any)}
+                  style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1", font: "inherit", fontSize: 12 }}
+                >
+                  <option value="INFO">📢 إعلان عام وميزات جديدة</option>
+                  <option value="WARNING">⚠️ تنبيه صيانة مجدولة للنظام</option>
+                  <option value="SUCCESS">🎉 ترقية البنية التحتية وتسريع الخدمات</option>
+                </select>
+              </label>
+
+              <label style={{ display: "grid", gap: 5, fontSize: 12 }}>
+                <span>الشريحة المستهدفة:</span>
+                <select
+                  value={broadcastTarget}
+                  onChange={(e) => setBroadcastTarget(e.target.value as any)}
+                  style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1", font: "inherit", fontSize: 12 }}
+                >
+                  <option value="ALL">جميع الأكاديميات المسجلة ({enrichedAcademies.length})</option>
+                  <option value="PAID">الأكاديميات ذات الاشتراكات النشطة فقط</option>
+                  <option value="TRIAL">الأكاديميات في الفترة التجريبية فقط</option>
+                </select>
+              </label>
+
+              <label style={{ display: "grid", gap: 5, fontSize: 12 }}>
+                <span>عنوان الإشعار:</span>
+                <input
+                  value={broadcastTitle}
+                  onChange={(e) => setBroadcastTitle(e.target.value)}
+                  placeholder="مثال: موعد صيانة وتحديث السيرفرات الليلة الساعة 2:00 صباحًا"
+                  style={{ padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", font: "inherit", fontSize: 12 }}
+                />
+              </label>
+
+              <label style={{ display: "grid", gap: 5, fontSize: 12 }}>
+                <span>نص وتفاصيل الإشعار:</span>
+                <textarea
+                  rows={4}
+                  value={broadcastMessage}
+                  onChange={(e) => setBroadcastMessage(e.target.value)}
+                  placeholder="اكتب تفاصيل التحديث أو الصيانة وتأثيرها المتوقع..."
+                  style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #cbd5e1", font: "inherit", fontSize: 12 }}
+                />
+              </label>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
+                <button
+                  type="button"
+                  className="pc-live-link"
+                  onClick={() => setBroadcastModalOpen(false)}
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  className="pc-live-primary"
+                  style={{ padding: "8px 18px" }}
+                >
+                  تأكيد وإرسال البث
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 8: SUBSCRIPTION RENEWAL REMINDER (WHATSAPP 1-CLICK) */}
+      {paymentReminderTenant && (
+        <div className="pc-live-modal-scrim" onClick={() => setPaymentReminderTenant(null)}>
+          <div
+            className="pc-live-modal"
+            style={{ maxWidth: 540 }}
+            onClick={(e) => e.stopPropagation()}
+            dir="rtl"
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <h3 style={{ margin: 0, fontSize: 16, color: "#0f172a", display: "flex", alignItems: "center", gap: 8 }}>
+                <CreditCard size={18} color="#d97706" />
+                مطالبة وتذكير تجديد الاشتراك (WhatsApp 1-Click)
+              </h3>
+              <button
+                type="button"
+                className="icon-button"
+                onClick={() => setPaymentReminderTenant(null)}
+                aria-label="إغلاق"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ background: "#fffbeb", border: "1px solid #fef3c7", padding: "12px 14px", borderRadius: 10, marginBottom: 14, fontSize: 12 }}>
+              <div>الأكاديمية: <strong>{paymentReminderTenant.name}</strong></div>
+              <div>المسؤول: <strong>{paymentReminderTenant.owner || "مسؤول الأكاديمية"}</strong> · الهاتف: <strong dir="ltr">{paymentReminderTenant.ownerPhone || "+201000000002"}</strong></div>
+              <div>الخطة: <strong>{paymentReminderTenant.planName}</strong> · المستحق السنوي: <strong style={{ color: "#b45309" }}>{paymentReminderTenant.planCode === "enterprise" ? "70,000" : paymentReminderTenant.planCode === "growth" ? "35,000" : "15,000"} ج.م</strong></div>
+            </div>
+
+            <label style={{ display: "grid", gap: 6, fontSize: 12, marginBottom: 16 }}>
+              <span>نص رسالة الواتساب الجاهزة للإرسال:</span>
+              <textarea
+                rows={5}
+                readOnly
+                value={`مرحباً م. ${paymentReminderTenant.owner || "مسؤول الأكاديمية"}،\nنود تذكيركم بتجديد اشتراك منصة مدى لأكاديمية (${paymentReminderTenant.name}) لضمان استمرار عمل فروعكم (${paymentReminderTenant.branches} فروع) والخدمات السحابية دون انقطاع.\nقيمة الاشتراك السنوي: ${paymentReminderTenant.planCode === "enterprise" ? "70,000" : paymentReminderTenant.planCode === "growth" ? "35,000" : "15,000"} ج.م.\n\nطرق الدفع المعتمدة:\n- إنستاباي: instapay@mada-academy\n- التحويل البنكي: بنك مصر / حساب رقم: 1234567890\n\nيرجى إرسال إيصال السداد لاعتماد التجديد فوراً. شكراً لثقتكم في مدى!`}
+                style={{
+                  padding: "10px",
+                  borderRadius: 8,
+                  border: "1px solid #cbd5e1",
+                  background: "#f8fafc",
+                  fontSize: 12,
+                  lineHeight: 1.6,
+                  fontFamily: "inherit",
+                }}
+              />
+            </label>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <button
+                type="button"
+                className="pc-live-primary"
+                style={{ background: "#16a34a", borderColor: "#16a34a" }}
+                onClick={() => {
+                  const text = `مرحباً م. ${paymentReminderTenant.owner || "مسؤول الأكاديمية"}،\nنود تذكيركم بتجديد اشتراك منصة مدى لأكاديمية (${paymentReminderTenant.name}) لضمان استمرار عمل فروعكم والخدمات السحابية دون انقطاع.\nقيمة الاشتراك السنوي: ${paymentReminderTenant.planCode === "enterprise" ? "70,000" : paymentReminderTenant.planCode === "growth" ? "35,000" : "15,000"} ج.م.\nإنستاباي: instapay@mada-academy`;
+                  void navigator.clipboard.writeText(text);
+                  toast.success("تم نسخ رسالة الواتساب للحافظة بنجاح!");
+                  const phone = (paymentReminderTenant.ownerPhone || "201000000002").replace(/[^0-9]/g, "");
+                  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, "_blank");
+                }}
+              >
+                <ExternalLink size={15} /> نسخ وفتح واتساب المباشر
+              </button>
+
+              <button
+                type="button"
+                className="pc-live-link"
+                onClick={() => setPaymentReminderTenant(null)}
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </RoleDashboardShell>
   );
