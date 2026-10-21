@@ -24,27 +24,49 @@ export default function AcademyBootstrap() {
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<BootstrapAcademyResponse | null>(null);
 
-  const update = (key: keyof typeof form, value: string) => setForm(current => ({ ...current, [key]: value }));
+  const generateSafeSlug = (name: string, customSlug?: string) => {
+    if (customSlug && customSlug.trim()) {
+      const cleaned = customSlug.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      if (cleaned.length >= 2) return cleaned;
+    }
+    const fromName = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    if (fromName.length >= 2) return fromName;
+    return `academy-${Date.now().toString(36).slice(-5)}`;
+  };
+
+  const update = (key: keyof typeof form, value: string) => {
+    setForm(current => {
+      const updated = { ...current, [key]: value };
+      if (key === "name" && !current.slug) {
+        const ascii = value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+        if (ascii.length >= 2) updated.slug = ascii;
+      }
+      return updated;
+    });
+  };
+
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!form.name.trim() || !form.branchName.trim() || !form.branchCode.trim() || !form.ownerName.trim() || !form.ownerPhone.trim() || !form.ownerEmail.trim() || form.ownerPassword.length < 8) {
-      setError("أكمل بيانات الأكاديمية والفرع ومسؤول الأكاديمية أولًا.");
+      setError("أكمل بيانات الأكاديمية والفرع ومسؤول الأكاديمية أولًا (كلمة المرور 8 خانات على الأقل).");
       return;
     }
     setSubmitting(true);
     setError(null);
+    const safeSlug = generateSafeSlug(form.name, form.slug);
     try {
       const response = await apiClient.bootstrapAcademy({
         name: form.name.trim(),
-        slug: form.slug.trim() || undefined,
+        slug: safeSlug,
         planCode: form.planCode,
-        primaryBranch: { name: form.branchName.trim(), code: form.branchCode.trim() },
+        primaryBranch: { name: form.branchName.trim(), code: form.branchCode.trim().toUpperCase() },
         owner: { fullName: form.ownerName.trim(), phone: form.ownerPhone.trim(), email: form.ownerEmail.trim(), password: form.ownerPassword },
       });
       setCreated(response);
       toast.success("تم إنشاء الأكاديمية بنجاح");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "تعذر إنشاء الأكاديمية الآن.");
+      const msg = cause instanceof Error ? cause.message : "تعذر إنشاء الأكاديمية الآن.";
+      setError(msg);
     } finally {
       setSubmitting(false);
     }

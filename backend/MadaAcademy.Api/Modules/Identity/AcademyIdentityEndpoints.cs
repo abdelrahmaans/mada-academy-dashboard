@@ -184,7 +184,10 @@ public static class AcademyIdentityEndpoints
     }
 
     private static string NormalizeSlug(string value)
-        => Regex.Replace(value.Trim().ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
+    {
+        var cleaned = Regex.Replace(value.Trim().ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
+        return string.IsNullOrWhiteSpace(cleaned) ? $"academy-{Guid.NewGuid().ToString("N")[..6]}" : cleaned;
+    }
 
     private static readonly Dictionary<string, string> RoleLabels = new()
     {

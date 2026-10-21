@@ -1238,9 +1238,5 @@ function PlatformConsolePreview() {
 }
 
 export default function PlatformConsole() {
-  return apiClient.hasSession() ? (
-    <PlatformConsoleLive />
-  ) : (
-    <PlatformConsolePreview />
-  );
+  return <PlatformConsoleLive />;
 }

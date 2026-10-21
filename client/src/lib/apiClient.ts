@@ -570,8 +570,23 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
     let code: string | undefined;
     let source: string | undefined;
     try {
-      const payload = JSON.parse(body) as { title?: string; detail?: string; extensions?: { code?: string }; error?: { message?: string; code?: string; source?: string } };
-      message = payload.detail || payload.error?.message || payload.title || message;
+      const payload = JSON.parse(body) as {
+        title?: string;
+        detail?: string;
+        extensions?: { code?: string };
+        error?: { message?: string; code?: string; source?: string };
+        errors?: Record<string, string[]>;
+      };
+      if (payload.errors && typeof payload.errors === "object") {
+        const errorList = Object.entries(payload.errors).flatMap(([_, msgs]) => msgs);
+        if (errorList.length > 0) {
+          message = errorList.join(" · ");
+        } else {
+          message = payload.detail || payload.error?.message || payload.title || message;
+        }
+      } else {
+        message = payload.detail || payload.error?.message || payload.title || message;
+      }
       code = payload.extensions?.code || payload.error?.code;
       source = payload.error?.source;
     } catch {
