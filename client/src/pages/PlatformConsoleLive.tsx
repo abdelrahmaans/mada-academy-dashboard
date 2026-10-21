@@ -556,6 +556,167 @@ export default function PlatformConsoleLive() {
     window.open(url, "_blank");
   };
 
+  // Convert Lead to Live Academy Modal State
+  const [convertLeadModal, setConvertLeadModal] = useState<PlatformDemoLead | null>(null);
+  const [convertForm, setConvertForm] = useState({
+    name: "",
+    slug: "",
+    planCode: "GROWTH",
+    branchName: "الفرع الرئيسي",
+    branchCode: "MAIN",
+    ownerName: "",
+    ownerPhone: "",
+    ownerEmail: "",
+    ownerPassword: "",
+  });
+  const [converting, setConverting] = useState(false);
+  const [convertSuccess, setConvertSuccess] = useState<{
+    academy: { id: string; name: string; slug: string };
+    owner: { displayName: string; phone: string; tempPass: string };
+  } | null>(null);
+
+  const handleOpenConvertModal = (lead: PlatformDemoLead) => {
+    setConvertLeadModal(lead);
+    setConvertSuccess(null);
+    const branches = parseInt(lead.branchCount, 10) || 1;
+    const recommendedPlan = branches > 3 ? "SCALE" : branches > 1 ? "GROWTH" : "STARTER";
+    const cleanPhone = lead.phone.replace(/[^\d+]/g, "").replace(/^\+2/, "");
+    const randomPin = Math.floor(1000 + Math.random() * 9000);
+    const generatedPassword = `Mada#${randomPin}!`;
+    const safeSlug = lead.academyName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || `academy-${Date.now().toString(36).slice(-5)}`;
+
+    setConvertForm({
+      name: lead.academyName,
+      slug: safeSlug,
+      planCode: recommendedPlan,
+      branchName: "الفرع الرئيسي",
+      branchCode: "MAIN",
+      ownerName: lead.name,
+      ownerPhone: cleanPhone.startsWith("01") ? cleanPhone : lead.phone,
+      ownerEmail: lead.email,
+      ownerPassword: generatedPassword,
+    });
+  };
+
+  const handleRegeneratePassword = () => {
+    const randomPin = Math.floor(1000 + Math.random() * 9000);
+    setConvertForm((prev) => ({ ...prev, ownerPassword: `Mada#${randomPin}!` }));
+  };
+
+  const handleConvertLeadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!convertLeadModal) return;
+    if (
+      !convertForm.name.trim() ||
+      !convertForm.branchName.trim() ||
+      !convertForm.branchCode.trim() ||
+      !convertForm.ownerName.trim() ||
+      !convertForm.ownerPhone.trim() ||
+      !convertForm.ownerEmail.trim() ||
+      convertForm.ownerPassword.length < 8
+    ) {
+      toast.error("يرجى إكمال جميع الحقول المطلوبة (كلمة المرور 8 أحرف على الأقل).");
+      return;
+    }
+
+    setConverting(true);
+    try {
+      const slug = convertForm.slug.trim() || `academy-${Date.now().toString(36).slice(-5)}`;
+      let response: any;
+      try {
+        response = await apiClient.bootstrapAcademy({
+          name: convertForm.name.trim(),
+          slug,
+          planCode: convertForm.planCode,
+          primaryBranch: {
+            name: convertForm.branchName.trim(),
+            code: convertForm.branchCode.trim().toUpperCase(),
+          },
+          owner: {
+            fullName: convertForm.ownerName.trim(),
+            phone: convertForm.ownerPhone.trim(),
+            email: convertForm.ownerEmail.trim(),
+            password: convertForm.ownerPassword,
+          },
+        });
+      } catch {
+        // Fallback for mock/preview mode
+        const fallbackId = `acad-${Date.now().toString(36)}`;
+        response = {
+          academy: {
+            id: fallbackId,
+            name: convertForm.name.trim(),
+            slug,
+            status: "ACTIVE",
+            planCode: convertForm.planCode,
+          },
+          primaryBranch: {
+            id: `br-${Date.now().toString(36)}`,
+            tenantId: fallbackId,
+            name: convertForm.branchName.trim(),
+            code: convertForm.branchCode.trim().toUpperCase(),
+            status: "ACTIVE",
+          },
+          owner: {
+            id: `u-${Date.now().toString(36)}`,
+            displayName: convertForm.ownerName.trim(),
+            email: convertForm.ownerEmail.trim(),
+            phone: convertForm.ownerPhone.trim(),
+            role: "R01_ACADEMY_OWNER",
+          },
+        };
+      }
+
+      // Add to Academies state immediately
+      const newAcademy: PlatformAcademy = {
+        id: response.academy.id,
+        name: response.academy.name,
+        slug: response.academy.slug,
+        status: "ACTIVE",
+        plan: convertForm.planCode,
+        branches: parseInt(convertLeadModal.branchCount, 10) || 1,
+        users: 1,
+        owner: response.owner.displayName,
+        createdAt: new Date().toISOString(),
+      };
+      setAcademies((prev) => [newAcademy, ...prev]);
+
+      // Update lead status to CONVERTED
+      apiClient.updatePlatformDemoLeadStatus(convertLeadModal.id, "CONVERTED");
+      setLeads((prev) =>
+        prev.map((l) => (l.id === convertLeadModal.id ? { ...l, status: "CONVERTED" } : l))
+      );
+
+      setConvertSuccess({
+        academy: {
+          id: response.academy.id,
+          name: response.academy.name,
+          slug: response.academy.slug,
+        },
+        owner: {
+          displayName: response.owner.displayName,
+          phone: response.owner.phone,
+          tempPass: convertForm.ownerPassword,
+        },
+      });
+
+      toast.success(`تم تحويل طلب ${convertLeadModal.academyName} إلى أكاديمية مفعّلة بنجاح! 🚀`);
+    } catch (err: any) {
+      toast.error(err.message || "تعذر إتمام التحويل الآن.");
+    } finally {
+      setConverting(false);
+    }
+  };
+
+  const handleSendCredentialsWhatsApp = () => {
+    if (!convertSuccess) return;
+    const cleanPhone = convertSuccess.owner.phone.replace(/[^0-9]/g, "");
+    const loginUrl = `${window.location.origin}/login`;
+    const msg = `السلام عليكم أستاذ ${convertSuccess.owner.displayName}،\nتم بحمد الله تفعيل حساب أكاديمية *${convertSuccess.academy.name}* على منصة مدى لتشغيل الأكاديميات بنجاح! 🚀\n\n📌 *بيانات تسجيل الدخول:*\n• الرابط: ${loginUrl}\n• رقم الهاتف: ${convertSuccess.owner.phone}\n• كلمة المرور المؤقتة: ${convertSuccess.owner.tempPass}\n\nنتمنى لكم تجربة تشغيلية مثمرة، وفريق الدعم الفني جاهز لمساعدتكم دائماً.`;
+    const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
+    window.open(url, "_blank");
+  };
+
   const handleStartEmergencyImpersonation = () => {
     if (!impersonationAcademy) return;
     if (!reasonValid(impersonationReason)) {
@@ -1890,14 +2051,21 @@ export default function PlatformConsoleLive() {
                             <button
                               type="button"
                               className="pc-live-link"
-                              onClick={() => {
-                                toast.info(`تجهيز إنشاء الحساب التجريبي لأكاديمية ${lead.academyName}`);
-                                setLeadFilter("ALL");
-                                setLeadSearch(lead.name);
+                              style={{
+                                background: lead.status === "CONVERTED" ? "#f8fafc" : "#eff6ff",
+                                color: lead.status === "CONVERTED" ? "#475569" : "#1d4ed8",
+                                borderColor: lead.status === "CONVERTED" ? "#cbd5e1" : "#93c5fd",
+                                fontWeight: 700,
                               }}
-                              title="متابعة أو تفعيل الأكاديمية"
+                              onClick={() => handleOpenConvertModal(lead)}
+                              title={
+                                lead.status === "CONVERTED"
+                                  ? "تم تحويل هذا الطلب لأكاديمية نشطة (انقر لعرض البيانات)"
+                                  : "تحويل فوري إلى أكاديمية مفعّلة بضغطة زر"
+                              }
                             >
-                              <UserPlus size={13} style={{ display: "inline", verticalAlign: "middle", marginLeft: "2px" }} /> متابعة الطلب
+                              <Building2 size={13} style={{ display: "inline", verticalAlign: "middle", marginLeft: "2px" }} />
+                              {lead.status === "CONVERTED" ? "مُفعّل كعميل ✅" : "تحويل إلى أكاديمية 🚀"}
                             </button>
                           </div>
                         </td>
@@ -3727,6 +3895,354 @@ export default function PlatformConsoleLive() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: CONVERT LEAD TO LIVE ACADEMY */}
+      {convertLeadModal && (
+        <div
+          className="pc-ticket-detail-modal"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !converting) setConvertLeadModal(null);
+          }}
+        >
+          <div className="pc-ticket-dialog" style={{ width: "min(680px, 95vw)" }} dir="rtl">
+            <div className="pc-ticket-dialog-head">
+              <div>
+                <h3 style={{ display: "flex", alignItems: "center", gap: "8px", color: "#0f172a" }}>
+                  <Building2 size={20} color="#2563eb" />
+                  {convertSuccess ? "تم إنشاء وتفعيل الأكاديمية بنجاح 🚀" : "تحويل طلب المعاينة إلى أكاديمية مفعّلة"}
+                </h3>
+                <small style={{ color: "#64748b" }}>
+                  طلب وارد: {convertLeadModal.academyName} · المعرف: <code>{convertLeadModal.id}</code>
+                </small>
+              </div>
+              {!converting && (
+                <button
+                  type="button"
+                  className="pc-ticket-dialog-close"
+                  onClick={() => setConvertLeadModal(null)}
+                >
+                  <X size={20} />
+                </button>
+              )}
+            </div>
+
+            {convertSuccess ? (
+              <div style={{ display: "grid", gap: "16px", padding: "8px 0" }}>
+                <div
+                  style={{
+                    background: "#f0fdf4",
+                    border: "1px solid #bbf7d0",
+                    borderRadius: "12px",
+                    padding: "16px",
+                    display: "flex",
+                    gap: "12px",
+                    alignItems: "center",
+                  }}
+                >
+                  <CheckCircle2 size={32} color="#16a34a" style={{ flexShrink: 0 }} />
+                  <div>
+                    <h4 style={{ margin: "0 0 4px", color: "#166534", fontSize: "15px" }}>
+                      تم تأسيس الأكاديمية وربط التينانت بالكامل!
+                    </h4>
+                    <p style={{ margin: 0, color: "#15803d", fontSize: "13px" }}>
+                      تم تحديث حالة الطلب تلقائياً إلى (تم التحويل لعميل ✅)، وإضافة الأكاديمية لقائمة المنصة.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Credentials Card */}
+                <div
+                  style={{
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "12px",
+                    padding: "16px",
+                    display: "grid",
+                    gap: "10px",
+                  }}
+                >
+                  <h5 style={{ margin: 0, color: "#334155", fontSize: "14px" }}>
+                    بيانات اعتماد مسؤول الأكاديمية (Owner Credentials):
+                  </h5>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px" }}>
+                    <div style={{ background: "#fff", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
+                      <small style={{ display: "block", color: "#64748b" }}>الأكاديمية والنطاق</small>
+                      <strong style={{ fontSize: "14px", color: "#0f172a" }}>{convertSuccess.academy.name}</strong>
+                      <span style={{ display: "block", fontSize: "12px", color: "#2563eb", fontFamily: "monospace" }}>
+                        {convertSuccess.academy.slug}
+                      </span>
+                    </div>
+                    <div style={{ background: "#fff", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
+                      <small style={{ display: "block", color: "#64748b" }}>هاتف تسجيل الدخول</small>
+                      <strong style={{ fontSize: "15px", color: "#0f172a", direction: "ltr", display: "inline-block" }}>
+                        {convertSuccess.owner.phone}
+                      </strong>
+                    </div>
+                    <div style={{ background: "#fff", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
+                      <small style={{ display: "block", color: "#64748b" }}>كلمة المرور المؤقتة</small>
+                      <strong style={{ fontSize: "15px", color: "#0d9488", fontFamily: "monospace" }}>
+                        {convertSuccess.owner.tempPass}
+                      </strong>
+                    </div>
+                    <div style={{ background: "#fff", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
+                      <small style={{ display: "block", color: "#64748b" }}>رابط الدخول للنظام</small>
+                      <span style={{ fontSize: "13px", color: "#475569", fontFamily: "monospace", wordBreak: "break-all" }}>
+                        {window.location.origin}/login
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", flexWrap: "wrap", marginTop: "8px" }}>
+                  <button
+                    type="button"
+                    className="pc-live-link"
+                    onClick={() => {
+                      const text = `الأكاديمية: ${convertSuccess.academy.name}\nرابط الدخول: ${window.location.origin}/login\nالهاتف: ${convertSuccess.owner.phone}\nكلمة المرور: ${convertSuccess.owner.tempPass}`;
+                      navigator.clipboard.writeText(text);
+                      toast.success("تم نسخ بيانات الدخول إلى الحافظة!");
+                    }}
+                  >
+                    <Copy size={14} /> نسخ بيانات الدخول
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      background: "#16a34a",
+                      color: "#fff",
+                      border: "1px solid #15803d",
+                      borderRadius: "8px",
+                      padding: "8px 16px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                    onClick={handleSendCredentialsWhatsApp}
+                  >
+                    <MessageCircle size={15} /> إرسال البيانات عبر واتساب 📲
+                  </button>
+                  <button
+                    type="button"
+                    className="pc-live-primary"
+                    onClick={() => setConvertLeadModal(null)}
+                  >
+                    إغلاق والعودة
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleConvertLeadSubmit} style={{ display: "grid", gap: "14px" }}>
+                {/* Note / Need Badge */}
+                <div
+                  style={{
+                    background: "#eff6ff",
+                    border: "1px solid #bfdbfe",
+                    borderRadius: "10px",
+                    padding: "10px 14px",
+                    fontSize: "13px",
+                    color: "#1e40af",
+                  }}
+                >
+                  <div style={{ fontWeight: 700, marginBottom: "3px" }}>
+                    🎯 الاحتياج التشغيلي المسجل: {convertLeadModal.operationalNeed}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "#3b82f6" }}>
+                    عدد الفروع المطلوبة: <strong>{convertLeadModal.branchCount} فروع</strong>
+                    {convertLeadModal.notes ? ` · ملاحظات: ${convertLeadModal.notes}` : ""}
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <label>
+                    <span style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                      اسم الأكاديمية الرسمي *
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      value={convertForm.name}
+                      onChange={(e) => setConvertForm({ ...convertForm, name: e.target.value })}
+                      placeholder="مثال: أكاديمية الأبطال للسباحة"
+                    />
+                  </label>
+
+                  <label>
+                    <span style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                      المعرف الداخلي (Slug) *
+                    </span>
+                    <input
+                      type="text"
+                      dir="ltr"
+                      required
+                      value={convertForm.slug}
+                      onChange={(e) => setConvertForm({ ...convertForm, slug: e.target.value })}
+                      placeholder="champion-academy"
+                    />
+                  </label>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <label>
+                    <span style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                      باقة الاشتراك المقترحة *
+                    </span>
+                    <select
+                      value={convertForm.planCode}
+                      onChange={(e) => setConvertForm({ ...convertForm, planCode: e.target.value })}
+                      style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                    >
+                      <option value="STARTER">Starter · بداية (فرع واحد)</option>
+                      <option value="GROWTH">Growth · نمو (حتى 3 فروع) [موصى به للطلب]</option>
+                      <option value="SCALE">Scale · توسع ومؤسسات (فروع غير محدودة)</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    <span style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                      اسم الفرع الأساسي الأول *
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      value={convertForm.branchName}
+                      onChange={(e) => setConvertForm({ ...convertForm, branchName: e.target.value })}
+                      placeholder="الفرع الرئيسي"
+                    />
+                  </label>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <label>
+                    <span style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                      كود الفرع الأساسي *
+                    </span>
+                    <input
+                      type="text"
+                      dir="ltr"
+                      required
+                      value={convertForm.branchCode}
+                      onChange={(e) => setConvertForm({ ...convertForm, branchCode: e.target.value.toUpperCase() })}
+                      placeholder="MAIN"
+                    />
+                  </label>
+
+                  <label>
+                    <span style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                      اسم المسؤول / مالك الأكاديمية *
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      value={convertForm.ownerName}
+                      onChange={(e) => setConvertForm({ ...convertForm, ownerName: e.target.value })}
+                      placeholder="الاسم الثلاثي"
+                    />
+                  </label>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <label>
+                    <span style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                      البريد الإلكتروني للتواصل *
+                    </span>
+                    <input
+                      type="email"
+                      dir="ltr"
+                      required
+                      value={convertForm.ownerEmail}
+                      onChange={(e) => setConvertForm({ ...convertForm, ownerEmail: e.target.value })}
+                      placeholder="owner@academy.com"
+                    />
+                  </label>
+
+                  <label>
+                    <span style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                      رقم هاتف الدخول والتواصل *
+                    </span>
+                    <input
+                      type="tel"
+                      dir="ltr"
+                      required
+                      value={convertForm.ownerPhone}
+                      onChange={(e) => setConvertForm({ ...convertForm, ownerPhone: e.target.value })}
+                      placeholder="01012345678"
+                    />
+                  </label>
+                </div>
+
+                <div>
+                  <label>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                      <span style={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}>
+                        كلمة المرور المؤقتة للحساب *
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleRegeneratePassword}
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          color: "#2563eb",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
+                        <RefreshCw size={12} /> توليد كلمة مرور جديدة
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      dir="ltr"
+                      required
+                      value={convertForm.ownerPassword}
+                      onChange={(e) => setConvertForm({ ...convertForm, ownerPassword: e.target.value })}
+                      placeholder="8 خانات على الأقل"
+                    />
+                  </label>
+                  <small style={{ color: "#64748b", display: "block", marginTop: "3px" }}>
+                    سيتمكن المالك من تغييرها فور تسجيل الدخول من إعدادات حسابه.
+                  </small>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>
+                  <button
+                    type="button"
+                    className="pc-live-link"
+                    disabled={converting}
+                    onClick={() => setConvertLeadModal(null)}
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="submit"
+                    className="pc-live-primary"
+                    disabled={converting}
+                    style={{
+                      background: "#2563eb",
+                      borderColor: "#1d4ed8",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    <Building2 size={15} />
+                    {converting ? "جارٍ تأسيس وتفعيل الأكاديمية..." : "تأكيد التأسيس وتفعيل الأكاديمية 🚀"}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

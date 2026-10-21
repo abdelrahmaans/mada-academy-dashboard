@@ -5,21 +5,42 @@ import { toast } from "sonner";
 import { apiClient, type BootstrapAcademyResponse } from "@/lib/apiClient";
 import "./AcademyBootstrap.css";
 
-const initialForm = {
-  name: "",
-  slug: "",
-  planCode: "STARTER",
-  branchName: "",
-  branchCode: "",
-  ownerName: "",
-  ownerPhone: "",
-  ownerEmail: "",
-  ownerPassword: "",
+const getInitialForm = () => {
+  const fallback = {
+    name: "",
+    slug: "",
+    planCode: "STARTER",
+    branchName: "",
+    branchCode: "",
+    ownerName: "",
+    ownerPhone: "",
+    ownerEmail: "",
+    ownerPassword: "",
+  };
+  if (typeof window === "undefined") return fallback;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const storedRaw = sessionStorage.getItem("mada_convert_lead");
+    const stored = storedRaw ? JSON.parse(storedRaw) : {};
+    return {
+      name: params.get("name") || stored.academyName || "",
+      slug: params.get("slug") || "",
+      planCode: params.get("plan") || stored.planCode || "STARTER",
+      branchName: params.get("branch") || "الفرع الرئيسي",
+      branchCode: params.get("code") || "MAIN",
+      ownerName: params.get("owner") || stored.name || "",
+      ownerPhone: params.get("phone") || stored.phone || "",
+      ownerEmail: params.get("email") || stored.email || "",
+      ownerPassword: params.get("password") || stored.password || "",
+    };
+  } catch {
+    return fallback;
+  }
 };
 
 export default function AcademyBootstrap() {
   const [, navigate] = useLocation();
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState(getInitialForm);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<BootstrapAcademyResponse | null>(null);
@@ -64,6 +85,16 @@ export default function AcademyBootstrap() {
       });
       setCreated(response);
       toast.success("تم إنشاء الأكاديمية بنجاح");
+      try {
+        const leadId = new URLSearchParams(window.location.search).get("leadId") || sessionStorage.getItem("mada_convert_lead_id");
+        if (leadId) {
+          apiClient.updatePlatformDemoLeadStatus(leadId, "CONVERTED");
+          sessionStorage.removeItem("mada_convert_lead");
+          sessionStorage.removeItem("mada_convert_lead_id");
+        }
+      } catch {
+        // ignore
+      }
     } catch (cause) {
       const msg = cause instanceof Error ? cause.message : "تعذر إنشاء الأكاديمية الآن.";
       setError(msg);
