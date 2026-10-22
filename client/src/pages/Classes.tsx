@@ -6,27 +6,15 @@ import {
   Bell,
   BookOpen,
   CalendarCheck,
-  CalendarDays,
   CheckCircle2,
   ChevronDown,
   ChevronLeft,
-  ChevronRight,
-  CircleHelp,
-  Clock3,
-  Filter,
-  GraduationCap,
-  LayoutDashboard,
-  LogOut,
   MapPin,
   Menu,
-  MoreHorizontal,
   Plus,
   Search,
-  Settings,
   Sparkles,
   Users,
-  Wallet,
-  X,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import {
@@ -378,35 +366,9 @@ const offeringFromApi = (group: GroupRecord): Offering => {
   };
 };
 
-function BrandMark() {
-  return (
-    <div className="brand-lockup" aria-label="مدى">
-      <span className="brand-symbol" aria-hidden="true">
-        <svg viewBox="0 0 40 40" fill="none">
-          <path
-            d="M4 12.5 12.5 8l8.2 4.5v9.4l-8.2 4.6L4 21.9v-9.4Z"
-            fill="currentColor"
-          />
-          <path
-            d="m19.3 12.5 8.2-4.5 8.5 4.5v9.4l-8.5 4.6-8.2-4.6v-9.4Z"
-            fill="currentColor"
-            opacity=".72"
-          />
-          <path
-            d="m11.5 24.1 8.3-4.6 8.2 4.6v8.2l-8.2 4.4-8.3-4.4v-8.2Z"
-            fill="currentColor"
-            opacity=".48"
-          />
-        </svg>
-      </span>
-      <span className="brand-word">مدى</span>
-    </div>
-  );
-}
-
 function ClassesPage() {
   const [, setLocation] = useLocation();
-  const { logout, me } = useAuth();
+  const { me } = useAuth();
   const userRoleCode = me?.role ? (me.role.replace(/_.*$/, "") as RoleCode) : undefined;
   const activeRoleCode: RoleCode = userRoleCode || "R02";
   const roleDef = getRoleDefinition(activeRoleCode);
@@ -455,7 +417,6 @@ function ClassesPage() {
   const [liveClassrooms, setLiveClassrooms] = useState<SchedulingClassroom[]>(
     []
   );
-  const [liveRoomsReady, setLiveRoomsReady] = useState(false);
   const [liveInstructors, setLiveInstructors] = useState<
     SchedulingInstructor[]
   >([]);
@@ -657,12 +618,6 @@ function ClassesPage() {
     0
   );
 
-  const notifySoon = (name: string) => {
-    toast("القسم قيد التجهيز", {
-      description: `سيُستكمل «${name}» في المرحلة التالية.`,
-    });
-    setMobileNavOpen(false);
-  };
   const resetCourseForm = () => {
     setCourseName("");
     setNewTrack("robotics");
@@ -912,8 +867,6 @@ function ClassesPage() {
     setBranchFilter("كل الفروع");
   };
   const trackOptions = Object.entries(trackLabels) as [Track, string][];
-  const currentCount =
-    tab === "courses" ? filteredCourses.length : filteredOfferings.length;
   const liveBranchNames = Array.from(
     new Set(liveClassrooms.map(room => room.branchName))
   );
