@@ -1,21 +1,15 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  Award,
-  Calendar,
   ChevronLeft,
   CircleAlert,
-  Clock,
   Compass,
-  Cpu,
   GraduationCap,
   Medal,
   Plus,
   RefreshCw,
   Rocket,
-  ShieldCheck,
   Sparkles,
   Trophy,
-  UserCheck,
   UserPlus,
   Users,
   X
@@ -29,7 +23,6 @@ import type { RoleCode } from "@/lib/roleNavigation";
 import {
   apiClient,
   type AuthMe,
-  type CompetitionDetailItem,
   type CompetitionSummaryItem,
   type CompetitionTeamItem,
   type HallOfFameCardItem,
@@ -48,7 +41,6 @@ export default function CompetitionsLive({ me }: { me?: AuthMe }) {
   const [selectedCompId, setSelectedCompId] = useState<string | null>(null);
   const [teams, setTeams] = useState<CompetitionTeamItem[]>([]);
   const [hallOfFame, setHallOfFame] = useState<HallOfFameCardItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -80,10 +72,7 @@ export default function CompetitionsLive({ me }: { me?: AuthMe }) {
   // Students list for member assignment
   const [studentsList, setStudentsList] = useState<Array<{ id: string; fullName: string }>>([]);
 
-  const isBranchManager = currentMe?.role === "R02_BRANCH_MANAGER";
-  const isInstructor = currentMe?.role === "R04_INSTRUCTOR" || currentMe?.role === "R03_HEAD_INSTRUCTORS";
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setRefreshing(true);
       setError(null);
@@ -113,14 +102,13 @@ export default function CompetitionsLive({ me }: { me?: AuthMe }) {
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "تعذر تحميل بيانات البطولات");
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [selectedCompId]);
 
   useEffect(() => {
     void loadData();
-  }, [selectedCompId]);
+  }, [loadData]);
 
   const handleSelectComp = async (id: string) => {
     setSelectedCompId(id);

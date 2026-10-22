@@ -1,30 +1,14 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
-  AlertCircle,
-  ArrowDownToLine,
-  ArrowUpLeft,
   Banknote,
-  BarChart3,
   CalendarDays,
-  Check,
   CheckCircle2,
-  ChevronLeft,
-  CircleHelp,
-  Clock3,
-  CreditCard,
-  FileCheck2,
   FileText,
   Info,
-  LayoutDashboard,
-  LogOut,
   MapPin,
   Menu,
-  Plus,
-  Search,
-  Settings,
   ShieldCheck,
   TrendingDown,
-  TrendingUp,
   UserCheck,
   Wallet,
   X,
@@ -34,22 +18,16 @@ import { FinanceDeskDialogs } from "@/components/FinanceDeskDialogs";
 import {
   Collections,
   Expenses,
-  NavButton,
   Overview,
-  PanelTitle,
   Reports,
   ShiftsView,
   PayrollView,
   PAYMENT_METHOD_LABELS,
-  STATUS_LABEL,
-  EXPENSE_LABEL,
   VIEW_COPY,
   VIEW_TITLES,
-  invoiceStatus,
   money,
 } from "@/components/FinanceDeskViews";
 import "@/components/FinanceDeskEnhanced.css";
-import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
@@ -114,7 +92,7 @@ export type Expense = {
   evidenceStatus?: string;
   evidenceFileName?: string | null;
 };
-export const INVOICES: Invoice[] = [
+const INVOICES: Invoice[] = [
   {
     id: "INV-0908",
     number: "MAD-NSR-2026-0908",
@@ -164,7 +142,7 @@ export const INVOICES: Invoice[] = [
     payments: [],
   },
 ];
-export const INITIAL_EXPENSES: Expense[] = [
+const INITIAL_EXPENSES: Expense[] = [
   {
     id: "EXP-104",
     description: "مستلزمات روبوتكس للمجموعات الجديدة",
@@ -254,7 +232,6 @@ function mapFinanceExpense(expense: FinanceExpense): Expense {
   };
 }
 export default function FinanceDesk() {
-  const [, navigate] = useLocation();
   const [liveMode] = useState(() => apiClient.hasSession());
   const [view, setView] = useState<View>(() => {
     const rawHash = typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
@@ -374,7 +351,7 @@ export default function FinanceDesk() {
       try {
         await apiClient.closeoutCashierShift({ countedCashPiastres: Math.round(shift.cashAmount * 100), notes: notes || "تم استلام ومطابقة النقدية" });
         await apiClient.depositCashierSafe({ amountPiastres: Math.round(shift.cashAmount * 100), notes: `توريد عهدة وردية ${shift.id} إلى الخزينة الرئيسية` });
-      } catch (err) {
+      } catch {
         // Gracefully handle or log
       }
     }
@@ -908,6 +885,8 @@ export default function FinanceDesk() {
       }
       tenantName={financeMe?.academy?.name ?? "أكاديمية مدى"}
       branchName={branchContext}
+      mobileOpen={mobileOpen}
+      onCloseMobile={() => setMobileOpen(false)}
     >
       <main className="main-panel">
         <header className="topbar">

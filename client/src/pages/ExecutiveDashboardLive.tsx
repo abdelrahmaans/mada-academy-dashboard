@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, Activity, ArrowDownToLine, BarChart3, Building2, CalendarDays, CheckCircle2, GraduationCap, LayoutDashboard, Menu, RefreshCw, ShieldCheck, Users, Wallet, X } from "lucide-react";
+import { AlertCircle, Activity, ArrowDownToLine, BarChart3, Building2, CalendarDays, CheckCircle2, GraduationCap, LayoutDashboard, RefreshCw, Users, Wallet } from "lucide-react";
 import { toast } from "sonner";
-import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
@@ -146,7 +145,7 @@ export default function ExecutiveDashboardLive() {
     toast.success("تم تصدير تقرير مجلس الإدارة بنجاح");
   };
 
-  return <RoleDashboardShell className="app-shell executive-dashboard-shell r1-live-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية الحالية" branchName={selectedBranchName} demo={false}>
+  return <RoleDashboardShell className="app-shell executive-dashboard-shell r1-live-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية الحالية" branchName={selectedBranchName} demo={false} mobileOpen={mobileNavOpen} onCloseMobile={() => setMobileNavOpen(false)}>
     <main className="main-panel">
       <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel={selectedBranchName} />
       <div className="workspace r1-live-page" dir="rtl">
