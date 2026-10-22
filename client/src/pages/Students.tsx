@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
-  Activity,
   ArrowDownToLine,
   ArrowUpLeft,
   BookOpen,
@@ -10,22 +9,17 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  CircleHelp,
   Clock3,
   FileText,
   Filter,
   GraduationCap,
-  LayoutDashboard,
-  LogOut,
   MapPin,
   Menu,
   MoreHorizontal,
   Plus,
   Search,
   Send,
-  Settings,
   ShieldCheck,
-  Sparkles,
   UserPlus,
   Users,
   Wallet,
@@ -295,35 +289,9 @@ function getStudentJourney(student: Student): StudentJourneySummary {
   };
 }
 
-function BrandMark() {
-  return (
-    <div className="brand-lockup" aria-label="مدى">
-      <span className="brand-symbol" aria-hidden="true">
-        <svg viewBox="0 0 40 40" fill="none">
-          <path
-            d="M4 12.5 12.5 8l8.2 4.5v9.4l-8.2 4.6L4 21.9v-9.4Z"
-            fill="currentColor"
-          />
-          <path
-            d="m19.3 12.5 8.2-4.5 8.5 4.5v9.4l-8.5 4.6-8.2-4.6v-9.4Z"
-            fill="currentColor"
-            opacity=".72"
-          />
-          <path
-            d="m11.5 24.1 8.3-4.6 8.2 4.6v8.2l-8.2 4.4-8.3-4.4v-8.2Z"
-            fill="currentColor"
-            opacity=".48"
-          />
-        </svg>
-      </span>
-      <span className="brand-word">مدى</span>
-    </div>
-  );
-}
-
 function StudentPage() {
   const [, setLocation] = useLocation();
-  const { logout, me } = useAuth();
+  const { me } = useAuth();
   const userRoleCode = me?.role ? (me.role.replace(/_.*$/, "") as RoleCode) : undefined;
   const activeRoleCode: RoleCode = userRoleCode || "R02";
   const roleDef = getRoleDefinition(activeRoleCode);
@@ -429,13 +397,6 @@ function StudentPage() {
   const monthCount = students.filter(student =>
     student.joined.includes("سبتمبر 2026")
   ).length;
-
-  const comingSoon = (feature: string) => {
-    toast("القسم قيد التجهيز", {
-      description: `هنبدأ في تطوير «${feature}» في المرحلة التالية.`,
-    });
-    setMobileNavOpen(false);
-  };
 
   const resetForm = () => {
     setStudentName("");

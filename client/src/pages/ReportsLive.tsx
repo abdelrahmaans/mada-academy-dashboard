@@ -4,10 +4,7 @@ import {
   ArrowDownToLine,
   ArrowLeft,
   Building2,
-  CheckCircle2,
   CircleAlert,
-  Clock,
-  CreditCard,
   Database,
   FileSpreadsheet,
   GraduationCap,
@@ -18,7 +15,6 @@ import {
   TrendingDown,
   Users,
   Wallet,
-  XCircle,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import PageHeader from "@/components/PageHeader";
@@ -221,6 +217,8 @@ export default function ReportsLive({ me }: { me: AuthMe }) {
       tenantName={me.academy?.name}
       branchName={isOwner ? undefined : branchName}
       demo={false}
+      mobileOpen={mobileOpen}
+      onCloseMobile={() => setMobileOpen(false)}
     >
       <main className="main-panel">
         {isOwner ? (

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { BookOpen, CheckCircle2, Eye, RefreshCw, ShieldCheck, UserPlus, X } from "lucide-react";
+import { BookOpen, CheckCircle2, RefreshCw, ShieldCheck, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";

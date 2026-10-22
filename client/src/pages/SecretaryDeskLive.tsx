@@ -1,9 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
-  ArrowUpLeft,
   CheckCircle2,
-  ChevronLeft,
-  CircleAlert,
   Clock,
   Filter,
   GraduationCap,
@@ -13,7 +10,6 @@ import {
   Plus,
   RefreshCw,
   Search,
-  Send,
   Snowflake,
   Sparkles,
   UserCheck,
@@ -23,7 +19,6 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useLocation } from "wouter";
 import PageHeader from "@/components/PageHeader";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
@@ -63,7 +58,6 @@ const CHANNEL_LABELS: Record<string, string> = {
 
 export default function SecretaryDeskLive() {
   const { me } = useAuth();
-  const [, navigate] = useLocation();
 
   const [leads, setLeads] = useState<LeadRecord[]>([]);
   const [groups, setGroups] = useState<SchedulingGroupRecord[]>([]);

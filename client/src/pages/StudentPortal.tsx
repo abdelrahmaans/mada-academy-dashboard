@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
 import {
   Activity,
-  Award,
   BookOpen,
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
-  CircleHelp,
   Clock,
   GraduationCap,
   Home,
@@ -132,7 +130,6 @@ export default function StudentPortal() {
   const [dataError, setDataError] = useState<string | null>(null);
   const [dataWarning, setDataWarning] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
-  const [hasStudentProfile, setHasStudentProfile] = useState(!isStudentAccount);
 
   // Sync tab with URL hash
   useEffect(() => {
@@ -160,7 +157,6 @@ export default function StudentPortal() {
       setLiveMode(false);
       setDataLoading(false);
       setSessions(DEMO_SESSIONS);
-      setHasStudentProfile(true);
       setStudentName("لينا عمر");
       setCourseName("روبوتكس الناشئين — المستوى 1");
       return;
@@ -183,7 +179,6 @@ export default function StudentPortal() {
       if (studentsResult.status === "rejected") {
         const message = studentsResult.reason instanceof Error ? studentsResult.reason.message : "تعذر تحميل ملف الطالب.";
         setSessions([]);
-        setHasStudentProfile(false);
         setDataError(message);
         toast.error(message);
         return;
@@ -193,7 +188,6 @@ export default function StudentPortal() {
       const records = sessionsResult.status === "fulfilled" ? sessionsResult.value.items : [];
       const ownRecords = student ? sessionsForStudent(records, student.id) : [];
 
-      setHasStudentProfile(Boolean(student));
       setStudentName(student?.name ?? me?.user?.displayName ?? "الطالب");
       setCourseName(ownRecords[0]?.courseName ?? "روبوتكس الناشئين — المستوى 1");
 
@@ -330,6 +324,15 @@ export default function StudentPortal() {
           <div className="consumer-note-box warning" role="alert">
             <ShieldCheck size={16} />
             <span>تعذر تحميل بيانات الطالب: {dataError}</span>
+            <button type="button" className="button button-secondary" style={{ padding: "4px 10px", fontSize: "0.8rem", marginInlineStart: "auto" }} onClick={retry}>
+              إعادة المحاولة
+            </button>
+          </div>
+        )}
+        {dataWarning && (
+          <div className="consumer-note-box warning" role="alert">
+            <ShieldCheck size={16} />
+            <span>تنبيه: {dataWarning}</span>
             <button type="button" className="button button-secondary" style={{ padding: "4px 10px", fontSize: "0.8rem", marginInlineStart: "auto" }} onClick={retry}>
               إعادة المحاولة
             </button>

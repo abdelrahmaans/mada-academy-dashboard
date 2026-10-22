@@ -53,16 +53,6 @@ function statusLabel(status: string) {
   };
   return labels[status] ?? status;
 }
-function attendanceLabel(status: AttendanceStatus) {
-  const labels: Record<AttendanceStatus, string> = {
-    PRESENT: "حاضر",
-    LATE: "متأخر",
-    ABSENT: "غائب",
-    EXCUSED: "بعذر",
-    UNMARKED: "لم يسجل",
-  };
-  return labels[status];
-}
 function evaluationLabel(status?: string) {
   if (status === "PUBLISHED") return "منشور للأسرة";
   if (status === "SUBMITTED") return "بانتظار مراجعة رئيس المدربين";

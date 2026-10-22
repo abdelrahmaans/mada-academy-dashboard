@@ -3,36 +3,24 @@ import {
   Activity,
   AlertCircle,
   ArrowDownToLine,
-  ArrowUpLeft,
   Bell,
   BookOpen,
   CalendarDays,
-  CheckCircle2,
   ChevronDown,
   ChevronLeft,
-  CircleHelp,
   Clock3,
-  FileText,
-  GraduationCap,
-  LayoutDashboard,
-  LogOut,
   MapPin,
   Menu,
   Search,
-  Settings,
-  Sparkles,
   TrendingUp,
-  UserCog,
   Users,
   Wallet,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient } from "@/lib/apiClient";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
-import RoleSidebar from "@/components/RoleSidebar";
 import { getRoleBackPath, getRoleDefinition } from "@/lib/roleNavigation";
 import type { RoleCode } from "@/contexts/RoleScopeContext";
 import ReportsLive from "./ReportsLive";
@@ -95,31 +83,6 @@ const COURSE_UTILIZATION = [
   },
 ];
 
-function BrandMark() {
-  return (
-    <div className="brand-lockup" aria-label="مدى">
-      <span className="brand-symbol" aria-hidden="true">
-        <svg viewBox="0 0 40 40" fill="none">
-          <path
-            d="M4 12.5 12.5 8l8.2 4.5v9.4l-8.2 4.6L4 21.9v-9.4Z"
-            fill="currentColor"
-          />
-          <path
-            d="m19.3 12.5 8.2-4.5 8.5 4.5v9.4l-8.5 4.6-8.2-4.6v-9.4Z"
-            fill="currentColor"
-            opacity=".72"
-          />
-          <path
-            d="m11.5 24.1 8.3-4.6 8.2 4.6v8.2l-8.2 4.4-8.3-4.4v-8.2Z"
-            fill="currentColor"
-            opacity=".48"
-          />
-        </svg>
-      </span>
-      <span className="brand-word">مدى</span>
-    </div>
-  );
-}
 
 function ReportsPreview() {
   const [, navigate] = useLocation();
@@ -162,7 +125,7 @@ function ReportsPreview() {
       },
     ];
     return source.filter(row => row.branch === branch);
-  }, [branch, query]);
+  }, [branch]);
   const totalStudents = branchRows.reduce((sum, row) => sum + row.students, 0);
   const totalSessions = branchRows.reduce((sum, row) => sum + row.sessions, 0);
   const totalCollected = branchRows.reduce(
@@ -181,12 +144,6 @@ function ReportsPreview() {
     [query]
   );
 
-  const showComingSoon = (label: string) => {
-    toast("القسم قيد التجهيز", {
-      description: `هنبدأ في تطوير «${label}» في المرحلة التالية.`,
-    });
-    setMobileNavOpen(false);
-  };
   const exportCsv = () => {
     const rows = [
       ["الفرع", "عدد الطلاب", "الحصص", "الحضور %", "التحصيل ج.م"],

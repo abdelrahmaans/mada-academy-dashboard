@@ -1,39 +1,20 @@
 import { useMemo, useState, type FormEvent } from "react";
 import {
-  CalendarCheck,
   CalendarDays,
-  CheckCircle2,
-  ChevronLeft,
-  CircleHelp,
-  LayoutDashboard,
-  LogOut,
   MapPin,
   Menu,
-  MessageCircle,
-  Plus,
-  Settings,
   ShieldCheck,
-  UserRoundPlus,
-  UserRoundSearch,
-  Users,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
-import EnrollmentHandoff from "@/components/EnrollmentHandoff";
-import FamilyProfileCard from "@/components/FamilyProfileCard";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
-import RoleSidebar from "@/components/RoleSidebar";
-import { getRoleBackPath } from "@/lib/roleNavigation";
 import SecretaryDeskLive from "./SecretaryDeskLive";
-import { DISCOUNTS, LEAD_LABELS, LEADS, OFFERINGS, type Lead, type LeadStatus, type Offering, OverviewView, FollowupsView, RegistrationView, OperationsView, NavButton, VIEW_COPY, VIEW_TITLES } from "@/components/SecretaryPreviewViews";
+import { DISCOUNTS, LEADS, OFFERINGS, type LeadStatus, OverviewView, FollowupsView, RegistrationView, OperationsView, VIEW_COPY, VIEW_TITLES } from "@/components/SecretaryPreviewViews";
 
 type DeskView = "overview" | "followups" | "registration" | "operations";
 function SecretaryDeskPreview() {
-  const [, navigate] = useLocation();
   const [view, setView] = useState<DeskView>("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState(LEADS[0].id);
@@ -120,15 +101,15 @@ function SecretaryDeskPreview() {
   return (
     <RoleDashboardShell
       className="app-shell secretary-desk-shell"
-      hideSidebar
       roleCode="R05"
       roleLabel="السكرتارية"
       scopeLevel="branch"
       scopeLabel="خدمة الأسر وتسجيل الفرع"
       tenantName="أكاديمية مدى"
       branchName="فرع مدينة نصر"
+      mobileOpen={mobileOpen}
+      onCloseMobile={() => setMobileOpen(false)}
     >
-      <RoleSidebar roleCode="R05" roleLabel="السكرتارية" mobileOpen={mobileOpen} onCloseMobile={() => setMobileOpen(false)} />
       <main className="main-panel">
         <header className="topbar">
           <div className="topbar-right">

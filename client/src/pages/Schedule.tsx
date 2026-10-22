@@ -1,33 +1,19 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
-  Activity,
   AlertCircle,
   ArrowRightLeft,
   Bell,
-  BookOpen,
   CalendarDays,
-  Check,
-  CheckCircle2,
   ChevronDown,
   ChevronLeft,
-  ChevronRight,
-  CircleHelp,
   Clock3,
-  GraduationCap,
-  LayoutDashboard,
-  LogOut,
   MapPin,
   Menu,
   Plus,
   Search,
-  Settings,
-  Sparkles,
-  Users,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
-import RoleSidebar from "@/components/RoleSidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "wouter";
 import {
@@ -478,31 +464,6 @@ function seededSessions(): Session[] {
   return result;
 }
 
-function BrandMark() {
-  return (
-    <div className="brand-lockup" aria-label="مدى">
-      <span className="brand-symbol" aria-hidden="true">
-        <svg viewBox="0 0 40 40" fill="none">
-          <path
-            d="M4 12.5 12.5 8l8.2 4.5v9.4l-8.2 4.6L4 21.9v-9.4Z"
-            fill="currentColor"
-          />
-          <path
-            d="m19.3 12.5 8.2-4.5 8.5 4.5v9.4l-8.5 4.6-8.2-4.6v-9.4Z"
-            fill="currentColor"
-            opacity=".72"
-          />
-          <path
-            d="m11.5 24.1 8.3-4.6 8.2 4.6v8.2l-8.2 4.4-8.3-4.4v-8.2Z"
-            fill="currentColor"
-            opacity=".48"
-          />
-        </svg>
-      </span>
-      <span className="brand-word">مدى</span>
-    </div>
-  );
-}
 
 function SchedulePage() {
   const [, navigate] = useLocation();
@@ -533,7 +494,6 @@ function SchedulePage() {
   const [liveClassrooms, setLiveClassrooms] = useState<SchedulingClassroom[]>(
     []
   );
-  const [liveClassroomsReady, setLiveClassroomsReady] = useState(false);
   const [liveInstructors, setLiveInstructors] = useState<
     SchedulingInstructor[]
   >([]);
@@ -566,7 +526,6 @@ function SchedulePage() {
       if (sessionResult.status === "rejected") {
         setLiveClassrooms([]);
         setLiveInstructors([]);
-        setLiveClassroomsReady(false);
         setSessions([]);
         const cause = sessionResult.reason;
         setLoadError(
@@ -588,7 +547,6 @@ function SchedulePage() {
           : [];
       setLiveClassrooms(classrooms);
       setLiveInstructors(instructors);
-      setLiveClassroomsReady(classroomResult.status === "fulfilled");
 
       const optionalFailure = [classroomResult, instructorResult].find(
         result => result.status === "rejected"
@@ -683,13 +641,6 @@ function SchedulePage() {
   ).length;
   const roomCount = new Set(weekRecords.map(session => session.room)).size;
 
-  const comingSoon = (label: string) => {
-    toast("القسم قيد التجهيز", {
-      description: `هنبدأ في تطوير «${label}» في المرحلة التالية.`,
-    });
-    setMobileNavOpen(false);
-  };
-
   const shiftSelection = (direction: -1 | 1) => {
     if (view === "week") {
       setWeekOffset(offset => offset + direction);
@@ -704,13 +655,6 @@ function SchedulePage() {
     } else {
       setSelectedDay(day => day + direction);
     }
-  };
-
-  const resetFilters = () => {
-    setQuery("");
-    setBranch("كل الفروع");
-    setInstructorFilter("الكل");
-    setStatusFilter("all");
   };
 
   const openAddDialog = () => {

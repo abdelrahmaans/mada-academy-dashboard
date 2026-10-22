@@ -58,5 +58,3 @@ export default function WorkspaceHub() {
     </main>
   );
 }
-
-export { ROLE_ORDER };

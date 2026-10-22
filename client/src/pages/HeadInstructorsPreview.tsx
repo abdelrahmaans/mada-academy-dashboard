@@ -11,8 +11,6 @@ import {
   ArrowDownLeft,
   ArrowLeft,
   ArrowUpLeft,
-  ArrowUpRight,
-  BarChart3,
   BookOpen,
   CalendarCheck,
   CalendarDays,
@@ -24,7 +22,6 @@ import {
   Clock3,
   Eye,
   FileCheck2,
-  GraduationCap,
   LayoutDashboard,
   MapPin,
   Menu,
@@ -48,7 +45,6 @@ import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import {
   EmptyState,
-  LoadingState,
   LockedState,
 } from "@/components/FeedbackStates";
 import WorkflowStepper from "@/components/WorkflowStepper";
@@ -519,10 +515,6 @@ const formatDate = (isoDate: string) =>
     day: "numeric",
     month: "short",
   }).format(new Date(`${isoDate}T12:00:00`));
-const averageAttendance = Math.round(
-  ATTENDANCE_TREND.reduce((sum, item) => sum + item.value, 0) /
-    ATTENDANCE_TREND.length
-);
 const presentRate = (session: SessionRecord) => {
   if (!session.attendance) return null;
   const included = session.students - (session.attendance.excused || 0);
@@ -742,15 +734,6 @@ export default function HeadInstructorsPreview() {
     setMobileNavOpen(false);
   };
   const openEvaluation = (id: string) => setSelectedEvaluationId(id);
-  const markEvaluationViewed = (id: string) => {
-    setReviewedIds(current =>
-      current.includes(id) ? current : [...current, id]
-    );
-    setSelectedEvaluationId(null);
-    toast.success("تم تسجيل الاطلاع في المعاينة المحلية", {
-      description: "الحالة لا تُحفظ خارج هذه الجلسة.",
-    });
-  };
   const decideEvaluation = (
     id: string,
     status: Exclude<EvaluationReviewStatus, "pending">,
