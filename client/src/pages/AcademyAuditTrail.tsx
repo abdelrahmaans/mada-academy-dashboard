@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Activity,
   Search,
@@ -11,13 +11,7 @@ import {
   X,
   Copy,
   Check,
-  ShieldCheck,
-  Building2,
-  Users,
-  Wallet,
-  GraduationCap,
   Clock,
-  Laptop
 } from "lucide-react";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
@@ -73,7 +67,7 @@ export default function AcademyAuditTrail() {
   const [copied, setCopied] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const res = await apiClient.auditEvents({
@@ -91,11 +85,11 @@ export default function AcademyAuditTrail() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize, actionFilter, fromDate, toDate]);
 
   useEffect(() => {
     void loadData();
-  }, [page, actionFilter, fromDate, toDate]);
+  }, [loadData]);
 
   const filteredEvents = useMemo(() => {
     if (!searchQuery.trim()) return events;
@@ -382,7 +376,7 @@ export default function AcademyAuditTrail() {
                     <button
                       type="button"
                       className="audit-btn py-1 px-2 text-xs"
-                      onClick={() => copyMetadata(selectedEvent.metadataJson!)}
+                      onClick={() => copyMetadata(selectedEvent.metadataJson ?? "")}
                     >
                       {copied ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
                       {copied ? "تم النسخ" : "نسخ JSON"}

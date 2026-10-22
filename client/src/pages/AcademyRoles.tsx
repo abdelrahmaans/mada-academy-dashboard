@@ -1,18 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ArrowRight,
   Building2,
   Check,
   CheckCircle2,
-  Filter,
   Info,
   KeyRound,
   LoaderCircle,
   Plus,
-  RefreshCw,
   RotateCcw,
   Search,
-  ShieldAlert,
   ShieldCheck,
   SlidersHorizontal,
   UserCheck,
@@ -82,7 +78,7 @@ export default function AcademyRoles() {
     branchId: "",
   });
 
-  const loadData = async (notifySuccess = false) => {
+  const loadData = useCallback(async (notifySuccess = false) => {
     setLoading(true);
     setError(null);
     try {
@@ -112,8 +108,8 @@ export default function AcademyRoles() {
       if (branchRes.status === "fulfilled") {
         const activeBranches = branchRes.value.items.filter((b) => b.status === "ACTIVE");
         setBranches(activeBranches);
-        if (!newMember.branchId && activeBranches[0]) {
-          setNewMember((prev) => ({ ...prev, branchId: activeBranches[0].id }));
+        if (activeBranches[0]) {
+          setNewMember((prev) => (!prev.branchId ? { ...prev, branchId: activeBranches[0].id } : prev));
         }
       }
 
@@ -125,11 +121,11 @@ export default function AcademyRoles() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadData();
-  }, []);
+  }, [loadData]);
 
   // Filtered members list
   const filteredMembers = useMemo(() => {
@@ -164,8 +160,12 @@ export default function AcademyRoles() {
     const map = new Map<string, PermissionDetail[]>();
     for (const item of permissionDetails) {
       const cat = item.category || "عام";
-      if (!map.has(cat)) map.set(cat, []);
-      map.get(cat)!.push(item);
+      const existing = map.get(cat);
+      if (existing) {
+        existing.push(item);
+      } else {
+        map.set(cat, [item]);
+      }
     }
     return Array.from(map.entries()).map(([category, items]) => ({ category, items }));
   }, [permissionDetails]);

@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Armchair, ArrowRight, Building2, CheckCircle2, Edit3, GraduationCap, LoaderCircle, MapPin, Plus, Settings2, Trash2, Users, Wrench, X } from "lucide-react";
-import { useLocation } from "wouter";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Armchair, Building2, CheckCircle2, Edit3, GraduationCap, LoaderCircle, MapPin, Plus, Settings2, Trash2, Users, Wrench, X } from "lucide-react";
 import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
@@ -12,7 +11,6 @@ const STATUS_LABELS: Record<string, string> = { AVAILABLE: "متاحة", MAINTEN
 const STATUS_TONES: Record<string, string> = { AVAILABLE: "available", MAINTENANCE: "maintenance", INACTIVE: "inactive" };
 
 export default function AcademyClassrooms() {
-  const [, navigate] = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [branches, setBranches] = useState<AcademyBranch[]>([]);
   const [classrooms, setClassrooms] = useState<AcademyClassroom[]>([]);
@@ -29,7 +27,7 @@ export default function AcademyClassrooms() {
   const [resourceError, setResourceError] = useState<string | null>(null);
   const [resourceForm, setResourceForm] = useState({ kind: "EQUIPMENT" as "SEATING" | "EQUIPMENT", name: "", quantity: "1", status: "AVAILABLE", notes: "" });
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true); setError(null);
     const [branchResult, classroomResult] = await Promise.allSettled([
       apiClient.academyBranches(),
@@ -50,8 +48,8 @@ export default function AcademyClassrooms() {
       setError(cause instanceof Error ? cause.message : "تعذر تحميل القاعات.");
     }
     setLoading(false);
-  };
-  useEffect(() => { void load(); }, [branchFilter]);
+  }, [branchFilter]);
+  useEffect(() => { void load(); }, [load]);
 
   const activeClassrooms = useMemo(() => classrooms.filter(room => room.status === "AVAILABLE").length, [classrooms]);
   const totalCapacity = useMemo(() => classrooms.filter(room => room.status !== "INACTIVE").reduce((sum, room) => sum + room.capacity, 0), [classrooms]);
