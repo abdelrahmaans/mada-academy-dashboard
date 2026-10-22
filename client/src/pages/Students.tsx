@@ -1219,7 +1219,7 @@ function StudentPage() {
               {linksLoading && <div className="dialog-info">جارٍ تحميل الروابط الحالية…</div>}
               {linksError && <div className="dialog-info" role="alert">تعذر قراءة الروابط: {linksError}</div>}
               {consumerLinks && <div className="detail-grid">
-                <div><small>حساب الطالب</small><strong>{consumerLinks.studentAccount ? `${consumerLinks.studentAccount.name ?? "حساب الطالب"} · ${consumerLinks.studentAccount.phone}` : "غير مرتبط"}</strong>{consumerLinks.studentAccount && <button type="button" className="button button-secondary" onClick={() => void unlinkConsumerAccount("student", consumerLinks.studentAccount!.id)}>إلغاء الربط</button>}</div>
+                <div><small>حساب الطالب</small><strong>{consumerLinks.studentAccount ? `${consumerLinks.studentAccount.name ?? "حساب الطالب"} · ${consumerLinks.studentAccount.phone}` : "غير مرتبط"}</strong>{consumerLinks.studentAccount && <button type="button" className="button button-secondary" onClick={() => { const acc = consumerLinks.studentAccount; if (acc) void unlinkConsumerAccount("student", acc.id); }}>إلغاء الربط</button>}</div>
                 <div><small>أولياء الأمور</small>{consumerLinks.guardians.length ? consumerLinks.guardians.map(guardian => <div key={guardian.id}><strong>{guardian.name ?? guardian.phone} · {guardian.relationship}</strong><button type="button" className="button button-secondary" onClick={() => void unlinkConsumerAccount("guardian", guardian.id)}>إلغاء الربط</button></div>) : <strong>لا يوجد حساب ولي أمر مرتبط</strong>}</div>
               </div>}
               <form onSubmit={searchConsumerAccounts}>

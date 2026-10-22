@@ -93,17 +93,29 @@ export default function SecretaryDeskLive() {
   };
 
   const [freezeModalOpen, setFreezeModalOpen] = useState(false);
-  const [freezeFormData, setFreezeFormData] = useState({
+  const [freezeFormData, setFreezeFormData] = useState<{
+    studentId: string;
+    startDate: string;
+    endDate: string;
+    reason: "MEDICAL" | "TRAVEL" | "EXAMS" | "FAMILY" | "OTHER";
+    reasonText: string;
+  }>({
     studentId: "",
     startDate: new Date().toISOString().split("T")[0],
     endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-    reason: "MEDICAL" as const,
+    reason: "MEDICAL",
     reasonText: "",
   });
 
   const [shiftModalOpen, setShiftModalOpen] = useState(false);
-  const [shiftFormData, setShiftFormData] = useState({
-    shiftName: "MORNING" as const,
+  const [shiftFormData, setShiftFormData] = useState<{
+    shiftName: "MORNING" | "EVENING";
+    cashAmount: string;
+    electronicAmount: string;
+    totalReceiptsCount: string;
+    notes: string;
+  }>({
+    shiftName: "MORNING",
     cashAmount: "",
     electronicAmount: "",
     totalReceiptsCount: "",
@@ -959,7 +971,7 @@ export default function SecretaryDeskLive() {
                         <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "4px" }}>تصنيف العذر</label>
                         <select
                           value={freezeFormData.reason}
-                          onChange={e => setFreezeFormData({ ...freezeFormData, reason: e.target.value as any })}
+                          onChange={e => setFreezeFormData({ ...freezeFormData, reason: e.target.value as "MEDICAL" | "TRAVEL" | "EXAMS" | "FAMILY" | "OTHER" })}
                           style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
                         >
                           <option value="MEDICAL">ظروف صحية / إجازة مرضية</option>
@@ -1129,7 +1141,7 @@ export default function SecretaryDeskLive() {
                         <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, marginBottom: "4px" }}>فترة الوردية</label>
                         <select
                           value={shiftFormData.shiftName}
-                          onChange={e => setShiftFormData({ ...shiftFormData, shiftName: e.target.value as any })}
+                          onChange={e => setShiftFormData({ ...shiftFormData, shiftName: e.target.value as "MORNING" | "EVENING" })}
                           style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
                         >
                           <option value="MORNING">وردية صباحية (09:00 ص - 03:00 م)</option>
