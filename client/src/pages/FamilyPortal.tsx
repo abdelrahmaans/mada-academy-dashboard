@@ -6,16 +6,13 @@ import {
   CheckCircle2,
   ChevronLeft,
   Clock,
-  HelpCircle,
   Home,
-  MessageCircle,
   Plus,
   Receipt,
   RefreshCw,
   ShieldCheck,
   Snowflake,
   Star,
-  Users,
   Wallet,
   X,
 } from "lucide-react";
@@ -395,11 +392,11 @@ export default function FamilyPortal() {
         </nav>
 
         {/* Tab Contents */}
-        {child && tab === "overview" && <ChildOverview child={child} onTab={selectTab} liveMode={liveMode} />}
-        {child && tab === "attendance" && <ChildAttendance child={child} liveMode={liveMode} />}
-        {child && tab === "evaluations" && <ChildEvaluations child={child} liveMode={liveMode} />}
+        {child && tab === "overview" && <ChildOverview child={child} onTab={selectTab} />}
+        {child && tab === "attendance" && <ChildAttendance child={child} />}
+        {child && tab === "evaluations" && <ChildEvaluations child={child} />}
         {child && tab === "invoices" && (
-          <ChildInvoices invoices={child.invoices ?? []} loading={invoiceLoading} error={invoiceError} onRetry={retry} liveMode={liveMode} />
+          <ChildInvoices invoices={child.invoices ?? []} loading={invoiceLoading} error={invoiceError} onRetry={retry} />
         )}
         {child && tab === "freeze" && <ChildFreezeSection child={child} liveMode={liveMode} />}
 
@@ -418,11 +415,9 @@ export default function FamilyPortal() {
 function ChildOverview({
   child,
   onTab,
-  liveMode,
 }: {
   child: ChildData;
   onTab: (tab: PortalTab) => void;
-  liveMode: boolean;
 }) {
   return (
     <>
@@ -518,7 +513,7 @@ function ChildOverview({
   );
 }
 
-function ChildAttendance({ child, liveMode }: { child: ChildData; liveMode: boolean }) {
+function ChildAttendance({ child }: { child: ChildData }) {
   const sessions = child.sessionRecords ?? [];
 
   return (
@@ -615,7 +610,7 @@ function ChildAttendance({ child, liveMode }: { child: ChildData; liveMode: bool
   );
 }
 
-function ChildEvaluations({ child, liveMode }: { child: ChildData; liveMode: boolean }) {
+function ChildEvaluations({ child }: { child: ChildData }) {
   const evaluations = (child.sessionRecords ?? []).filter(item => item.score !== null);
 
   return (
@@ -709,13 +704,11 @@ function ChildInvoices({
   loading,
   error,
   onRetry,
-  liveMode,
 }: {
   invoices: FinanceInvoice[];
   loading: boolean;
   error: string | null;
   onRetry: () => void;
-  liveMode: boolean;
 }) {
   return (
     <section className="consumer-panel">
@@ -789,7 +782,7 @@ function ChildInvoices({
                     <small style={{ fontWeight: 700, color: "#475569", display: "block", marginBottom: "4px" }}>
                       بنود الفاتورة والاشتراك:
                     </small>
-                    {invoice.lines.map((l: any, i: number) => (
+                    {invoice.lines.map((l, i: number) => (
                       <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.86rem", color: "#334155" }}>
                         <span>• {l.description || "رسوم الدورة التدريبية"}</span>
                         <span>{((l.amountPiastres || invoice.totalPiastres) / 100).toLocaleString("ar-EG")} ج.م</span>
@@ -803,7 +796,7 @@ function ChildInvoices({
                     <small style={{ fontWeight: 700, color: "#475569", display: "block", marginBottom: "6px" }}>
                       إيصالات التحصيل المسجلة:
                     </small>
-                    {invoice.payments.map((p: any, i: number) => (
+                    {invoice.payments.map((p, i: number) => (
                       <div key={p.id || i} className="consumer-receipt-row">
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                           <Receipt size={16} style={{ color: "#0d9488" }} />
@@ -828,10 +821,15 @@ function ChildFreezeSection({ child, liveMode }: { child: ChildData; liveMode: b
     return freezeStorage.getRequests().filter(r => r.studentId === child.id);
   });
   const [modalOpen, setModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    startDate: string;
+    endDate: string;
+    reason: SubscriptionFreezeRequest["reason"];
+    reasonText: string;
+  }>({
     startDate: new Date().toISOString().split("T")[0],
     endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-    reason: "MEDICAL" as const,
+    reason: "MEDICAL",
     reasonText: "",
   });
 
@@ -1051,7 +1049,7 @@ function ChildFreezeSection({ child, liveMode }: { child: ChildData; liveMode: b
                 <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, marginBottom: "6px" }}>نوع السبب</label>
                 <select
                   value={formData.reason}
-                  onChange={e => setFormData({ ...formData, reason: e.target.value as any })}
+                  onChange={e => setFormData({ ...formData, reason: e.target.value as SubscriptionFreezeRequest["reason"] })}
                   style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
                 >
                   <option value="MEDICAL">ظروف صحية أو إجازة مرضية</option>
