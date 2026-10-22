@@ -54,6 +54,6 @@ Relevant contracts:
 - `pnpm test`: 64/64 passed (Frontend Vitest tests).
 - `pnpm check`: passed (0 TypeScript errors).
 - `pnpm lint`: passed (0 errors with ESLint 9 Flat Config).
-- `pnpm build`: passed in 5.58s (60% build time reduction).
-- `@mada/landing build`: passed.
+- `pnpm build`: passed in 5.56s (60% build time reduction).
+- `@mada/landing build`: passed in 2.57s.
 - `git diff --check`: passed.
