@@ -15,7 +15,7 @@ Read this file first, then read [`PROJECT_STATUS.md`](../.agent/PROJECT_STATUS.m
 
 | Area | Merged state |
 |---|---|
-| Architecture Refactoring & Quality | ESLint 9 Flat Config integrated with 0 errors; massive pages decomposed (`PlatformConsoleTypes.ts`, `HeadInstructorsPreview.tsx`, `PlatformConsole.tsx` cleaned); CSS modularized into 15 stylesheets under `styles/pages/` reducing `index.css` from 552KB (21,627 lines) to 44KB (2,250 lines) with build time cut to 5.7s; mobile drawer scrim & dual `.sidebar-open`/`.open` selector fixed |
+| Architecture Refactoring & Quality | ESLint 9 Flat Config integrated with 0 errors; massive pages decomposed (`PlatformConsoleTypes.ts`, `HeadInstructorsPreview.tsx`, `PlatformConsole.tsx` cleaned); CSS modularized into 15 stylesheets under `styles/pages/` reducing `index.css` from 552KB (21,627 lines) to 44KB (2,250 lines) with build time cut to 5.58s; Role shell migration completed natively via `RoleDashboardShell` (removed legacy `BranchManagerSidebar`, `R01AcademySidebar`, and `R03HeadInstructorsSidebar` wrappers); mobile drawer scrim & dual `.sidebar-open`/`.open` selector fixed |
 | Dynamic permissions engine | Tenant role overrides (`TenantRoleOverrides`), custom membership permissions (`CustomPermissionsJson`), instant suspension with active session revocation, and interactive permissions matrix UI (`AcademyRoles.tsx`) |
 | Granular route & navigation guards | Route-level permission bindings (`permission`, `anyOfPermissions`), dynamic sidebar menu filtering (`getAuthorizedNavigation`), Arabic 403 access-denied UI, active workspace indicators (`WorkspaceHub.tsx`) |
 | Governance indexing & audit trail | Compound DB indexing on `AuditEvent` and `ApprovalRequest` (`20261013140000_AddAuditEventIndexes`), academy audit endpoint (`GET /api/v1/academy/audit-events`), and full interactive audit trail dashboard (`/academy/audit-trail`, `AcademyAuditTrail.tsx`) |
@@ -54,6 +54,6 @@ Relevant contracts:
 - `pnpm test`: 64/64 passed (Frontend Vitest tests).
 - `pnpm check`: passed (0 TypeScript errors).
 - `pnpm lint`: passed (0 errors with ESLint 9 Flat Config).
-- `pnpm build`: passed in 5.72s (60% build time reduction).
+- `pnpm build`: passed in 5.58s (60% build time reduction).
 - `@mada/landing build`: passed.
 - `git diff --check`: passed.
