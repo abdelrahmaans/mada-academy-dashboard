@@ -13,7 +13,22 @@ export type AuthMe = {
 };
 
 export type PlatformOverview = { academies: number; activeAcademies: number; trialAcademies: number; attentionAcademies: number; staffAccounts: number; activeSessions: number; auditEvents: number };
-export type PlatformAcademy = { id: string; name: string; slug: string; status: string; plan: string; createdAt: string; branches: number; users: number; owner: string | null };
+export type PlatformAcademy = {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  plan: string;
+  createdAt: string;
+  branches: number;
+  users: number;
+  owner: string | null;
+  planName?: string;
+  planCode?: string;
+  allowedBranches?: number;
+  ownerPhone?: string;
+  ownerEmail?: string;
+};
 export type PlatformAcademiesResponse = { items: PlatformAcademy[]; total: number };
 export type PlatformActivity = { id: string; action: string; targetType: string; targetId: string; tenantId: string | null; actorUserId: string | null; reason: string | null; createdAt: string; tenantName: string | null; actorName: string | null };
 export type PlatformActivityResponse = { items: PlatformActivity[]; total: number };
@@ -224,6 +239,8 @@ export type StudentRecord = {
   dateOfBirth: string | null;
   status: string;
   activeEnrollmentCount: number;
+  code?: string;
+  studentCode?: string;
 };
 
 export type StudentListResponse = {

@@ -251,7 +251,7 @@ export default function SettingsModal({ open, onClose }: Props) {
             <div className="grid grid-cols-2 gap-2.5 text-xs">
               <button
                 type="button"
-                onClick={() => setTheme("light")}
+                onClick={() => setTheme?.("light")}
                 className={`flex items-center justify-center gap-2.5 p-3 rounded-xl border transition-all cursor-pointer font-bold ${
                   theme === "light"
                     ? "bg-white border-teal-500 text-teal-800 shadow-sm ring-2 ring-teal-500/10"
@@ -264,7 +264,7 @@ export default function SettingsModal({ open, onClose }: Props) {
 
               <button
                 type="button"
-                onClick={() => setTheme("dark")}
+                onClick={() => setTheme?.("dark")}
                 className={`flex items-center justify-center gap-2.5 p-3 rounded-xl border transition-all cursor-pointer font-bold ${
                   theme === "dark"
                     ? "bg-slate-900 border-teal-500 text-teal-300 shadow-sm ring-2 ring-teal-500/10"

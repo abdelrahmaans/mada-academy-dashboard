@@ -43,11 +43,13 @@ Mada has moved beyond a static prototype: authentication, scoped operational API
 
 ## CI and verified baseline
 
-The current merged baseline includes PR #112. All tests pass with 100% success rate:
-- `dotnet test`: 100/100 passed (Backend Integration tests).
-- `pnpm test`: 63/63 passed (Frontend Vitest tests).
+The current baseline is verified with 100% success rate:
+- `dotnet test` (InMemory): 109/109 passed (Backend Integration tests).
+- `pnpm test`: 64/64 passed (Frontend Vitest tests).
 - `pnpm check`: passed (0 TypeScript errors).
-- `@mada/landing build`: passed (9.5s).
+- `pnpm lint`: passed (0 errors with ESLint 9 Flat Config).
+- `pnpm build`: passed in 5.72s (60% build time reduction via CSS modularization & dead code removal).
+- `@mada/landing build`: passed.
 No real deployment secrets are stored in Git.
 
 ## LIVE acceptance evidence — 13 October 2026

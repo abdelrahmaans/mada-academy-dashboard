@@ -22,7 +22,7 @@ public sealed class InvoiceCorrectionApiTests
         Assert.Equal(HttpStatusCode.Created, (await requesterClient.PostAsJsonAsync($"/api/v1/finance/invoices/{invoiceId}/payments", new { amountPiastres = 5_000, method = "CASH" })).StatusCode);
         var create = await requesterClient.PostAsJsonAsync($"/api/v1/finance/invoices/{invoiceId}/correction-requests", new
         {
-            proposedDueDate = "2026-10-20",
+            proposedDueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(14)).ToString("yyyy-MM-dd"),
             lines = new[] { new { description = "Corrected tuition", amountPiastres = 12_000 } },
             reason = "تم تصحيح قيمة الاشتراك بناءً على المستند المعتمد"
         });
@@ -60,7 +60,7 @@ public sealed class InvoiceCorrectionApiTests
         var invoiceId = await SeedInvoiceAsync(factory, requester.TenantId, requester.BranchId, 10_000);
         TestData.Authenticate(client, await TestData.LoginAsync(client, requester));
         await client.PostAsJsonAsync($"/api/v1/finance/invoices/{invoiceId}/payments", new { amountPiastres = 8_000, method = "VISA" });
-        var response = await client.PostAsJsonAsync($"/api/v1/finance/invoices/{invoiceId}/correction-requests", new { proposedDueDate = "2026-10-20", lines = new[] { new { description = "Too low", amountPiastres = 7_000 } }, reason = "غير صالح" });
+        var response = await client.PostAsJsonAsync($"/api/v1/finance/invoices/{invoiceId}/correction-requests", new { proposedDueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(14)).ToString("yyyy-MM-dd"), lines = new[] { new { description = "Too low", amountPiastres = 7_000 } }, reason = "غير صالح" });
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Contains("CORRECTION_BELOW_PAID_AMOUNT", await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
     }
@@ -120,7 +120,7 @@ public sealed class InvoiceCorrectionApiTests
         var requester = await TestData.CreateAccountAsync(factory, "R06_ACCOUNTANT");
         var invoiceId = await SeedInvoiceAsync(factory, requester.TenantId, requester.BranchId, 10_000);
         TestData.Authenticate(client, await TestData.LoginAsync(client, requester));
-        var request = new { proposedDueDate = "2026-10-20", lines = new[] { new { description = "Updated tuition", amountPiastres = 11_000 } }, reason = "Duplicate guard test" };
+        var request = new { proposedDueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(14)).ToString("yyyy-MM-dd"), lines = new[] { new { description = "Updated tuition", amountPiastres = 11_000 } }, reason = "Duplicate guard test" };
 
         Assert.Equal(HttpStatusCode.Created, (await client.PostAsJsonAsync($"/api/v1/finance/invoices/{invoiceId}/correction-requests", request)).StatusCode);
         var duplicate = await client.PostAsJsonAsync($"/api/v1/finance/invoices/{invoiceId}/correction-requests", request);

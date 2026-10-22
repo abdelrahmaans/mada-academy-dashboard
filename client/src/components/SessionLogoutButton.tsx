@@ -2,9 +2,7 @@ import { LogIn, LogOut } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { apiClient } from "@/lib/apiClient";
-
-import { clearTokens } from "@/lib/apiClient";
+import { apiClient, clearTokens } from "@/lib/apiClient";
 
 type SessionLogoutButtonProps = {
   className?: string;

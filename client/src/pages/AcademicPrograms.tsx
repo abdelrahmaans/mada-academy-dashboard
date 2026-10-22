@@ -86,6 +86,7 @@ function AcademicProgramsPreview() {
   const selectView = (next: ProgramView) => { setView(next); setQuery(""); setStatusFilter("all"); setMobileOpen(false); };
   const submitCurriculum = (id: string) => { setCurricula(current => current.map(item => item.id === id && item.status === "draft" ? { ...item, status: "in_review" } : item)); toast.success("تم رفع المنهج للمراجعة", { description: "سيحتاج اعتماد الأكاديمية قبل نشر النسخة الجديدة." }); };
   const resolveSession = (id: string) => { setSessions(current => current.map(item => item.id === id ? { ...item, status: "ready" } : item)); toast.success("تم تسجيل متابعة الجلسة", { description: "تم وضعها كجاهزة في العرض المحلي." }); };
+  const addProgressNote = (id: string) => { setProgress(current => current.map(item => item.id === id ? { ...item, note: item.note ? undefined : "تمت مراجعة خطة الدعم مع المدرب" } : item)); toast.success("تم تحديث ملاحظة المتابعة للطالب"); };
   const { me } = useAuth();
   const userRoleCode = me?.role ? (me.role.replace(/_.*$/, "") as RoleCode) : undefined;
   const activeRoleCode: RoleCode = userRoleCode || "R03";

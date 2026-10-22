@@ -15,13 +15,15 @@ import {
   Users,
   X,
 } from "lucide-react";
-import type {
-  RoleInfo,
-  RoleCode,
-  StaffMember,
-  StaffStatus,
+import {
+  type RoleInfo,
+  type RoleCode,
+  type StaffMember,
+  type StaffStatus,
+  ROLE_BY_CODE,
+  ROLES,
+  STATUS_LABELS,
 } from "@/components/TeamModels";
-import { ROLE_BY_CODE, ROLES, STATUS_LABELS } from "@/components/TeamModels";
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 

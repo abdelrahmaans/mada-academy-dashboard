@@ -1,3 +1,8 @@
+export type {
+  RoleCode,
+  RoleIdentityKind,
+  RoleScopeLevel,
+} from "@/contexts/RoleScopeContext";
 import type {
   RoleCode,
   RoleIdentityKind,

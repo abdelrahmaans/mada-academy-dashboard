@@ -107,6 +107,33 @@
   display: none;
 }
 
+/* =====================================================================
+   Mobile sidebar overlay — fixes the sidebar-open / mobile-scrim bug
+   RoleSidebar applies .sidebar-open on <aside>, these rules make it work
+   ===================================================================== */
+
+/* Mobile scrim (backdrop) — rendered by RoleDashboardShell as a <button> */
+.mobile-scrim {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 48;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.45);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  animation: scrim-fade-in 0.22s ease;
+}
+
+@keyframes scrim-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 @media (max-width: 900px) {
   .role-dashboard-shell.app-shell {
     display: block;
@@ -120,6 +147,7 @@
     min-height: 100vh;
   }
 
+  /* Show the hamburger trigger on mobile */
   .shell-mobile-trigger {
     position: fixed;
     top: 14px;
@@ -142,5 +170,51 @@
     background: #f0f7f6;
     border-color: #0d9488;
     color: #0d9488;
+  }
+
+  /* Sidebar hidden off-screen by default on mobile */
+  .role-dashboard-shell .sidebar,
+  .app-shell .sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 49;
+    width: 272px;
+    height: 100dvh;
+    transform: translateX(100%);
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: none;
+  }
+
+  /* Sidebar visible when .sidebar-open or .open is applied */
+  .role-dashboard-shell .sidebar.sidebar-open,
+  .role-dashboard-shell .sidebar.open,
+  .app-shell .sidebar.sidebar-open,
+  .app-shell .sidebar.open {
+    transform: translateX(0);
+    box-shadow: -8px 0 40px rgba(15, 23, 42, 0.22);
+  }
+
+  /* Show the scrim on mobile when sidebar is open */
+  .mobile-scrim {
+    display: block;
+  }
+
+  /* Show the close button inside the sidebar on mobile */
+  .sidebar-close {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.07);
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .sidebar-close:hover {
+    background: rgba(255, 255, 255, 0.14);
   }
 }

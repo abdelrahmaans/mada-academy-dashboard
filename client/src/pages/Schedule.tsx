@@ -41,7 +41,7 @@ import {
   ScheduleDetailsDialog,
   ScheduleFormDialog,
 } from "@/components/ScheduleViews";
-import { getRoleDefinition } from "@/lib/roleNavigation";
+import { getRoleDefinition, type RoleCode } from "@/lib/roleNavigation";
 
 export type SessionStatus =
   | "scheduled"

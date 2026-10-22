@@ -1,0 +1,591 @@
+/* Retention cards */
+.retention-branches-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.retention-branch-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+}
+
+.retention-branch-card.status-top_performer {
+  border-color: #a7f3d0;
+}
+
+.retention-branch-card.status-needs_attention {
+  border-color: #fde68a;
+  background: #fffdf5;
+}
+
+.retention-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.retention-card-head h4 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.retention-status-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: #059669;
+}
+
+.status-needs_attention .retention-status-tag {
+  color: #b45309;
+}
+
+.retention-rate-circle {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #f0fdf4;
+  border: 2px solid #86efac;
+  text-align: center;
+}
+
+.status-needs_attention .retention-rate-circle {
+  background: #fefce8;
+  border-color: #fde047;
+}
+
+.retention-rate-circle strong {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+.retention-rate-circle small {
+  font-size: 9px;
+  color: #64748b;
+}
+
+.retention-mini-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 10px;
+}
+
+.retention-mini-metrics small {
+  display: block;
+  font-size: 10px;
+  color: #64748b;
+}
+
+.retention-mini-metrics b {
+  font-size: 13px;
+  color: #1e293b;
+}
+
+.retention-tracks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.retention-tracks-list h5 {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.retention-track-row {
+  display: grid;
+  grid-template-columns: 140px 1fr 40px;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: #334155;
+}
+
+.retention-track-bar {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.track-bar-fill {
+  height: 100%;
+  background: #0d9488;
+  border-radius: 99px;
+}
+
+.retention-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.text-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  color: #0d9488;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Cohort Timeline */
+.cohort-trend-panel {
+  padding: 20px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+}
+
+.cohort-trend-panel h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.cohort-timeline {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cohort-timeline-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.cohort-month-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.cohort-rate-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.cohort-rate-box strong {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.cohort-rate-box small {
+  font-size: 10px;
+  color: #64748b;
+}
+
+.cohort-churn-hint {
+  font-size: 11px;
+  color: #e11d48;
+}
+
+.cohort-student-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+/* At Risk Radar Table & Filters */
+.pnl-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.pnl-search-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  min-width: 280px;
+  color: #64748b;
+}
+
+.pnl-search-input input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 12px;
+  width: 100%;
+  color: #1e293b;
+}
+
+.pnl-severity-filters {
+  display: flex;
+  gap: 6px;
+}
+
+.severity-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.severity-btn.active {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+}
+
+.severity-btn.critical.active {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+}
+
+.severity-btn.warning.active {
+  background: #d97706;
+  border-color: #d97706;
+  color: #ffffff;
+}
+
+.at-risk-table td {
+  vertical-align: middle;
+}
+
+.risk-row.critical {
+  background: #fffafa;
+}
+
+.attendance-tag {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.attendance-tag.low {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.attendance-tag.mid {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.days-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.risk-reason-cell p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: #475569;
+  max-width: 280px;
+  white-space: normal;
+  line-height: 1.5;
+}
+
+.risk-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.risk-badge.critical {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.risk-badge.warning {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.risk-badge.moderate {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.status-pill {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.status-pill.pending { background: #f1f5f9; color: #475569; }
+.status-pill.contacted { background: #e0f2fe; color: #0369a1; }
+.status-pill.retained { background: #dcfce7; color: #15803d; }
+.status-pill.lost { background: #fee2e2; color: #b91c1c; }
+
+.contact-note-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  color: #64748b;
+  max-width: 140px;
+  white-space: normal;
+}
+
+.action-btn-take {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.action-btn-take:hover {
+  background: #0d9488;
+  color: #ffffff;
+  border-color: #0d9488;
+}
+
+/* Action Dialogs */
+.pnl-action-dialog,
+.pnl-insights-dialog {
+  width: min(560px, 100%) !important;
+}
+
+.dialog-meta {
+  margin: 4px 0 16px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.dialog-body-box {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.risk-summary-callout,
+.suggested-action-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.risk-summary-callout {
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  color: #92400e;
+}
+
+.suggested-action-callout {
+  background: #f0fdfa;
+  border: 1px solid #ccfbf1;
+  color: #0f766e;
+}
+
+.risk-summary-callout strong,
+.suggested-action-callout strong {
+  display: block;
+  font-size: 12px;
+}
+
+.risk-summary-callout p,
+.suggested-action-callout p {
+  margin: 2px 0 0;
+}
+
+.quick-action-triggers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.quick-action-triggers span {
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.triggers-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.trigger-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s ease;
+}
+
+.btn-contacted {
+  background: #e0f2fe;
+  color: #0284c7;
+  border-color: #bae6fd;
+}
+
+.btn-contacted:hover {
+  background: #0284c7;
+  color: #ffffff;
+}
+
+.btn-retained {
+  background: #dcfce7;
+  color: #16a34a;
+  border-color: #bbf7d0;
+}
+
+.btn-retained:hover {
+  background: #16a34a;
+  color: #ffffff;
+}
+
+.btn-lost {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.btn-lost:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+/* Insights list in modal */
+.insights-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.insight-item-card {
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.insight-item-card.tone-warning {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #78350f;
+}
+
+.insight-item-card.tone-success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #14532d;
+}
+
+.insight-item-card.tone-info {
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+  color: #134e4a;
+}
+
+.insight-item-card h4 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.insight-recommendation {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.15);
+  font-weight: 600;
+}
+
+@media (max-width: 1100px) {
+  .pnl-kpis-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .retention-branches-grid {
+    grid-template-columns: 1fr;
+  }
+  .pnl-insights-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .pnl-kpis-grid {
+    grid-template-columns: 1fr;
+  }
+  .cohort-timeline {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .triggers-row {
+    grid-template-columns: 1fr;
+  }
+}
+

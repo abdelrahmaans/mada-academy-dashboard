@@ -26,19 +26,25 @@ import RoleScopeCard from "@/components/RoleScopeCard";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import BranchManagerSidebar from "@/components/BranchManagerSidebar";
 import R01AcademySidebar from "@/components/R01AcademySidebar";
+import { useAuth } from "@/contexts/AuthContext";
+import type { RoleCode } from "@/lib/roleNavigation";
 import {
   apiClient,
   type AuthMe,
   type CompetitionDetailItem,
   type CompetitionSummaryItem,
   type CompetitionTeamItem,
-  type HallOfFameCardItem
+  type HallOfFameCardItem,
+  type StudentRecord,
 } from "@/lib/apiClient";
 import "./CompetitionsLive.css";
 
 type TabType = "TOURNAMENTS" | "TEAMS" | "HALL_OF_FAME";
 
-export default function CompetitionsLive({ me }: { me: AuthMe }) {
+export default function CompetitionsLive({ me }: { me?: AuthMe }) {
+  const { me: authMe } = useAuth();
+  const currentMe = me || authMe;
+  const isOwner = Boolean(currentMe?.role?.startsWith("R01"));
   const [activeTab, setActiveTab] = useState<TabType>("TOURNAMENTS");
   const [competitions, setCompetitions] = useState<CompetitionSummaryItem[]>([]);
   const [selectedCompId, setSelectedCompId] = useState<string | null>(null);
@@ -76,9 +82,8 @@ export default function CompetitionsLive({ me }: { me: AuthMe }) {
   // Students list for member assignment
   const [studentsList, setStudentsList] = useState<Array<{ id: string; fullName: string }>>([]);
 
-  const isOwner = me.role === "R01_ACADEMY_OWNER";
-  const isBranchManager = me.role === "R02_BRANCH_MANAGER";
-  const isInstructor = me.role === "R04_INSTRUCTOR" || me.role === "R03_HEAD_INSTRUCTORS";
+  const isBranchManager = currentMe?.role === "R02_BRANCH_MANAGER";
+  const isInstructor = currentMe?.role === "R04_INSTRUCTOR" || currentMe?.role === "R03_HEAD_INSTRUCTORS";
 
   const loadData = async () => {
     try {
@@ -102,8 +107,8 @@ export default function CompetitionsLive({ me }: { me: AuthMe }) {
 
       // Load students for selector
       try {
-        const studRes = await apiClient.students();
-        setStudentsList(studRes.students.map(s => ({ id: s.id, fullName: s.fullName })));
+        const studRes = await apiClient.listStudents();
+        setStudentsList((studRes.items || []).map((s: StudentRecord) => ({ id: s.id, fullName: s.fullName })));
       } catch {
         // Fallback
       }
@@ -239,32 +244,26 @@ export default function CompetitionsLive({ me }: { me: AuthMe }) {
     }
   };
 
-  const userRoleCode = me?.role ? (me.role.replace(/_.*$/, "") as RoleCode) : (isOwner ? "R01" : "R02");
+  const userRoleCode = currentMe?.role ? (currentMe.role.replace(/_.*$/, "") as RoleCode) : (isOwner ? "R01" : "R02");
+  const roleLabel = currentMe?.roleLabel ?? (isOwner ? "مسؤول الأكاديمية" : "إدارة الفرع");
+  const branchName = currentMe?.branches?.[0]?.name ?? "الفرع الحالي";
 
   return (
     <RoleDashboardShell
       roleCode={userRoleCode}
-      roleLabel={me.roleLabel ?? (isOwner ? "مسؤول الأكاديمية" : "إدارة الفرع")}
+      roleLabel={roleLabel}
       scopeLevel={isOwner ? "tenant" : "branch"}
-      scopeLabel={me.branch?.name ?? "الفرع الحالي"}
+      scopeLabel={branchName}
     >
       <div className="comp-workspace" dir="rtl">
         {/* Topbar */}
         <RoleSurfaceTopbar
-          title="منظومة المسابقات والبطولات الدولية · لوحة الشرف"
-          subtitle="إعداد الفرق، معسكرات التدريب المكثف (Bootcamps)، وتوثيق جوائز FLL, WRO, RoboRave"
-          onOpenMobileNav={() => {}}
+          onMenu={() => {}}
+          scopeLabel={branchName}
+          roleLabel={roleLabel}
         />
 
-        <RoleScopeCard
-          roleLabel={me.roleLabel ?? (isOwner ? "مسؤول الأكاديمية" : "إدارة الفرع")}
-          scopeDescription={
-            isOwner
-              ? "متابعة مشاركات وتمثيل الأكاديمية في كافة المسابقات الرسمية والمحلية"
-              : "إدارة فرق الفرع والمدربين والطلاب المشاركين في البطولات"
-          }
-          branchName={me.branches?.[0]?.name ?? "كل الفروع"}
-        />
+        <RoleScopeCard />
 
         {/* Hero Banner */}
         <div className="comp-hero-banner">
