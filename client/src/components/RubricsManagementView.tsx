@@ -4,12 +4,9 @@ import {
   BookOpen,
   Check,
   CheckCircle2,
-  ChevronDown,
-  ChevronLeft,
   Copy,
   Edit3,
   Eye,
-  Filter,
   Layers,
   Plus,
   Search,
@@ -17,9 +14,7 @@ import {
   Sparkles,
   Star,
   Trash2,
-  Users,
   X,
-  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -28,8 +23,8 @@ import {
   type RubricCriterion,
 } from "@/lib/apiClient";
 
-const TRACK_OPTIONS: Array<{ key: DisciplineRubric["trackKey"]; label: string }> = [
-  { key: "all" as any, label: "جميع التخصصات والمسارات" },
+const TRACK_OPTIONS: Array<{ key: DisciplineRubric["trackKey"] | "all"; label: string }> = [
+  { key: "all", label: "جميع التخصصات والمسارات" },
   { key: "robotics", label: "روبوتكس وميكاترونكس" },
   { key: "coding", label: "برمجة وتطوير ألعاب" },
   { key: "circuits", label: "دوائر إلكترونية وأنظمة مدمجة" },
@@ -575,7 +570,7 @@ export default function RubricsManagementView() {
                         });
                       }}
                     >
-                      {TRACK_OPTIONS.filter(t => (t.key as any) !== "all").map(t => (
+                      {TRACK_OPTIONS.filter(t => t.key !== "all").map(t => (
                         <option key={t.key} value={t.key}>
                           {t.label}
                         </option>

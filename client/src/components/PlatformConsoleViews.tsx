@@ -1,14 +1,9 @@
 import { useLayoutEffect, useRef, type ReactNode } from "react";
 import {
-  Activity,
   Building2,
-  CalendarDays,
-  CheckCircle2,
   ChevronLeft,
   Clock3,
-  CreditCard,
   Search,
-  ShieldCheck,
   Ticket,
 } from "lucide-react";
 import SharedStatusBadge from "@/components/StatusBadge";

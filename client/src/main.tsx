@@ -15,4 +15,9 @@ if (analyticsEndpoint && analyticsWebsiteId) {
   document.head.appendChild(script);
 }
 
-createRoot(document.getElementById("root")!).render(<AuthProvider><App /></AuthProvider>);
+const rootEl = document.getElementById("root");
+if (!rootEl) {
+  throw new Error("Root element '#root' not found");
+}
+
+createRoot(rootEl).render(<AuthProvider><App /></AuthProvider>);

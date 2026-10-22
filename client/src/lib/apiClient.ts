@@ -1137,6 +1137,12 @@ const DEFAULT_FREEZES: SubscriptionFreezeRequest[] = [
   },
 ];
 
+function findEntityOrThrow<T extends { id: string }>(items: T[], id: string, entityName: string): T {
+  const found = items.find(item => item.id === id);
+  if (!found) throw new Error(`${entityName} with id "${id}" not found`);
+  return found;
+}
+
 export const freezeStorage = {
   getRequests: (): SubscriptionFreezeRequest[] => {
     try {
@@ -1200,7 +1206,7 @@ export const freezeStorage = {
       };
     });
     freezeStorage.saveRequests(updated);
-    return updated.find(item => item.id === id)!;
+    return findEntityOrThrow(updated, id, "Freeze request");
   },
 };
 
@@ -1325,7 +1331,7 @@ const DEFAULT_SHIFTS: ShiftCashHandover[] = [
 
 export function generateTrainerSessions(
   instructorId: string = "SES",
-  instructorName: string = "مدرب",
+  _instructorName: string = "مدرب",
   count: number = 0,
   rate: number = 0
 ): TrainerSessionDetail[] {
@@ -1459,7 +1465,7 @@ export const shiftStorage = {
       };
     });
     shiftStorage.saveHandovers(updated);
-    return updated.find(item => item.id === id)!;
+    return findEntityOrThrow(updated, id, "Handover");
   },
 };
 
@@ -1493,7 +1499,7 @@ export const payrollStorage = {
     const list = payrollStorage.getPayrolls();
     const updated = list.map(item => item.id === id ? { ...item, status: "APPROVED" as const } : item);
     payrollStorage.savePayrolls(updated);
-    return updated.find(item => item.id === id)!;
+    return findEntityOrThrow(updated, id, "Payroll");
   },
   updateAdjustments: (id: string, bonus: number, bonusReason: string, deduction: number, deductionReason: string): TrainerPayrollRecord => {
     const list = payrollStorage.getPayrolls();
@@ -1510,7 +1516,7 @@ export const payrollStorage = {
       };
     });
     payrollStorage.savePayrolls(updated);
-    return updated.find(item => item.id === id)!;
+    return findEntityOrThrow(updated, id, "Payroll");
   },
   markPaid: (id: string, method: string, reference?: string): TrainerPayrollRecord => {
     const list = payrollStorage.getPayrolls();
@@ -1522,7 +1528,7 @@ export const payrollStorage = {
       paymentReference: reference,
     } : item);
     payrollStorage.savePayrolls(updated);
-    return updated.find(item => item.id === id)!;
+    return findEntityOrThrow(updated, id, "Payroll");
   },
 };
 
@@ -1629,7 +1635,7 @@ export const waitlistStorage = {
       notifiedAt: new Date().toISOString(),
     } : item);
     waitlistStorage.saveEntries(updated);
-    return updated.find(item => item.id === id)!;
+    return findEntityOrThrow(updated, id, "Waitlist entry");
   },
   enrollEntry: (id: string): WaitlistEntry => {
     const list = waitlistStorage.getEntries();
@@ -1639,7 +1645,7 @@ export const waitlistStorage = {
       enrolledAt: new Date().toISOString(),
     } : item);
     waitlistStorage.saveEntries(updated);
-    return updated.find(item => item.id === id)!;
+    return findEntityOrThrow(updated, id, "Waitlist entry");
   },
   cancelEntry: (id: string): WaitlistEntry => {
     const list = waitlistStorage.getEntries();
@@ -1648,7 +1654,7 @@ export const waitlistStorage = {
       status: "CANCELLED" as const,
     } : item);
     waitlistStorage.saveEntries(updated);
-    return updated.find(item => item.id === id)!;
+    return findEntityOrThrow(updated, id, "Waitlist entry");
   },
   deleteEntry: (id: string) => {
     const list = waitlistStorage.getEntries();

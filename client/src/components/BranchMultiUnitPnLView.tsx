@@ -1,34 +1,24 @@
 import { useState, useMemo } from "react";
 import {
   AlertCircle,
-  ArrowDownToLine,
-  ArrowUpRight,
   BarChart3,
   Building2,
   Calendar,
   CheckCircle2,
   ChevronLeft,
-  CircleAlert,
   Clock,
   DollarSign,
   Download,
-  Filter,
-  GraduationCap,
-  HelpCircle,
   Lightbulb,
-  MessageCircle,
   PhoneCall,
   PieChart,
-  RefreshCw,
   Search,
   ShieldAlert,
   ShieldCheck,
   Sparkles,
-  TrendingDown,
   TrendingUp,
   UserCheck,
   UserMinus,
-  UserPlus,
   Users,
   Wallet,
   X,
@@ -39,15 +29,13 @@ import {
   PNL_PERIODS,
   pnlAndRetentionStorage,
   type AtRiskStudent,
-  type BranchPnLRecord,
-  type BranchRetentionRecord,
 } from "@/lib/pnlRetentionData";
 
 type SubTab = "pnl" | "retention" | "at_risk";
 
 export default function BranchMultiUnitPnLView({
   initialBranch = "كل الفروع",
-  onNavigateToBranch,
+  onNavigateToBranch: _onNavigateToBranch,
 }: {
   initialBranch?: string;
   onNavigateToBranch?: (branchName: string) => void;
@@ -468,7 +456,7 @@ export default function BranchMultiUnitPnLView({
             <div className="cohort-trend-panel">
               <h4><TrendingUp size={16} /> اتجاه استبقاء الطلاب خلال آخر 4 أشهر (Cohort Monthly Trend)</h4>
               <div className="cohort-timeline">
-                {retentionList[0]?.trend.map((tr, idx) => (
+                {retentionList[0]?.trend.map((tr) => (
                   <div key={tr.month} className="cohort-timeline-item">
                     <span className="cohort-month-label">{tr.monthLabel}</span>
                     <div className="cohort-rate-box">

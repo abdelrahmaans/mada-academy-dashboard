@@ -3,17 +3,14 @@ import {
   Users,
   Clock3,
   CheckCircle2,
-  AlertCircle,
   Phone,
   MessageCircle,
   Plus,
   Search,
   Filter,
-  Sparkles,
   Send,
   UserCheck,
   X,
-  ChevronLeft,
   BookOpen,
   MapPin,
   CalendarDays,
@@ -209,7 +206,7 @@ export default function WaitlistManagementView({
               <Filter size={14} />
               <select
                 value={statusFilter}
-                onChange={e => setStatusFilter(e.target.value as any)}
+                onChange={e => setStatusFilter(e.target.value as "ALL" | "WAITING" | "NOTIFIED" | "ENROLLED")}
               >
                 <option value="ALL">جميع الحالات</option>
                 <option value="WAITING">قيد الانتظار ({waitingCount})</option>
@@ -413,6 +410,19 @@ export default function WaitlistManagementView({
                         <span className="enrolled-success-tag">
                           <CheckCircle2 size={14} /> مسجل في المجموعة
                         </span>
+                      )}
+
+                      {onCancelWaitlistEntry && (entry.status === "WAITING" || entry.status === "NOTIFIED") && (
+                        <button
+                          className="btn-action btn-cancel-entry"
+                          onClick={() => {
+                            onCancelWaitlistEntry(entry.id);
+                            toast.info("تم إلغاء قيد الانتظار");
+                          }}
+                          title="إلغاء قيد الانتظار"
+                        >
+                          <Ban size={14} />
+                        </button>
                       )}
 
                       {onDeleteWaitlistEntry && entry.status !== "ENROLLED" && (

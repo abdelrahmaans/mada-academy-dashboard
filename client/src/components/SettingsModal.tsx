@@ -9,10 +9,8 @@ import {
   Settings,
   ShieldCheck,
   Sun,
-  User,
   X,
   MapPin,
-  Phone,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";

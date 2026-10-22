@@ -16,7 +16,6 @@ import {
 } from "@/contexts/RoleScopeContext";
 import { getRoleDefinition } from "@/lib/roleNavigation";
 import RoleSidebar from "./RoleSidebar";
-import SessionLogoutButton from "./SessionLogoutButton";
 import "./RoleDashboardShell.css";
 import "./RoleFoundation.css";
 
@@ -32,7 +31,8 @@ const RoleShellContext = createContext<RoleShellContextValue>({
   closeMobileNav: () => {},
 });
 
-export const useRoleShell = () => useContext(RoleShellContext);
+const useRoleShell = () => useContext(RoleShellContext);
+void useRoleShell;
 
 type RoleDashboardShellProps = Omit<HTMLAttributes<HTMLDivElement>, "role"> & {
   children: ReactNode;
@@ -62,7 +62,7 @@ export default function RoleDashboardShell({
   branchName,
   demo = true,
   hideSidebar = false,
-  showSessionLogout = false,
+  showSessionLogout: _showSessionLogout = false,
   mobileOpen,
   onCloseMobile,
   ...props
@@ -108,7 +108,7 @@ export default function RoleDashboardShell({
       if (
         child.type === "aside" ||
         (typeof child.type === "string" && child.type === "aside") ||
-        (child.props as any)?.className?.includes("sidebar")
+        (child.props as { className?: string })?.className?.includes("sidebar")
       ) {
         hasChildrenSidebar = true;
       }

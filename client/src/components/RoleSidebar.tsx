@@ -5,7 +5,6 @@ import {
   useState,
 } from "react";
 import {
-  Award,
   Banknote,
   BarChart3,
   BookOpen,
@@ -37,7 +36,6 @@ import {
   type LucideProps,
 } from "lucide-react";
 import { useLocation } from "wouter";
-import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAuthorizedNavigation, getRoleDefinition } from "@/lib/roleNavigation";
 import type { RoleCode } from "@/contexts/RoleScopeContext";

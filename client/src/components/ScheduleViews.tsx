@@ -11,7 +11,6 @@ import {
   Clock3,
   MapPin,
   Plus,
-  Search,
   Users,
   X,
 } from "lucide-react";

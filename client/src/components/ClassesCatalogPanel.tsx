@@ -1,4 +1,4 @@
-import { BookOpen, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, Clock3, Filter, MapPin, MoreHorizontal, Search, Sparkles, Users } from "lucide-react";
+import { BookOpen, CalendarDays, ChevronDown, ChevronLeft, Clock3, Filter, MapPin, MoreHorizontal, Search, Sparkles, Users } from "lucide-react";
 import { toast } from "sonner";
 import type { Course, Offering, Track } from "@/pages/Classes";
 import type { WaitlistEntry } from "@/lib/apiClient";
