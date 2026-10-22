@@ -6,7 +6,6 @@ import {
   CalendarDays,
   Check,
   CheckCircle2,
-  ChevronDown,
   ChevronLeft,
   CircleHelp,
   Clock3,
@@ -18,7 +17,6 @@ import {
   GraduationCap,
   HardDrive,
   KeyRound,
-  LayoutDashboard,
   LifeBuoy,
   Lightbulb,
   LockKeyhole,
@@ -33,12 +31,9 @@ import {
   ShieldAlert,
   ShieldCheck,
   Sparkles,
-  Ticket,
   TrendingDown,
   TrendingUp,
-  UserPlus,
   UserRoundX,
-  Users,
   Wallet,
   X,
 } from "lucide-react";
@@ -51,7 +46,7 @@ import SessionLogoutButton from "@/components/SessionLogoutButton";
 import SettingsModal from "@/components/SettingsModal";
 import {
   apiClient,
-  platformSaaSStorage,
+  type BootstrapAcademyResponse,
   type PlatformAcademy,
   type PlatformActivity,
   type PlatformDemoLead,
@@ -59,18 +54,14 @@ import {
   type PlatformOverview,
   type PlatformPaymentRecord,
   type PlatformRole,
-  type PlatformTenantExtra,
 } from "@/lib/apiClient";
 import {
   type View,
   type SupportTicket,
   type ReasonModalState,
   NAV_ITEMS,
-  STATUS_LABEL,
   statusLabel,
-  TICKET_PRIORITY_LABELS,
   ticketPriorityLabels,
-  TICKET_STATUS_LABELS,
   ticketStatusLabels,
   SUBSCRIPTION_PLANS,
   FALLBACK_OVERVIEW,
@@ -254,7 +245,7 @@ export default function PlatformConsoleLive() {
     setConverting(true);
     try {
       const slug = convertForm.slug.trim() || `academy-${Date.now().toString(36).slice(-5)}`;
-      let response: any;
+      let response: BootstrapAcademyResponse;
       try {
         response = await apiClient.bootstrapAcademy({
           name: convertForm.name.trim(),
@@ -296,6 +287,7 @@ export default function PlatformConsoleLive() {
             phone: convertForm.ownerPhone.trim(),
             role: "R01_ACADEMY_OWNER",
           },
+          nextStep: "OWNER_LOGIN_REQUIRED",
         };
       }
 
@@ -333,8 +325,9 @@ export default function PlatformConsoleLive() {
       });
 
       toast.success(`تم تحويل طلب ${convertLeadModal.academyName} إلى أكاديمية مفعّلة بنجاح! 🚀`);
-    } catch (err: any) {
-      toast.error(err.message || "تعذر إتمام التحويل الآن.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "تعذر إتمام التحويل الآن.";
+      toast.error(message);
     } finally {
       setConverting(false);
     }
@@ -458,7 +451,6 @@ export default function PlatformConsoleLive() {
     ])
       .then(([overviewResult, academyResult, rolesResult]) => {
         if (!active) return;
-        const warnings: string[] = [];
 
         if (overviewResult.status === "fulfilled" && overviewResult.value) {
           setOverview(overviewResult.value);
@@ -552,6 +544,7 @@ export default function PlatformConsoleLive() {
 
   // Enriched academy metadata (integrating extras: plan, trial, allowedBranches)
   const enrichedAcademies = useMemo(() => {
+    void refreshKey;
     return academies.map((academy) => {
       const extra = apiClient.getPlatformTenantExtra(academy.id, academy.plan);
       // Trial days remaining calculation
@@ -3175,7 +3168,7 @@ export default function PlatformConsoleLive() {
                 <span>نوع التنبيه:</span>
                 <select
                   value={broadcastType}
-                  onChange={(e) => setBroadcastType(e.target.value as any)}
+                  onChange={(e) => setBroadcastType(e.target.value as "INFO" | "WARNING" | "SUCCESS")}
                   style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1", font: "inherit", fontSize: 12 }}
                 >
                   <option value="INFO">📢 إعلان عام وميزات جديدة</option>
@@ -3188,7 +3181,7 @@ export default function PlatformConsoleLive() {
                 <span>الشريحة المستهدفة:</span>
                 <select
                   value={broadcastTarget}
-                  onChange={(e) => setBroadcastTarget(e.target.value as any)}
+                  onChange={(e) => setBroadcastTarget(e.target.value as "ALL" | "PAID" | "TRIAL")}
                   style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #cbd5e1", font: "inherit", fontSize: 12 }}
                 >
                   <option value="ALL">جميع الأكاديميات المسجلة ({enrichedAcademies.length})</option>

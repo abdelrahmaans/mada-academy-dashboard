@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Armchair, Building2, CheckCircle2, Edit3, GraduationCap, LoaderCircle, MapPin, Plus, Settings2, Trash2, Users, Wrench, X } from "lucide-react";
 import { toast } from "sonner";
+import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
@@ -11,6 +12,7 @@ const STATUS_LABELS: Record<string, string> = { AVAILABLE: "متاحة", MAINTEN
 const STATUS_TONES: Record<string, string> = { AVAILABLE: "available", MAINTENANCE: "maintenance", INACTIVE: "inactive" };
 
 export default function AcademyClassrooms() {
+  const [, navigate] = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [branches, setBranches] = useState<AcademyBranch[]>([]);
   const [classrooms, setClassrooms] = useState<AcademyClassroom[]>([]);

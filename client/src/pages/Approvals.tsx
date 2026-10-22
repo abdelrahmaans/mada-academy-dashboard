@@ -41,6 +41,7 @@ import {
   type SubscriptionFreezeRequest,
 } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLocation } from "wouter";
 
 type QueueTab = "all" | ApprovalKind;
 type ApprovalSort = "priority" | "oldest" | "newest";
@@ -252,6 +253,7 @@ function freezeFromStorage(record: SubscriptionFreezeRequest): ApprovalItem {
 }
 
 export default function Approvals() {
+  const [, navigate] = useLocation();
   const { me } = useAuth();
   const [liveMode, setLiveMode] = useState(() => apiClient.hasSession());
   const [loading, setLoading] = useState(() => apiClient.hasSession());

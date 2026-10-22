@@ -504,7 +504,6 @@ function ClassesPage() {
           setLiveClassrooms([]);
           setLiveInstructors([]);
           setLiveStudents([]);
-          setLiveRoomsReady(false);
           const cause =
             courseResult.status === "rejected"
               ? courseResult.reason
@@ -547,7 +546,6 @@ function ClassesPage() {
           setSelectedInstructorId(firstInstructor.id);
           setInstructor(firstInstructor.name ?? "");
         }
-        setLiveRoomsReady(roomResult.status === "fulfilled");
 
         const optionalFailure = [
           roomResult,

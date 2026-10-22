@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
-  ArrowRight,
   BarChart3,
   Building2,
   CheckCircle2,
@@ -11,18 +10,13 @@ import {
   FileText,
   GraduationCap,
   Headphones,
-  LayoutDashboard,
   MapPin,
-  Menu,
   MessageSquare,
-  Plus,
   Search,
-  Settings2,
   ShieldCheck,
   Ticket,
   TrendingUp,
   Users,
-  X,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
@@ -177,13 +171,13 @@ const PRIORITY_LABELS: Record<TicketPriority, string> = {
 export default function AcademyOwner() {
   const [location, navigate] = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const viewFromLocation = (): OwnerView => {
+  const viewFromLocation = useCallback((): OwnerView => {
     if (location === "/academy-owner/branches") return "branches";
     if (location === "/academy-owner/tickets") return "tickets";
     if (location === "/academy-owner/reports") return "reports";
     if (location === "/academy-owner/pnl-retention") return "pnl";
     return "overview";
-  };
+  }, [location]);
   const [view, setView] = useState<OwnerView>(viewFromLocation);
   const [month, setMonth] = useState<string>(PERFORMANCE_MONTHS[0].value);
   const [branch, setBranch] = useState("all");
@@ -247,7 +241,7 @@ export default function AcademyOwner() {
     navigate(next === "overview" ? "/academy-owner" : next === "pnl" ? "/academy-owner/pnl-retention" : `/academy-owner/${next}`);
     setMobileNavOpen(false);
   };
-  useEffect(() => { setView(viewFromLocation()); }, [location]);
+  useEffect(() => { setView(viewFromLocation()); }, [viewFromLocation]);
   const updateTicketStatus = (status: TicketStatus) => {
     if (!selectedTicket) return;
     setTickets(current => current.map(ticket => ticket.id === selectedTicket.id ? { ...ticket, status, updated: "الآن" } : ticket));
@@ -294,7 +288,7 @@ export default function AcademyOwner() {
           <RoleScopeCard className="academy-owner-content-scope" />
           <div className="academy-owner-demo-banner" role="note"><AlertCircle size={15} /><span>DEMO</span>بيانات الفروع والتذاكر والتقارير توضيحية محلية وليست متصلة بالـbackend.</div>
 
-          {view === "overview" && <OverviewView totals={academyTotals} rollup={rollup} openTickets={tickets.filter(ticket => ticket.status !== "resolved")} onBranches={() => goToView("branches")} onTickets={() => goToView("tickets")} onReports={() => goToView("reports")} onPnL={() => goToView("pnl")} />}
+          {view === "overview" && <OverviewView totals={academyTotals} rollup={rollup} openTickets={tickets.filter(ticket => ticket.status !== "resolved")} onBranches={() => goToView("branches")} onTickets={() => goToView("tickets")} onPnL={() => goToView("pnl")} />}
           {view === "branches" && <BranchRollupView branch={branch} setBranch={setBranch} rollup={rollup} onReports={() => goToView("reports")} />}
           {view === "tickets" && <TicketCenterView tickets={visibleTickets} selectedTicket={selectedTicket} query={ticketQuery} setQuery={setTicketQuery} filter={ticketFilter} setFilter={setTicketFilter} onSelect={setSelectedTicketId} onStatus={updateTicketStatus} />}
           {view === "reports" && <ReportsView month={month} setMonth={setMonth} branch={branch} setBranch={setBranch} instructorId={instructorId} setInstructorId={setInstructorId} summary={summary} rollup={rollup} onDownload={downloadReport} />}
@@ -311,11 +305,7 @@ const OWNER_VIEW_LABELS: Record<OwnerView, string> = { overview: "نظرة عا�
 const OWNER_VIEW_TITLES: Record<OwnerView, string> = { overview: "مركز الأكاديمية", branches: "الفروع والأداء", tickets: "مركز تذاكر الأكاديمية", reports: "التقارير المجمعة", pnl: "الأرباح والخسائر واستبقاء الطلاب" };
 const OWNER_VIEW_DESCRIPTIONS: Record<OwnerView, string> = { overview: "ابدأ من صورة موحّدة للفروع والتنبيهات والتقارير، ثم انتقل إلى الإجراء المطلوب دون خلط نطاق الأكاديمية بنطاق الفرع.", branches: "قارن أداء الفروع، راجع حالة مدير كل فرع، وحدد أين يحتاج الفريق إلى دعم أو تصعيد.", tickets: "تابع تذاكر كل فروع أكاديميتك في مكان واحد مع أولوية وحالة ومالك واضحين.", reports: "أنشئ تقريرًا مجمعًا قابلًا للتصدير مع الحفاظ على محدد الشهر والفرع كسياق واضح.", pnl: "تحليلات الأرباح والخسائر التفصيلية لكل فرع، اقتصاديات الوحدة لكل طالب، ورادار استبقاء وحماية الاشتراكات." };
 
-function OwnerNavButton({ active, icon, label, count, onClick }: { active: boolean; icon: React.ReactNode; label: string; count?: number; onClick: () => void }) {
-  return <button className={active ? "active" : ""} aria-current={active ? "page" : undefined} onClick={onClick}>{icon}<span>{label}</span>{count !== undefined && <b>{count}</b>}</button>;
-}
-
-function OverviewView({ totals, rollup, openTickets, onBranches, onTickets, onReports, onPnL }: { totals: { students: number; sessions: number; collected: number; tickets: number; leads: number }; rollup: BranchRecord[]; openTickets: AcademyTicket[]; onBranches: () => void; onTickets: () => void; onReports: () => void; onPnL: () => void }) {
+function OverviewView({ totals, rollup, openTickets, onBranches, onTickets, onPnL }: { totals: { students: number; sessions: number; collected: number; tickets: number; leads: number }; rollup: BranchRecord[]; openTickets: AcademyTicket[]; onBranches: () => void; onTickets: () => void; onPnL: () => void }) {
   return <>
     <section className="academy-owner-summary-grid" aria-label="ملخص الأكاديمية"><SummaryCard icon={<Users size={17} />} tone="teal" label="طلاب نشطون" value={totals.students} hint="عبر الفروع المحددة" /><SummaryCard icon={<Building2 size={17} />} tone="blue" label="فروع نشطة" value={rollup.length} hint="ضمن نطاق الأكاديمية" /><SummaryCard icon={<FileText size={17} />} tone="amber" label="تذاكر تحتاج متابعة" value={totals.tickets} hint={`${totals.leads} leads تحتاج متابعة`} /><SummaryCard icon={<TrendingUp size={17} />} tone="violet" label="حصص هذا الشهر" value={totals.sessions} hint={`${formatMoney(totals.collected)} تحصيل توضيحي`} /></section>
     <section className="academy-owner-feature-grid"><article className="academy-owner-panel"><PanelHeading icon={<Building2 size={16} />} title="لقطة الفروع" action={<button onClick={onBranches}>عرض كل الفروع <ChevronLeft size={14} /></button>} /><div className="academy-owner-branch-list">{rollup.map(item => <BranchRow key={item.name} branch={item} />)}</div></article><article className="academy-owner-panel"><PanelHeading icon={<Headphones size={16} />} title="تذاكر تحتاج انتباهًا" action={<button onClick={onTickets}>فتح المركز <ChevronLeft size={14} /></button>} /><div className="academy-owner-ticket-preview">{openTickets.slice(0, 3).map(ticket => <button key={ticket.id} onClick={onTickets}><span className={`academy-owner-ticket-dot ${ticket.priority}`} /><span><strong>{ticket.title}</strong><small>{ticket.branch} · {PRIORITY_LABELS[ticket.priority]}</small></span><ChevronLeft size={14} /></button>)}{openTickets.length === 0 && <p className="academy-owner-muted">لا توجد تذاكر مفتوحة.</p>}</div></article></section>
