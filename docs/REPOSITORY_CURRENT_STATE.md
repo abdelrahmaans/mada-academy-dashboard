@@ -51,9 +51,10 @@ Relevant contracts:
 ## Validation baseline
 
 - `dotnet test` (InMemory): 109/109 passed (100% Backend Integration tests).
+- `verify_flow.ps1` (Live API E2E): 10/10 PASSED across all roles (R00 Platform Admin, R01 Owner, R02 Branch Manager, R03 Head Instructor, R04 Instructor, R05 Secretary, R06 Accountant, R07 Marketing, R08 Parent, R09 Student).
 - `pnpm test`: 64/64 passed (Frontend Vitest tests).
 - `pnpm check`: passed (0 TypeScript errors).
 - `pnpm lint`: passed (0 errors with ESLint 9 Flat Config).
-- `pnpm build`: passed in 5.56s (60% build time reduction).
-- `@mada/landing build`: passed in 2.57s.
+- `pnpm build`: passed in 5.73s (60% build time reduction, >1,020 lines of dead code removed).
+- `@mada/landing build`: passed in 2.56s.
 - `git diff --check`: passed.

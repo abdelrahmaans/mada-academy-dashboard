@@ -74,8 +74,9 @@ Test-RoleFlow "R03" "Head Instructor (+201000000004)" {
     $groups = Invoke-RestMethod -Uri "$ApiBase/scheduling/groups" -Method GET -Headers $headers
     $groupItems = if ($groups.data.items) { $groups.data.items } else { $groups.data }
     Write-Host "  -> Academic Groups in Branch: $($groupItems.Count)" -ForegroundColor Gray
-    $evals = Invoke-RestMethod -Uri "$ApiBase/evaluations/status-summary" -Method GET -Headers $headers
-    Write-Host "  -> Evaluation Summary retrieved successfully." -ForegroundColor Gray
+    $supervision = Invoke-RestMethod -Uri "$ApiBase/supervision/my-groups" -Method GET -Headers $headers
+    $supItems = if ($supervision.data.items) { $supervision.data.items } else { $supervision.data }
+    Write-Host "  -> Supervised Groups in Scope: $($supItems.Count)" -ForegroundColor Gray
 }
 
 # 4. Main Instructor Flow (R04)
@@ -112,7 +113,7 @@ Test-RoleFlow "R06" "Accountant (+201000000006)" {
 Test-RoleFlow "R07" "Marketing Desk (+201000000007)" {
     $token = Post-Login "+201000000007" $Password "staff"
     $headers = @{ Authorization = "Bearer $token" }
-    $leads = Invoke-RestMethod -Uri "$ApiBase/marketing/leads" -Method GET -Headers $headers
+    $leads = Invoke-RestMethod -Uri "$ApiBase/leads" -Method GET -Headers $headers
     $leadItems = if ($leads.data.items) { $leads.data.items } else { $leads.data }
     Write-Host "  -> Persisted Leads in Scope: $($leadItems.Count)" -ForegroundColor Gray
     $campaigns = Invoke-RestMethod -Uri "$ApiBase/marketing/campaigns" -Method GET -Headers $headers

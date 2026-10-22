@@ -21,7 +21,8 @@ public static class MarketingEndpoints
                 .Where(x => x.TenantId == scope.TenantId && (!scope.BranchId.HasValue || x.BranchId == scope.BranchId.Value))
                 .OrderByDescending(x => x.CreatedAt).ToListAsync(cancellationToken);
             var ids = campaigns.Select(x => x.Id).ToArray();
-            var leadStats = await db.Leads.AsNoTracking().Where(x => ids.Contains(x.CampaignId!.Value))
+            var leadStats = await db.Leads.AsNoTracking()
+                .Where(x => x.CampaignId.HasValue && ids.Contains(x.CampaignId.Value))
                 .GroupBy(x => x.CampaignId!.Value)
                 .Select(g => new { Id = g.Key, Leads = g.Count(), Conversions = g.Count(x => x.Status == "REGISTERED") })
                 .ToDictionaryAsync(x => x.Id, cancellationToken);
