@@ -1,30 +1,22 @@
 import { useMemo, useState, type FormEvent } from "react";
 import {
-  Activity,
-  ArrowRight,
   BookOpen,
   Building2,
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  CircleHelp,
   Clock3,
-  GraduationCap,
-  LayoutDashboard,
-  LogOut,
   MapPin,
   Menu,
   Plus,
   Search,
-  Settings,
   ShieldCheck,
   UserCog,
   Users,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
@@ -91,10 +83,9 @@ const TRAINER_STATUS_LABELS: Record<TrainerStatus, string> = { active: "نشط",
 const SESSION_STATUS_LABELS: Record<SessionStatus, string> = { confirmed: "مؤكدة", needs_room: "تحتاج قاعة", pending_approval: "بانتظار الاعتماد" };
 
 export default function BranchOperations() {
-  const [, navigate] = useLocation();
   const [view, setView] = useState<OpsView>("departments");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [departments, setDepartments] = useState(INITIAL_DEPARTMENTS);
+  const [departments] = useState(INITIAL_DEPARTMENTS);
   const [trainers, setTrainers] = useState(INITIAL_TRAINERS);
   const [sessions, setSessions] = useState(INITIAL_SESSIONS);
   const [query, setQuery] = useState("");
@@ -108,8 +99,6 @@ export default function BranchOperations() {
     return (!query.trim() || text.includes(query.trim().toLocaleLowerCase("ar"))) && (departmentFilter === "all" || trainer.department === departmentFilter);
   }), [departmentFilter, query, trainers]);
   const filteredSessions = useMemo(() => sessions.filter(session => departmentFilter === "all" || session.department === departmentFilter), [departmentFilter, sessions]);
-  const activeTrainerCount = trainers.filter(trainer => trainer.status === "active").length;
-  const pendingSessions = sessions.filter(session => session.status !== "confirmed").length;
 
   const selectView = (next: OpsView) => { setView(next); setMobileNavOpen(false); setQuery(""); };
   const toggleTrainerStatus = (id: string) => {
@@ -132,7 +121,7 @@ export default function BranchOperations() {
   };
 
   return (
-    <RoleDashboardShell className="app-shell r02-operations-shell" roleCode="R02" roleLabel="مدير الفرع" scopeLevel="branch" scopeLabel="فرع مدينة نصر" tenantName="أكاديمية مدى" branchName="فرع مدينة نصر">
+    <RoleDashboardShell className="app-shell r02-operations-shell" roleCode="R02" roleLabel="مدير الفرع" scopeLevel="branch" scopeLabel="فرع مدينة نصر" tenantName="أكاديمية مدى" branchName="فرع مدينة نصر" mobileOpen={mobileNavOpen} onCloseMobile={() => setMobileNavOpen(false)}>
       <main className="main-panel"><header className="topbar"><div className="topbar-right"><button className="icon-button mobile-menu-button" aria-label="فتح القائمة" onClick={() => setMobileNavOpen(true)}><Menu size={21} /></button><div className="branch-select assigned-branch"><span className="branch-icon"><MapPin size={17} /></span><span>فرع مدينة نصر</span></div></div><div className="r02-ops-scope-pill"><ShieldCheck size={15} /> صلاحية مدير الفرع · فرع واحد</div></header>
         <div className="workspace r02-ops-content"><div className="r02-preview-banner" role="note"><strong>PREVIEW / DEMO</strong> هذه الصفحة غير متصلة ببيانات الخادم؛ الأقسام والمدربون والجلسات والأفعال المعروضة محلية توضيحية ولا تُحفظ.</div><PageHeader className="welcome-row" copyClassName="welcome-copy" actionsClassName="welcome-actions" eyebrow={<span className="eyebrow"><i className="eyebrow-dot" /> تشغيل الفرع · R02</span>} title={VIEW_TITLES[view]} description={VIEW_DESCRIPTIONS[view]} actions={<span className="r02-ops-date"><Clock3 size={14} /> أسبوع التشغيل الحالي</span>} /><RoleScopeCard className="r02-ops-scope-card" /><div className="r02-ops-demo-note"><ShieldCheck size={14} /><strong>عرض محلي فقط:</strong> لا تستخدم الأرقام أو التغييرات هنا كحالة فعلية للفرع.</div>
           {view === "departments" && <DepartmentsView departments={departments} trainers={filteredTrainers} query={query} setQuery={setQuery} departmentFilter={departmentFilter} setDepartmentFilter={setDepartmentFilter} onToggle={toggleTrainerStatus} onDepartmentChange={changeDepartment} onSchedule={() => selectView("schedule")} />}

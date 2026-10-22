@@ -3,32 +3,19 @@ import {
   Activity,
   AlertCircle,
   ArrowDownToLine,
-  Bell,
-  BookOpen,
-  CalendarDays,
-  Check,
   CheckCircle2,
   ChevronDown,
   ChevronLeft,
-  CircleHelp,
   Clock3,
   FileText,
-  GraduationCap,
-  LayoutDashboard,
-  LogOut,
   MapPin,
   Menu,
   Search,
-  Settings,
   ShieldCheck,
-  Sparkles,
   UserCheck,
-  Users,
   Wallet,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import { getRoleDefinition } from "@/lib/roleNavigation";
 import type { RoleCode } from "@/contexts/RoleScopeContext";
@@ -172,13 +159,6 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   },
 ];
 
-
-function formatMoney(value: number) {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(
-    value
-  );
-}
-
 function approvalFromApi(record: ApprovalRequestRecord): ApprovalItem {
   const isSubstitution = record.requestType === "INSTRUCTOR_SUBSTITUTION";
   const typeName = record.requestType === "EXTRA" ? "جلسة إضافية" : record.requestType === "MAKEUP" ? "جلسة تعويضية" : "طلب مدرب بديل";
@@ -272,8 +252,7 @@ function freezeFromStorage(record: SubscriptionFreezeRequest): ApprovalItem {
 }
 
 export default function Approvals() {
-  const [, navigate] = useLocation();
-  const { logout, me } = useAuth();
+  const { me } = useAuth();
   const [liveMode, setLiveMode] = useState(() => apiClient.hasSession());
   const [loading, setLoading] = useState(() => apiClient.hasSession());
   const [requests, setRequests] = useState<ApprovalItem[]>(() => apiClient.hasSession() ? [] : INITIAL_REQUESTS);
@@ -281,7 +260,6 @@ export default function Approvals() {
   const branch = liveMode
     ? me?.branches?.find(item => item.id === me.branchId)?.name ?? me?.branches?.[0]?.name ?? "الفرع المصرح"
     : "مدينة نصر";
-  const isAccountant = me?.role === "R06_ACCOUNTANT";
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState<QueueTab>("all");
