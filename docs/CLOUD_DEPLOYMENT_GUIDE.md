@@ -75,20 +75,51 @@
 
 ---
 
-## 4. ربط الفرونت إند (Vercel) بالـ API السحابي الجديد
+## 4. إعداد ونشر الواجهات الأمامية على Vercel
 
-بعد نشر الباك إند وحصولك على الرابط العام (مثلاً `https://mada-api-production.up.railway.app`):
-1. في لوحة تحكم مشروعك على **Vercel** (للـ React و Angular):
-2. افتح **Settings -> Environment Variables**.
-3. اضبط المتغير:
+الريبو يدعم نشر الواجهات عبر Vercel كـ Monorepo مستقل:
+
+### أ. لوحة التحكم الأساسية (Mada Dashboard):
+1. في Vercel، أنشئ مشروعاً جديداً واختر ريبو `mada-academy-dashboard`.
+2. اترك **Root Directory** فارغاً أو اختر `.` (الجذر).
+3. نوع الـ Framework: `Vite`.
+4. أمر البناء (Build Command): `pnpm build`
+5. مجلد المخرجات (Output Directory): `dist/public`
+6. في **Environment Variables**، أضف:
    ```env
-   VITE_API_URL=https://mada-api-production.up.railway.app/api/v1
+   VITE_API_URL=https://<your-api-domain>/api/v1
    ```
-4. أعد نشر الفرونت إند (Redeploy).
+
+### ب. صفحة الهبوط والتسويق (Mada Landing Page):
+1. في Vercel، أنشئ مشروعاً ثانياً متصلاً بنفس الريبو.
+2. اضبط **Root Directory** على: `apps/landing`.
+3. نوع الـ Framework: `Vite`.
+4. أمر البناء (Build Command): `pnpm build`
+5. مجلد المخرجات (Output Directory): `dist`
+6. في **Environment Variables**، أضف:
+   ```env
+   VITE_API_URL=https://<your-api-domain>/api/v1
+   VITE_DASHBOARD_URL=https://<your-dashboard-domain>
+   ```
 
 ---
 
-## 5. اختبار التشغيل والتحقق (Smoke Verification)
+## 5. تطبيق الهجرات والتحقق من قاعدة بيانات Supabase
+
+لتطبيق كافة الـ 17 هجرة (Migrations) على قاعدة بيانات Supabase السحابية:
+1. عند تشغيل حاوية الباك إند لأول مرة، يمكنك تمرير متغير البيئة المؤقت:
+   ```env
+   MADA_APPLY_MIGRATIONS=true
+   ```
+2. أو تشغيل سكريبت تطبيق الهجرات يدوياً عبر سطر الأوامر:
+   ```bash
+   DATABASE_URL="Host=aws-1-eu-central-1.pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.xxx;Password=xxx" ./backend/scripts/apply-migrations.sh
+   ```
+3. **بوابة ترقية Supabase Pro:** يجب تفعيل النسخ الاحتياطي التلقائي اليومي وخاصية Point-in-Time Recovery (PITR) قبل فتح بوابات الدفع والفواتير الحية في بيئة الإنتاج.
+
+---
+
+## 6. اختبار التشغيل والتحقق (Smoke Verification)
 
 للتأكد من أن السيرفر السحابي يعمل بكفاءة وأمان كامل:
 
