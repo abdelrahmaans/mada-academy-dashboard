@@ -53,8 +53,6 @@ import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
-import BranchManagerSidebar from "@/components/BranchManagerSidebar";
-import RoleSidebar from "@/components/RoleSidebar";
 import {
   canAccessFinanceView,
   financeCapabilitiesForRole,

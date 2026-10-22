@@ -4,7 +4,6 @@ import { useLocation } from "wouter";
 import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
-import R01AcademySidebar from "@/components/R01AcademySidebar";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { apiClient, type AcademyBranch, type AcademyClassroom, type ClassroomResource } from "@/lib/apiClient";
 import "./AcademyClassrooms.css";
@@ -105,8 +104,7 @@ export default function AcademyClassrooms() {
   };
   const retryResources = () => { if (resourceRoom) void openResources(resourceRoom); };
 
-  return <RoleDashboardShell className="app-shell academy-classrooms-shell" showSessionLogout={false} hideSidebar roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية" demo={false}>
-    <R01AcademySidebar activePath="/academy/classrooms" mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
+  return <RoleDashboardShell className="app-shell academy-classrooms-shell" roleCode="R01" roleLabel="مسؤول الأكاديمية" scopeLevel="tenant" scopeLabel="كل فروع الأكاديمية" tenantName="الأكاديمية" demo={false} mobileOpen={mobileNavOpen} onCloseMobile={() => setMobileNavOpen(false)}>
     <main className="main-panel academy-classrooms-page" dir="rtl">
       <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel="كل فروع الأكاديمية" />
       <div className="workspace academy-classrooms-content">

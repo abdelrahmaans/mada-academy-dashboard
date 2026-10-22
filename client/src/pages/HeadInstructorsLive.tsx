@@ -3,7 +3,6 @@ import { Award, CheckCircle2, RefreshCw, ShieldCheck, Users } from "lucide-react
 import EvaluationReviewQueue from "@/components/EvaluationReviewQueue";
 import HeadInstructorsLiveOverview, { type HeadInstructorsOverviewData } from "@/components/HeadInstructorsLiveOverview";
 import RubricsManagementView from "@/components/RubricsManagementView";
-import R03HeadInstructorsSidebar from "@/components/R03HeadInstructorsSidebar";
 import { LoadingState } from "@/components/FeedbackStates";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
@@ -106,7 +105,7 @@ export default function HeadInstructorsLive() {
   }
 
   return (
-    <RoleDashboardShell className="app-shell r03-live-shell" roleCode="R03" roleLabel="رئيس المدربين" scopeLevel="branch" scopeLabel={`فرع واحد · ${branch}`} branchName={branch} tenantName={me.academy?.name} demo={false}>
+    <RoleDashboardShell className="app-shell r03-live-shell" roleCode="R03" roleLabel="رئيس المدربين" scopeLevel="branch" scopeLabel={`فرع واحد · ${branch}`} branchName={branch} tenantName={me.academy?.name} demo={false} mobileOpen={mobileNavOpen} onCloseMobile={() => setMobileNavOpen(false)}>
       <main className="main-panel" dir="rtl">
         <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel={`فرع ${branch}`} roleLabel="رئيس المدربين" />
         <div className="r03-live-page">

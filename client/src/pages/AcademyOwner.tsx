@@ -30,7 +30,6 @@ import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import StatusBadge from "@/components/StatusBadge";
 import InstructorPerformanceComparison from "@/components/InstructorPerformanceComparison";
-import R01AcademySidebar from "@/components/R01AcademySidebar";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import {
   ACADEMY_BRANCHES,
@@ -270,17 +269,15 @@ export default function AcademyOwner() {
   return (
     <RoleDashboardShell
       className="app-shell"
-      showSessionLogout={false}
-      hideSidebar
       roleCode="R01"
       roleLabel="مسؤول الأكاديمية"
       scopeLevel="tenant"
       scopeLabel={branchLabel}
       tenantName="أكاديمية مدى"
       branchName={branchLabel}
+      mobileOpen={mobileNavOpen}
+      onCloseMobile={() => setMobileNavOpen(false)}
     >
-      <R01AcademySidebar activePath={location} mobileOpen={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
-
       <main className="main-panel academy-owner-main">
         <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel={branchLabel} />
         <div className="workspace academy-owner-content">

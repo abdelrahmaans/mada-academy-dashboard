@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
-import R01AcademySidebar from "@/components/R01AcademySidebar";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { apiClient, type AcademyAuditEventItem } from "@/lib/apiClient";
 import { toast } from "sonner";
@@ -121,8 +120,6 @@ export default function AcademyAuditTrail() {
   return (
     <RoleDashboardShell
       className="app-shell"
-      showSessionLogout={false}
-      hideSidebar
       roleCode="R01"
       roleLabel="مسؤول الأكاديمية"
       scopeLevel="tenant"
@@ -130,12 +127,9 @@ export default function AcademyAuditTrail() {
       tenantName="الأكاديمية الحالية"
       branchName="الإدارة العامة"
       demo={false}
+      mobileOpen={mobileNavOpen}
+      onCloseMobile={() => setMobileNavOpen(false)}
     >
-      <R01AcademySidebar
-        activePath="/academy/audit-trail"
-        mobileOpen={mobileNavOpen}
-        onClose={() => setMobileNavOpen(false)}
-      />
       <main className="main-panel">
         <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel="سجل الحوكمة والتدقيق" />
         <div className="workspace academy-audit-page" dir="rtl">

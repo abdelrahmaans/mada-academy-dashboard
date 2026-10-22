@@ -24,8 +24,6 @@ import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
-import BranchManagerSidebar from "@/components/BranchManagerSidebar";
-import R01AcademySidebar from "@/components/R01AcademySidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import type { RoleCode } from "@/lib/roleNavigation";
 import {

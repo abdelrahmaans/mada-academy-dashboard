@@ -24,7 +24,6 @@ import {
 import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
-import R01AcademySidebar from "@/components/R01AcademySidebar";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -475,21 +474,15 @@ export default function AcademyRoles() {
   return (
     <RoleDashboardShell
       className="app-shell academy-roles-shell"
-      showSessionLogout={false}
-      hideSidebar
       roleCode="R01"
       roleLabel="مسؤول الأكاديمية"
       scopeLevel="tenant"
       scopeLabel="كل فروع الأكاديمية"
       tenantName={me?.academy?.name ?? "الأكاديمية"}
       demo={false}
+      mobileOpen={mobileNavOpen}
+      onCloseMobile={() => setMobileNavOpen(false)}
     >
-      <R01AcademySidebar
-        activePath="/academy/roles"
-        mobileOpen={mobileNavOpen}
-        onClose={() => setMobileNavOpen(false)}
-      />
-
       <main className="main-panel academy-roles-page" dir="rtl">
         <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel="كل فروع الأكاديمية" />
 

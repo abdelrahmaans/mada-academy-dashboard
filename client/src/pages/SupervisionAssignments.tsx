@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { BookOpen, CheckCircle2, Eye, RefreshCw, ShieldCheck, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
-import BranchManagerSidebar from "@/components/BranchManagerSidebar";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { apiClient, type AcademyMember, type BranchSupervisionGroup } from "@/lib/apiClient";
@@ -49,7 +48,7 @@ export default function SupervisionAssignments() {
     catch (cause) { toast.error(cause instanceof Error ? cause.message : "تعذر سحب الصلاحية."); }
   };
 
-  return <RoleDashboardShell className="app-shell supervision-assignments-shell" roleCode="R02" roleLabel="مدير الفرع" scopeLevel="branch" scopeLabel="فرع واحد" demo={false}>
+  return <RoleDashboardShell className="app-shell supervision-assignments-shell" roleCode="R02" roleLabel="مدير الفرع" scopeLevel="branch" scopeLabel="فرع واحد" demo={false} mobileOpen={mobileOpen} onCloseMobile={() => setMobileOpen(false)}>
     <main className="main-panel" dir="rtl"><RoleSurfaceTopbar onMenu={() => setMobileOpen(true)} scopeLabel="نطاق الفرع" roleLabel="مدير الفرع" />
       <div className="workspace supervision-assignments-page">
         <header className="supervision-heading"><div><span className="supervision-kicker"><ShieldCheck size={15} /> صلاحيات المتابعة</span><h1>إدارة متابعة المجموعات</h1><p>عيّن المدرب أو مشرف المدربين لمتابعة مجموعات محددة داخل فرعك فقط.</p></div><button className="button button-secondary" onClick={() => void load()} disabled={loading}><RefreshCw size={15} /> تحديث</button></header>
