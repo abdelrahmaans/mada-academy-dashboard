@@ -1,21 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Building2,
-  Check,
   CheckCircle2,
-  Info,
   KeyRound,
   LoaderCircle,
-  Plus,
-  RotateCcw,
-  Search,
   ShieldCheck,
   SlidersHorizontal,
-  UserCheck,
-  UserMinus,
   UserPlus,
   Users,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
@@ -30,17 +22,23 @@ import {
   type PermissionDetail,
 } from "@/lib/apiClient";
 import "./AcademyRoles.css";
-
-const roleLabel = (roles: AcademyRoleDefinition[], code: string) =>
-  roles.find((role) => role.code === code)?.label ?? code;
-
-const isBranchRole = (roles: AcademyRoleDefinition[], code: string) =>
-  roles.find((role) => role.code === code)?.scopeLevel === "BRANCH";
+import {
+  Metric,
+  isBranchRole,
+  type NewMemberForm,
+  type RoleTab,
+} from "./AcademyRolesTypes";
+import {
+  AddMemberModal,
+  CustomizeMemberModal,
+} from "@/components/roles/AcademyRolesModals";
+import { AcademyRolesMembersTab } from "@/components/roles/AcademyRolesMembersTab";
+import { AcademyRolesMatrixTab } from "@/components/roles/AcademyRolesMatrixTab";
 
 export default function AcademyRoles() {
   const { me } = useAuth();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"members" | "matrix">("members");
+  const [activeTab, setActiveTab] = useState<RoleTab>("members");
 
   const [roles, setRoles] = useState<AcademyRoleDefinition[]>([]);
   const [permissionDetails, setPermissionDetails] = useState<PermissionDetail[]>([]);
@@ -69,7 +67,7 @@ export default function AcademyRoles() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [newMember, setNewMember] = useState({
+  const [newMember, setNewMember] = useState<NewMemberForm>({
     fullName: "",
     email: "",
     phone: "",
@@ -261,9 +259,9 @@ export default function AcademyRoles() {
             : m
         )
       );
-      toast.success(`تمت استعادة الصلاحيات الافتراضية لدور "${activeRoleDefinition.label}"`);
+      toast.success(`تمت استعادة الصلاحيات القياسية لدور "${activeRoleDefinition.label}"`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "تعذر استعادة الافتراضي.");
+      toast.error(err instanceof Error ? err.message : "تعذر استعادة صلاحيات الدور.");
     } finally {
       setSaving(false);
     }
@@ -495,6 +493,7 @@ export default function AcademyRoles() {
             actions={
               <div className="academy-header-actions">
                 <button
+                  type="button"
                   className="academy-roles-add-button"
                   onClick={() => setShowAddModal(true)}
                 >
@@ -514,7 +513,7 @@ export default function AcademyRoles() {
           {error && (
             <div className="academy-roles-error">
               <span>{error}</span>
-              <button onClick={() => void loadData(true)}>إعادة المحاولة</button>
+              <button type="button" onClick={() => void loadData(true)}>إعادة المحاولة</button>
             </div>
           )}
 
@@ -540,6 +539,7 @@ export default function AcademyRoles() {
               {/* Navigation Tabs */}
               <div className="academy-roles-tabs">
                 <button
+                  type="button"
                   className={`academy-tab-btn ${activeTab === "members" ? "active" : ""}`}
                   onClick={() => setActiveTab("members")}
                 >
@@ -548,6 +548,7 @@ export default function AcademyRoles() {
                   <span className="tab-badge">{members.length}</span>
                 </button>
                 <button
+                  type="button"
                   className={`academy-tab-btn ${activeTab === "matrix" ? "active" : ""}`}
                   onClick={() => setActiveTab("matrix")}
                 >
@@ -559,383 +560,49 @@ export default function AcademyRoles() {
 
               {/* TAB 1: MEMBERS MANAGEMENT */}
               {activeTab === "members" && (
-                <div className="academy-roles-grid">
-                  {/* Members Column */}
-                  <section className="academy-roles-panel academy-roles-members">
-                    <PanelTitle
-                      icon={<Users size={17} />}
-                      title="أعضاء الأكاديمية"
-                      note={`${filteredMembers.length} من أصل ${members.length}`}
-                    />
-
-                    {/* Filters Toolbar */}
-                    <div className="academy-members-filterbar">
-                      <div className="filter-search-box">
-                        <Search size={15} />
-                        <input
-                          type="text"
-                          placeholder="بحث بالاسم أو البريد أو الهاتف…"
-                          value={memberSearch}
-                          onChange={(e) => setMemberSearch(e.target.value)}
-                        />
-                        {memberSearch && (
-                          <button className="clear-btn" onClick={() => setMemberSearch("")}>
-                            <X size={13} />
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="filter-selects-row">
-                        <select
-                          value={memberBranchFilter}
-                          onChange={(e) => setMemberBranchFilter(e.target.value)}
-                        >
-                          <option value="">جميع الفروع</option>
-                          {branches.map((b) => (
-                            <option key={b.id} value={b.id}>
-                              {b.name}
-                            </option>
-                          ))}
-                        </select>
-
-                        <select
-                          value={memberStatusFilter}
-                          onChange={(e) =>
-                            setMemberStatusFilter(e.target.value as "ALL" | "ACTIVE" | "SUSPENDED")
-                          }
-                        >
-                          <option value="ALL">جميع الحالات</option>
-                          <option value="ACTIVE">النشط فقط</option>
-                          <option value="SUSPENDED">الموقوف فقط</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    {filteredMembers.length === 0 ? (
-                      <Empty text="لا يوجد أعضاء يطابقون شروط البحث الحالية." />
-                    ) : (
-                      <div className="academy-member-list">
-                        {filteredMembers.map((member) => (
-                          <article
-                            key={member.membershipId}
-                            className={`academy-member ${selectedMemberId === member.membershipId ? "selected" : ""}`}
-                            onClick={() => {
-                              setSelectedMemberId(member.membershipId);
-                              setSelectedRoleCode(member.roleCode);
-                            }}
-                          >
-                            <span className="academy-member-avatar">
-                              {(member.name ?? "؟").slice(0, 1)}
-                            </span>
-                            <div className="academy-member-copy">
-                              <div className="member-name-row">
-                                <strong>{member.name ?? "بدون اسم"}</strong>
-                                {member.hasCustomPermissions && (
-                                  <span className="custom-perm-tag" title="لديه صلاحيات مخصصة فرديًا">
-                                    مخصص فرديًا
-                                  </span>
-                                )}
-                              </div>
-                              <small>
-                                <bdi dir="ltr">{member.email}</bdi> · {member.branch?.name ?? "نطاق الأكاديمية"}
-                              </small>
-                            </div>
-                            <span
-                              className={`academy-member-status ${member.membershipStatus.toLowerCase()}`}
-                            >
-                              {member.membershipStatus === "ACTIVE"
-                                ? "نشط"
-                                : member.membershipStatus === "SUSPENDED"
-                                ? "موقوف"
-                                : member.membershipStatus}
-                            </span>
-                            <span className="academy-member-role">
-                              {roleLabel(roles, member.roleCode)}
-                            </span>
-                          </article>
-                        ))}
-                      </div>
-                    )}
-                  </section>
-
-                  {/* Selected Member Detail */}
-                  <aside className="academy-roles-panel academy-role-detail">
-                    <PanelTitle
-                      icon={<KeyRound size={17} />}
-                      title="ملف العضو والصلاحيات"
-                      note={selectedMemberRecord?.name ?? "اختر عضوًا للمعاينة"}
-                    />
-
-                    {selectedMemberRecord ? (
-                      <div className="member-detail-container">
-                        <div className="academy-role-detail-user">
-                          <span className="academy-member-avatar large">
-                            {(selectedMemberRecord.name ?? "؟").slice(0, 1)}
-                          </span>
-                          <div>
-                            <strong>{selectedMemberRecord.name}</strong>
-                            <p className="user-contact">
-                              <bdi dir="ltr">{selectedMemberRecord.email}</bdi> ·{" "}
-                              <bdi dir="ltr">{selectedMemberRecord.phone}</bdi>
-                            </p>
-                            <small>
-                              {roleLabel(roles, selectedMemberRecord.roleCode)} ·{" "}
-                              {selectedMemberRecord.scopeLevel === "BRANCH"
-                                ? selectedMemberRecord.branch?.name ?? "فرع غير محدد"
-                                : "كل فروع الأكاديمية"}
-                            </small>
-                          </div>
-                        </div>
-
-                        {/* Controls */}
-                        <div className="member-quick-controls">
-                          <label className="academy-role-select">
-                            <span>الدور الوظيفي</span>
-                            <select
-                              value={selectedMemberRecord.roleCode}
-                              onChange={(e) => void changeRole(selectedMemberRecord, e.target.value)}
-                              disabled={saving || selectedMemberRecord.userId === me?.id}
-                            >
-                              {roles
-                                .filter((r) => r.assignableByAcademyOwner)
-                                .map((r) => (
-                                  <option key={r.code} value={r.code}>
-                                    {r.label}
-                                  </option>
-                                ))}
-                            </select>
-                          </label>
-
-                          {isBranchRole(roles, selectedMemberRecord.roleCode) && (
-                            <label className="academy-role-select">
-                              <span>الفرع المرتبط</span>
-                              <select
-                                value={selectedMemberRecord.branch?.id ?? ""}
-                                onChange={(e) =>
-                                  void changeMemberBranch(selectedMemberRecord, e.target.value)
-                                }
-                                disabled={saving || selectedMemberRecord.userId === me?.id}
-                              >
-                                <option value="">اختر الفرع</option>
-                                {branches.map((b) => (
-                                  <option key={b.id} value={b.id}>
-                                    {b.name} ({b.code})
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                          )}
-                        </div>
-
-                        {/* Custom Permissions Status Callout */}
-                        <div className="member-perms-status-card">
-                          <div className="status-header">
-                            <div>
-                              <h4>صلاحيات المستخدم الحالية</h4>
-                              <p>
-                                {selectedMemberRecord.hasCustomPermissions ? (
-                                  <span className="text-warning">
-                                    لديه مصفوفة صلاحيات مخصصة فرديًا تختلف عن دور {roleLabel(roles, selectedMemberRecord.roleCode)}.
-                                  </span>
-                                ) : (
-                                  <span className="text-muted">
-                                    يتبع الصلاحيات القياسية لدور {roleLabel(roles, selectedMemberRecord.roleCode)}.
-                                  </span>
-                                )}
-                              </p>
-                            </div>
-                            <div className="status-actions">
-                              {selectedMemberRecord.userId !== me?.id && (
-                                <button
-                                  className="btn-custom-perm"
-                                  onClick={() => openMemberCustomization(selectedMemberRecord)}
-                                  disabled={saving}
-                                >
-                                  <SlidersHorizontal size={14} /> تخصيص فردي
-                                </button>
-                              )}
-                              {selectedMemberRecord.hasCustomPermissions && selectedMemberRecord.userId !== me?.id && (
-                                <button
-                                  className="btn-reset-member-perm"
-                                  onClick={() => void resetMemberPermissions(selectedMemberRecord)}
-                                  disabled={saving}
-                                  title="إلغاء التخصيص والعودة لافتراضي الدور"
-                                >
-                                  <RotateCcw size={14} /> استعادة الدور
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="academy-permission-chips">
-                            {(
-                              selectedMemberRecord.effectivePermissions ??
-                              roles.find((r) => r.code === selectedMemberRecord.roleCode)?.permissions ??
-                              []
-                            ).map((perm) => (
-                              <span key={perm} className="perm-chip">
-                                {perm}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Suspension / Activation Control */}
-                        {selectedMemberRecord.userId !== me?.id && (
-                          <div className="member-danger-zone">
-                            <button
-                              className={`academy-member-status-button ${
-                                selectedMemberRecord.membershipStatus === "ACTIVE"
-                                  ? "btn-suspend"
-                                  : "btn-activate"
-                              }`}
-                              onClick={() => void changeStatus(selectedMemberRecord)}
-                              disabled={saving}
-                            >
-                              {selectedMemberRecord.membershipStatus === "ACTIVE" ? (
-                                <>
-                                  <UserMinus size={15} /> إيقاف الحساب وسحب الجلسات فورًا
-                                </>
-                              ) : (
-                                <>
-                                  <UserCheck size={15} /> إعادة تفعيل الحساب
-                                </>
-                              )}
-                            </button>
-                            <small className="suspend-note">
-                              {selectedMemberRecord.membershipStatus === "ACTIVE"
-                                ? "سيؤدي الإيقاف إلى منع الدخول فورًا وإلغاء صلاحيات الـBearer Token."
-                                : "سيمكن للعضو تسجيل الدخول بعد إعادة التفعيل."}
-                            </small>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <Empty text="اختر عضوًا من القائمة لمراجعة بياناته أو تعديل صلاحياته." />
-                    )}
-                  </aside>
-                </div>
+                <AcademyRolesMembersTab
+                  filteredMembers={filteredMembers}
+                  members={members}
+                  roles={roles}
+                  branches={branches}
+                  selectedMemberId={selectedMemberId}
+                  selectedMemberRecord={selectedMemberRecord}
+                  memberSearch={memberSearch}
+                  setMemberSearch={setMemberSearch}
+                  memberBranchFilter={memberBranchFilter}
+                  setMemberBranchFilter={setMemberBranchFilter}
+                  memberStatusFilter={memberStatusFilter}
+                  setMemberStatusFilter={setMemberStatusFilter}
+                  onSelectMember={(id, roleCode) => {
+                    setSelectedMemberId(id);
+                    setSelectedRoleCode(roleCode);
+                  }}
+                  onChangeRole={changeRole}
+                  onChangeMemberBranch={changeMemberBranch}
+                  onOpenCustomization={openMemberCustomization}
+                  onResetMemberPermissions={resetMemberPermissions}
+                  onChangeStatus={changeStatus}
+                  saving={saving}
+                  currentUserId={me?.id}
+                />
               )}
 
               {/* TAB 2: ROLE PERMISSIONS MATRIX */}
               {activeTab === "matrix" && (
-                <div className="academy-matrix-layout">
-                  {/* Role Selector Cards Row */}
-                  <div className="role-selector-ribbon">
-                    {roles
-                      .filter((r) => r.assignableByAcademyOwner)
-                      .map((role) => {
-                        const isSelected = selectedRoleCode === role.code;
-                        const draftCount = (roleDrafts[role.code] ?? role.permissions).length;
-                        return (
-                          <button
-                            key={role.code}
-                            className={`role-ribbon-card ${isSelected ? "selected" : ""}`}
-                            onClick={() => setSelectedRoleCode(role.code)}
-                          >
-                            <div className="ribbon-card-header">
-                              <strong>{role.label}</strong>
-                              {role.isCustomized ? (
-                                <span className="custom-badge">مخصص</span>
-                              ) : (
-                                <span className="default-badge">افتراضي</span>
-                              )}
-                            </div>
-                            <small>{role.scopeLevel === "BRANCH" ? "نطاق فرع" : "نطاق أكاديمية"}</small>
-                            <div className="ribbon-card-footer">
-                              <span>{draftCount} صلاحية نشطة</span>
-                            </div>
-                          </button>
-                        );
-                      })}
-                  </div>
-
-                  {/* Active Role Control Bar */}
-                  {activeRoleDefinition && (
-                    <div className="role-matrix-banner">
-                      <div className="banner-info">
-                        <h3>
-                          تخصيص صلاحيات دور: <span>{activeRoleDefinition.label}</span>
-                        </h3>
-                        <p>{activeRoleDefinition.description}</p>
-                      </div>
-
-                      <div className="banner-actions">
-                        {activeRoleDefinition.isCustomized && (
-                          <button
-                            className="btn-outline-reset"
-                            onClick={() => void resetRolePermissions()}
-                            disabled={saving}
-                          >
-                            <RotateCcw size={14} /> استعادة الافتراضي للنظام
-                          </button>
-                        )}
-                        <button
-                          className={`btn-primary-save ${hasRoleChanges ? "highlight" : ""}`}
-                          onClick={() => void saveRolePermissions()}
-                          disabled={saving || !hasRoleChanges}
-                        >
-                          {saving ? <LoaderCircle className="spin" size={15} /> : <Check size={15} />}
-                          {hasRoleChanges ? "حفظ التعديلات على الدور" : "الصلاحيات محفوظة"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Categorized Permissions Checkbox Grid */}
-                  <div className="matrix-categories-grid">
-                    {categorizedPermissions.map(({ category, items }) => {
-                      const currentDraft = roleDrafts[selectedRoleCode] ?? [];
-                      const selectedCount = items.filter((i) => currentDraft.includes(i.code)).length;
-                      const allSelected = selectedCount === items.length;
-
-                      return (
-                        <div key={category} className="category-matrix-card">
-                          <header className="category-card-header">
-                            <div>
-                              <h4>{category}</h4>
-                              <small>
-                                {selectedCount} من {items.length} مفعلة
-                              </small>
-                            </div>
-                            <button
-                              type="button"
-                              className="category-toggle-all"
-                              onClick={() => toggleCategoryPermissions(items)}
-                            >
-                              {allSelected ? "إلغاء التحديد" : "تحديد الكل"}
-                            </button>
-                          </header>
-
-                          <div className="permission-items-list">
-                            {items.map((perm) => {
-                              const checked = currentDraft.includes(perm.code);
-                              return (
-                                <label
-                                  key={perm.code}
-                                  className={`permission-item-row ${checked ? "checked" : ""}`}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={checked}
-                                    onChange={() => toggleRolePermission(perm.code)}
-                                  />
-                                  <div className="perm-item-copy">
-                                    <div className="perm-label-code">
-                                      <strong>{perm.label}</strong>
-                                      <code>{perm.code}</code>
-                                    </div>
-                                    <small>{perm.description}</small>
-                                  </div>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                <AcademyRolesMatrixTab
+                  roles={roles}
+                  selectedRoleCode={selectedRoleCode}
+                  setSelectedRoleCode={setSelectedRoleCode}
+                  roleDrafts={roleDrafts}
+                  activeRoleDefinition={activeRoleDefinition}
+                  hasRoleChanges={hasRoleChanges}
+                  saving={saving}
+                  categorizedPermissions={categorizedPermissions}
+                  onToggleRolePermission={toggleRolePermission}
+                  onToggleCategoryPermissions={toggleCategoryPermissions}
+                  onSaveRolePermissions={() => void saveRolePermissions()}
+                  onResetRolePermissions={() => void resetRolePermissions()}
+                />
               )}
             </>
           )}
@@ -943,249 +610,28 @@ export default function AcademyRoles() {
       </main>
 
       {/* MODAL 1: ADD NEW MEMBER */}
-      {showAddModal && (
-        <div className="academy-add-overlay">
-          <form className="academy-add-modal" onSubmit={addMember}>
-            <header>
-              <div>
-                <span><UserPlus size={18} /></span>
-                <h2>إضافة عضو جديد للفريق</h2>
-              </div>
-              <button type="button" onClick={() => setShowAddModal(false)}>
-                <X size={18} />
-              </button>
-            </header>
-            <p>سيتمكن الموظف أو المدرب من الدخول برقم هاتفه وكلمة المرور فور الحفظ.</p>
-
-            <label>
-              الاسم الكامل
-              <input
-                required
-                value={newMember.fullName}
-                onChange={(e) => setNewMember({ ...newMember, fullName: e.target.value })}
-                placeholder="مثال: أحمد مصطفى"
-              />
-            </label>
-
-            <label>
-              البريد الإلكتروني
-              <input
-                dir="ltr"
-                type="email"
-                required
-                value={newMember.email}
-                onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
-                placeholder="user@example.com"
-              />
-            </label>
-
-            <label>
-              رقم الهاتف
-              <input
-                dir="ltr"
-                type="tel"
-                required
-                value={newMember.phone}
-                onChange={(e) => setNewMember({ ...newMember, phone: e.target.value })}
-                placeholder="010XXXXXXXX"
-              />
-            </label>
-
-            <label>
-              كلمة المرور المؤقتة
-              <input
-                dir="ltr"
-                type="password"
-                minLength={8}
-                required
-                value={newMember.password}
-                onChange={(e) => setNewMember({ ...newMember, password: e.target.value })}
-                placeholder="8 أحرف أو أرقام على الأقل"
-              />
-            </label>
-
-            <label>
-              الدور الوظيفي
-              <select
-                value={newMember.roleCode}
-                onChange={(e) => setNewMember({ ...newMember, roleCode: e.target.value })}
-              >
-                {roles
-                  .filter((r) => r.assignableByAcademyOwner)
-                  .map((r) => (
-                    <option key={r.code} value={r.code}>
-                      {r.label} ({r.code})
-                    </option>
-                  ))}
-              </select>
-            </label>
-
-            {isBranchRole(roles, newMember.roleCode) && (
-              <label>
-                الفرع التابع له
-                <select
-                  required
-                  value={newMember.branchId}
-                  onChange={(e) => setNewMember({ ...newMember, branchId: e.target.value })}
-                >
-                  <option value="">اختر الفرع</option>
-                  {branches.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name} ({b.code})
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-
-            <footer>
-              <button type="button" onClick={() => setShowAddModal(false)}>
-                إلغاء
-              </button>
-              <button className="primary" type="submit" disabled={saving}>
-                {saving ? <LoaderCircle className="spin" size={15} /> : <Plus size={15} />}
-                إضافة العضو وتفعيل الحساب
-              </button>
-            </footer>
-          </form>
-        </div>
-      )}
+      <AddMemberModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        newMember={newMember}
+        setNewMember={setNewMember}
+        onSubmit={addMember}
+        roles={roles}
+        branches={branches}
+        saving={saving}
+      />
 
       {/* MODAL 2: CUSTOMIZE INDIVIDUAL MEMBER PERMISSIONS */}
-      {customizingMember && (
-        <div className="academy-add-overlay">
-          <div className="academy-member-perm-modal">
-            <header>
-              <div>
-                <span><SlidersHorizontal size={18} /></span>
-                <div>
-                  <h2>تخصيص صلاحيات: {customizingMember.name}</h2>
-                  <small>
-                    الدور الحالي: {roleLabel(roles, customizingMember.roleCode)} · {customizingMember.email}
-                  </small>
-                </div>
-              </div>
-              <button type="button" onClick={() => setCustomizingMember(null)}>
-                <X size={18} />
-              </button>
-            </header>
-
-            <div className="modal-scroll-content">
-              <div className="modal-info-alert">
-                <Info size={16} />
-                <span>
-                  هذه الصلاحيات ستكون خاصة بهذا المستخدم فقط، وستتجاوز الصلاحيات الافتراضية لدوره.
-                </span>
-              </div>
-
-              <div className="matrix-categories-grid">
-                {categorizedPermissions.map(({ category, items }) => {
-                  return (
-                    <div key={category} className="category-matrix-card">
-                      <header className="category-card-header">
-                        <h4>{category}</h4>
-                        <small>
-                          {items.filter((i) => memberDraftPermissions.includes(i.code)).length} من{" "}
-                          {items.length}
-                        </small>
-                      </header>
-
-                      <div className="permission-items-list">
-                        {items.map((perm) => {
-                          const checked = memberDraftPermissions.includes(perm.code);
-                          return (
-                            <label
-                              key={perm.code}
-                              className={`permission-item-row ${checked ? "checked" : ""}`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => toggleMemberPermission(perm.code)}
-                              />
-                              <div className="perm-item-copy">
-                                <div className="perm-label-code">
-                                  <strong>{perm.label}</strong>
-                                  <code>{perm.code}</code>
-                                </div>
-                                <small>{perm.description}</small>
-                              </div>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <footer>
-              <button type="button" onClick={() => setCustomizingMember(null)}>
-                إلغاء
-              </button>
-              <button
-                className="primary"
-                type="button"
-                onClick={() => void saveMemberPermissions()}
-                disabled={saving}
-              >
-                {saving ? <LoaderCircle className="spin" size={15} /> : <Check size={15} />}
-                حفظ الصلاحيات الفردية
-              </button>
-            </footer>
-          </div>
-        </div>
-      )}
+      <CustomizeMemberModal
+        member={customizingMember}
+        onClose={() => setCustomizingMember(null)}
+        roles={roles}
+        categorizedPermissions={categorizedPermissions}
+        memberDraftPermissions={memberDraftPermissions}
+        onTogglePermission={toggleMemberPermission}
+        onSave={() => void saveMemberPermissions()}
+        saving={saving}
+      />
     </RoleDashboardShell>
-  );
-}
-
-function PanelTitle({
-  icon,
-  title,
-  note,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  note: string;
-}) {
-  return (
-    <div className="academy-roles-panel-title">
-      <div>
-        <span>{icon}</span>
-        <h2>{title}</h2>
-      </div>
-      <small>{note}</small>
-    </div>
-  );
-}
-
-function Metric({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-}) {
-  return (
-    <div className="academy-role-metric">
-      <span>{icon}</span>
-      <div>
-        <strong>{value}</strong>
-        <small>{label}</small>
-      </div>
-    </div>
-  );
-}
-
-function Empty({ text }: { text: string }) {
-  return (
-    <div className="academy-roles-empty">
-      <Users size={22} />
-      <span>{text}</span>
-    </div>
   );
 }
