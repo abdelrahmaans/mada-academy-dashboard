@@ -1,22 +1,9 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import {
-  Activity,
-  ArrowDownToLine,
-  ArrowUpLeft,
-  Bell,
-  BookOpen,
-  CalendarCheck,
-  CheckCircle2,
-  ChevronDown,
-  ChevronLeft,
-  MapPin,
-  Menu,
-  Plus,
-  Search,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { Activity } from "lucide-react";
 import { useLocation } from "wouter";
+import { ClassesTopbar } from "@/components/classes/ClassesTopbar";
+import { ClassesHeader } from "@/components/classes/ClassesHeader";
+import { ClassesStatsCards } from "@/components/classes/ClassesStatsCards";
 import {
   apiClient,
   waitlistStorage,
@@ -600,204 +587,40 @@ function ClassesPage() {
       onCloseMobile={() => setMobileNavOpen(false)}
     >
       <main className="main-panel">
-        <header className="topbar">
-          <div className="topbar-right">
-            <button
-              className="icon-button mobile-menu-button"
-              aria-label="فتح القائمة"
-              onClick={() => setMobileNavOpen(true)}
-            >
-              <Menu size={21} />
-            </button>
-            <div className="branch-select-wrap">
-              <button
-                className={`branch-select ${branchMenuOpen ? "is-open" : ""}`}
-                aria-expanded={branchMenuOpen}
-                onClick={() => setBranchMenuOpen(open => !open)}
-              >
-                <span className="branch-icon">
-                  <MapPin size={17} />
-                </span>
-                <span>
-                  {branchFilter === "كل الفروع"
-                    ? "كل الفروع"
-                    : `فرع ${branchFilter}`}
-                </span>
-                <ChevronDown size={15} />
-              </button>
-              {branchMenuOpen && (
-                <div className="branch-menu">
-                  {(liveMode
-                    ? ["كل الفروع", ...liveBranchNames]
-                    : branches
-                  ).map(branch => (
-                    <button
-                      key={branch}
-                      className={branchFilter === branch ? "selected" : ""}
-                      onClick={() => {
-                        setBranchFilter(branch);
-                        setBranchMenuOpen(false);
-                      }}
-                    >
-                      {branch === "كل الفروع" ? (
-                        <Users size={15} />
-                      ) : (
-                        <MapPin size={15} />
-                      )}
-                      {branch}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <label className="top-search">
-              <Search size={18} />
-              <input
-                aria-label="ابحث عن كورس أو مدرب"
-                placeholder="ابحث عن كورس أو مدرب..."
-                value={search}
-                onChange={event => setSearch(event.target.value)}
-              />
-              <kbd>⌘ K</kbd>
-            </label>
-          </div>
-          <div className="topbar-left">
-            <button
-              className="icon-button notification-button"
-              aria-label="الإشعارات"
-              onClick={() => toast("لا توجد إشعارات جديدة")}
-            >
-              <span className="notification-dot" />
-              <Bell size={18} />
-            </button>
-            <span className="topbar-divider" />
-            <button
-              className="profile-button"
-              onClick={() => toast("إعدادات الحساب قيد التجهيز")}
-            >
-              <span className="profile-copy">
-                <strong>{me?.user?.displayName?.trim() || "أحمد محمود"}</strong>
-                <small>{me?.roleLabel || (liveMode ? "مدير الفرع" : "مدير الفرع")}</small>
-              </span>
-              <span className="profile-avatar">{me?.user?.displayName ? me.user.displayName.trim().slice(0, 2) : "أم"}</span>
-              <ChevronDown size={14} />
-            </button>
-          </div>
-        </header>
+        <ClassesTopbar
+          onOpenMobileNav={() => setMobileNavOpen(true)}
+          branchFilter={branchFilter}
+          branchMenuOpen={branchMenuOpen}
+          setBranchMenuOpen={setBranchMenuOpen}
+          onSelectBranch={setBranchFilter}
+          liveMode={liveMode}
+          branches={branches}
+          liveBranchNames={liveBranchNames}
+          search={search}
+          onSearchChange={setSearch}
+          userDisplayName={me?.user?.displayName}
+          roleLabel={me?.roleLabel}
+        />
 
         <div className="workspace classes-workspace">
-          <div className="students-breadcrumb">
-            <button onClick={() => setLocation("/")}>الرئيسية</button>
-            <ChevronLeft size={13} />
-            <span>الحصص والكورسات</span>
-          </div>
-          <section className="students-welcome classes-welcome">
-            <div>
-              <div className="eyebrow">
-                <span className="eyebrow-dot" /> المسارات التعليمية · إدارة
-                الجداول
-              </div>
-              <h1>الحصص والكورسات</h1>
-              <p>نظّم محتوى الكورسات، المجموعات، وجداول حصص الفروع.</p>
-            </div>
-            <div className="welcome-actions">
-              <button
-                className="button button-secondary"
-                onClick={() =>
-                  toast("تنزيل التقرير سيتاح عند ربط البيانات الفعلية")
-                }
-              >
-                <ArrowDownToLine size={17} /> تصدير
-              </button>
-              <button
-                className="button button-primary"
-                onClick={() =>
-                  tab === "courses"
-                    ? setCourseModalOpen(true)
-                    : setOfferingModalOpen(true)
-                }
-              >
-                <Plus size={18} />
-                {tab === "courses" ? "إضافة كورس" : "إضافة مجموعة"}
-              </button>
-            </div>
-          </section>
-          <div className="students-demo-note" role="status">
-            <strong>
-              {liveMode ? "بيانات الأكاديمية الحية" : "DEMO · بيانات توضيحية"}
-            </strong>
-            <span>
-              {liveMode
-                ? "الكورسات والمجموعات تُقرأ من الـAPI؛ إنشاء القوالب والمجموعات يُحفظ على الخادم."
-                : "الإضافات في هذه الصفحة محلية للعرض التجريبي فقط."}
-            </span>
-          </div>
-          {loadError && (
-            <div className="students-demo-note" role="alert">
-              <strong>تعذر تحميل بيانات الأكاديمية</strong>
-              <span>{loadError}</span>
-            </div>
-          )}
+          <ClassesHeader
+            onNavigateHome={() => setLocation("/")}
+            tab={tab}
+            onOpenCourseModal={() => setCourseModalOpen(true)}
+            onOpenOfferingModal={() => setOfferingModalOpen(true)}
+            liveMode={liveMode}
+            loadError={loadError}
+          />
 
-          <section
-            className="course-stats-grid"
-            aria-label="ملخص الكورسات والمجموعات"
-          >
-            <article className="course-stat">
-              <span className="course-stat-icon icon-teal">
-                <BookOpen size={18} />
-              </span>
-              <span className="course-stat-label">قوالب كورسات نشطة</span>
-              <div>
-                <strong>{loading ? "..." : String(activeCourses).padStart(2, "0")}</strong>
-                <span>من {courses.length} كورسات</span>
-              </div>
-              <small>
-                <CheckCircle2 size={13} /> قابلة للتسجيل
-              </small>
-            </article>
-            <article className="course-stat">
-              <span className="course-stat-icon icon-blue">
-                <CalendarCheck size={18} />
-              </span>
-              <span className="course-stat-label">مجموعات جارية أو قادمة</span>
-              <div>
-                <strong>{loading ? "..." : String(activeGroups).padStart(2, "0")}</strong>
-                <span>مجموعة</span>
-              </div>
-              <small className="course-neutral">في الفروع المسجلة</small>
-            </article>
-            <article className="course-stat">
-              <span className="course-stat-icon icon-violet">
-                <Users size={18} />
-              </span>
-              <span className="course-stat-label">
-                {liveMode ? "طلاب في المجموعات" : "طلاب في مجموعات العينة"}
-              </span>
-              <div>
-                <strong>{loading ? "..." : String(enrolledTotal).padStart(2, "0")}</strong>
-                <span>طالب</span>
-              </div>
-              <small className="course-neutral">
-                {liveMode ? "إجمالي المسجلين بالخادم" : "مجموع بيانات تجريبية"}
-              </small>
-            </article>
-            <article className="course-stat">
-              <span className="course-stat-icon icon-amber">
-                <Sparkles size={18} />
-              </span>
-              <span className="course-stat-label">
-                {liveMode ? "أماكن متاحة" : "أماكن متاحة في العينة"}
-              </span>
-              <div>
-                <strong>{String(availableSeats).padStart(2, "0")}</strong>
-                <span>مقعد</span>
-              </div>
-              <small>
-                <ArrowUpLeft size={13} /> سعة المجموعات النشطة والقادمة
-              </small>
-            </article>
-          </section>
+          <ClassesStatsCards
+            loading={loading}
+            liveMode={liveMode}
+            activeCourses={activeCourses}
+            totalCourses={courses.length}
+            activeGroups={activeGroups}
+            enrolledTotal={enrolledTotal}
+            availableSeats={availableSeats}
+          />
 
           <ClassesCatalogPanel
             tab={tab}
