@@ -2,11 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CalendarCheck,
   CalendarDays,
-  Check,
-  CheckCircle2,
-  Clock3,
   RefreshCw,
-  Save,
   ShieldCheck,
   Star,
   Users,
@@ -15,6 +11,10 @@ import { LoadingState } from "@/components/FeedbackStates";
 import EvaluationReviewQueue from "@/components/EvaluationReviewQueue";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
+import { InstructorSessionsView } from "@/components/instructor/InstructorSessionsView";
+import { InstructorSupervisionView } from "@/components/instructor/InstructorSupervisionView";
+import { InstructorAttendanceView } from "@/components/instructor/InstructorAttendanceView";
+import { InstructorEvaluationsView } from "@/components/instructor/InstructorEvaluationsView";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   apiClient,
@@ -23,7 +23,6 @@ import {
   type SessionEvaluationRecord,
   type SessionRecord,
 } from "@/lib/apiClient";
-import { groupStatusLabel, sessionStatusLabel } from "@/lib/statusLabels";
 import "./InstructorDeskLive.css";
 
 import {
@@ -464,107 +463,25 @@ export default function InstructorDeskLive() {
           </section>
         )}
         {!loading && !error && sessions.length > 0 && view === "sessions" && (
-          <section className="r04-live-panel">
-            <div className="r04-live-panel-head">
-              <div>
-                <h2>حصصي وجلسات المتابعة</h2>
-                <p>{sessions.length} جلسة ضمن آخر 30 يومًا والقادم 60 يومًا.</p>
-              </div>
-            </div>
-            <div className="r04-live-session-list">
-              {sessions.map(session => (
-                <button
-                  type="button"
-                  className={`r04-live-session ${session.id === selectedSessionId ? "selected" : ""}`}
-                  key={session.id}
-                  onClick={() => setSelectedSessionId(session.id)}
-                >
-                  <span className="r04-live-session-icon">
-                    <CalendarCheck size={17} />
-                  </span>
-                  <span className="r04-live-session-main">
-                    <strong>
-                      {session.courseName ?? `جلسة ${session.sessionNumber}`}
-                    </strong>
-                    <small>
-                      {session.branchName ?? branch} ·{" "}
-                      {session.classroomName ?? "قاعة غير محددة"}
-                    </small>
-                    <small>
-                      {formatDate(session.startAt)} ·{" "}
-                      {formatTime(session.startAt)}–{formatTime(session.endAt)}
-                    </small>
-                    {session.instructorId !== me.id && session.substituteInstructorId !== me.id && (
-                      <small className="r04-live-supervision-label">متابعة مفوضة · قراءة فقط</small>
-                    )}
-                  </span>
-                  <span
-                    className={`r04-live-status ${session.status === "COMPLETED" ? "completed" : ""}`}
-                  >
-                    {sessionStatusLabel(session.status)}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
+          <InstructorSessionsView
+            sessions={sessions}
+            selectedSessionId={selectedSessionId}
+            onSelectSession={setSelectedSessionId}
+            branch={branch}
+            currentUserId={me?.id}
+          />
         )}
         {!loading && !error && view === "supervision" && (
-          <section className="r04-live-panel">
-            <div className="r04-live-panel-head">
-              <div>
-                <h2>الجروبات المفوض بمتابعتها</h2>
-                <p>تكليفات نشطة من مدير الفرع، داخل نطاق فرعك فقط.</p>
-              </div>
-            </div>
-            {supervisionError && (
-              <section className="r04-live-alert" role="alert">
-                <strong>تعذر تحميل تكليفات الإشراف</strong>
-                <p>{supervisionError}</p>
-                <button type="button" onClick={() => void loadSessions()}>إعادة المحاولة</button>
-              </section>
-            )}
-            {!supervisionError && supervisionGroups.length === 0 && (
-              <div className="r04-live-empty">
-                <Users size={22} />
-                <strong>لا توجد جروبات مفوض إليك بمتابعتها حاليًا.</strong>
-                <span>يظهر هنا فقط ما عيّنه مدير الفرع لحسابك.</span>
-              </div>
-            )}
-            {!supervisionError && supervisionGroups.length > 0 && (
-              <div className="r04-live-supervision-list">
-                {supervisionGroups.map(group => {
-                  const groupSessions = sessions.filter(item => item.courseOfferingId === group.groupId);
-                  return (
-                    <article className="r04-live-supervision-card" key={group.assignmentId}>
-                      <div className="r04-live-supervision-main">
-                        <strong>{group.courseName}</strong>
-                        <small>{formatDate(group.startDate)} – {formatDate(group.endDate)} · {groupStatusLabel(group.status)}</small>
-                        <div className="r04-live-supervision-permissions">
-                          {group.canReadAttendance && <span>قراءة الحضور</span>}
-                          {group.canReadEvaluations && <span>قراءة التقييمات</span>}
-                          {group.canDecideEvaluations && <span>قرار نشر/إرجاع</span>}
-                        </div>
-                      </div>
-                      {group.canReadAttendance && (
-                        <button
-                          type="button"
-                          className="r04-live-primary"
-                          disabled={groupSessions.length === 0}
-                          onClick={() => {
-                            if (!groupSessions[0]) return;
-                            setSelectedSessionId(groupSessions[0].id);
-                            setView("attendance");
-                          }}
-                        >
-                          <CalendarCheck size={14} /> عرض الحضور ({groupSessions.length})
-                        </button>
-                      )}
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </section>
+          <InstructorSupervisionView
+            supervisionGroups={supervisionGroups}
+            supervisionError={supervisionError}
+            sessions={sessions}
+            onRetry={() => void loadSessions()}
+            onViewAttendance={(sessionId) => {
+              setSelectedSessionId(sessionId);
+              setView("attendance");
+            }}
+          />
         )}
         {!loading && !error && view === "review" && canReadAssignedEvaluations && (
           <EvaluationReviewQueue />
@@ -587,7 +504,11 @@ export default function InstructorDeskLive() {
                     {formatTime(selectedSession.startAt)}–
                     {formatTime(selectedSession.endAt)}
                   </p>
-                  {!isOwnSession && <p className="r04-live-supervision-label">جروب متابعة مفوض · عرض دون تعديل</p>}
+                  {!isOwnSession && (
+                    <p className="r04-live-supervision-label">
+                      جروب متابعة مفوض · عرض دون تعديل
+                    </p>
+                  )}
                 </div>
                 <label className="r04-live-select">
                   <span>اختيار الجلسة</span>
@@ -614,7 +535,10 @@ export default function InstructorDeskLive() {
                 <section className="r04-live-alert" role="alert">
                   <strong>تعذر تحميل أو حفظ بيانات الحضور</strong>
                   <p>{attendanceError} لم يتم عرض قائمة طلاب تجريبية.</p>
-                  <button type="button" onClick={() => setAttendanceRetryKey(value => value + 1)}>
+                  <button
+                    type="button"
+                    onClick={() => setAttendanceRetryKey(value => value + 1)}
+                  >
                     إعادة المحاولة
                   </button>
                 </section>
@@ -634,284 +558,51 @@ export default function InstructorDeskLive() {
                 !attendanceError &&
                 attendanceRows.length > 0 &&
                 view === "attendance" && (
-                  <>
-                    <div className="r04-live-attendance-summary">
-                      <span>
-                        <CheckCircle2 size={15} /> حاضر: {counts.present}
-                      </span>
-                      <span>
-                        <Clock3 size={15} /> متأخر: {counts.late}
-                      </span>
-                      <span>
-                        <Users size={15} /> غائب/بعذر: {counts.absent}
-                      </span>
-                      <span className={counts.unmarked ? "needs-action" : ""}>
-                        غير مسجل: {counts.unmarked}
-                      </span>
-                    </div>
-                    <div className="r04-live-table-wrap">
-                      <table className="r04-live-table">
-                        <thead>
-                          <tr>
-                            <th>الطالب</th>
-                            <th>الحالة</th>
-                            <th>دقائق التأخير</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {attendanceRows.map(student => {
-                            const mark = attendanceDraft[student.studentId] ?? {
-                              status: "UNMARKED" as const,
-                              lateMinutes: null,
-                            };
-                            return (
-                              <tr key={student.studentId}>
-                                <td>
-                                  <strong>{student.studentName}</strong>
-                                </td>
-                                <td>
-                                  <select
-                                    aria-label={`حضور ${student.studentName}`}
-                                    value={mark.status}
-                                    disabled={
-                                      !isOwnSession ||
-                                      selectedSession.status === "COMPLETED" ||
-                                      selectedSession.status === "CANCELLED"
-                                    }
-                                    onChange={event =>
-                                      updateAttendance(
-                                        student.studentId,
-                                        event.target.value as AttendanceStatus
-                                      )
-                                    }
-                                  >
-                                    <option value="UNMARKED">لم يسجل</option>
-                                    <option value="PRESENT">حاضر</option>
-                                    <option value="LATE">متأخر</option>
-                                    <option value="ABSENT">غائب</option>
-                                    <option value="EXCUSED">بعذر</option>
-                                  </select>
-                                </td>
-                                <td>
-                                  {mark.status === "LATE" ? (
-                                    <input
-                                      aria-label={`دقائق تأخير ${student.studentName}`}
-                                      type="number"
-                                      min="1"
-                                      value={mark.lateMinutes ?? 1}
-                                      disabled={
-                                        !isOwnSession ||
-                                        selectedSession.status ===
-                                          "COMPLETED" ||
-                                        selectedSession.status === "CANCELLED"
-                                      }
-                                      onChange={event => {
-                                        setAttendanceDirty(true);
-                                        setAttendanceDraft(current => ({
-                                          ...current,
-                                          [student.studentId]: {
-                                            ...current[student.studentId],
-                                            lateMinutes: Math.max(
-                                              1,
-                                              Number(event.target.value) || 1
-                                            ),
-                                          },
-                                        }));
-                                      }}
-                                    />
-                                  ) : (
-                                    <span>—</span>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                    {isOwnSession ? (
-                      <>
-                        <div className="r04-live-actions">
-                          <button
-                            type="button"
-                            className="r04-live-primary"
-                            onClick={() => void saveAttendance()}
-                            disabled={
-                              savingAttendance ||
-                              counts.unmarked > 0 ||
-                              selectedSession.status === "COMPLETED" ||
-                              selectedSession.status === "CANCELLED"
-                            }
-                          >
-                            <Save size={14} />{" "}
-                            {savingAttendance ? "جارٍ الحفظ…" : "حفظ الحضور"}
-                          </button>
-                          <button
-                            type="button"
-                            className="r04-live-complete"
-                            onClick={() => void completeSession()}
-                            disabled={!completionAllowed || completing}
-                          >
-                            {completing ? "جارٍ الإتمام…" : "إتمام الجلسة"}
-                          </button>
-                        </div>
-                        <p className="r04-live-helper">
-                          يتاح إتمام الجلسة بعد وقت انتهائها وبعد حفظ حالة كل طالب.
-                          عند الإتمام يُقفل كشف الحضور.
-                        </p>
-                        {completionError && (
-                          <p className="r04-live-inline-error" role="alert">
-                            {completionError}
-                          </p>
-                        )}
-                      </>
-                    ) : (
-                      <p className="r04-live-supervision-note">تكليفك لهذا الجروب يتيح قراءة الحضور فقط؛ لا يمكنك تعديل الحضور أو إتمام جلسات مدرب آخر.</p>
-                    )}
-                  </>
+                  <InstructorAttendanceView
+                    selectedSession={selectedSession}
+                    isOwnSession={isOwnSession}
+                    attendanceRows={attendanceRows}
+                    attendanceDraft={attendanceDraft}
+                    counts={counts}
+                    savingAttendance={savingAttendance}
+                    completing={completing}
+                    completionAllowed={completionAllowed}
+                    completionError={completionError}
+                    onUpdateAttendance={updateAttendance}
+                    onUpdateLateMinutes={(studentId, minutes) => {
+                      setAttendanceDirty(true);
+                      setAttendanceDraft(current => ({
+                        ...current,
+                        [studentId]: {
+                          ...current[studentId],
+                          lateMinutes: minutes,
+                        },
+                      }));
+                    }}
+                    onSaveAttendance={() => void saveAttendance()}
+                    onCompleteSession={() => void completeSession()}
+                  />
                 )}
               {!attendanceLoading &&
                 !attendanceError &&
                 attendanceRows.length > 0 &&
                 view === "evaluations" &&
                 isOwnSession && (
-                  <>
-                    {evaluationLoading && (
-                      <LoadingState
-                        label="جارٍ تحميل تقييمات الطلاب…"
-                        compact
-                      />
-                    )}
-                    {evaluationError && (
-                      <section className="r04-live-alert" role="alert">
-                        <strong>تعذر تحميل التقييمات</strong>
-                        <p>{evaluationError}</p>
-                      </section>
-                    )}
-                    {!evaluationLoading && !evaluationError && (
-                      <div className="r04-live-evaluation-layout">
-                        <div className="r04-live-student-list">
-                          <h3>طلاب الجلسة</h3>
-                          {attendanceRows.map(student => {
-                            const evaluation = evaluations.find(
-                              item => item.studentId === student.studentId
-                            );
-                            return (
-                              <button
-                                type="button"
-                                key={student.studentId}
-                                className={
-                                  student.studentId === selectedStudentId
-                                    ? "selected"
-                                    : ""
-                                }
-                                onClick={() =>
-                                  setSelectedStudentId(student.studentId)
-                                }
-                              >
-                                <span>{student.studentName.slice(0, 1)}</span>
-                                <strong>{student.studentName}</strong>
-                                <small>
-                                  {evaluationLabel(evaluation?.status)}
-                                </small>
-                              </button>
-                            );
-                          })}
-                        </div>
-                        <div className="r04-live-evaluation-form">
-                          <h3>مسودة تقييم</h3>
-                          <p>
-                            تُحفظ المسودة خاصةً بالمدرب، ولا تظهر للأسرة إلا بعد
-                            مراجعة رئيس المدربين ونشرها.
-                          </p>
-                          {selectedEvaluation?.reviewNote && (
-                            <div className="r04-live-review-note">
-                              <strong>ملاحظة المراجع:</strong>{" "}
-                              {selectedEvaluation.reviewNote}
-                            </div>
-                          )}
-                          <label>
-                            النتيجة من 100
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              value={score}
-                              disabled={
-                                selectedEvaluation?.status === "SUBMITTED" ||
-                                selectedEvaluation?.status === "PUBLISHED"
-                              }
-                              onChange={event =>
-                                setScore(
-                                  event.target.value === ""
-                                    ? ""
-                                    : Math.max(
-                                        0,
-                                        Math.min(
-                                          100,
-                                          Number(event.target.value)
-                                        )
-                                      )
-                                )
-                              }
-                            />
-                          </label>
-                          <label>
-                            ملاحظة بنّاءة
-                            <textarea
-                              rows={5}
-                              value={notes}
-                              disabled={
-                                selectedEvaluation?.status === "SUBMITTED" ||
-                                selectedEvaluation?.status === "PUBLISHED"
-                              }
-                              onChange={event => setNotes(event.target.value)}
-                              placeholder="اكتب ما أتقنه الطالب والخطوة التالية المقترحة…"
-                            />
-                          </label>
-                          <div className="r04-live-eval-state">
-                            الحالة:{" "}
-                            {evaluationLabel(selectedEvaluation?.status)}
-                          </div>
-                          <div className="r04-live-actions">
-                            <button
-                              type="button"
-                              className="r04-live-primary"
-                              disabled={
-                                savingEvaluation ||
-                                score === "" ||
-                                !notes.trim() ||
-                                selectedEvaluation?.status === "SUBMITTED" ||
-                                selectedEvaluation?.status === "PUBLISHED"
-                              }
-                              onClick={() => void saveEvaluation(false)}
-                            >
-                              <Save size={14} /> حفظ المسودة
-                            </button>
-                            <button
-                              type="button"
-                              className="r04-live-complete"
-                              disabled={
-                                savingEvaluation ||
-                                score === "" ||
-                                !notes.trim() ||
-                                selectedEvaluation?.status === "SUBMITTED" ||
-                                selectedEvaluation?.status === "PUBLISHED"
-                              }
-                              onClick={() => void saveEvaluation(true)}
-                            >
-                              <Check size={14} /> إرسال للمراجعة
-                            </button>
-                          </div>
-                          {evaluationError && (
-                            <p className="r04-live-inline-error" role="alert">
-                              {evaluationError}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </>
+                  <InstructorEvaluationsView
+                    evaluationLoading={evaluationLoading}
+                    evaluationError={evaluationError}
+                    attendanceRows={attendanceRows}
+                    evaluations={evaluations}
+                    selectedStudentId={selectedStudentId}
+                    selectedEvaluation={selectedEvaluation}
+                    score={score}
+                    notes={notes}
+                    savingEvaluation={savingEvaluation}
+                    onSelectStudent={setSelectedStudentId}
+                    onScoreChange={setScore}
+                    onNotesChange={setNotes}
+                    onSaveEvaluation={(submit) => void saveEvaluation(submit)}
+                  />
                 )}
             </section>
           )}
