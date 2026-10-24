@@ -19,7 +19,7 @@ import type {
   SessionForm,
   SessionStatus,
   SessionType,
-} from "@/pages/Schedule";
+} from "@/pages/ScheduleTypes";
 
 export type ScheduleDay = {
   name: string;

@@ -29,6 +29,12 @@ import {
   type StudentRecord,
 } from "@/lib/apiClient";
 import "./CompetitionsLive.css";
+import {
+  CreateCompetitionModal,
+  CreateTeamModal,
+  AddTeamMemberModal,
+  RecordAwardModal,
+} from "@/components/competitions/CompetitionsModals";
 
 type TabType = "TOURNAMENTS" | "TEAMS" | "HALL_OF_FAME";
 
@@ -694,254 +700,55 @@ export default function CompetitionsLive({ me }: { me?: AuthMe }) {
           </div>
         )}
 
-        {/* MODAL: CREATE COMPETITION */}
-        {showCompModal && (
-          <div className="comp-modal-overlay">
-            <div className="comp-modal">
-              <div className="comp-modal-header">
-                <h3>إدراج مسابقة / بطولة رسمية جديدة</h3>
-                <button type="button" className="icon-button" onClick={() => setShowCompModal(false)}>
-                  <X size={18} />
-                </button>
-              </div>
+        {/* MODALS */}
+        <CreateCompetitionModal
+          isOpen={showCompModal}
+          onClose={() => setShowCompModal(false)}
+          name={newCompName}
+          setName={setNewCompName}
+          organizer={newCompOrganizer}
+          setOrganizer={setNewCompOrganizer}
+          track={newCompTrack}
+          setTrack={setNewCompTrack}
+          season={newCompSeason}
+          setSeason={setNewCompSeason}
+          location={newCompLocation}
+          setLocation={setNewCompLocation}
+          onSubmit={handleCreateCompetition}
+        />
 
-              <form onSubmit={handleCreateCompetition} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                <div className="comp-form-group">
-                  <label>اسم البطولة / المسابقة</label>
-                  <input
-                    type="text"
-                    className="comp-form-input"
-                    placeholder="مثال: First LEGO League Egypt 2026"
-                    value={newCompName}
-                    onChange={e => setNewCompName(e.target.value)}
-                    required
-                  />
-                </div>
+        <CreateTeamModal
+          isOpen={showTeamModal}
+          onClose={() => setShowTeamModal(false)}
+          name={newTeamName}
+          setName={setNewTeamName}
+          project={newTeamProject}
+          setProject={setNewTeamProject}
+          onSubmit={handleCreateTeam}
+        />
 
-                <div className="comp-form-group">
-                  <label>الجهة المنظمة</label>
-                  <input
-                    type="text"
-                    className="comp-form-input"
-                    placeholder="مثال: جمعية مصر للثقافة / IEEE Egypt"
-                    value={newCompOrganizer}
-                    onChange={e => setNewCompOrganizer(e.target.value)}
-                    required
-                  />
-                </div>
+        <AddTeamMemberModal
+          isOpen={showMemberModal}
+          team={activeTeamForMember}
+          onClose={() => setShowMemberModal(false)}
+          studentId={memberStudentId}
+          setStudentId={setMemberStudentId}
+          role={memberRole}
+          setRole={setMemberRole}
+          studentsList={studentsList}
+          onSubmit={handleAddMember}
+        />
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                  <div className="comp-form-group">
-                    <label>المسار</label>
-                    <select
-                      className="comp-form-select"
-                      value={newCompTrack}
-                      onChange={e => setNewCompTrack(e.target.value)}
-                    >
-                      <option value="robotics">روبوتكس وميكانيكا (Robotics)</option>
-                      <option value="ai">ذكاء اصطناعي (AI)</option>
-                      <option value="programming">برمجة وهاكاثون (Coding)</option>
-                    </select>
-                  </div>
-
-                  <div className="comp-form-group">
-                    <label>الموسم</label>
-                    <input
-                      type="text"
-                      className="comp-form-input"
-                      value={newCompSeason}
-                      onChange={e => setNewCompSeason(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="comp-form-group">
-                  <label>مكان الفعالية</label>
-                  <input
-                    type="text"
-                    className="comp-form-input"
-                    placeholder="مثال: الصالة المغطاة - استاد القاهرة الدولي"
-                    value={newCompLocation}
-                    onChange={e => setNewCompLocation(e.target.value)}
-                  />
-                </div>
-
-                <div className="comp-modal-actions">
-                  <button type="button" className="comp-btn-secondary" style={{ color: "#334155", borderColor: "#cbd5e1" }} onClick={() => setShowCompModal(false)}>
-                    إلغاء
-                  </button>
-                  <button type="submit" className="comp-btn-primary">
-                    حفظ وإدراج البطولة
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* MODAL: CREATE TEAM */}
-        {showTeamModal && (
-          <div className="comp-modal-overlay">
-            <div className="comp-modal">
-              <div className="comp-modal-header">
-                <h3>تشكيل فريق وبدء الإعداد</h3>
-                <button type="button" className="icon-button" onClick={() => setShowTeamModal(false)}>
-                  <X size={18} />
-                </button>
-              </div>
-
-              <form onSubmit={handleCreateTeam} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                <div className="comp-form-group">
-                  <label>اسم الفريق التنافسي</label>
-                  <input
-                    type="text"
-                    className="comp-form-input"
-                    placeholder="مثال: RoboTitans Dokki / CyberNinjas"
-                    value={newTeamName}
-                    onChange={e => setNewTeamName(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="comp-form-group">
-                  <label>فكرة / عنوان مشروع الابتكار (Innovation Project)</label>
-                  <input
-                    type="text"
-                    className="comp-form-input"
-                    placeholder="مثال: روبوت ذاتي القيادة لتنظيف المسطحات المائية"
-                    value={newTeamProject}
-                    onChange={e => setNewTeamProject(e.target.value)}
-                  />
-                </div>
-
-                <div className="comp-modal-actions">
-                  <button type="button" className="comp-btn-secondary" style={{ color: "#334155", borderColor: "#cbd5e1" }} onClick={() => setShowTeamModal(false)}>
-                    إلغاء
-                  </button>
-                  <button type="submit" className="comp-btn-primary">
-                    تشكيل الفريق
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* MODAL: ADD STUDENT MEMBER */}
-        {showMemberModal && activeTeamForMember && (
-          <div className="comp-modal-overlay">
-            <div className="comp-modal">
-              <div className="comp-modal-header">
-                <h3>إضافة طالب لفريق: {activeTeamForMember.name}</h3>
-                <button type="button" className="icon-button" onClick={() => setShowMemberModal(false)}>
-                  <X size={18} />
-                </button>
-              </div>
-
-              <form onSubmit={handleAddMember} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                <div className="comp-form-group">
-                  <label>اختر الطالب</label>
-                  <select
-                    className="comp-form-select"
-                    value={memberStudentId}
-                    onChange={e => setMemberStudentId(e.target.value)}
-                    required
-                  >
-                    <option value="">-- اختر من طلاب الأكاديمية --</option>
-                    {studentsList.map(s => (
-                      <option key={s.id} value={s.id}>{s.fullName}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="comp-form-group">
-                  <label>الدور التخصصي في الفريق</label>
-                  <select
-                    className="comp-form-select"
-                    value={memberRole}
-                    onChange={e => setMemberRole(e.target.value)}
-                  >
-                    <option value="TEAM_CAPTAIN">كابتن وقائد الفريق (Team Captain)</option>
-                    <option value="LEAD_PROGRAMMER">المبرمج الرئيسي (Lead Programmer)</option>
-                    <option value="MECHANICAL_BUILDER">مهندس البناء والميكانيكا (Mechanical Builder)</option>
-                    <option value="RESEARCHER_PRESENTER">باحث وعارض المشروع (Researcher & Presenter)</option>
-                    <option value="STRATEGIST">مخطط الاستراتيجية والمناورات (Strategist)</option>
-                  </select>
-                </div>
-
-                <div className="comp-modal-actions">
-                  <button type="button" className="comp-btn-secondary" style={{ color: "#334155", borderColor: "#cbd5e1" }} onClick={() => setShowMemberModal(false)}>
-                    إلغاء
-                  </button>
-                  <button type="submit" className="comp-btn-primary">
-                    ضم الطالب للفريق
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* MODAL: RECORD AWARD */}
-        {showAwardModal && activeTeamForAward && (
-          <div className="comp-modal-overlay">
-            <div className="comp-modal">
-              <div className="comp-modal-header">
-                <h3>توثيق جائزة ونشر في لوحة الشرف 🏆</h3>
-                <button type="button" className="icon-button" onClick={() => setShowAwardModal(false)}>
-                  <X size={18} />
-                </button>
-              </div>
-
-              <form onSubmit={handleRecordAward} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                <div className="comp-form-group">
-                  <label>الفريق المكرم</label>
-                  <input
-                    type="text"
-                    className="comp-form-input"
-                    value={activeTeamForAward.name}
-                    disabled
-                  />
-                </div>
-
-                <div className="comp-form-group">
-                  <label>عنوان الجائزة / التكريم</label>
-                  <input
-                    type="text"
-                    className="comp-form-input"
-                    placeholder="مثال: المركز الأول جمهورية - أفضل تصميم روبوت وأداء ميكانيكي"
-                    value={awardTitle}
-                    onChange={e => setAwardTitle(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="comp-form-group">
-                  <label>الترتيب التنافسي</label>
-                  <select
-                    className="comp-form-select"
-                    value={awardRank}
-                    onChange={e => setAwardRank(Number(e.target.value))}
-                  >
-                    <option value="1">المركز الأول 🥇 (Champion)</option>
-                    <option value="2">المركز الثاني 🥈 (Runner Up)</option>
-                    <option value="3">المركز الثالث 🥉</option>
-                    <option value="4">جائزة تميز خاصة / أفضل ابتكار 🏆</option>
-                  </select>
-                </div>
-
-                <div className="comp-modal-actions">
-                  <button type="button" className="comp-btn-secondary" style={{ color: "#334155", borderColor: "#cbd5e1" }} onClick={() => setShowAwardModal(false)}>
-                    إلغاء
-                  </button>
-                  <button type="submit" className="comp-btn-primary">
-                    نشر وتتويج في لوحة الشرف
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+        <RecordAwardModal
+          isOpen={showAwardModal}
+          team={activeTeamForAward}
+          onClose={() => setShowAwardModal(false)}
+          title={awardTitle}
+          setTitle={setAwardTitle}
+          rank={awardRank}
+          setRank={setAwardRank}
+          onSubmit={handleRecordAward}
+        />
       </div>
     </RoleDashboardShell>
   );
