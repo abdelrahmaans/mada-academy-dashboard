@@ -23,53 +23,33 @@ import {
   type SessionEvaluationRecord,
   type SessionRecord,
 } from "@/lib/apiClient";
+import { groupStatusLabel, sessionStatusLabel } from "@/lib/statusLabels";
 import "./InstructorDeskLive.css";
 
-type View = "sessions" | "attendance" | "evaluations" | "supervision" | "review";
-type AttendanceStatus = "PRESENT" | "LATE" | "ABSENT" | "EXCUSED" | "UNMARKED";
-type AttendanceDraft = { status: AttendanceStatus; lateMinutes: number | null };
+import {
+  type InstructorView,
+  type AttendanceStatus,
+  type AttendanceDraft,
+  formatDate,
+  formatTime,
+  evaluationLabel,
+  mapAttendance,
+} from "./InstructorDeskTypes";
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("ar-EG", {
-    weekday: "long",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
-}
-function formatTime(value: string) {
-  return new Intl.DateTimeFormat("ar-EG", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
-function statusLabel(status: string) {
-  const labels: Record<string, string> = {
-    SCHEDULED: "مجدولة",
-    IN_PROGRESS: "جارية",
-    COMPLETED: "مكتملة",
-    CANCELLED: "ملغاة",
-    PENDING_APPROVAL: "بانتظار الاعتماد",
-  };
-  return labels[status] ?? status;
-}
-function evaluationLabel(status?: string) {
-  if (status === "PUBLISHED") return "منشور للأسرة";
-  if (status === "SUBMITTED") return "بانتظار مراجعة رئيس المدربين";
-  if (status === "CHANGES_REQUESTED") return "مطلوب تعديل";
-  return status === "DRAFT" ? "مسودة محفوظة" : "لم يُحفظ بعد";
-}
-function mapAttendance(items: AttendanceItem[]) {
-  return Object.fromEntries(
-    items.map(item => [
-      item.studentId,
-      {
-        status: item.status as AttendanceStatus,
-        lateMinutes: item.lateMinutes,
-      },
-    ])
-  ) as Record<string, AttendanceDraft>;
-}
+export type {
+  InstructorView,
+  AttendanceStatus,
+  AttendanceDraft,
+};
+
+export {
+  formatDate,
+  formatTime,
+  evaluationLabel,
+  mapAttendance,
+};
+
+type View = InstructorView;
 
 export default function InstructorDeskLive() {
   const { me, loading: authLoading } = useAuth();
@@ -521,7 +501,7 @@ export default function InstructorDeskLive() {
                   <span
                     className={`r04-live-status ${session.status === "COMPLETED" ? "completed" : ""}`}
                   >
-                    {statusLabel(session.status)}
+                    {sessionStatusLabel(session.status)}
                   </span>
                 </button>
               ))}
@@ -558,7 +538,7 @@ export default function InstructorDeskLive() {
                     <article className="r04-live-supervision-card" key={group.assignmentId}>
                       <div className="r04-live-supervision-main">
                         <strong>{group.courseName}</strong>
-                        <small>{formatDate(group.startDate)} – {formatDate(group.endDate)} · {group.status === "ACTIVE" ? "نشط" : group.status === "UPCOMING" ? "قادم" : group.status}</small>
+                        <small>{formatDate(group.startDate)} – {formatDate(group.endDate)} · {groupStatusLabel(group.status)}</small>
                         <div className="r04-live-supervision-permissions">
                           {group.canReadAttendance && <span>قراءة الحضور</span>}
                           {group.canReadEvaluations && <span>قراءة التقييمات</span>}

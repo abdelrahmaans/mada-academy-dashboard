@@ -32,6 +32,7 @@ import {
   type RetentionRadarResponse,
 } from "@/lib/apiClient";
 import { getRoleHomePath } from "@/lib/roleNavigation";
+import { type ReportsTab, FinanceStat } from "./ReportsLiveTypes";
 import "./ReportsLive.css";
 
 export default function ReportsLive({ me }: { me: AuthMe }) {
@@ -56,7 +57,7 @@ export default function ReportsLive({ me }: { me: AuthMe }) {
   const branchName = me.branches?.find(branch => branch.id === me.branchId)?.name ?? "الفرع المصرح به";
   const scopeLabel = isOwner ? "كل فروع الأكاديمية" : branchName;
 
-  const [activeTab, setActiveTab] = useState<"overview" | "expenses" | "radar" | "courses" | "instructors">(
+  const [activeTab, setActiveTab] = useState<ReportsTab>(
     "overview"
   );
 
@@ -929,22 +930,3 @@ export default function ReportsLive({ me }: { me: AuthMe }) {
   );
 }
 
-function FinanceStat({
-  icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-  tone: string;
-}) {
-  return (
-    <article className={`reports-live-stat reports-live-stat-${tone}`}>
-      <span>{icon}</span>
-      <small>{label}</small>
-      <strong>{value}</strong>
-    </article>
-  );
-}

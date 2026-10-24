@@ -5,6 +5,7 @@ import PageHeader from "@/components/PageHeader";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import { apiClient, type AuthMe, type DashboardSummary } from "@/lib/apiClient";
+import { sessionStatusLabel } from "@/lib/statusLabels";
 import "./HomeLive.css";
 
 export default function HomeLive({ me }: { me: AuthMe }) {
@@ -66,7 +67,7 @@ export default function HomeLive({ me }: { me: AuthMe }) {
 
           <section className="r02-live-panel">
             <div className="r02-live-panel-heading"><div><h2>الجلسات القادمة</h2><p>{branchName} · أقرب الجلسات المسجلة</p></div><span>{summary.upcoming.length} جلسات</span></div>
-            {summary.upcoming.length === 0 ? <div className="r02-live-empty">لا توجد جلسات قادمة مسجلة لهذا الفرع.</div> : <div className="r02-live-session-list">{summary.upcoming.map(session => <article key={session.id} className="r02-live-session"><span className="r02-live-session-icon"><CalendarDays size={17} /></span><div><strong>الجلسة رقم {session.sessionNumber}</strong><small>{formatSessionTime(session.startAt)}</small></div><span className="r02-live-session-status">{session.status === "SCHEDULED" ? "مجدولة" : session.status}</span></article>)}</div>}
+            {summary.upcoming.length === 0 ? <div className="r02-live-empty">لا توجد جلسات قادمة مسجلة لهذا الفرع.</div> : <div className="r02-live-session-list">{summary.upcoming.map(session => <article key={session.id} className="r02-live-session"><span className="r02-live-session-icon"><CalendarDays size={17} /></span><div><strong>الجلسة رقم {session.sessionNumber}</strong><small>{formatSessionTime(session.startAt)}</small></div><span className="r02-live-session-status">{sessionStatusLabel(session.status)}</span></article>)}</div>}
           </section>
 
           <section className="r02-live-actions" aria-label="روابط تشغيلية">

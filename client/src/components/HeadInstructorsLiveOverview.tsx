@@ -7,6 +7,7 @@ import type {
   SchedulingInstructor,
   SessionRecord,
 } from "@/lib/apiClient";
+import { groupStatusLabel, sessionStatusLabel } from "@/lib/statusLabels";
 
 export type HeadInstructorsOverviewData = {
   groups: GroupRecord[];
@@ -51,16 +52,6 @@ function dateTimeLabel(value: string) {
   }).format(new Date(value));
 }
 
-function sessionStatusLabel(status: string) {
-  const labels: Record<string, string> = {
-    SCHEDULED: "مجدولة",
-    PENDING_APPROVAL: "بانتظار الاعتماد",
-    COMPLETED: "مكتملة",
-    CANCELLED: "ملغاة",
-    RESCHEDULED: "أعيدت جدولتها",
-  };
-  return labels[status] ?? status;
-}
 
 export default function HeadInstructorsLiveOverview({
   data,
@@ -159,7 +150,7 @@ export default function HeadInstructorsLiveOverview({
                     <td>{group.instructorName ?? "غير محدد"}</td>
                     <td>{group.enrolledStudents} / {group.maxStudents}</td>
                     <td>{dateLabel(group.startDate)} – {dateLabel(group.endDate)}</td>
-                    <td><span className="r03-live-pill">{group.status}</span></td>
+                    <td><span className="r03-live-pill">{groupStatusLabel(group.status)}</span></td>
                   </tr>
                 ))}
               </tbody>

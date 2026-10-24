@@ -7,7 +7,7 @@ export type {
   EvaluationCardStatus,
   SessionRecord,
   EvaluationRecord,
-} from "./HeadInstructorsPreview";
+} from "./HeadInstructorsTypes";
 
 export default function HeadInstructors() {
   return apiClient.hasSession() ? (
