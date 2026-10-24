@@ -28,266 +28,27 @@ import {
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { ErrorState, LoadingState } from "@/components/FeedbackStates";
-import { apiClient, type ConsumerAccountLookupRecord, type ConsumerInvitationDelivery, type ConsumerLinksResponse, type StudentRecord } from "@/lib/apiClient";
+import {
+  apiClient,
+  type ConsumerAccountLookupRecord,
+  type ConsumerInvitationDelivery,
+  type ConsumerLinksResponse,
+} from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import { getRoleDefinition } from "@/lib/roleNavigation";
 import type { RoleCode } from "@/contexts/RoleScopeContext";
-
-type StudentStatus = "active" | "on_hold" | "inactive" | "graduated";
-type StudentSource =
-  | "walk_in"
-  | "landing_page"
-  | "referral"
-  | "social_media"
-  | "event";
-type Student = {
-  id: string;
-  name: string;
-  birthDate: string;
-  gender: "male" | "female";
-  parentName: string;
-  parentPhone: string;
-  relation: "الأب" | "الأم" | "ولي أمر";
-  branch: string;
-  course: string;
-  source: StudentSource;
-  status: StudentStatus;
-  joined: string;
-  initials: string;
-  color: string;
-};
-
-const initialStudents: Student[] = [
-  {
-    id: "MAD-0248",
-    name: "ياسين محمد علي",
-    birthDate: "2015-05-12",
-    gender: "male",
-    parentName: "محمد علي",
-    parentPhone: "01012345678",
-    relation: "الأب",
-    branch: "مدينة نصر",
-    course: "روبوتكس مستوى 2",
-    source: "landing_page",
-    status: "active",
-    joined: "12 سبتمبر 2026",
-    initials: "يع",
-    color: "teal",
-  },
-  {
-    id: "MAD-0247",
-    name: "ليلى أحمد محمود",
-    birthDate: "2014-11-03",
-    gender: "female",
-    parentName: "أحمد محمود",
-    parentPhone: "01123456789",
-    relation: "الأب",
-    branch: "المعادي",
-    course: "برمجة للمبتدئين",
-    source: "referral",
-    status: "active",
-    joined: "10 سبتمبر 2026",
-    initials: "لم",
-    color: "violet",
-  },
-  {
-    id: "MAD-0246",
-    name: "عمر خالد إبراهيم",
-    birthDate: "2013-02-18",
-    gender: "male",
-    parentName: "نهى إبراهيم",
-    parentPhone: "01234567890",
-    relation: "الأم",
-    branch: "مدينة نصر",
-    course: "دوائر إلكترونية",
-    source: "walk_in",
-    status: "active",
-    joined: "08 سبتمبر 2026",
-    initials: "عإ",
-    color: "blue",
-  },
-  {
-    id: "MAD-0245",
-    name: "ملك حسام الدين",
-    birthDate: "2016-08-24",
-    gender: "female",
-    parentName: "حسام الدين",
-    parentPhone: "01098765432",
-    relation: "الأب",
-    branch: "الشيخ زايد",
-    course: "روبوتكس مستوى 1",
-    source: "social_media",
-    status: "on_hold",
-    joined: "04 سبتمبر 2026",
-    initials: "مح",
-    color: "amber",
-  },
-  {
-    id: "MAD-0244",
-    name: "آدم شريف حسن",
-    birthDate: "2012-01-30",
-    gender: "male",
-    parentName: "شريف حسن",
-    parentPhone: "01109876543",
-    relation: "الأب",
-    branch: "مدينة نصر",
-    course: "ذكاء اصطناعي للصغار",
-    source: "event",
-    status: "active",
-    joined: "01 سبتمبر 2026",
-    initials: "آح",
-    color: "navy",
-  },
-  {
-    id: "MAD-0243",
-    name: "نور عمرو فؤاد",
-    birthDate: "2015-07-17",
-    gender: "female",
-    parentName: "عمرو فؤاد",
-    parentPhone: "01210987654",
-    relation: "الأب",
-    branch: "المعادي",
-    course: "برمجة الألعاب",
-    source: "landing_page",
-    status: "inactive",
-    joined: "28 أغسطس 2026",
-    initials: "نف",
-    color: "rose",
-  },
-  {
-    id: "MAD-0242",
-    name: "سيف مصطفى عادل",
-    birthDate: "2011-10-06",
-    gender: "male",
-    parentName: "مصطفى عادل",
-    parentPhone: "01087654321",
-    relation: "الأب",
-    branch: "الشيخ زايد",
-    course: "الدوائر والروبوتات",
-    source: "referral",
-    status: "active",
-    joined: "25 أغسطس 2026",
-    initials: "سع",
-    color: "teal",
-  },
-  {
-    id: "MAD-0241",
-    name: "جنى طارق سعيد",
-    birthDate: "2014-04-09",
-    gender: "female",
-    parentName: "طارق سعيد",
-    parentPhone: "01187654320",
-    relation: "الأب",
-    branch: "مدينة نصر",
-    course: "مهارات التفكير الإبداعي",
-    source: "walk_in",
-    status: "graduated",
-    joined: "20 أغسطس 2026",
-    initials: "جس",
-    color: "violet",
-  },
-];
-
-const statusLabels: Record<StudentStatus, string> = {
-  active: "نشط",
-  on_hold: "موقوف مؤقتًا",
-  inactive: "غير نشط",
-  graduated: "متخرج",
-};
-const sourceLabels: Record<StudentSource, string> = {
-  walk_in: "زيارة مباشرة",
-  landing_page: "صفحة الأكاديمية",
-  referral: "ترشيح",
-  social_media: "سوشيال ميديا",
-  event: "فعالية",
-};
-const branches = ["كل الفروع", "مدينة نصر", "المعادي", "الشيخ زايد"];
-const PAGE_SIZE = 6;
-const LIVE_BRANCH_LABELS: Record<string, string> = {
-  "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb": "مدينة نصر",
-  "cccccccc-cccc-cccc-cccc-cccccccccccc": "مصر الجديدة",
-};
-function mapLiveStudent(record: StudentRecord): Student {
-  const status: StudentStatus = record.status === "ACTIVE" ? "active" : record.status === "SUSPENDED" ? "on_hold" : record.status === "GRADUATED" ? "graduated" : "inactive";
-  const initials = record.fullName.trim().split(/\s+/).slice(0, 2).map(part => part[0]).join("");
-  return {
-    id: record.id,
-    name: record.fullName,
-    birthDate: record.dateOfBirth ?? "—",
-    gender: "male",
-    parentName: "غير متاح من عقد الطلاب الحالي",
-    parentPhone: "—",
-    relation: "ولي أمر",
-    branch: LIVE_BRANCH_LABELS[record.branchId] ?? `فرع ${record.branchId.slice(0, 8)}`,
-    course: record.activeEnrollmentCount > 0 ? "يوجد تسجيل نشط" : "لم يتم التسجيل في كورس",
-    source: "walk_in",
-    status,
-    joined: "من قاعدة البيانات",
-    initials,
-    color: status === "active" ? "teal" : "amber",
-  };
-}
-
-type StudentJourneySummary = {
-  attendance: string;
-  attendanceNote: string;
-  nextSession: string;
-  nextSessionNote: string;
-  payment: string;
-  paymentNote: string;
-  progress: number;
-};
-
-function getStudentJourney(student: Student): StudentJourneySummary {
-  if (student.course === "لم يتم التسجيل في كورس") {
-    return {
-      attendance: "—",
-      attendanceNote: "لا توجد جلسات مسجلة",
-      nextSession: "غير محددة",
-      nextSessionNote: "يحتاج تسجيل في مجموعة",
-      payment: "لا توجد فاتورة",
-      paymentNote: "سيظهر بعد التسجيل",
-      progress: 0,
-    };
-  }
-
-  if (student.status === "graduated") {
-    return {
-      attendance: "94%",
-      attendanceNote: "انتظام ممتاز",
-      nextSession: "اكتمل المسار",
-      nextSessionNote: "جاهز للشهادة",
-      payment: "مدفوع بالكامل",
-      paymentNote: "لا توجد مستحقات",
-      progress: 100,
-    };
-  }
-
-  if (student.status === "on_hold") {
-    return {
-      attendance: "71%",
-      attendanceNote: "يحتاج متابعة",
-      nextSession: "موقوف مؤقتًا",
-      nextSessionNote: "راجع حالة التسجيل",
-      payment: "قسط مستحق",
-      paymentNote: "يحتاج تواصل مع الأسرة",
-      progress: 46,
-    };
-  }
-
-  return {
-    attendance: student.id.endsWith("248") ? "88%" : "86%",
-    attendanceNote: "من آخر ٨ جلسات",
-    nextSession: "الأحد · ١٢:٠٠ م",
-    nextSessionNote: "معمل ١ · الجلسة ٩",
-    payment: student.id.endsWith("247") ? "قسطان متبقيان" : "مدفوع حتى أكتوبر",
-    paymentNote: student.id.endsWith("247")
-      ? "أقرب استحقاق ١ أكتوبر"
-      : "آخر تحصيل ١ سبتمبر",
-    progress: student.id.endsWith("248") ? 72 : 64,
-  };
-}
+import {
+  type Student,
+  type StudentStatus,
+  type StudentSource,
+  initialStudents,
+  branches,
+  PAGE_SIZE,
+  mapLiveStudent,
+  statusLabels,
+} from "./StudentsTypes";
+import { AddStudentModal, StudentDetailsModal } from "./StudentsModals";
 
 function StudentPage() {
   const [, setLocation] = useLocation();
@@ -989,341 +750,59 @@ function StudentPage() {
         </div>
       </main>
 
-      {addOpen && (
-        <div
-          className="dialog-backdrop"
-          role="presentation"
-          onMouseDown={event => {
-            if (event.target === event.currentTarget) {
-              setAddOpen(false);
-              resetForm();
-            }
-          }}
-        >
-          <section
-            className="student-dialog students-form-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="add-student-title"
-          >
-            <div className="dialog-top">
-              <span className="dialog-mark">
-                <GraduationCap size={21} />
-              </span>
-              <button
-                className="icon-button"
-                aria-label="إغلاق"
-                onClick={() => {
-                  setAddOpen(false);
-                  resetForm();
-                }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <h2 id="add-student-title">إضافة طالب جديد</h2>
-            <p>أدخل بيانات الطالب وولي الأمر لبدء التسجيل في الفرع.</p>
-            <form onSubmit={submitStudent}>
-              <label className="form-field">
-                <span>
-                  اسم الطالب <b>*</b>
-                </span>
-                <input
-                  autoFocus
-                  value={studentName}
-                  onChange={event => setStudentName(event.target.value)}
-                  placeholder="الاسم بالكامل"
-                />
-              </label>
-              <div className="form-row">
-                <label className="form-field">
-                  <span>
-                    تاريخ الميلاد <b>*</b>
-                  </span>
-                  <input
-                    type="date"
-                    value={birthDate}
-                    onChange={event => setBirthDate(event.target.value)}
-                  />
-                </label>
-                <label className="form-field">
-                  <span>النوع</span>
-                  <select
-                    value={gender}
-                    onChange={event =>
-                      setGender(event.target.value as "male" | "female")
-                    }
-                  >
-                    <option value="male">ذكر</option>
-                    <option value="female">أنثى</option>
-                  </select>
-                </label>
-              </div>
-              <div className="form-row">
-                <label className="form-field">
-                  <span>
-                    اسم ولي الأمر <b>*</b>
-                  </span>
-                  <input
-                    value={parentName}
-                    onChange={event => setParentName(event.target.value)}
-                    placeholder="اسم ولي الأمر"
-                  />
-                </label>
-                <label className="form-field">
-                  <span>
-                    رقم الهاتف <b>*</b>
-                  </span>
-                  <input
-                    value={parentPhone}
-                    onChange={event => setParentPhone(event.target.value)}
-                    placeholder="01XXXXXXXXX"
-                    inputMode="tel"
-                    dir="ltr"
-                  />
-                </label>
-              </div>
-              <div className="form-row">
-                <label className="form-field">
-                  <span>الفرع</span>
-                  <select
-                    value={newBranch}
-                    onChange={event => setNewBranch(event.target.value)}
-                  >
-                    {branches.slice(1).map(branch => (
-                      <option key={branch}>{branch}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="form-field">
-                  <span>مصدر التسجيل</span>
-                  <select
-                    value={source}
-                    onChange={event =>
-                      setSource(event.target.value as StudentSource)
-                    }
-                  >
-                    {Object.entries(sourceLabels).map(([key, label]) => (
-                      <option key={key} value={key}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <div className="dialog-info">
-                <FileText size={15} />
-                <span>
-                  بيانات النموذج محلية للعرض فقط، ولن تُحفظ في قاعدة بيانات.
-                </span>
-              </div>
-              <div className="dialog-actions">
-                <button
-                  type="button"
-                  className="button button-secondary"
-                  onClick={() => {
-                    setAddOpen(false);
-                    resetForm();
-                  }}
-                >
-                  إلغاء
-                </button>
-                <button type="submit" className="button button-primary">
-                  <Plus size={16} /> إضافة الطالب
-                </button>
-              </div>
-            </form>
-          </section>
-        </div>
-      )}
+      <AddStudentModal
+        isOpen={addOpen}
+        onClose={() => {
+          setAddOpen(false);
+          resetForm();
+        }}
+        studentName={studentName}
+        setStudentName={setStudentName}
+        birthDate={birthDate}
+        setBirthDate={setBirthDate}
+        gender={gender}
+        setGender={setGender}
+        parentName={parentName}
+        setParentName={setParentName}
+        parentPhone={parentPhone}
+        setParentPhone={setParentPhone}
+        newBranch={newBranch}
+        setNewBranch={setNewBranch}
+        source={source}
+        setSource={setSource}
+        onSubmit={submitStudent}
+        branches={branches}
+      />
 
-      {detailsStudent && (
-        <div
-          className="dialog-backdrop"
-          role="presentation"
-          onMouseDown={event => {
-            if (event.target === event.currentTarget) setDetailsStudent(null);
-          }}
-        >
-          <section
-            className="student-dialog student-details-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="student-detail-name"
-          >
-            <div className="dialog-top">
-              <span className="dialog-mark">
-                <Users size={20} />
-              </span>
-              <button
-                className="icon-button"
-                aria-label="إغلاق"
-                onClick={() => setDetailsStudent(null)}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="detail-profile">
-              <span className={`student-avatar avatar-${detailsStudent.color}`}>
-                {detailsStudent.initials}
-              </span>
-              <div>
-                <h2 id="student-detail-name">{detailsStudent.name}</h2>
-                <span>
-                  <span
-                    className={`student-status status-${detailsStudent.status}`}
-                  >
-                    <i />
-                    {statusLabels[detailsStudent.status]}
-                  </span>
-                </span>
-              </div>
-            </div>
-            <div className="detail-grid">
-              <div>
-                <small>الكورس الحالي</small>
-                <strong>
-                  <BookOpen size={14} />
-                  {detailsStudent.course}
-                </strong>
-              </div>
-              <div>
-                <small>الفرع</small>
-                <strong>
-                  <MapPin size={14} />
-                  {detailsStudent.branch}
-                </strong>
-              </div>
-              <div>
-                <small>ولي الأمر</small>
-                <strong>
-                  {detailsStudent.parentName} ({detailsStudent.relation})
-                </strong>
-              </div>
-              <div>
-                <small>هاتف ولي الأمر</small>
-                <strong dir="ltr">{detailsStudent.parentPhone}</strong>
-              </div>
-              <div>
-                <small>تاريخ الميلاد</small>
-                <strong dir="ltr">{detailsStudent.birthDate}</strong>
-              </div>
-              <div>
-                <small>مصدر التسجيل</small>
-                <strong>{sourceLabels[detailsStudent.source]}</strong>
-              </div>
-            </div>
-            {dataMode === "live" && <section className="student-link-panel">
-              <div className="student-journey-heading"><div><strong>حسابات الطالب والأسرة</strong><span>إدارة الوصول إلى بوابتي الطالب وولي الأمر</span></div></div>
-              <div className="dialog-info"><ShieldCheck size={15} /><span>نسخة MVP بلا تكلفة SMS: في Development يظهر رمز عشوائي للاختبار فقط؛ لا يُقبل رمز ثابت في الإنتاج، ويظل الإرسال الحي مغلقًا حتى إعداد مزود رسائل.</span></div>
-              {linksLoading && <div className="dialog-info">جارٍ تحميل الروابط الحالية…</div>}
-              {linksError && <div className="dialog-info" role="alert">تعذر قراءة الروابط: {linksError}</div>}
-              {consumerLinks && <div className="detail-grid">
-                <div><small>حساب الطالب</small><strong>{consumerLinks.studentAccount ? `${consumerLinks.studentAccount.name ?? "حساب الطالب"} · ${consumerLinks.studentAccount.phone}` : "غير مرتبط"}</strong>{consumerLinks.studentAccount && <button type="button" className="button button-secondary" onClick={() => { const acc = consumerLinks.studentAccount; if (acc) void unlinkConsumerAccount("student", acc.id); }}>إلغاء الربط</button>}</div>
-                <div><small>أولياء الأمور</small>{consumerLinks.guardians.length ? consumerLinks.guardians.map(guardian => <div key={guardian.id}><strong>{guardian.name ?? guardian.phone} · {guardian.relationship}</strong><button type="button" className="button button-secondary" onClick={() => void unlinkConsumerAccount("guardian", guardian.id)}>إلغاء الربط</button></div>) : <strong>لا يوجد حساب ولي أمر مرتبط</strong>}</div>
-              </div>}
-              <form onSubmit={searchConsumerAccounts}>
-                <div className="form-row">
-                  <label className="form-field"><span>نوع الربط</span><select value={linkKind} disabled={lookupLoading || invitationLoading} onChange={event => { setLinkKind(event.target.value as "guardian" | "student"); setLookupResults(null); setLookupError(null); setInvitationResult(null); }}><option value="guardian">حساب ولي أمر</option><option value="student">حساب الطالب نفسه</option></select></label>
-                  <label className="form-field"><span>رقم الهاتف</span><input type="tel" inputMode="tel" autoComplete="tel" value={linkPhone} disabled={lookupLoading || invitationLoading} onChange={event => { setLinkPhone(event.target.value); setLookupResults(null); setLookupError(null); setInvitationResult(null); }} placeholder="01012345678 أو +201012345678" dir="ltr" required /></label>
-                </div>
-                {linkKind === "guardian" && <label className="form-field"><span>صلة القرابة</span><select value={linkRelationship} onChange={event => setLinkRelationship(event.target.value)}><option>ولي أمر</option><option>الأب</option><option>الأم</option><option>وصي</option></select></label>}
-                <div className="dialog-info"><FileText size={15} /><span>بحث دقيق داخل الحسابات النشطة من نفس الأكاديمية فقط. تظهر بيانات محدودة، ولا يتم كشف UUID أو بيانات حسابات أكاديميات أخرى.</span></div>
-                <button type="submit" className="button button-primary" disabled={lookupLoading || !linkPhone.trim()}><Search size={15} /> {lookupLoading ? "جارٍ البحث…" : "بحث عن الحساب"}</button>
-              </form>
-              {lookupError && <div className="dialog-info" role="alert">تعذر البحث أو إرسال الدعوة: {lookupError}</div>}
-              {lookupResults !== null && (lookupResults.length ? <div className="student-link-results" aria-live="polite">{lookupResults.map(account => <article key={account.id}><div><strong>{account.name || (account.accountType === "parent" ? "حساب ولي أمر" : "حساب طالب")}</strong><span dir="ltr">{account.maskedPhone}</span></div><button type="button" className="button button-secondary" disabled={linkingAccountId !== null || linksLoading} onClick={() => void linkConsumerAccount(account)}><UserPlus size={15} /> {linkingAccountId === account.id ? "جارٍ الربط…" : account.accountType === "parent" ? "ربط بولي الأمر" : "ربط بحساب الطالب"}</button></article>)}</div> : <div className="dialog-info" role="status"><span>لم يوجد حساب نشط مؤهل بهذا الرقم داخل الأكاديمية.</span><button type="button" className="button button-secondary" onClick={() => void inviteConsumerAccount()} disabled={invitationLoading || !linkPhone.trim()}><Send size={15} /> {invitationLoading ? "جارٍ تجهيز الدعوة…" : "إرسال دعوة تفعيل OTP"}</button></div>)}
-              {invitationResult && <div className="dialog-info" role="status"><span>حالة الدعوة: {invitationResult.delivery === "development://sms" ? "اختبار محلي فقط — لا توجد رسالة SMS فعلية" : "تم إرسال الرسالة"}{invitationResult.developmentCode && <> · رمز الاختبار: <b dir="ltr">{invitationResult.developmentCode}</b></>}{invitationResult.debugAcceptUrl && <> · <a href={invitationResult.debugAcceptUrl}>فتح صفحة قبول الدعوة التجريبية</a></>}</span></div>}
-            </section>}
-            {dataMode !== "live" && (() => {
-              const journey = getStudentJourney(detailsStudent);
-              return (
-                <>
-                  <div className="student-journey-heading">
-                    <div>
-                      <strong>رحلة الطالب</strong>
-                      <span>ملخص تشغيلي سريع مبني على بيانات العرض</span>
-                    </div>
-                    <span className="journey-progress-label">
-                      {journey.progress}% مكتمل
-                    </span>
-                  </div>
-                  <div
-                    className="student-journey-progress"
-                    aria-label={`نسبة تقدم الطالب ${journey.progress}%`}
-                  >
-                    <span style={{ width: `${journey.progress}%` }} />
-                  </div>
-                  <div className="student-journey-grid">
-                    <article>
-                      <span className="journey-icon journey-icon-teal">
-                        <CheckCircle2 size={15} />
-                      </span>
-                      <div>
-                        <small>انتظام الحضور</small>
-                        <strong>{journey.attendance}</strong>
-                        <span>{journey.attendanceNote}</span>
-                      </div>
-                    </article>
-                    <article>
-                      <span className="journey-icon journey-icon-blue">
-                        <CalendarDays size={15} />
-                      </span>
-                      <div>
-                        <small>الجلسة القادمة</small>
-                        <strong>{journey.nextSession}</strong>
-                        <span>{journey.nextSessionNote}</span>
-                      </div>
-                    </article>
-                    <article>
-                      <span className="journey-icon journey-icon-amber">
-                        <Wallet size={15} />
-                      </span>
-                      <div>
-                        <small>حالة التحصيل</small>
-                        <strong>{journey.payment}</strong>
-                        <span>{journey.paymentNote}</span>
-                      </div>
-                    </article>
-                  </div>
-                  <div className="student-journey-actions">
-                    <button
-                      className="button button-secondary"
-                      onClick={() => setLocation("/schedule")}
-                    >
-                      <CalendarDays size={15} /> عرض الجدول
-                    </button>
-                    <button
-                      className="button button-secondary"
-                      onClick={() => setLocation("/finance")}
-                    >
-                      <Wallet size={15} /> فتح التحصيل
-                    </button>
-                  </div>
-                </>
-              );
-            })()}
-            <div className="dialog-info">
-              <FileText size={15} />
-              <span>{dataMode === "live" ? "البيانات الأساسية من قاعدة البيانات؛ معلومات الحضور والفواتير غير متاحة في عقد هذا الملف." : "تفاصيل توضيحية للعرض، غير مرتبطة بملف طالب حقيقي."}</span>
-            </div>
-            <div className="dialog-actions">
-              <button
-                className="button button-secondary"
-                onClick={() => setDetailsStudent(null)}
-              >
-                إغلاق
-              </button>
-              <button
-                className="button button-primary"
-                onClick={() => toast("تعديل بيانات الطالب قيد التجهيز")}
-              >
-                <FileText size={15} /> تعديل البيانات
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
+      <StudentDetailsModal
+        detailsStudent={detailsStudent}
+        onClose={() => setDetailsStudent(null)}
+        dataMode={dataMode}
+        consumerLinks={consumerLinks}
+        linksLoading={linksLoading}
+        linksError={linksError}
+        linkKind={linkKind}
+        setLinkKind={setLinkKind}
+        linkPhone={linkPhone}
+        setLinkPhone={setLinkPhone}
+        linkRelationship={linkRelationship}
+        setLinkRelationship={setLinkRelationship}
+        lookupLoading={lookupLoading}
+        lookupResults={lookupResults}
+        setLookupResults={setLookupResults}
+        lookupError={lookupError}
+        setLookupError={setLookupError}
+        invitationLoading={invitationLoading}
+        invitationResult={invitationResult}
+        setInvitationResult={setInvitationResult}
+        linkingAccountId={linkingAccountId}
+        onSearchConsumerAccounts={searchConsumerAccounts}
+        onLinkConsumerAccount={linkConsumerAccount}
+        onUnlinkConsumerAccount={unlinkConsumerAccount}
+        onInviteConsumerAccount={inviteConsumerAccount}
+        onNavigateSchedule={() => setLocation("/schedule")}
+        onNavigateFinance={() => setLocation("/finance")}
+      />
     </RoleDashboardShell>
   );
 }

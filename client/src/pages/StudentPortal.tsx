@@ -490,8 +490,11 @@ export default function StudentPortal() {
                 const isCompleted = sess.status === "مكتملة";
                 const isPresent = sess.attendanceStatus === "PRESENT";
                 const isLate = sess.attendanceStatus === "LATE";
-                const tagClass = isPresent ? "present" : isLate ? "late" : "scheduled";
-                const tagLabel = isPresent ? "حاضر" : isLate ? "حضور متأخر" : "مجدولة";
+                const isAbsent = sess.attendanceStatus === "ABSENT";
+                const isExcused = sess.attendanceStatus === "EXCUSED";
+
+                const tagClass = isPresent ? "present" : isLate ? "late" : isAbsent ? "absent" : isExcused ? "excused" : "scheduled";
+                const tagLabel = isPresent ? "حاضر" : isLate ? "حضور متأخر" : isAbsent ? "غائب" : isExcused ? "غياب بعذر" : "مجدولة";
 
                 return (
                   <div key={sess.sessionId} className="consumer-session-item">
