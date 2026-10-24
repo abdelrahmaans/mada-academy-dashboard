@@ -1,8 +1,8 @@
 # Mada Academy — Repository Current State
 
-**Snapshot:** 22 October 2026<br/>
+**Snapshot:** 24 October 2026<br/>
 **Canonical branch:** `main` (active dev on `dev`)<br/>
-**Verified commit:** dynamic — run `git rev-parse --short origin/main`<br/>
+**Verified commit:** dynamic — run `git rev-parse --short origin/dev`<br/>
 **Repository:** `abdelrahmaans/mada-academy-dashboard`
 
 ## How to start work
@@ -11,21 +11,21 @@ Read this file first, then read [`PROJECT_STATUS.md`](../.agent/PROJECT_STATUS.m
 
 ## Git and PR state
 
-`main` is clean, pushed to `origin/main`. Active hardening is progressing on `dev`. All backend and frontend suites pass with 100% test coverage. Because every merge creates a new commit, this file intentionally does not hard-code a commit hash or a changing documentation PR range.
+`main` is clean, pushed to `origin/main`. Active hardening and comprehensive architectural refactoring are progressing on `dev`. All backend and frontend suites pass with 100% test coverage.
 
-| Area | Merged state |
+| Area | Merged / Active State |
 |---|---|
-| Architecture Refactoring & Quality | ESLint 9 Flat Config integrated with 0 errors; massive pages decomposed (`PlatformConsoleTypes.ts`, `HeadInstructorsPreview.tsx`, `PlatformConsole.tsx` cleaned); CSS modularized into 15 stylesheets under `styles/pages/` reducing `index.css` from 552KB (21,627 lines) to 44KB (2,250 lines) with build time cut to 5.58s; Role shell migration completed natively via `RoleDashboardShell` (removed legacy `BranchManagerSidebar`, `R01AcademySidebar`, and `R03HeadInstructorsSidebar` wrappers); mobile drawer scrim & dual `.sidebar-open`/`.open` selector fixed |
-| Dynamic permissions engine | Tenant role overrides (`TenantRoleOverrides`), custom membership permissions (`CustomPermissionsJson`), instant suspension with active session revocation, and interactive permissions matrix UI (`AcademyRoles.tsx`) |
-| Granular route & navigation guards | Route-level permission bindings (`permission`, `anyOfPermissions`), dynamic sidebar menu filtering (`getAuthorizedNavigation`), Arabic 403 access-denied UI, active workspace indicators (`WorkspaceHub.tsx`) |
-| Governance indexing & audit trail | Compound DB indexing on `AuditEvent` and `ApprovalRequest` (`20261013140000_AddAuditEventIndexes`), academy audit endpoint (`GET /api/v1/academy/audit-events`), and full interactive audit trail dashboard (`/academy/audit-trail`, `AcademyAuditTrail.tsx`) |
-| Modern landing page & brand alignment | High-aesthetic brand alignment in `apps/landing`, interactive components (Hero, Capabilities, Audience, SystemPreview, Workflow, DemoForm modal, Footer), build verified |
-| Product workflow | Persisted Marketing Leads/Campaigns/Content Items and conversion metrics |
-| Student/branch onboarding | Student, Branch, Staff, and Guardian/Guardian Link CSV Preview + Commit |
-| Staff onboarding | Invitation-first; creates `INVITED` staff and invitation hashes; no passwords imported or stored |
-| Scheduling onboarding | Course Template and Group CSV Preview + Commit; Group Commit creates CourseOfferings and AcademySessions |
-| Enrollment onboarding | Enrollment CSV Preview + Commit; ordered `ACTIVE` then `WAITLISTED` assignment by group capacity |
-| Billing boundary | Enrollment import creates no invoices; invoice/payment workflows remain separate |
+| **Architecture Modularization & Refactoring** | Complete decomposition of 11 monolithic surfaces into domain-scoped subviews, tabs, and modals:<br>• **FinanceDeskViews.tsx**: Decomposed from 2,579 lines (123KB) down to 24 lines across 6 modular views in `client/src/components/finance/` (`FinanceOverviewView`, `FinanceCollectionsView`, `FinanceExpensesView`, `FinanceReportsView`, `FinanceShiftsView`, `FinancePayrollView`, `FinanceShared.tsx`, and `FinanceDeskTypes.ts`).<br>• **PlatformConsoleLive.tsx**: Modularized into 11 modals in `PlatformConsoleModals.tsx` and 7 feature tabs (`Overview`, `Academies`, `Billing`, `Leads`, `Support`, `System`, and `Components`).<br>• **SecretaryDeskLive.tsx**: Slashed by 59% (1,371 lines down to 563 lines) across `SecretaryDeskModals.tsx` and 5 tabs (`Pipeline`, `Registration`, `Followups`, `Freezes`, `Shifts`).<br>• **FamilyPortal.tsx**: Slashed by 69% (1,093 down to 336 lines) via `FamilyPortalTypes.ts` and `FamilyPortalSubViews.tsx`.<br>• **AcademyRoles.tsx**: Slashed by 60% via `AcademyRolesMatrixTab.tsx`, `AcademyRolesMembersTab.tsx`, and `AcademyRolesModals.tsx`.<br>• **Schedule.tsx & ScheduleViews.tsx**: Extracted `ScheduleTypes.ts`, completely severing circular dependencies.<br>• **InstructorDeskLive.tsx**: Slashed from 926 down to 597 lines via 4 subviews in `client/src/components/instructor/` (`InstructorSessionsView`, `InstructorSupervisionView`, `InstructorAttendanceView`, `InstructorEvaluationsView`).<br>• **ReportsLive.tsx**: Slashed by 52% (938 down to 451 lines) via 5 tab components in `client/src/components/reports/` (`ReportsOverviewTab`, `ReportsExpensesTab`, `ReportsRetentionRadarTab`, `ReportsCoursesTab`, `ReportsInstructorsTab`).<br>• **Approvals, Competitions, Students, Classes**: Extracted modals, seed mappers, and domain contracts (`ApprovalsTypes.ts`, `CompetitionsModals.tsx`, `StudentsModals.tsx`, `StudentsTypes.ts`, `ClassesTypes.ts`). |
+| **Dynamic permissions engine** | Tenant role overrides (`TenantRoleOverrides`), custom membership permissions (`CustomPermissionsJson`), instant suspension with active session revocation, and interactive permissions matrix UI (`AcademyRoles.tsx`). |
+| **Granular route & navigation guards** | Route-level permission bindings (`permission`, `anyOfPermissions`), dynamic sidebar menu filtering (`getAuthorizedNavigation`), Arabic 403 access-denied UI, active workspace indicators (`WorkspaceHub.tsx`). |
+| **Governance indexing & audit trail** | Compound DB indexing on `AuditEvent` and `ApprovalRequest` (`20261013140000_AddAuditEventIndexes`), academy audit endpoint (`GET /api/v1/academy/audit-events`), and full interactive audit trail dashboard (`/academy/audit-trail`, `AcademyAuditTrail.tsx`). |
+| **Modern landing page & brand alignment** | High-aesthetic brand alignment in `apps/landing`, interactive components (Hero, Capabilities, Audience, SystemPreview, Workflow, DemoForm modal, Footer), build verified. |
+| **Product workflow** | Persisted Marketing Leads/Campaigns/Content Items and conversion metrics. |
+| **Student/branch onboarding** | Student, Branch, Staff, and Guardian/Guardian Link CSV Preview + Commit. |
+| **Staff onboarding** | Invitation-first; creates `INVITED` staff and invitation hashes; no passwords imported or stored. |
+| **Scheduling onboarding** | Course Template and Group CSV Preview + Commit; Group Commit creates CourseOfferings and AcademySessions. |
+| **Enrollment onboarding** | Enrollment CSV Preview + Commit; ordered `ACTIVE` then `WAITLISTED` assignment by group capacity. |
+| **Billing boundary** | Enrollment import creates no invoices; invoice/payment workflows remain separate. |
 
 ## Shared CSV contract
 
@@ -42,19 +42,20 @@ Relevant contracts:
 
 ## Current next plan
 
-1. **Supabase Pro Infrastructure Gate:** Configure automated daily backups and Point-In-Time Recovery (PITR) before opening the live production finance gate.
-2. Configure Vercel production deployment routing for both dashboard client (`/`) and landing page (`apps/landing`).
-3. Run database migration verification against the live Supabase PostgreSQL staging/production database.
-4. Validate end-to-end multi-role real simulation and onboarding testing across all role workspaces.
-5. Keep production-only gates separate: private storage/secrets, backup/restore evidence, authenticated staging smoke, real SMS, password recovery, and distributed rate limiting.
+1. **Multi-Role Real Simulation:** Execute `verify_flow.ps1` end-to-end to validate all 10 roles (R00 - R09) against the live seeded database.
+2. **Merge & Staging Deployment:** Merge `dev` into `main` and verify production deployment routing on Vercel (`/` for dashboard and `apps/landing`) and Railway/Render for the .NET API.
+3. **Supabase Pro Infrastructure Gate:** Configure automated daily backups and Point-In-Time Recovery (PITR) when live paying customers are onboarded ($0 SaaS policy until commercial launch).
+4. **Production Readiness:** Keep production-only gates separate: private storage/secrets, backup/restore evidence, authenticated staging smoke, real SMS OTP, password recovery, and distributed rate limiting.
 
 ## Validation baseline
 
-- `dotnet test` (InMemory): 109/109 passed (100% Backend Integration tests).
-- `verify_flow.ps1` (Live API E2E): 10/10 PASSED across all roles (R00 Platform Admin, R01 Owner, R02 Branch Manager, R03 Head Instructor, R04 Instructor, R05 Secretary, R06 Accountant, R07 Marketing, R08 Parent, R09 Student).
-- `pnpm test`: 64/64 passed (Frontend Vitest tests).
-- `pnpm check`: passed (0 TypeScript errors).
-- `pnpm lint`: passed (0 errors with ESLint 9 Flat Config).
-- `pnpm build`: passed in 5.73s (60% build time reduction, >1,020 lines of dead code removed).
-- `@mada/landing build`: passed in 2.56s.
-- `git diff --check`: passed.
+- `dotnet test` (InMemory): **109/109 passed** (100% Backend Integration tests).
+- `dotnet build`: **0 warnings, 0 errors** (.NET 10).
+- `verify_flow.ps1` (Live API E2E): **10/10 PASSED** across all roles (R00 Platform Admin, R01 Owner, R02 Branch Manager, R03 Head Instructor, R04 Instructor, R05 Secretary, R06 Accountant, R07 Marketing, R08 Parent, R09 Student).
+- `pnpm test`: **64/64 passed** (Frontend Vitest unit/integration tests).
+- `pnpm check`: **0 TypeScript errors** (`tsc --noEmit`).
+- `pnpm lint`: **0 errors** (ESLint 9 Flat Config).
+- `pnpm build`: **Passed in 6.2s** (clean chunk splitting with zero circular dependencies).
+- `playwright`: **18 critical MVP journey tests** in `e2e/critical-flows.spec.ts` (cross-platform Windows/Linux configuration).
+- `@mada/landing build`: **Passed in 2.56s**.
+- `git diff --check`: **Clean**.
