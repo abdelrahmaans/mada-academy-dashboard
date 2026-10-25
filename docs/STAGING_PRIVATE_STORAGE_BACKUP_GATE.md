@@ -7,7 +7,18 @@
 - Evidence access remains behind authenticated, tenant/branch-scoped API routes.
 - A staging smoke test now covers private upload and download: `scripts/private-storage-smoke.sh`.
 - A restore verification gate now creates a custom PostgreSQL dump, records a SHA-256 checksum, inspects the archive, and restores it into an explicitly confirmed isolated database: `scripts/backup-restore-verify.sh` (requires `RESTORE_DATABASE_ISOLATED_CONFIRM=YES`).
+- A manual GitHub Actions workflow now orchestrates these checks behind the protected `staging` environment: `.github/workflows/staging-release-gates.yml`.
 - Marketing R07 now uses the persisted `/api/v1/leads` workflow instead of local preview data.
+
+## Manual staging execution
+
+Run **Staging Release Gates** from GitHub Actions with the deployed API URL. The workflow is manual-only, uses the `staging` environment, and never runs against `main` automatically. Configure these environment secrets before running it:
+
+- `STAGING_STAFF_PHONE` and `STAGING_STAFF_PASSWORD`.
+- Optional `STAGING_PARENT_PHONE` and `STAGING_PARENT_PASSWORD`.
+- Optional `STAGING_DATABASE_URL` and `STAGING_RESTORE_DATABASE_URL` for the isolated PostgreSQL restore gate.
+
+The private-storage option also requires an existing staging `payment_id`; the workflow creates a non-sensitive PNG fixture on the runner. The backup dump is never uploaded as an artifact; only its SHA-256 evidence is retained.
 
 ## What remains externally blocked
 

@@ -1,0 +1,96 @@
+name: Staging Release Gates
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: "Deployed staging API base URL including /api/v1"
+        required: true
+        type: string
+      payment_id:
+        description: "Existing staging payment ID for private evidence smoke"
+        required: false
+        type: string
+      run_private_storage:
+        description: "Run authenticated private evidence upload/download smoke"
+        required: true
+        default: false
+        type: boolean
+      run_backup_restore:
+        description: "Run PostgreSQL backup and isolated restore verification"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-release-gates
+  cancel-in-progress: false
+
+jobs:
+  gates:
+    name: Staging smoke and release gates
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact commit under review
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client tools
+        if: ${{ inputs.run_backup_restore }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends postgresql-client
+
+      - name: Create non-sensitive evidence fixture
+        if: ${{ inputs.run_private_storage }}
+        run: |
+          mkdir -p artifacts
+          printf 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=' | base64 --decode > artifacts/staging-receipt.png
+
+      - name: Run API and consumer staging smoke
+        env:
+          API_BASE_URL: ${{ inputs.api_base_url }}
+          STAFF_PHONE: ${{ secrets.STAGING_STAFF_PHONE }}
+          STAFF_PASSWORD: ${{ secrets.STAGING_STAFF_PASSWORD }}
+          PARENT_PHONE: ${{ secrets.STAGING_PARENT_PHONE }}
+          PARENT_PASSWORD: ${{ secrets.STAGING_PARENT_PASSWORD }}
+        run: ./scripts/staging-smoke.sh
+
+      - name: Run private storage smoke
+        if: ${{ inputs.run_private_storage && inputs.payment_id != '' }}
+        env:
+          API_BASE_URL: ${{ inputs.api_base_url }}
+          STAFF_PHONE: ${{ secrets.STAGING_STAFF_PHONE }}
+          STAFF_PASSWORD: ${{ secrets.STAGING_STAFF_PASSWORD }}
+          PAYMENT_ID: ${{ inputs.payment_id }}
+          EVIDENCE_FILE: artifacts/staging-receipt.png
+        run: ./scripts/private-storage-smoke.sh
+
+      - name: Require payment ID when private storage smoke is selected
+        if: ${{ inputs.run_private_storage && inputs.payment_id == '' }}
+        run: |
+          echo "payment_id is required when run_private_storage=true" >&2
+          exit 1
+
+      - name: Run PostgreSQL backup and isolated restore verification
+        if: ${{ inputs.run_backup_restore }}
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          RESTORE_DATABASE_URL: ${{ secrets.STAGING_RESTORE_DATABASE_URL }}
+          RESTORE_DATABASE_ISOLATED_CONFIRM: YES
+          BACKUP_FILE: artifacts/staging-database.dump
+        run: ./scripts/backup-restore-verify.sh
+
+      - name: Upload non-sensitive gate evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-release-gate-evidence-${{ github.run_id }}
+          path: artifacts/*.sha256
+          if-no-files-found: ignore
+          retention-days: 7
