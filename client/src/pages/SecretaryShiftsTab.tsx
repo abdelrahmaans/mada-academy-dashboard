@@ -108,9 +108,9 @@ export function SecretaryShiftsTab({
                     }}
                   >
                     {isAccepted
-                      ? "تم الاستلام من المحاسب"
+                      ? "معتمد ومستلم من المحاسب ✓"
                       : isPending
-                      ? "بانتظار استلام المحاسب"
+                      ? "بانتظار استلام واعتماد المحاسب ⏳"
                       : "يوجد فرق / عجز"}
                   </span>
                 </div>
@@ -142,8 +142,9 @@ export function SecretaryShiftsTab({
                     paddingTop: "6px",
                   }}
                 >
-                  تم استلام النقدية واعتمادها بواسطة:{" "}
+                  تم استلام النقدية وتوريدها للخزينة الرئيسية بواسطة:{" "}
                   <b>{shift.receivedByName}</b>
+                  {shift.receivedAt ? ` (في ${new Date(shift.receivedAt).toLocaleString("ar-EG")})` : ""}
                 </div>
               )}
             </article>

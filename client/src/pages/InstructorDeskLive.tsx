@@ -22,7 +22,11 @@ import {
   type MySupervisionGroup,
   type SessionEvaluationRecord,
   type SessionRecord,
+  type MyInstructorEarnings,
 } from "@/lib/apiClient";
+import { InstructorEarningsCard } from "@/components/instructor/InstructorEarningsCard";
+import { GuidedSessionCompletionModal } from "@/components/instructor/GuidedSessionCompletionModal";
+import { SubstitutionRequestModal } from "@/components/instructor/SubstitutionRequestModal";
 import "./InstructorDeskLive.css";
 
 import {
@@ -77,6 +81,10 @@ export default function InstructorDeskLive() {
   const [attendanceError, setAttendanceError] = useState<string | null>(null);
   const [completionError, setCompletionError] = useState<string | null>(null);
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
+  const [earnings, setEarnings] = useState<MyInstructorEarnings | null>(null);
+  const [earningsLoading, setEarningsLoading] = useState(true);
+  const [completionModalOpen, setCompletionModalOpen] = useState(false);
+  const [substituteModalOpen, setSubstituteModalOpen] = useState(false);
 
   const loadSessions = useCallback(async () => {
     if (!me?.branchId || me.role !== "R04_INSTRUCTOR") {
@@ -98,10 +106,15 @@ export default function InstructorDeskLive() {
       const to = new Date(
         now.getTime() + 60 * 24 * 60 * 60 * 1000
       ).toISOString();
-      const [sessionsResult, supervisionResult] = await Promise.allSettled([
+      const [sessionsResult, supervisionResult, earningsResult] = await Promise.allSettled([
         apiClient.listSessions({ from, to }),
         apiClient.mySupervisionGroups(),
+        apiClient.myInstructorEarnings(),
       ]);
+      if (earningsResult.status === "fulfilled") {
+        setEarnings(earningsResult.value);
+        setEarningsLoading(false);
+      }
       if (supervisionResult.status === "fulfilled") {
         setSupervisionGroups(supervisionResult.value.items);
         setSupervisionError(null);
@@ -399,6 +412,11 @@ export default function InstructorDeskLive() {
           </button>
         </header>
         <RoleScopeCard className="r04-live-scope" compact />
+        <InstructorEarningsCard
+          earnings={earnings}
+          loading={earningsLoading}
+          onRefresh={() => void loadSessions()}
+        />
         <nav className="r04-live-tabs" aria-label="مساحة المدرب">
           <button
             type="button"
@@ -580,7 +598,8 @@ export default function InstructorDeskLive() {
                       }));
                     }}
                     onSaveAttendance={() => void saveAttendance()}
-                    onCompleteSession={() => void completeSession()}
+                    onCompleteSession={() => setCompletionModalOpen(true)}
+                    onRequestSubstitute={() => setSubstituteModalOpen(true)}
                   />
                 )}
               {!attendanceLoading &&
@@ -610,6 +629,29 @@ export default function InstructorDeskLive() {
           <ShieldCheck size={15} /> النطاق يأتي من الخادم: حصصك والجروبات المفوضة
           لحسابك فقط؛ صلاحيات الكتابة والاعتماد تخضع للتكليف والصلاحيات الخلفية.
         </p>
+
+        {completionModalOpen && selectedSession && (
+          <GuidedSessionCompletionModal
+            session={selectedSession}
+            attendanceRows={attendanceRows}
+            attendanceDraft={attendanceDraft}
+            counts={counts}
+            onClose={() => setCompletionModalOpen(false)}
+            onCompleted={() => {
+              void loadSessions();
+            }}
+          />
+        )}
+
+        {substituteModalOpen && selectedSession && (
+          <SubstitutionRequestModal
+            session={selectedSession}
+            onClose={() => setSubstituteModalOpen(false)}
+            onSuccess={() => {
+              void loadSessions();
+            }}
+          />
+        )}
       </main>
     </RoleDashboardShell>
   );

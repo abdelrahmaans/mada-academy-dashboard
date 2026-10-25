@@ -1,5 +1,5 @@
 import React from "react";
-import { CheckCircle2, Clock3, Save, Users } from "lucide-react";
+import { CheckCircle2, Clock3, Save, Users, UserMinus } from "lucide-react";
 import type { AttendanceItem, SessionRecord } from "@/lib/apiClient";
 import type { AttendanceDraft, AttendanceStatus } from "@/pages/InstructorDeskTypes";
 
@@ -22,6 +22,7 @@ export interface InstructorAttendanceViewProps {
   onUpdateLateMinutes: (studentId: string, minutes: number) => void;
   onSaveAttendance: () => void;
   onCompleteSession: () => void;
+  onRequestSubstitute?: () => void;
 }
 
 export function InstructorAttendanceView({
@@ -38,6 +39,7 @@ export function InstructorAttendanceView({
   onUpdateLateMinutes,
   onSaveAttendance,
   onCompleteSession,
+  onRequestSubstitute,
 }: InstructorAttendanceViewProps) {
   return (
     <>
@@ -150,12 +152,21 @@ export function InstructorAttendanceView({
               onClick={onCompleteSession}
               disabled={!completionAllowed || completing}
             >
-              {completing ? "جارٍ الإتمام…" : "إتمام الجلسة"}
+              {completing ? "جارٍ الإتمام…" : "إتمام الجلسة (إرشادي)"}
             </button>
+            {onRequestSubstitute && selectedSession.status === "SCHEDULED" && (
+              <button
+                type="button"
+                className="r04-live-substitute-btn"
+                onClick={onRequestSubstitute}
+              >
+                <UserMinus size={14} /> طلب اعتذار / بديل
+              </button>
+            )}
           </div>
           <p className="r04-live-helper">
             يتاح إتمام الجلسة بعد وقت انتهائها وبعد حفظ حالة كل طالب. عند الإتمام
-            يُقفل كشف الحضور.
+            يُقفل كشف الحضور وتضاف المستحقات فورًا.
           </p>
           {completionError && (
             <p className="r04-live-inline-error" role="alert">

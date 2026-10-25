@@ -16,7 +16,7 @@
     "build:landing": "pnpm --filter @mada/landing build",
     "check:landing": "pnpm --filter @mada/landing check",
     "preview": "vite preview --host",
-    "check": "tsc --noEmit",
+    "check": "node --max-old-space-size=4096 ./node_modules/typescript/bin/tsc --noEmit",
     "lint": "eslint client/src shared --ext .ts,.tsx",
     "lint:fix": "eslint client/src shared --ext .ts,.tsx --fix",
     "test": "vitest run --config vitest.config.ts",

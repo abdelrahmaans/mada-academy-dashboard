@@ -47,6 +47,8 @@ import { SecretaryRegistrationTab } from "./SecretaryRegistrationTab";
 import { SecretaryFollowupsTab } from "./SecretaryFollowupsTab";
 import { SecretaryFreezesTab } from "./SecretaryFreezesTab";
 import { SecretaryShiftsTab } from "./SecretaryShiftsTab";
+import { SecretaryPulseTab } from "./SecretaryPulseTab";
+import { Calendar } from "lucide-react";
 import "./SecretaryDeskLive.css";
 
 export default function SecretaryDeskLive() {
@@ -65,7 +67,7 @@ export default function SecretaryDeskLive() {
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash.replace("#", "") as SecretaryTab;
-      const validTabs: SecretaryTab[] = ["pipeline", "registration", "followups", "freezes", "shifts"];
+      const validTabs: SecretaryTab[] = ["pulse", "pipeline", "registration", "followups", "freezes", "shifts"];
       if (validTabs.includes(hash)) {
         setActiveTab(hash);
       }
@@ -142,12 +144,30 @@ export default function SecretaryDeskLive() {
       apiClient.listSchedulingGroups(),
       apiClient.listStudents(),
       apiClient.freezeRequests(),
-    ]).then(([leadsRes, groupsRes, studentsRes, freezesRes]) => {
+      apiClient.listCashierShiftsHistory(),
+    ]).then(([leadsRes, groupsRes, studentsRes, freezesRes, shiftsRes]) => {
       if (!active) return;
       if (leadsRes.status === "fulfilled") setLeads(leadsRes.value.items);
       if (groupsRes.status === "fulfilled") setGroups(groupsRes.value.items);
       if (studentsRes.status === "fulfilled") setStudents(studentsRes.value.items);
       if (freezesRes.status === "fulfilled") setServerFreezes(freezesRes.value);
+      if (shiftsRes.status === "fulfilled" && shiftsRes.value?.items?.length) {
+        const currentHandovers = shiftStorage.getHandovers();
+        const updated = currentHandovers.map(h => {
+          const serverMatch = shiftsRes.value.items.find(item => item.targetId === h.id || item.closedAt?.startsWith(h.shiftDate));
+          if (serverMatch && serverMatch.isConfirmed) {
+            return {
+              ...h,
+              status: "ACCEPTED" as const,
+              receivedByName: serverMatch.confirmedBy || h.receivedByName || "المحاسب المالي",
+              receivedAt: serverMatch.confirmedAt || h.receivedAt,
+              notes: serverMatch.confirmNotes || h.notes,
+            };
+          }
+          return h;
+        });
+        shiftStorage.saveHandovers(updated);
+      }
       setLoading(false);
     });
 
@@ -362,6 +382,13 @@ export default function SecretaryDeskLive() {
       notes: shiftFormData.notes || undefined,
     });
 
+    if (apiClient.hasSession()) {
+      apiClient.closeoutCashierShift({
+        countedCashPiastres: Math.round(cash * 100),
+        notes: shiftFormData.notes || `تقفيل وردية ${shiftFormData.shiftName === "MORNING" ? "صباحية" : "مسائية"} (${newShift.id})`,
+      }).catch(() => undefined);
+    }
+
     setShiftModalOpen(false);
     setShiftFormData({
       shiftName: "MORNING",
@@ -479,6 +506,13 @@ export default function SecretaryDeskLive() {
         <div className="secretary-tabs">
           <button
             type="button"
+            className={`secretary-tab-btn ${activeTab === "pulse" ? "active" : ""}`}
+            onClick={() => selectTab("pulse")}
+          >
+            <Calendar size={17} /> جدول اليوم (Daily Pulse)
+          </button>
+          <button
+            type="button"
             className={`secretary-tab-btn ${activeTab === "pipeline" ? "active" : ""}`}
             onClick={() => selectTab("pipeline")}
           >
@@ -513,6 +547,19 @@ export default function SecretaryDeskLive() {
             <Wallet size={17} /> تقفيل خزينة الوردية
           </button>
         </div>
+
+        {/* TAB 0: Today's Pulse */}
+        {activeTab === "pulse" && (
+          <SecretaryPulseTab
+            groups={groups}
+            onDirectRegister={(offeringId) => {
+              if (offeringId) {
+                setDirectRegistration(cur => ({ ...cur, courseOfferingId: offeringId }));
+              }
+              selectTab("registration");
+            }}
+          />
+        )}
 
         {/* TAB 1: Leads Pipeline */}
         {activeTab === "pipeline" && (

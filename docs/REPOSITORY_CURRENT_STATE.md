@@ -15,6 +15,7 @@ Read this file first, then read [`PROJECT_STATUS.md`](../.agent/PROJECT_STATUS.m
 
 | Area | Merged / Active State |
 |---|---|
+| **Interconnected ERP Role Workflows (R02, R04, R05, R06)** | Complete end-to-end integration across operations, instruction, reception, and finance:<br>• **Instructor Transparency & Guided Completion (R04)**: Live monthly accrued earnings hero card (`InstructorEarningsCard.tsx` + `GET /api/v1/finance/instructor/my-earnings`), step-by-step 3-stage guided completion modal (`GuidedSessionCompletionModal.tsx`) locking attendance and recording per-student evaluations with immediate cascade to student/family portals and live payroll recalculation.<br>• **Instructor Substitution & Conflict Resolution (R02/R04)**: In-app substitute requests (`SubstitutionRequestModal.tsx`) and Branch Manager conflict resolver (`BranchSubstituteModal.tsx` + `GET /api/v1/scheduling/sessions/{id}/available-substitutes` + `POST /api/v1/scheduling/sessions/{id}/assign-substitute`) detecting instructor schedule clashes and transferring session compensation to the substitute.<br>• **Secretary Daily Pulse (R05)**: Daily timeline tab (`SecretaryPulseTab.tsx`) with live session counters, student roster inspector, and enforced group creation permissions restricted to R01, R02, and R05 (`CanManageScheduling`).<br>• **Accountant Cash Reconciliation (R06)**: Two-man rule shift reconciliation (`POST /api/v1/finance/cashier/confirm-shift` and `GET /api/v1/finance/cashier/shifts-history`) locking reception drawer closeouts with audit trails and syncing real-time status to Secretary Desk (`SecretaryShiftsTab.tsx`). |
 | **Active Student Billing Meter & Plan Limits Contract** | `GET /api/v1/academy/billing-meter` calculating active students, branch usage, and staff counts against Starter/Growth/Enterprise plan limits. Non-destructive operational warnings, live billing widget in Executive Dashboard (`BillingMeterWidget.tsx`), and platform admin plan upgrade endpoint (`PATCH /api/v1/platform/academies/{id}/plan`) with audit event `PLATFORM_TENANT_PLAN_CHANGED`. |
 | **Waitlist Promotion & Direct Invoice Flow** | Policy-driven enrollment activation (`ActivateWaitlistRequest`) allowing optional invoice generation upon promotion. Automatically calculates tuition, binds invoice lines to course templates, logs audit events, and updates UI (`WaitlistManagementView.tsx` & `Classes.tsx`). |
 | **Playwright E2E Suite (100% Green)** | 18 critical MVP journey tests passing locally (`e2e/critical-flows.spec.ts`) covering multi-role authentication (R04, R06, R08, R09), finance desk accounting, family portal child scoping, student self-scoping, route access guards, and mock network failure boundaries. |
@@ -52,7 +53,7 @@ Relevant contracts:
 
 ## Validation baseline
 
-- `dotnet test` (InMemory): **114/114 passed** (100% Backend Integration tests).
+- `dotnet test` (InMemory): **120/120 passed** (100% Backend Integration tests).
 - `dotnet build`: **0 warnings, 0 errors** (.NET 10).
 - `pnpm test`: **70/70 passed** (10 test suites, Vitest unit/integration tests).
 - `pnpm check`: **0 TypeScript errors** (`tsc --noEmit`).

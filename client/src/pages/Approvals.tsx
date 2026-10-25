@@ -28,6 +28,7 @@ import ApprovalCard, {
 import ApprovalQueueTabs from "@/components/ApprovalQueueTabs";
 import AuditTimeline, { type AuditEvent } from "@/components/AuditTimeline";
 import DecisionDialog from "@/components/DecisionDialog";
+import { BranchSubstituteModal } from "@/components/BranchSubstituteModal";
 import NotificationCenter, {
   type NotificationItem,
 } from "@/components/NotificationCenter";
@@ -38,6 +39,7 @@ import {
   type FinanceExpense,
   type InvoiceCorrection,
   type NotificationRecord,
+  type SessionRecord,
   type SubscriptionFreezeRequest,
 } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
@@ -93,6 +95,8 @@ export default function Approvals() {
   const [decisionNote, setDecisionNote] = useState("");
   const [expenseRejectionMode, setExpenseRejectionMode] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => apiClient.hasSession() ? [] : INITIAL_NOTIFICATIONS);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [substituteSession, setSubstituteSession] = useState<SessionRecord | null>(null);
   const canApproveSelected =
     selected?.kind === "substitute" ? Boolean(selected.proposedInstructorId) : selected?.kind !== "discount" || (selected.discountValue ?? 0) <= BRANCH_MANAGER_DISCOUNT_LIMIT;
 
@@ -145,7 +149,7 @@ export default function Approvals() {
     }).finally(() => {
       setLoading(false);
     });
-  }, [me?.role]);
+  }, [me?.role, reloadKey]);
 
   const branchRequests = useMemo(
     () => liveMode ? requests : requests.filter(item => item.branch === branch),
@@ -754,6 +758,42 @@ export default function Approvals() {
           onCancelExpenseRejection={() => {
             setExpenseRejectionMode(false);
             setDecisionNote("");
+          }}
+          onOpenSubstituteModal={
+            selected.kind === "substitute"
+              ? () => {
+                  const sessionObj: SessionRecord = {
+                    id: selected.targetId || selected.id,
+                    branchId: me?.branchId || "",
+                    courseOfferingId: null,
+                    sessionNumber: 1,
+                    startAt: selected.submittedAtSort || new Date().toISOString(),
+                    endAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+                    instructorId: "",
+                    classroomId: "",
+                    type: "STANDARD",
+                    status: "SCHEDULED",
+                    notes: selected.summary,
+                    completedAt: null,
+                    courseName: selected.course,
+                    instructorName: selected.instructor,
+                  };
+                  setSubstituteSession(sessionObj);
+                }
+              : undefined
+          }
+        />
+      )}
+
+      {substituteSession && (
+        <BranchSubstituteModal
+          session={substituteSession}
+          onClose={() => setSubstituteSession(null)}
+          onAssigned={() => {
+            setSubstituteSession(null);
+            closeReview();
+            setReloadKey(k => k + 1);
+            toast.success("تم تعيين المدرب البديل واعتماد الطلب بنجاح! 🎉");
           }}
         />
       )}

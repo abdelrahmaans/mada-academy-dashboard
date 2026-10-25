@@ -8,7 +8,7 @@ import type {
   SubscriptionFreezeRequest,
 } from "@/lib/apiClient";
 
-export type SecretaryTab = "pipeline" | "registration" | "followups" | "freezes" | "shifts";
+export type SecretaryTab = "pulse" | "pipeline" | "registration" | "followups" | "freezes" | "shifts";
 
 export interface FreezeFormData {
   studentId: string;

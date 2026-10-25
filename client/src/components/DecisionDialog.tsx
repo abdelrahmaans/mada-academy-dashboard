@@ -83,6 +83,7 @@ export type DecisionDialogProps = {
   onDecide: (status: "approved" | "rejected") => void;
   onStartExpenseRejection: () => void;
   onCancelExpenseRejection: () => void;
+  onOpenSubstituteModal?: () => void;
 };
 
 export default function DecisionDialog({
@@ -97,6 +98,7 @@ export default function DecisionDialog({
   onDecide,
   onStartExpenseRejection,
   onCancelExpenseRejection,
+  onOpenSubstituteModal,
 }: DecisionDialogProps) {
   return (
     <div
@@ -211,6 +213,37 @@ export default function DecisionDialog({
           title="مسار الموافقة"
           description="تتابع الحالة من الإرسال حتى قرار صاحب الصلاحية."
         />
+        {item.kind === "substitute" && item.status === "pending" && onOpenSubstituteModal && (
+          <div style={{
+            background: "rgba(13, 148, 136, 0.08)",
+            border: "1px dashed #0d9488",
+            borderRadius: "8px",
+            padding: "12px 16px",
+            margin: "12px 0",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "10px"
+          }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "#0f766e" }}>
+                فحص المدربين المتاحين وتعيين بديل آليًا
+              </div>
+              <div style={{ fontSize: "0.8rem", color: "#64748b" }}>
+                افحص جدول المدربين المتاحين في نفس التوقيت بدون تعارض وعيّن البديل فوراً.
+              </div>
+            </div>
+            <button
+              type="button"
+              className="button button-primary"
+              style={{ fontSize: "0.82rem", padding: "6px 14px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+              onClick={onOpenSubstituteModal}
+            >
+              اختيار وتكليف مدرب متاح
+            </button>
+          </div>
+        )}
         {item.kind === "discount" && (
           <EscalationBanner
             escalated={!canApprove}

@@ -302,6 +302,7 @@ export type SessionRecord = {
   classroomName?: string | null;
   branchName?: string | null;
   courseName?: string | null;
+  substituteInstructorName?: string | null;
 };
 
 export type SessionListResponse = {
@@ -338,6 +339,72 @@ export type AttendanceResponse = {
   total: number;
 };
 export type SessionCompletionResponse = { sessionId: string; status: string; completedAt: string };
+
+export type InstructorEarningsItem = {
+  sessionId: string;
+  sessionNumber: number;
+  courseName: string;
+  startAt: string;
+  completedAt: string | null;
+  isSubstitute: boolean;
+  earnedPiastres: number;
+  earnedEgp: number;
+};
+
+export type MyInstructorEarnings = {
+  month: string;
+  instructorId: string;
+  ratePerSessionPiastres: number;
+  ratePerSessionEgp: number;
+  completedSessionsCount: number;
+  upcomingSessionsCount: number;
+  accruedPiastres: number;
+  accruedEgp: number;
+  projectedTotalPiastres: number;
+  projectedTotalEgp: number;
+  sessions: InstructorEarningsItem[];
+};
+
+export type AvailableSubstituteItem = {
+  instructorId: string;
+  displayName: string;
+  phone: string;
+  roleCode: string;
+  isAvailable: boolean;
+  conflictDetails?: {
+    instructorSessions: string[];
+    classroomSessions: string[];
+    students: string[];
+    kits: string[];
+    branchHours: boolean;
+  } | null;
+};
+
+export type AvailableSubstitutesResponse = {
+  sessionId: string;
+  branchId: string;
+  startAt: string;
+  endAt: string;
+  items: AvailableSubstituteItem[];
+};
+
+export type CashierShiftHistoryItem = {
+  targetId: string;
+  branchId: string | null;
+  branchName: string | null;
+  closedAt: string | null;
+  closedBy: string | null;
+  closeoutMetadata: string | null;
+  isConfirmed: boolean;
+  confirmedAt: string | null;
+  confirmedBy: string | null;
+  confirmNotes: string | null;
+};
+
+export type CashierShiftsHistoryResponse = {
+  items: CashierShiftHistoryItem[];
+  total: number;
+};
 
 export type AttendanceRecordInput = {
   studentId: string;
@@ -777,6 +844,8 @@ export const apiClient = {
   requestSession: (input: { type: "EXTRA" | "MAKEUP"; branchId: string; classroomId: string; startAt: string; endAt: string; sessionNumber: number; studentIds?: string[]; courseOfferingId?: string; instructorId?: string; reason?: string; notes?: string }) =>
     request<{ approvalId: string; sessionId: string; state: string; type?: string }>("/scheduling/session-requests", { method: "POST", body: JSON.stringify(input) }),
   requestSubstitution: (sessionId: string, reason: string) => request<{ approvalId: string; sessionId: string; state: string }>(`/scheduling/sessions/${sessionId}/substitution-requests`, { method: "POST", body: JSON.stringify({ reason }) }),
+  getAvailableSubstitutes: (sessionId: string) => request<AvailableSubstitutesResponse>(`/scheduling/sessions/${sessionId}/available-substitutes`),
+  assignSubstitute: (sessionId: string, input: { substituteInstructorId: string; reason?: string }) => request<{ sessionId: string; substituteInstructorId: string; status: string }>(`/scheduling/sessions/${sessionId}/assign-substitute`, { method: "POST", body: JSON.stringify(input) }),
   proposeSubstitute: (approvalId: string, message?: string) => request<{ approvalId: string; proposedInstructorId: string }>(`/scheduling/approvals/${approvalId}/proposals`, { method: "POST", body: JSON.stringify({ message }) }),
   listApprovals: (state: "ALL" | "PENDING" | "APPROVED" | "REJECTED" = "ALL") => request<ApprovalListResponse>(`/scheduling/approvals?state=${state}`),
   decideApproval: (approvalId: string, input: { decision: "APPROVED" | "REJECTED"; assignedInstructorId?: string; reason?: string }) => request<{ approvalId: string; state: string; sessionId: string; sessionStatus: string; substituteInstructorId: string | null }>(`/scheduling/approvals/${approvalId}/decision`, { method: "POST", body: JSON.stringify(input) }),
@@ -886,6 +955,9 @@ export const apiClient = {
   },
   cashierShiftSummary: () => request<CashierShiftSummary>("/finance/cashier/shift-summary"),
   closeoutCashierShift: (input: { countedCashPiastres: number; notes?: string }) => request<CloseoutCashierResponse>("/finance/cashier/closeout", { method: "POST", body: JSON.stringify(input) }),
+  confirmCashierShift: (input: { date: string; branchId?: string; notes?: string }) => request<{ status: string; targetId: string; confirmedAt: string }>("/finance/cashier/confirm-shift", { method: "POST", body: JSON.stringify(input) }),
+  listCashierShiftsHistory: () => request<CashierShiftsHistoryResponse>("/finance/cashier/shifts-history"),
+  myInstructorEarnings: (month?: string) => request<MyInstructorEarnings>("/finance/instructor/my-earnings" + (month ? `?month=${encodeURIComponent(month)}` : "")),
   financeExpenses: (params: { status?: string; branchId?: string } = {}) => {
     const query = new URLSearchParams();
     if (params.status) query.set("status", params.status);

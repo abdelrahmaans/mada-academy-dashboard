@@ -57,6 +57,16 @@ export function InstructorSessionsView({
                     متابعة مفوضة · قراءة فقط
                   </small>
                 )}
+              {currentUserId && session.substituteInstructorId === currentUserId && (
+                <small className="r04-live-substitute-assigned">
+                  🎖️ أنت المدرب البديل لهذه الجلسة
+                </small>
+              )}
+              {session.substituteInstructorId && session.substituteInstructorId !== currentUserId && (
+                <small className="r04-live-substitute-assigned">
+                  مدرب بديل: {session.substituteInstructorName ?? "معين"}
+                </small>
+              )}
             </span>
             <span
               className={`r04-live-status ${session.status === "COMPLETED" ? "completed" : ""}`}

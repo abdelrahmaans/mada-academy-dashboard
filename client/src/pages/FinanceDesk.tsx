@@ -182,6 +182,29 @@ export default function FinanceDesk() {
           }
         })
         .catch(() => undefined);
+
+      apiClient.listCashierShiftsHistory()
+        .then(res => {
+          if (res && res.items && res.items.length > 0) {
+            const currentHandovers = shiftStorage.getHandovers();
+            const updated = currentHandovers.map(h => {
+              const serverMatch = res.items.find(item => item.targetId === h.id || item.closedAt?.startsWith(h.shiftDate));
+              if (serverMatch && serverMatch.isConfirmed) {
+                return {
+                  ...h,
+                  status: "ACCEPTED" as const,
+                  receivedByName: serverMatch.confirmedBy || h.receivedByName || "المحاسب المالي",
+                  receivedAt: serverMatch.confirmedAt || h.receivedAt,
+                  notes: serverMatch.confirmNotes || h.notes,
+                };
+              }
+              return h;
+            });
+            shiftStorage.saveHandovers(updated);
+            setHandovers(updated);
+          }
+        })
+        .catch(() => undefined);
     }
   }, [liveMode]);
 
@@ -191,11 +214,15 @@ export default function FinanceDesk() {
       try {
         await apiClient.closeoutCashierShift({ countedCashPiastres: Math.round(shift.cashAmount * 100), notes: notes || "تم استلام ومطابقة النقدية" });
         await apiClient.depositCashierSafe({ amountPiastres: Math.round(shift.cashAmount * 100), notes: `توريد عهدة وردية ${shift.id} إلى الخزينة الرئيسية` });
+        await apiClient.confirmCashierShift({
+          date: shift.shiftDate,
+          notes: notes || `اعتماد وردية ${shift.id} وتوريد ${shift.cashAmount} ج.م للخزينة`,
+        });
       } catch {
         // Gracefully handle or log
       }
     }
-    const updated = shiftStorage.acceptShift(id, financeMe?.user?.displayName || "المحاسب", 0, notes);
+    const updated = shiftStorage.acceptShift(id, financeMe?.user?.displayName || "المحاسب المالي", 0, notes);
     setHandovers(shiftStorage.getHandovers());
     toast.success(`تم استلام وتوريد عهدة الوردية ${updated.id} للخزينة بنجاح!`);
   };

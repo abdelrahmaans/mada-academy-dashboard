@@ -22,6 +22,8 @@ public static class SessionWorkflowEndpoints
         scheduling.MapPost("/groups", CreateGroupAsync);
         scheduling.MapPost("/session-requests", RequestSessionAsync);
         scheduling.MapPost("/sessions/{sessionId:guid}/substitution-requests", RequestSubstitutionAsync);
+        scheduling.MapGet("/sessions/{sessionId:guid}/available-substitutes", ListAvailableSubstitutesAsync);
+        scheduling.MapPost("/sessions/{sessionId:guid}/assign-substitute", AssignSubstituteAsync);
         scheduling.MapPost("/approvals/{approvalId:guid}/proposals", ProposeSubstituteAsync);
         scheduling.MapGet("/approvals", ListApprovalsAsync);
         scheduling.MapPost("/approvals/{approvalId:guid}/decision", DecideApprovalAsync);
@@ -226,6 +228,115 @@ public static class SessionWorkflowEndpoints
         await db.SaveChangesAsync(cancellationToken);
         await NotifyStaffAsync(db, tenantId, session.BranchId, null, "SUBSTITUTE_PROPOSAL_RECEIVED", "مدرب متاح للجلسة", "وصل عرض من مدرب متاح لتغطية الجلسة.", "APPROVAL_REQUEST", approvalId.ToString(), cancellationToken); await db.SaveChangesAsync(cancellationToken);
         return Results.Accepted(null, new { data = new { approvalId, proposedInstructorId = actorId.Value } });
+    }
+
+    private static async Task<IResult> ListAvailableSubstitutesAsync(Guid sessionId, ClaimsPrincipal user, MadaDbContext db, ConflictService conflicts, CancellationToken cancellationToken)
+    {
+        if (!CanReadScheduling(user) && !IsInstructor(user)) return Forbidden("SCHEDULING_READ_FORBIDDEN");
+        if (!Scope(user, out var tenantId, out var branchScope)) return Forbidden("TENANT_SCOPE_REQUIRED");
+        
+        var session = await db.AcademySessions.AsNoTracking()
+            .SingleOrDefaultAsync(s => s.Id == sessionId && s.TenantId == tenantId && (!branchScope.HasValue || s.BranchId == branchScope.Value), cancellationToken);
+        if (session is null) return NotFound("SESSION_NOT_FOUND");
+
+        var instructors = await (from m in db.Memberships.AsNoTracking()
+                                 join u in db.UserAccounts.AsNoTracking() on m.UserAccountId equals u.Id
+                                 where m.TenantId == tenantId && m.Status == "ACTIVE" &&
+                                       (m.RoleCode == "R04_INSTRUCTOR" || m.RoleCode == "R03_HEAD_INSTRUCTORS") &&
+                                       (m.BranchId == null || m.BranchId == session.BranchId) &&
+                                       u.Status == "ACTIVE" && u.Id != session.InstructorId
+                                 select new
+                                 {
+                                     u.Id,
+                                     u.DisplayName,
+                                     u.Phone,
+                                     m.RoleCode
+                                 }).Distinct().ToListAsync(cancellationToken);
+
+        var list = new List<object>();
+        foreach (var inst in instructors)
+        {
+            var conflict = await conflicts.CheckAsync(new ConflictCheckRequest(session.BranchId, inst.Id, session.ClassroomId, [], [], session.StartAt, session.EndAt), cancellationToken);
+            list.Add(new
+            {
+                instructorId = inst.Id,
+                displayName = inst.DisplayName,
+                phone = inst.Phone,
+                roleCode = inst.RoleCode,
+                isAvailable = !conflict.HasConflict,
+                conflictDetails = conflict.HasConflict ? conflict.Conflicts : null
+            });
+        }
+
+        return Results.Ok(new { data = new { sessionId = session.Id, branchId = session.BranchId, startAt = session.StartAt, endAt = session.EndAt, items = list } });
+    }
+
+    private static async Task<IResult> AssignSubstituteAsync(Guid sessionId, AssignSubstituteRequest request, ClaimsPrincipal user, MadaDbContext db, ConflictService conflicts, CancellationToken cancellationToken)
+    {
+        if (!CanManageScheduling(user)) return Forbidden("SCHEDULING_WRITE_FORBIDDEN");
+        if (!Scope(user, out var tenantId, out var branchScope)) return Forbidden("TENANT_SCOPE_REQUIRED");
+        var actorId = Actor(user); if (!actorId.HasValue) return Forbidden("ACTOR_REQUIRED");
+
+        var session = await db.AcademySessions
+            .SingleOrDefaultAsync(s => s.Id == sessionId && s.TenantId == tenantId && (!branchScope.HasValue || s.BranchId == branchScope.Value), cancellationToken);
+        if (session is null) return NotFound("SESSION_NOT_FOUND");
+        if (session.Status is "COMPLETED" or "CANCELLED") return Conflict("SESSION_NOT_EDITABLE", "Cannot assign substitute to a completed or cancelled session.");
+
+        if (request.SubstituteInstructorId == session.InstructorId)
+            return Validation("substituteInstructorId", "Cannot assign the primary instructor as their own substitute.");
+
+        if (!await IsActiveStaffMember(db, request.SubstituteInstructorId, tenantId, session.BranchId, cancellationToken))
+            return Validation("substituteInstructorId", "The selected substitute instructor is not active in this branch.");
+
+        var conflict = await conflicts.CheckAsync(new ConflictCheckRequest(session.BranchId, request.SubstituteInstructorId, session.ClassroomId, [], [], session.StartAt, session.EndAt), cancellationToken);
+        if (conflict.HasConflict) return Conflict("INSTRUCTOR_UNAVAILABLE", "The selected substitute instructor has a scheduling conflict.");
+
+        var previousSubstitute = session.SubstituteInstructorId;
+        session.SubstituteInstructorId = request.SubstituteInstructorId;
+        session.Status = "SCHEDULED";
+
+        var pendingApprovals = await db.ApprovalRequests
+            .Where(a => a.TenantId == tenantId && a.TargetType == "SESSION" && a.TargetId == sessionId.ToString() && a.RequestType == "INSTRUCTOR_SUBSTITUTION" && a.State == "PENDING")
+            .ToListAsync(cancellationToken);
+        foreach (var app in pendingApprovals)
+        {
+            app.State = "APPROVED";
+            app.DecidedAt = DateTimeOffset.UtcNow;
+            app.DecidedByUserId = actorId.Value;
+            app.Reason = request.Reason ?? app.Reason;
+        }
+
+        db.AuditEvents.Add(new AuditEvent
+        {
+            TenantId = tenantId,
+            BranchId = session.BranchId,
+            ActorUserId = actorId.Value,
+            Action = "INSTRUCTOR_SUBSTITUTE_ASSIGNED",
+            TargetType = "SESSION",
+            TargetId = sessionId.ToString(),
+            Reason = request.Reason,
+            MetadataJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                previousSubstitute,
+                newSubstitute = request.SubstituteInstructorId,
+                assignedBy = actorId.Value
+            })
+        });
+
+        await NotifyStaffAsync(db, tenantId, session.BranchId, request.SubstituteInstructorId, "SUBSTITUTE_ASSIGNED", "تم تكليفك كمدرب بديل", "تم تكليفك كمدرب بديل لتغطية جلسة.", "SESSION", session.Id.ToString(), cancellationToken);
+        await NotifyStaffAsync(db, tenantId, session.BranchId, session.InstructorId, "SUBSTITUTE_CONFIRMED", "تم توفير مدرب بديل", "تم اعتماد مدرب بديل لتغطية جلستك.", "SESSION", session.Id.ToString(), cancellationToken);
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Results.Ok(new
+        {
+            data = new
+            {
+                sessionId = session.Id,
+                substituteInstructorId = session.SubstituteInstructorId,
+                status = session.Status
+            }
+        });
     }
 
     private static async Task<IResult> ListApprovalsAsync(ClaimsPrincipal user, MadaDbContext db, string? state, CancellationToken cancellationToken)
@@ -495,8 +606,8 @@ public static class SessionWorkflowEndpoints
         var now = DateTimeOffset.UtcNow;
         return await db.GroupSupervisionAssignments.AnyAsync(item => item.TenantId == tenantId && item.BranchId == branchId && item.SupervisorUserId == actorId.Value && item.Status == "ACTIVE" && (item.CanReadEvaluations || item.CanDecideEvaluations) && (!item.StartsAt.HasValue || item.StartsAt <= now) && (!item.EndsAt.HasValue || item.EndsAt > now), token);
     }
-    private static bool CanManageScheduling(ClaimsPrincipal user) => user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER");
-    private static bool CanReadScheduling(ClaimsPrincipal user) => CanManageScheduling(user) || user.IsInRole("R03_HEAD_INSTRUCTORS") || user.IsInRole("R05_SECRETARY");
+    private static bool CanManageScheduling(ClaimsPrincipal user) => user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R05_SECRETARY");
+    private static bool CanReadScheduling(ClaimsPrincipal user) => CanManageScheduling(user) || user.IsInRole("R03_HEAD_INSTRUCTORS");
     private static bool CanDecide(ClaimsPrincipal user) => user.IsInRole("R00_PLATFORM_ADMIN") || user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R03_HEAD_INSTRUCTORS");
     private static IResult NotFound(string code) => Results.NotFound(new { error = new { code, message = code } });
     private static IResult Conflict(string code, string message) => Results.Conflict(new { error = new { code, message } });
@@ -517,3 +628,4 @@ public sealed record EvaluationBatchRequest(IReadOnlyList<EvaluationItem> Items)
 public sealed record EvaluationItem(Guid StudentId, int? Score, string? Notes);
 public sealed record EvaluationSubmissionRequest(IReadOnlyList<Guid> StudentIds);
 public sealed record EvaluationReviewDecision(string Decision, string? Note = null);
+public sealed record AssignSubstituteRequest(Guid SubstituteInstructorId, string? Reason = null);

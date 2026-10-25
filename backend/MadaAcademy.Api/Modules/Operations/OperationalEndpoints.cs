@@ -455,8 +455,12 @@ public static class OperationalEndpoints
         var source = await query.OrderBy(session => session.StartAt).ToListAsync(cancellationToken);
         if (source.Count == 0) return [];
 
+        var allInstructorIds = source.Select(session => session.InstructorId)
+            .Concat(source.Where(session => session.SubstituteInstructorId.HasValue).Select(session => session.SubstituteInstructorId!.Value))
+            .Distinct()
+            .ToArray();
         var instructorNames = await db.UserAccounts.AsNoTracking()
-            .Where(item => source.Select(session => session.InstructorId).Contains(item.Id))
+            .Where(item => allInstructorIds.Contains(item.Id))
             .ToDictionaryAsync(item => item.Id, item => item.DisplayName, cancellationToken);
         var classroomNames = await db.Classrooms.AsNoTracking()
             .Where(item => source.Select(session => session.ClassroomId).Contains(item.Id))
@@ -491,7 +495,8 @@ public static class OperationalEndpoints
             classroomNames.GetValueOrDefault(session.ClassroomId),
             branchNames.GetValueOrDefault(session.BranchId),
             session.CourseOfferingId.HasValue ? courseNames.GetValueOrDefault(session.CourseOfferingId.Value) : null,
-            session.SubstituteInstructorId)).ToList();
+            session.SubstituteInstructorId,
+            session.SubstituteInstructorId.HasValue ? instructorNames.GetValueOrDefault(session.SubstituteInstructorId.Value) : null)).ToList();
     }
 
     private static async Task<AcademySession?> FindScopedSession(MadaDbContext db, Guid sessionId, Scope scope, CancellationToken cancellationToken) =>
@@ -505,7 +510,7 @@ public static class OperationalEndpoints
         (session.InstructorId == actorId || session.SubstituteInstructorId == actorId);
 
     private static bool CanAccessAttendanceSession(ClaimsPrincipal user, AcademySession session) =>
-        user.IsInRole("R02_BRANCH_MANAGER") || IsAssignedInstructor(user, session);
+        user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R05_SECRETARY") || IsAssignedInstructor(user, session);
 
     private static async Task<bool> HasSupervisionAccess(MadaDbContext db, ClaimsPrincipal user, AcademySession session, bool requireAttendance, CancellationToken cancellationToken)
     {
@@ -576,7 +581,7 @@ public sealed record StudentEnrollmentItem(Guid Id, Guid CourseOfferingId, strin
 public sealed record CreateStudentEnrollmentRequest(Guid CourseOfferingId, int FinalPricePiastres);
 public sealed record ActivateWaitlistRequest(bool CreateInvoice = false, int? DueDays = 14);
 public sealed record SessionListResponse(IReadOnlyList<SessionDetails> Items, int Total, string ScopeLevel, Guid? BranchId);
-public sealed record SessionDetails(Guid Id, Guid BranchId, Guid? CourseOfferingId, int SessionNumber, DateTimeOffset StartAt, DateTimeOffset EndAt, Guid InstructorId, Guid ClassroomId, string Type, string Status, string? Notes, DateTimeOffset? CompletedAt, string? InstructorName = null, string? ClassroomName = null, string? BranchName = null, string? CourseName = null, Guid? SubstituteInstructorId = null);
+public sealed record SessionDetails(Guid Id, Guid BranchId, Guid? CourseOfferingId, int SessionNumber, DateTimeOffset StartAt, DateTimeOffset EndAt, Guid InstructorId, Guid ClassroomId, string Type, string Status, string? Notes, DateTimeOffset? CompletedAt, string? InstructorName = null, string? ClassroomName = null, string? BranchName = null, string? CourseName = null, Guid? SubstituteInstructorId = null, string? SubstituteInstructorName = null);
 public sealed record AttendanceResponse(Guid SessionId, string SessionStatus, IReadOnlyList<AttendanceItem> Items, int Total);
 public sealed record AttendanceItem(Guid StudentId, string StudentName, string Status, int? LateMinutes, DateTimeOffset? UpdatedAt);
 public sealed record AttendanceUpsertRequest(IReadOnlyList<AttendanceRecordRequest>? Records);

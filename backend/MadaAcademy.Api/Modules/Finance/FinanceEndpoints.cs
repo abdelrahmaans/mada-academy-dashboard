@@ -32,7 +32,10 @@ public static class FinanceEndpoints
         api.MapPost("/cashier/closeout", CloseoutCashierShiftAsync).RequirePermission("payments.create");
         api.MapGet("/instructor-payroll", GetInstructorPayrollAsync).RequirePermission("finance.read");
         api.MapGet("/payroll/instructors", GetInstructorPayrollAsync).RequirePermission("finance.read");
+        api.MapGet("/instructor/my-earnings", GetMyInstructorEarningsAsync);
         api.MapPost("/cashier/deposit-to-safe", DepositCashierSafeAsync).RequirePermission("payments.create");
+        api.MapPost("/cashier/confirm-shift", ConfirmCashierShiftAsync).RequirePermission("finance.summary.read");
+        api.MapGet("/cashier/shifts-history", ListCashierShiftsHistoryAsync).RequirePermission("finance.summary.read");
 
         endpoints.MapGet("/api/v1/consumer/invoices", ListConsumerInvoicesAsync).RequireAuthorization("consumer");
         return endpoints;
@@ -498,6 +501,180 @@ public static class FinanceEndpoints
         return Results.Ok(new { data = new { status = "DEPOSITED", amountPiastres = request.AmountPiastres, depositedAt = DateTimeOffset.UtcNow } });
     }
 
+    private static async Task<IResult> GetMyInstructorEarningsAsync(
+        HttpContext context, MadaDbContext db, string? month, CancellationToken cancellationToken)
+    {
+        if (!TryStaffScope(context.User, out var scope, out var error)) return error;
+        if (!Guid.TryParse(context.User.FindFirstValue("sub"), out var instructorId))
+            return Forbidden("ACTOR_REQUIRED");
+
+        var isInstructor = context.User.IsInRole("R04_INSTRUCTOR") || context.User.IsInRole("R03_HEAD_INSTRUCTORS");
+        if (!isInstructor && !context.User.IsInRole("R01_ACADEMY_OWNER") && !context.User.IsInRole("R02_BRANCH_MANAGER"))
+            return Forbidden("INSTRUCTOR_REQUIRED");
+
+        DateOnly startMonth;
+        if (!string.IsNullOrWhiteSpace(month) && DateOnly.TryParseExact(month.Trim() + "-01", "yyyy-MM-dd", out var parsed))
+            startMonth = parsed;
+        else
+            startMonth = new DateOnly(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+
+        var nextMonth = startMonth.AddMonths(1);
+        var startUtc = new DateTimeOffset(startMonth.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+        var endUtc = new DateTimeOffset(nextMonth.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+
+        var isHeadInstructor = context.User.IsInRole("R03_HEAD_INSTRUCTORS");
+        var ratePiastres = isHeadInstructor ? 25_000L : 20_000L;
+
+        var monthSessions = await db.AcademySessions.AsNoTracking()
+            .Where(s => s.TenantId == scope.TenantId &&
+                        (!scope.BranchId.HasValue || s.BranchId == scope.BranchId.Value) &&
+                        s.StartAt >= startUtc && s.StartAt < endUtc &&
+                        ((s.SubstituteInstructorId.HasValue && s.SubstituteInstructorId.Value == instructorId) ||
+                         (!s.SubstituteInstructorId.HasValue && s.InstructorId == instructorId)))
+            .Select(s => new
+            {
+                s.Id,
+                s.SessionNumber,
+                s.StartAt,
+                s.EndAt,
+                s.Status,
+                s.CompletedAt,
+                IsSubstitute = s.SubstituteInstructorId == instructorId,
+                s.CourseOfferingId
+            })
+            .ToListAsync(cancellationToken);
+
+        var completedSessions = monthSessions.Where(s => s.Status == "COMPLETED").ToList();
+        var scheduledUpcoming = monthSessions.Where(s => s.Status == "SCHEDULED" || s.Status == "IN_PROGRESS").ToList();
+
+        var completedCount = completedSessions.Count;
+        var upcomingCount = scheduledUpcoming.Count;
+        var accruedPiastres = completedCount * ratePiastres;
+        var projectedTotalPiastres = (completedCount + upcomingCount) * ratePiastres;
+
+        var offeringIds = completedSessions.Where(s => s.CourseOfferingId.HasValue).Select(s => s.CourseOfferingId!.Value).Distinct().ToList();
+        var offeringCourses = await (from o in db.CourseOfferings.AsNoTracking()
+                                    join t in db.CourseTemplates.AsNoTracking() on o.CourseTemplateId equals t.Id
+                                    where offeringIds.Contains(o.Id)
+                                    select new { o.Id, TemplateName = t.Name }).ToDictionaryAsync(x => x.Id, x => x.TemplateName, cancellationToken);
+
+        var itemized = completedSessions.OrderByDescending(s => s.StartAt).Select(s => new
+        {
+            sessionId = s.Id,
+            sessionNumber = s.SessionNumber,
+            courseName = s.CourseOfferingId.HasValue && offeringCourses.TryGetValue(s.CourseOfferingId.Value, out var name) ? name : $"جلسة {s.SessionNumber}",
+            startAt = s.StartAt,
+            completedAt = s.CompletedAt,
+            isSubstitute = s.IsSubstitute,
+            earnedPiastres = ratePiastres,
+            earnedEgp = (int)(ratePiastres / 100)
+        }).ToList();
+
+        return Results.Ok(new
+        {
+            data = new
+            {
+                month = startMonth.ToString("yyyy-MM"),
+                instructorId,
+                ratePerSessionPiastres = ratePiastres,
+                ratePerSessionEgp = (int)(ratePiastres / 100),
+                completedSessionsCount = completedCount,
+                upcomingSessionsCount = upcomingCount,
+                accruedPiastres,
+                accruedEgp = (int)(accruedPiastres / 100),
+                projectedTotalPiastres,
+                projectedTotalEgp = (int)(projectedTotalPiastres / 100),
+                sessions = itemized
+            }
+        });
+    }
+
+    private static async Task<IResult> ConfirmCashierShiftAsync(
+        ConfirmShiftCloseoutRequest request, HttpContext context, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!TryStaffScope(context.User, out var scope, out var error)) return error;
+        if (!Guid.TryParse(context.User.FindFirstValue("sub"), out var actorId)) return Forbidden("ACTOR_REQUIRED");
+        if (!context.User.IsInRole("R06_ACCOUNTANT") && !context.User.IsInRole("R01_ACADEMY_OWNER") && !context.User.IsInRole("R02_BRANCH_MANAGER"))
+            return Forbidden("CONFIRM_SHIFT_FORBIDDEN");
+
+        var branchId = scope.BranchId ?? request.BranchId;
+        if (!branchId.HasValue) return Conflict("BRANCH_REQUIRED");
+
+        var targetId = $"{request.Date:yyyyMMdd}-{branchId.Value}";
+        var latestCloseout = await db.AuditEvents.AsNoTracking()
+            .Where(x => x.TenantId == scope.TenantId && x.TargetType == "SHIFT_CLOSEOUT" && x.TargetId == targetId && x.Action == "CASHIER_SHIFT_CLOSED")
+            .OrderByDescending(x => x.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (latestCloseout is null) return NotFound("SHIFT_CLOSEOUT_NOT_FOUND");
+
+        db.AuditEvents.Add(new AuditEvent
+        {
+            TenantId = scope.TenantId,
+            BranchId = branchId.Value,
+            ActorUserId = actorId,
+            Action = "CASHIER_SHIFT_CONFIRMED_BY_ACCOUNTANT",
+            TargetType = "SHIFT_CLOSEOUT",
+            TargetId = targetId,
+            Reason = request.Notes?.Trim() ?? "تم اعتماد إغلاق الوردية ومطابقة النقدية",
+            MetadataJson = JsonSerializer.Serialize(new
+            {
+                confirmedAt = DateTimeOffset.UtcNow,
+                confirmedByUserId = actorId,
+                date = request.Date,
+                notes = request.Notes
+            })
+        });
+
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.Ok(new { data = new { status = "CONFIRMED", targetId, confirmedAt = DateTimeOffset.UtcNow } });
+    }
+
+    private static async Task<IResult> ListCashierShiftsHistoryAsync(
+        HttpContext context, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!TryStaffScope(context.User, out var scope, out var error)) return error;
+        var events = await db.AuditEvents.AsNoTracking()
+            .Where(x => x.TenantId == scope.TenantId &&
+                        (!scope.BranchId.HasValue || x.BranchId == scope.BranchId.Value) &&
+                        x.TargetType == "SHIFT_CLOSEOUT")
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(100)
+            .ToListAsync(cancellationToken);
+
+        var userIds = events.Where(x => x.ActorUserId.HasValue).Select(x => x.ActorUserId!.Value).Distinct().ToList();
+        var userNames = await db.UserAccounts.AsNoTracking()
+            .Where(u => userIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u.DisplayName, cancellationToken);
+
+        var branchIds = events.Where(x => x.BranchId.HasValue).Select(x => x.BranchId!.Value).Distinct().ToList();
+        var branchNames = await db.Branches.AsNoTracking()
+            .Where(b => branchIds.Contains(b.Id))
+            .ToDictionaryAsync(b => b.Id, b => b.Name, cancellationToken);
+
+        // Group by targetId (shift day-branch)
+        var grouped = events.GroupBy(x => x.TargetId).Select(g =>
+        {
+            var closeout = g.FirstOrDefault(x => x.Action == "CASHIER_SHIFT_CLOSED");
+            var confirmation = g.FirstOrDefault(x => x.Action == "CASHIER_SHIFT_CONFIRMED_BY_ACCOUNTANT");
+            return new
+            {
+                targetId = g.Key,
+                branchId = closeout?.BranchId ?? confirmation?.BranchId,
+                branchName = (closeout?.BranchId.HasValue == true && branchNames.TryGetValue(closeout.BranchId.Value, out var bn)) ? bn : null,
+                closedAt = closeout?.CreatedAt,
+                closedBy = closeout != null && closeout.ActorUserId.HasValue && userNames.TryGetValue(closeout.ActorUserId.Value, out var cName) ? cName : null,
+                closeoutMetadata = closeout?.MetadataJson,
+                isConfirmed = confirmation != null,
+                confirmedAt = confirmation?.CreatedAt,
+                confirmedBy = confirmation != null && confirmation.ActorUserId.HasValue && userNames.TryGetValue(confirmation.ActorUserId.Value, out var confName) ? confName : null,
+                confirmNotes = confirmation?.Reason
+            };
+        }).ToList();
+
+        return Results.Ok(new { data = new { items = grouped, total = grouped.Count } });
+    }
+
     private static IResult Forbidden(string code) => Results.Problem(statusCode: 403, title: code, extensions: new Dictionary<string, object?> { ["code"] = code });
     private static IResult Conflict(string code) => Results.Conflict(new { error = new { code, message = "The financial operation could not be completed." } });
     private static IResult Validation(string field, string message) => Results.ValidationProblem(new Dictionary<string, string[]> { [field] = [message] });
@@ -510,3 +687,4 @@ public sealed record CreateInvoiceLineRequest(string Description, int AmountPias
 public sealed record CreatePaymentRequest(int AmountPiastres, string Method, DateOnly? ReceivedOn = null, string? ExternalReference = null, string? Note = null, string? IdempotencyKey = null);
 public sealed record CloseoutCashierRequest(long CountedCashPiastres, string? Notes = null);
 public sealed record DepositCashierSafeRequest(long AmountPiastres, string? Notes = null);
+public sealed record ConfirmShiftCloseoutRequest(DateOnly Date, Guid? BranchId = null, string? Notes = null);
