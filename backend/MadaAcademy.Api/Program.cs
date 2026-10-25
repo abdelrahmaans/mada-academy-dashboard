@@ -140,6 +140,7 @@ app.MapMadaLeadEndpoints();
 app.MapMadaMarketingEndpoints();
 app.MapMadaFinanceEndpoints();
 app.MapMadaExecutiveDashboardEndpoints();
+app.MapMadaBillingMeterEndpoints();
 app.MapMadaInvoiceCorrectionEndpoints();
 app.MapMadaExpenseEndpoints();
 app.MapMadaPlatformAdminEndpoints();

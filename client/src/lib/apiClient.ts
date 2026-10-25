@@ -90,6 +90,40 @@ export type ExecutiveDashboardReport = {
   dataSources: Record<string, string>;
 };
 
+export type BillingMeterReport = {
+  tenantId: string;
+  tenantName: string;
+  tenantStatus: string;
+  isTrial: boolean;
+  planCode: string;
+  planName: string;
+  students: {
+    activeCount: number;
+    limit: number;
+    usagePercentage: number;
+    isNearLimit: boolean;
+    isLimitExceeded: boolean;
+    remainingSlots: number;
+  };
+  branches: {
+    activeCount: number;
+    limit: number;
+    usagePercentage: number;
+    isLimitExceeded: boolean;
+    remainingSlots: number;
+  };
+  staff: {
+    activeCount: number;
+    limit: number;
+    usagePercentage: number;
+    isLimitExceeded: boolean;
+    remainingSlots: number;
+  };
+  warnings: string[];
+  canUpgrade: boolean;
+  recommendedPlan: string;
+};
+
 export type BootstrapAcademyInput = {
   name: string;
   slug?: string;
@@ -538,22 +572,46 @@ const API_BASE = (import.meta.env.VITE_API_URL || "https://academy-dashboard.run
 const ACCESS_KEY = "mada.accessToken";
 const REFRESH_KEY = "mada.refreshToken";
 
-let accessToken = localStorage.getItem(ACCESS_KEY);
+const safeStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      return typeof localStorage !== "undefined" ? localStorage.getItem(key) : null;
+    } catch {
+      return null;
+    }
+  },
+  setItem: (key: string, value: string): void => {
+    try {
+      if (typeof localStorage !== "undefined") localStorage.setItem(key, value);
+    } catch {
+      // ignore
+    }
+  },
+  removeItem: (key: string): void => {
+    try {
+      if (typeof localStorage !== "undefined") localStorage.removeItem(key);
+    } catch {
+      // ignore
+    }
+  },
+};
+
+let accessToken = safeStorage.getItem(ACCESS_KEY);
 
 function saveTokens(tokens: TokenResponse) {
   accessToken = tokens.accessToken;
-  localStorage.setItem(ACCESS_KEY, tokens.accessToken);
-  localStorage.setItem(REFRESH_KEY, tokens.refreshToken);
+  safeStorage.setItem(ACCESS_KEY, tokens.accessToken);
+  safeStorage.setItem(REFRESH_KEY, tokens.refreshToken);
 }
 
 export function clearTokens() {
   accessToken = null;
-  localStorage.removeItem(ACCESS_KEY);
-  localStorage.removeItem(REFRESH_KEY);
+  safeStorage.removeItem(ACCESS_KEY);
+  safeStorage.removeItem(REFRESH_KEY);
 }
 
 export async function refreshAccessToken(): Promise<boolean> {
-  const refreshToken = localStorage.getItem(REFRESH_KEY);
+  const refreshToken = safeStorage.getItem(REFRESH_KEY);
   if (!refreshToken) return false;
   const response = await fetch(`${API_BASE}/auth/refresh`, {
     method: "POST",
@@ -647,13 +705,14 @@ export const apiClient = {
   changePlatformAcademyPlan: async (tenantId: string, planCode: "starter" | "growth" | "enterprise", branchesLimit: number, reason: string) => {
     try {
       return await request<{ tenantId: string; planCode: string; allowedBranches: number }>(`/platform/academies/${tenantId}/plan`, {
-        method: "PUT",
+        method: "PATCH",
         body: JSON.stringify({ planCode, branchesLimit, reason }),
       });
     } catch {
       return platformSaaSStorage.updatePlan(tenantId, planCode, branchesLimit);
     }
   },
+  billingMeter: () => request<BillingMeterReport>("/academy/billing-meter"),
   extendPlatformAcademyTrial: async (tenantId: string, daysToAdd = 7, reason: string) => {
     try {
       return await request<{ tenantId: string; newEndDate: string; isTrialExtended: boolean }>(`/platform/academies/${tenantId}/trial/extend`, {

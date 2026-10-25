@@ -15,6 +15,7 @@ public static class PlatformAdminEndpoints
         api.MapGet("/academies", GetAcademiesAsync);
         api.MapGet("/roles", () => GetPlatformRoles());
         api.MapPatch("/academies/{tenantId:guid}/status", ChangeTenantStatusAsync);
+        api.MapPatch("/academies/{tenantId:guid}/plan", ChangeTenantPlanAsync);
         api.MapGet("/academies/{tenantId:guid}/members", GetMembersAsync);
         api.MapPatch("/academies/{tenantId:guid}/members/{membershipId:guid}/status", ChangeMemberStatusAsync);
         api.MapPost("/academies/{tenantId:guid}/users/{userId:guid}/sessions/revoke", RevokeSessionsAsync);
@@ -213,8 +214,38 @@ public static class PlatformAdminEndpoints
         return $"{visible}••••{value[separator..]}";
     }
 
+    private static async Task<IResult> ChangeTenantPlanAsync(Guid tenantId, TenantPlanRequest request, MadaDbContext db, ClaimsPrincipal principal, CancellationToken cancellationToken)
+    {
+        var normalizedPlan = request.PlanCode?.Trim().ToUpperInvariant();
+        if (normalizedPlan is not ("STARTER" or "GROWTH" or "ENTERPRISE" or "SCALE"))
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["planCode"] = ["Plan code must be STARTER, GROWTH, or ENTERPRISE."] });
+        if (string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Trim().Length < 4)
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["reason"] = ["A reason of at least four characters is required for every plan change."] });
+
+        var tenant = await db.Tenants.SingleOrDefaultAsync(x => x.Id == tenantId, cancellationToken);
+        if (tenant is null) return Results.NotFound(new { error = new { code = "TENANT_NOT_FOUND", message = "Academy was not found." } });
+
+        var previous = tenant.PlanCode;
+        tenant.PlanCode = normalizedPlan;
+        var allowedBranches = request.BranchesLimit ?? (normalizedPlan == "STARTER" ? 1 : normalizedPlan == "GROWTH" ? 3 : 99);
+
+        db.AuditEvents.Add(new AuditEvent
+        {
+            ActorUserId = ActorId(principal),
+            TenantId = tenant.Id,
+            Action = "PLATFORM_TENANT_PLAN_CHANGED",
+            TargetType = "TENANT",
+            TargetId = tenant.Id.ToString(),
+            Reason = request.Reason.Trim(),
+            MetadataJson = JsonSerializer.Serialize(new { previous, next = tenant.PlanCode, allowedBranches })
+        });
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.Ok(new { data = new { tenantId = tenant.Id, planCode = tenant.PlanCode, allowedBranches } });
+    }
+
     private static Guid? ActorId(ClaimsPrincipal principal) => Guid.TryParse(principal.FindFirstValue("sub"), out var id) ? id : null;
     private sealed record TenantStatusRequest(string Status, string? Reason);
+    private sealed record TenantPlanRequest(string PlanCode, int? BranchesLimit, string? Reason);
     private sealed record MemberStatusRequest(string Status, string? Reason);
     private sealed record SupportReasonRequest(string? Reason);
 }

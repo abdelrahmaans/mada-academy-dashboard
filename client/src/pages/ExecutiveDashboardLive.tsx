@@ -8,6 +8,7 @@ import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { apiClient, type ExecutiveActivityItem, type ExecutiveDashboardReport, type ExecutiveMetrics } from "@/lib/apiClient";
 import { executiveFailureMessage } from "@/lib/liveSurfaceAcceptance";
 import BranchMultiUnitPnLView from "@/components/BranchMultiUnitPnLView";
+import { BillingMeterWidget } from "@/components/BillingMeterWidget";
 import "./ExecutiveDashboardLive.css";
 
 type PeriodOffset = 0 | -1 | -2;
@@ -167,6 +168,7 @@ export default function ExecutiveDashboardLive() {
         }
       />
       <RoleScopeCard className="executive-scope-card" />
+      <BillingMeterWidget />
 
       <div className="pnl-tabs-nav" style={{ marginBottom: "16px" }}>
         <button
