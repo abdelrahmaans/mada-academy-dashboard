@@ -143,7 +143,7 @@ public sealed class BulkImportApiTests
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
-            var audit = await db.AuditEvents.SingleAsync(item => item.Action == "BULK_IMPORT_GUARDIAN_PREVIEW" && item.TargetId == previewId.ToString());
+            var audit = await db.AuditEvents.SingleAsync(item => item.Action == "BULK_IMPORT_GUARDIAN_PREVIEW_CREATED" && item.TargetId == previewId.ToString());
             audit.MetadataJson = audit.MetadataJson!.Replace(ownStudentId.ToString(), otherStudentId.ToString(), StringComparison.OrdinalIgnoreCase);
             await db.SaveChangesAsync();
         }
