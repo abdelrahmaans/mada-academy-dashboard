@@ -200,7 +200,7 @@ public static class OperationalEndpoints
             var rows = await LoadAttendance(db, session, cancellationToken);
             return TypedResults.Ok(new ApiEnvelope<AttendanceResponse>(
                 new AttendanceResponse(session.Id, session.Status, rows, rows.Count)));
-        }).RequirePermission("attendance.write");
+        }).RequirePermission("attendance.read");
 
         operations.MapPost("/sessions/{sessionId:guid}/complete", async Task<Results<Ok<ApiEnvelope<SessionCompletionResponse>>, ProblemHttpResult>> (
             Guid sessionId,

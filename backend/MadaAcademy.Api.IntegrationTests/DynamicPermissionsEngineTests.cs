@@ -76,6 +76,33 @@ public sealed class DynamicPermissionsEngineTests
     }
 
     [Fact]
+    public async Task StaffRoleWithoutStudentsPermission_IsDeniedUntilPermissionIsGranted()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var ownerClient = factory.CreateClient();
+        using var staffClient = factory.CreateClient();
+
+        var owner = await TestData.CreateAccountAsync(factory, "R01_ACADEMY_OWNER");
+        var instructor = await TestData.CreateAccountAsync(factory, "R03_HEAD_INSTRUCTORS", owner.TenantId, owner.BranchId);
+        TestData.Authenticate(ownerClient, await TestData.LoginAsync(ownerClient, owner));
+        TestData.Authenticate(staffClient, await TestData.LoginAsync(staffClient, instructor));
+
+        var denied = await staffClient.GetAsync("/api/v1/students");
+        Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
+
+        var members = await ownerClient.GetFromJsonAsync<JsonDocument>("/api/v1/academy/members");
+        var membershipId = members!.RootElement.GetProperty("data").GetProperty("items").EnumerateArray()
+            .First(item => item.GetProperty("userId").GetString() == instructor.UserId.ToString())
+            .GetProperty("membershipId").GetString();
+        var grant = await ownerClient.PutAsJsonAsync($"/api/v1/academy/members/{membershipId}/permissions", new { permissions = new[] { "students.read" } });
+        grant.EnsureSuccessStatusCode();
+
+        TestData.Authenticate(staffClient, await TestData.LoginAsync(staffClient, instructor));
+        var allowed = await staffClient.GetAsync("/api/v1/students");
+        Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
+    }
+
+    [Fact]
     public async Task UpdateMemberPermissions_OverridesRole_AndResetRestoresRoleDefaults()
     {
         using var factory = new TestApiFactory(useInMemory: true);
