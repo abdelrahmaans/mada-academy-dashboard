@@ -1,7 +1,7 @@
 # Mada Academy — Project Status
 
 **As of:** 25 October 2026
-**Verified Git state:** local branch `fix/dev-readiness-20261024`, rebased onto fetched `origin/dev` at `de21282` (including the newer billing-meter and waitlist-promotion slices); remediation changes remain uncommitted and unpushed, with no PR or staging deployment created in this task. PR #112 (`feat/dynamic-permissions-engine`) remains historical context for the previously delivered permissions/audit/landing work; verify live remote refs before future release actions.
+**Verified Git state:** branch `fix/dev-readiness-20261024` is pushed and PR [#113](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/113) is open against `dev`, based on `origin/dev` at `de21282` (including the newer billing-meter and waitlist-promotion slices). GitHub checks are running; no staging/production migration or deployment was performed. PR #112 (`feat/dynamic-permissions-engine`) remains historical context for previously delivered permissions/audit/landing work; verify live remote refs before future release actions.
 **Current delivery:** the local dev-readiness patch hardens development-only endpoints, aligns EF model/migration state, fixes user-facing false-success behavior, removes unsupported demo-derived data from LIVE R08/R09 surfaces, and extends local regression/CI coverage. The previously delivered dynamic permissions engine, audit trail, and landing redesign remain part of the project baseline.
 **Canonical quick snapshot:** [`docs/REPOSITORY_CURRENT_STATE.md`](../docs/REPOSITORY_CURRENT_STATE.md).
 **Stack:** React + Vite + TypeScript; ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions.
