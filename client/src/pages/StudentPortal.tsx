@@ -204,7 +204,7 @@ export default function StudentPortal() {
       setDataError(null);
 
       if (sessionsResult.status === "rejected") {
-        const message = sessionsResult.reason instanceof Error ? sessionsResult.reason.message : "الجلسات غير متاحة مؤقتًا.";
+        const message = "الجلسات غير متاحة مؤقتًا.";
         setDataWarning(message);
         toast.error(`تعذر تحميل الجلسات: ${message}`);
       }

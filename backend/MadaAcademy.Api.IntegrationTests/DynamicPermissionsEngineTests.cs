@@ -57,6 +57,7 @@ public sealed class DynamicPermissionsEngineTests
         var customPermissions = new[] { "students.read", "attendance.read", "finance.read" };
         var updateResponse = await ownerClient.PutAsJsonAsync("/api/v1/academy/roles/R04_INSTRUCTOR/permissions", new { permissions = customPermissions });
         updateResponse.EnsureSuccessStatusCode();
+        TestData.Authenticate(staffClient, await TestData.LoginAsync(staffClient, instructor));
 
         // Check instructor /me reflects newly granted dynamic permissions
         var updatedMe = await staffClient.GetFromJsonAsync<JsonDocument>("/api/v1/me");
@@ -66,6 +67,7 @@ public sealed class DynamicPermissionsEngineTests
         // Reset role permissions
         var resetResponse = await ownerClient.DeleteAsync("/api/v1/academy/roles/R04_INSTRUCTOR/permissions");
         resetResponse.EnsureSuccessStatusCode();
+        TestData.Authenticate(staffClient, await TestData.LoginAsync(staffClient, instructor));
 
         // Instructor /me should now reflect baseline canonical defaults
         var resetMe = await staffClient.GetFromJsonAsync<JsonDocument>("/api/v1/me");
@@ -96,6 +98,7 @@ public sealed class DynamicPermissionsEngineTests
         var memberCustom = new[] { "marketing.read" };
         var memberUpdateRes = await ownerClient.PutAsJsonAsync($"/api/v1/academy/members/{membershipId}/permissions", new { permissions = memberCustom });
         memberUpdateRes.EnsureSuccessStatusCode();
+        TestData.Authenticate(staffClient, await TestData.LoginAsync(staffClient, instructor));
 
         // Check member /me
         var memberMe = await staffClient.GetFromJsonAsync<JsonDocument>("/api/v1/me");
@@ -105,6 +108,7 @@ public sealed class DynamicPermissionsEngineTests
         // Reset member permissions
         var memberResetRes = await ownerClient.DeleteAsync($"/api/v1/academy/members/{membershipId}/permissions");
         memberResetRes.EnsureSuccessStatusCode();
+        TestData.Authenticate(staffClient, await TestData.LoginAsync(staffClient, instructor));
 
         // Check member /me is back to role default
         var afterResetMe = await staffClient.GetFromJsonAsync<JsonDocument>("/api/v1/me");

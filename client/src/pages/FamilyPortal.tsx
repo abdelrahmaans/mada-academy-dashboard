@@ -138,7 +138,7 @@ export default function FamilyPortal() {
       setDataError(null);
 
       if (sessionsResult.status === "rejected") {
-        const message = sessionsResult.reason instanceof Error ? sessionsResult.reason.message : "تعذر تحميل جلسات الأطفال.";
+        const message = "الجلسات غير متاحة مؤقتًا.";
         setDataWarning(message);
         toast.error(`تعذر تحميل الجلسات: ${message}`);
       }
@@ -345,4 +345,3 @@ export default function FamilyPortal() {
     </RoleDashboardShell>
   );
 }
-
