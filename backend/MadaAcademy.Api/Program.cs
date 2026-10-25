@@ -77,7 +77,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     foreach (var address in trustedProxyAddresses)
         options.KnownProxies.Add(address);
 });
-builder.Services.AddMadaPersistence(builder.Configuration);
+builder.Services.AddMadaPersistence(builder.Configuration, builder.Environment);
 var storageMode = builder.Configuration["Mada:PrivateStorageMode"] ?? Environment.GetEnvironmentVariable("MADA_PRIVATE_STORAGE_MODE") ?? (builder.Environment.IsDevelopment() ? "local" : "disabled");
 builder.Services.AddHttpClient<SupabasePrivateObjectStorage>();
 if (string.Equals(storageMode, "supabase", StringComparison.OrdinalIgnoreCase)) builder.Services.AddSingleton<IPrivateObjectStorage, SupabasePrivateObjectStorage>();

@@ -57,27 +57,22 @@ public static class AuthenticationRegistration
                         context.Fail("The session is no longer active.");
                         return;
                     }
-                    var activeMembership = await db.Memberships
-                        .Where(item =>
-                            item.UserAccountId == userId &&
-                            item.TenantId == tenantId &&
-                            item.RoleCode == role &&
-                            item.Status == "ACTIVE" &&
-                            item.UserAccount!.Status == "ACTIVE" &&
-                            (role == "R00_PLATFORM_ADMIN" || item.Tenant!.Status != "PAUSED"))
-                        .Select(item => new { item.BranchId })
-                        .SingleOrDefaultAsync(context.HttpContext.RequestAborted);
-                    if (activeMembership is null)
-                    {
-                        context.Fail("The account, membership, or academy is no longer active.");
-                        return;
-                    }
-
                     var tokenBranchId = Guid.TryParse(principal.FindFirst("branchId")?.Value, out var parsedBranchId)
                         ? parsedBranchId
                         : (Guid?)null;
-                    if (activeMembership.BranchId != tokenBranchId)
-                        context.Fail("The token branch scope no longer matches the active membership.");
+                    var activeMembership = await db.Memberships.AnyAsync(item =>
+                        item.UserAccountId == userId &&
+                        item.TenantId == tenantId &&
+                        item.RoleCode == role &&
+                        item.BranchId == tokenBranchId &&
+                        item.Status == "ACTIVE" &&
+                        item.UserAccount!.Status == "ACTIVE" &&
+                        (role == "R00_PLATFORM_ADMIN" || item.Tenant!.Status != "PAUSED"),
+                        context.HttpContext.RequestAborted);
+                    if (!activeMembership)
+                    {
+                        context.Fail("The account, membership, academy, or branch scope is no longer active.");
+                    }
                 }
             };
         });

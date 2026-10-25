@@ -22,6 +22,34 @@ public sealed class InMemoryApiTests
     }
 
     [Fact]
+    public async Task AccessToken_IsRejectedAfterMembershipBranchChanges()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var client = factory.CreateClient();
+        var account = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
+        var tokens = await TestData.LoginAsync(client, account);
+        TestData.Authenticate(client, tokens);
+
+        var replacementBranchId = Guid.NewGuid();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            db.Branches.Add(new Branch
+            {
+                Id = replacementBranchId,
+                TenantId = account.TenantId,
+                Name = "Replacement Branch",
+                Code = "REPLACEMENT"
+            });
+            var membership = await db.Memberships.SingleAsync(item => item.UserAccountId == account.UserId);
+            membership.BranchId = replacementBranchId;
+            await db.SaveChangesAsync();
+        }
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/v1/me")).StatusCode);
+    }
+
+    [Fact]
     public async Task PasswordLogin_RejectsInvalidPassword()
     {
         using var factory = new TestApiFactory(useInMemory: true);

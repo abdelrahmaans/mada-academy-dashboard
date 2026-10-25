@@ -102,6 +102,14 @@ public static class RoleEndpoints
             existing.UpdatedAt = DateTimeOffset.UtcNow;
         }
 
+        await RevokeSessionsAsync(
+            db,
+            await db.Memberships
+                .Where(item => item.TenantId == tenantId && item.RoleCode == role.Code)
+                .Select(item => item.UserAccountId)
+                .ToArrayAsync(cancellationToken),
+            cancellationToken);
+
         db.Add(new AuditEvent
         {
             ActorUserId = ActorId(principal),
@@ -288,6 +296,7 @@ public static class RoleEndpoints
         membership.RoleCode = role.Code;
         membership.ScopeLevel = role.ScopeLevel;
         membership.BranchId = branch?.Id;
+        await RevokeSessionsAsync(db, [membership.UserAccountId], cancellationToken);
         db.Add(new AuditEvent { ActorUserId = ActorId(principal), TenantId = tenantId, Action = "MEMBER_ROLE_CHANGED", TargetType = "MEMBERSHIP", TargetId = membership.Id.ToString(), MetadataJson = $"{{\"role\":\"{role.Code}\",\"userId\":\"{membership.UserAccountId}\"}}" });
         await db.SaveChangesAsync(cancellationToken);
         return Results.Ok(new { data = new { membershipId = membership.Id, roleCode = membership.RoleCode, scopeLevel = membership.ScopeLevel, branch = branch == null ? null : new { branch.Id, branch.Name, branch.Code } } });
@@ -315,6 +324,7 @@ public static class RoleEndpoints
             .ToArray();
 
         membership.CustomPermissionsJson = JsonSerializer.Serialize(sanitized);
+        await RevokeSessionsAsync(db, [membership.UserAccountId], cancellationToken);
         db.Add(new AuditEvent
         {
             ActorUserId = ActorId(principal),
@@ -351,6 +361,7 @@ public static class RoleEndpoints
             return Results.NotFound(new { error = new { code = "MEMBERSHIP_NOT_FOUND", message = "Member was not found in this academy." } });
 
         membership.CustomPermissionsJson = null;
+        await RevokeSessionsAsync(db, [membership.UserAccountId], cancellationToken);
         db.Add(new AuditEvent
         {
             ActorUserId = ActorId(principal),
@@ -411,6 +422,15 @@ public static class RoleEndpoints
         if (role.ScopeLevel != "BRANCH") return null;
         if (!branchId.HasValue) return null;
         return await db.Branches.SingleOrDefaultAsync(item => item.Id == branchId.Value && item.TenantId == tenantId && item.Status == "ACTIVE", cancellationToken);
+    }
+
+    private static async Task RevokeSessionsAsync(MadaDbContext db, IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken)
+    {
+        if (userIds.Count == 0) return;
+        var sessions = await db.RefreshSessions
+            .Where(item => userIds.Contains(item.UserAccountId) && item.RevokedAt == null)
+            .ToListAsync(cancellationToken);
+        foreach (var session in sessions) session.RevokedAt = DateTimeOffset.UtcNow;
     }
 
     private static bool TryTenant(ClaimsPrincipal principal, out Guid tenantId) => Guid.TryParse(principal.FindFirstValue("tenantId"), out tenantId);
