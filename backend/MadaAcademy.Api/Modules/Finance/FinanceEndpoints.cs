@@ -21,8 +21,8 @@ public static class FinanceEndpoints
     {
         var api = endpoints.MapGroup("/api/v1/finance").RequireAuthorization("staff");
         api.MapGet("/invoices", ListInvoicesAsync).RequirePermission("invoices.read");
-        api.MapGet("/reports/summary", ReportsSummaryAsync).RequirePermission("finance.read");
-        api.MapGet("/reports/summary.csv", ReportsCsvAsync).RequirePermission("finance.read");
+        api.MapGet("/reports/summary", ReportsSummaryAsync).RequirePermission("finance.summary.read");
+        api.MapGet("/reports/summary.csv", ReportsCsvAsync).RequirePermission("finance.summary.read");
         api.MapGet("/invoices/{invoiceId:guid}", GetInvoiceAsync).RequirePermission("invoices.read");
         api.MapPost("/invoices", CreateInvoiceAsync).RequirePermission("invoices.create");
         api.MapPost("/invoices/{invoiceId:guid}/payments", CreatePaymentAsync).RequirePermission("payments.create");
