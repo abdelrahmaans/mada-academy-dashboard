@@ -11,9 +11,9 @@
 - Backend: **133/133** integration tests passed against a disposable local PostgreSQL database with .NET SDK **10.0.401**; no staging or production database was touched.
 - React: **69/69** Vitest tests, `pnpm check`, and `pnpm build` passed.
 - Playwright: **19/19** `critical-flows.spec.ts` tests passed, including R08/R09 scoping/empty/error states and the regression that proves failed live freeze APIs neither display seeded localStorage data nor report successful submission.
-- Angular: **78/78** unit tests and production build passed; Landing typecheck/build passed in the prior local validation run.
+- Angular: **78/78** unit tests, production build, and **2/2** Angular R08 Playwright tests passed; the R08 E2E now covers both linked siblings and verifies selected-child evaluation isolation. Landing typecheck/build passed.
 - `pnpm lint`: **0 errors, 118 warnings** remain repository-wide; `git diff --check` passed.
-- Not yet done: GitHub PR checks, applying the migration to staging, authenticated staging smoke tests, or backup/restore proof. SMS provider, external backup integration, and distributed rate limiting remain paused while the core is stabilized; these remain release-readiness gates.
+- Still pending: final GitHub PR checks after the Angular R08 test correction, applying the migration to staging, authenticated staging smoke tests, and backup/restore proof. SMS provider, external backup integration, and distributed rate limiting remain paused while the core is stabilized; these remain release-readiness gates.
 
 **Security follow-up:** [Issue #98 — rotate historical Supabase/PostgreSQL credentials](https://github.com/abdelrahmaans/mada-academy-dashboard/issues/98) tracks provider credential rotation, environment/log audit, optional Git history purge, and re-scanning. The current working tree is sanitized; rotation and history rewriting require explicit account/repository authorization and are not performed automatically.
 
