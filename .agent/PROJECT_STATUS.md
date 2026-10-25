@@ -1,7 +1,7 @@
 # Mada Academy — Project Status
 
 **As of:** 25 October 2026
-**Verified Git state:** branch `fix/dev-readiness-20261024` is pushed and PR [#113](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/113) is open against `dev`, based on `origin/dev` at `de21282` (including the newer billing-meter and waitlist-promotion slices). GitHub checks are running; no staging/production migration or deployment was performed. PR #112 (`feat/dynamic-permissions-engine`) remains historical context for previously delivered permissions/audit/landing work; verify live remote refs before future release actions.
+**Verified Git state:** branch `fix/dev-readiness-20261024` is pushed and PR [#113](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/113) is open against `dev`, based on `origin/dev` at `de21282` (including the newer billing-meter and waitlist-promotion slices). Backend, frontend, Playwright R08/critical-flow, and Vercel Preview checks passed on code commit `dfe6448`; no staging/production migration or deployment was performed. PR #112 (`feat/dynamic-permissions-engine`) remains historical context for previously delivered permissions/audit/landing work; verify live remote refs before future release actions.
 **Current delivery:** the local dev-readiness patch hardens development-only endpoints, aligns EF model/migration state, fixes user-facing false-success behavior, removes unsupported demo-derived data from LIVE R08/R09 surfaces, and extends local regression/CI coverage. The previously delivered dynamic permissions engine, audit trail, and landing redesign remain part of the project baseline.
 **Canonical quick snapshot:** [`docs/REPOSITORY_CURRENT_STATE.md`](../docs/REPOSITORY_CURRENT_STATE.md).
 **Stack:** React + Vite + TypeScript; ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions.
@@ -13,7 +13,7 @@
 - Playwright: **19/19** `critical-flows.spec.ts` tests passed, including R08/R09 scoping/empty/error states and the regression that proves failed live freeze APIs neither display seeded localStorage data nor report successful submission.
 - Angular: **78/78** unit tests, production build, and **2/2** Angular R08 Playwright tests passed; the R08 E2E now covers both linked siblings and verifies selected-child evaluation isolation. Landing typecheck/build passed.
 - `pnpm lint`: **0 errors, 118 warnings** remain repository-wide; `git diff --check` passed.
-- Still pending: final GitHub PR checks after the Angular R08 test correction, applying the migration to staging, authenticated staging smoke tests, and backup/restore proof. SMS provider, external backup integration, and distributed rate limiting remain paused while the core is stabilized; these remain release-readiness gates.
+- Still pending: applying the migration to staging, authenticated staging smoke tests, and backup/restore proof. SMS provider, external backup integration, and distributed rate limiting remain paused while the core is stabilized; these remain release-readiness gates.
 
 **Security follow-up:** [Issue #98 — rotate historical Supabase/PostgreSQL credentials](https://github.com/abdelrahmaans/mada-academy-dashboard/issues/98) tracks provider credential rotation, environment/log audit, optional Git history purge, and re-scanning. The current working tree is sanitized; rotation and history rewriting require explicit account/repository authorization and are not performed automatically.
 
