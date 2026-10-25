@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,8 +11,8 @@ public static class OperationalReportEndpoints
     public static IEndpointRouteBuilder MapMadaOperationalReportEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var api = endpoints.MapGroup("/api/v1/reports").RequireAuthorization("staff");
-        api.MapGet("/operational", GetAsync);
-        api.MapGet("/operational.csv", GetCsvAsync);
+        api.MapGet("/operational", GetAsync).RequirePermission("reports.read");
+        api.MapGet("/operational.csv", GetCsvAsync).RequirePermission("reports.read");
         return endpoints;
     }
 

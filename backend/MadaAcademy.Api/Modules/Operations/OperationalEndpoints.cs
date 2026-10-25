@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -41,14 +42,14 @@ public static class OperationalEndpoints
 
             return TypedResults.Ok(new ApiEnvelope<StudentListResponse>(
                 new StudentListResponse(students, students.Count, scope.ScopeLevel, scope.BranchId)));
-        });
+        }).RequirePermission("students.read");
 
-        operations.MapPost("/students", CreateStudentAsync);
-        operations.MapPut("/students/{studentId:guid}", UpdateStudentAsync);
-        operations.MapGet("/students/{studentId:guid}/enrollments", ListStudentEnrollmentsAsync);
-        operations.MapPost("/students/{studentId:guid}/enrollments", CreateStudentEnrollmentAsync);
-        operations.MapPost("/students/{studentId:guid}/enrollments/{enrollmentId:guid}/activate", ActivateWaitlistedEnrollmentAsync);
-        operations.MapDelete("/students/{studentId:guid}/enrollments/{enrollmentId:guid}", CancelStudentEnrollmentAsync);
+        operations.MapPost("/students", CreateStudentAsync).RequirePermission("students.create");
+        operations.MapPut("/students/{studentId:guid}", UpdateStudentAsync).RequirePermission("students.create");
+        operations.MapGet("/students/{studentId:guid}/enrollments", ListStudentEnrollmentsAsync).RequirePermission("students.read");
+        operations.MapPost("/students/{studentId:guid}/enrollments", CreateStudentEnrollmentAsync).RequirePermission("students.create");
+        operations.MapPost("/students/{studentId:guid}/enrollments/{enrollmentId:guid}/activate", ActivateWaitlistedEnrollmentAsync).RequirePermission("students.create");
+        operations.MapDelete("/students/{studentId:guid}/enrollments/{enrollmentId:guid}", CancelStudentEnrollmentAsync).RequirePermission("students.create");
 
         operations.MapGet("/sessions", async Task<Results<Ok<ApiEnvelope<SessionListResponse>>, ProblemHttpResult>> (
             ClaimsPrincipal user,
@@ -79,7 +80,7 @@ public static class OperationalEndpoints
 
             return TypedResults.Ok(new ApiEnvelope<SessionListResponse>(
                 new SessionListResponse(sessions, sessions.Count, scope.ScopeLevel, scope.BranchId)));
-        });
+        }).RequirePermission("sessions.read");
 
         operations.MapGet("/sessions/{sessionId:guid}", async Task<Results<Ok<ApiEnvelope<SessionDetails>>, ProblemHttpResult>> (
             Guid sessionId,
@@ -106,7 +107,7 @@ public static class OperationalEndpoints
             return session is null
                 ? Problem(404, "SESSION_NOT_FOUND", "The session was not found in the current scope.")
                 : TypedResults.Ok(new ApiEnvelope<SessionDetails>(session));
-        });
+        }).RequirePermission("sessions.read");
 
         operations.MapGet("/sessions/{sessionId:guid}/attendance", async Task<Results<Ok<ApiEnvelope<AttendanceResponse>>, ProblemHttpResult>> (
             Guid sessionId,
@@ -123,7 +124,7 @@ public static class OperationalEndpoints
             var rows = await LoadAttendance(db, session, cancellationToken);
             return TypedResults.Ok(new ApiEnvelope<AttendanceResponse>(
                 new AttendanceResponse(session.Id, session.Status, rows, rows.Count)));
-        });
+        }).RequirePermission("attendance.read");
 
         operations.MapPut("/sessions/{sessionId:guid}/attendance", async Task<Results<Ok<ApiEnvelope<AttendanceResponse>>, ProblemHttpResult>> (
             Guid sessionId,
@@ -199,7 +200,7 @@ public static class OperationalEndpoints
             var rows = await LoadAttendance(db, session, cancellationToken);
             return TypedResults.Ok(new ApiEnvelope<AttendanceResponse>(
                 new AttendanceResponse(session.Id, session.Status, rows, rows.Count)));
-        });
+        }).RequirePermission("attendance.write");
 
         operations.MapPost("/sessions/{sessionId:guid}/complete", async Task<Results<Ok<ApiEnvelope<SessionCompletionResponse>>, ProblemHttpResult>> (
             Guid sessionId,
@@ -251,7 +252,7 @@ public static class OperationalEndpoints
             });
             await db.SaveChangesAsync(cancellationToken);
             return TypedResults.Ok(new ApiEnvelope<SessionCompletionResponse>(new SessionCompletionResponse(session.Id, session.Status, now)));
-        });
+        }).RequirePermission("attendance.write");
 
         return endpoints;
     }

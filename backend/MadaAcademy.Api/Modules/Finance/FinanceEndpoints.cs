@@ -2,6 +2,7 @@ using System.Data;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text;
+using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
 using MadaAcademy.Api.Storage;
@@ -19,19 +20,19 @@ public static class FinanceEndpoints
     public static IEndpointRouteBuilder MapMadaFinanceEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var api = endpoints.MapGroup("/api/v1/finance").RequireAuthorization("staff");
-        api.MapGet("/invoices", ListInvoicesAsync);
-        api.MapGet("/reports/summary", ReportsSummaryAsync);
-        api.MapGet("/reports/summary.csv", ReportsCsvAsync);
-        api.MapGet("/invoices/{invoiceId:guid}", GetInvoiceAsync);
-        api.MapPost("/invoices", CreateInvoiceAsync);
-        api.MapPost("/invoices/{invoiceId:guid}/payments", CreatePaymentAsync);
-        api.MapPost("/payments/{paymentId:guid}/evidence", UploadEvidenceAsync);
-        api.MapGet("/payments/{paymentId:guid}/evidence", DownloadEvidenceAsync);
-        api.MapGet("/cashier/shift-summary", GetCashierShiftSummaryAsync);
-        api.MapPost("/cashier/closeout", CloseoutCashierShiftAsync);
-        api.MapGet("/instructor-payroll", GetInstructorPayrollAsync);
-        api.MapGet("/payroll/instructors", GetInstructorPayrollAsync);
-        api.MapPost("/cashier/deposit-to-safe", DepositCashierSafeAsync);
+        api.MapGet("/invoices", ListInvoicesAsync).RequirePermission("invoices.read");
+        api.MapGet("/reports/summary", ReportsSummaryAsync).RequirePermission("finance.read");
+        api.MapGet("/reports/summary.csv", ReportsCsvAsync).RequirePermission("finance.read");
+        api.MapGet("/invoices/{invoiceId:guid}", GetInvoiceAsync).RequirePermission("invoices.read");
+        api.MapPost("/invoices", CreateInvoiceAsync).RequirePermission("invoices.create");
+        api.MapPost("/invoices/{invoiceId:guid}/payments", CreatePaymentAsync).RequirePermission("payments.create");
+        api.MapPost("/payments/{paymentId:guid}/evidence", UploadEvidenceAsync).RequirePermission("payments.evidence.write");
+        api.MapGet("/payments/{paymentId:guid}/evidence", DownloadEvidenceAsync).RequirePermission("payments.evidence.read");
+        api.MapGet("/cashier/shift-summary", GetCashierShiftSummaryAsync).RequirePermission("finance.summary.read");
+        api.MapPost("/cashier/closeout", CloseoutCashierShiftAsync).RequirePermission("payments.create");
+        api.MapGet("/instructor-payroll", GetInstructorPayrollAsync).RequirePermission("finance.read");
+        api.MapGet("/payroll/instructors", GetInstructorPayrollAsync).RequirePermission("finance.read");
+        api.MapPost("/cashier/deposit-to-safe", DepositCashierSafeAsync).RequirePermission("payments.create");
 
         endpoints.MapGet("/api/v1/consumer/invoices", ListConsumerInvoicesAsync).RequireAuthorization("consumer");
         return endpoints;

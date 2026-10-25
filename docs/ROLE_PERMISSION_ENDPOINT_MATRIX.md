@@ -1,10 +1,12 @@
 # Mada Academy — Role × Permission × Endpoint Matrix
 
-**Date:** 2026-10-07  
-**Source of truth:** backend endpoint guards, JWT scope queries, `RoleCatalog.cs`, API contracts, and integration tests.  
+**Date:** 2026-10-25
+**Source of truth:** backend endpoint guards, JWT scope queries, `RoleCatalog.cs`, API contracts, and integration tests.
 **Frontend status:** Angular is currently wired for auth, R02 dashboard, and the R03 data-access slice only. `Pending` in this document means the Angular feature/client method is not implemented yet; it does not mean that the backend endpoint is missing.
 
 > **Security rule:** Angular guards and this matrix are client navigation policy only. Backend `RequireAuthorization`, role checks, tenant/branch filters, linked-record checks, assignment checks, and publication checks remain authoritative.
+
+> **Dev enforcement update (2026-10-25):** Dynamic permission policies are now evaluated server-side for the students/sessions/attendance, finance/payments/expenses, marketing, reports, roles/members, branches, classrooms, and bulk-import route families. The evaluator reloads the active membership and tenant override from the database for each request. Deployed staging smoke, private-storage evidence, and backup/restore evidence remain open release gates; see [`DEV_PERMISSION_ENFORCEMENT_AND_RELEASE_GATES.md`](DEV_PERMISSION_ENFORCEMENT_AND_RELEASE_GATES.md).
 
 ## 1. Role catalog and declared permissions
 
@@ -88,7 +90,7 @@ The following table is the permission catalog declared by backend `RoleCatalog`.
 | `GET /academy/executive-summary`       | `academy-owner`; tenant scope                                                                  |   N |   Y |   N |     N |   N |   N |   N |   N |   N |   N | Pending     |
 | `GET /academy/executive-activity`      | `academy-owner`; tenant scope                                                                  |   N |   Y |   N |     N |   N |   N |   N |   N |   N |   N | Pending     |
 
-`*` R00 is shown as `N*` where the implementation is a `staff` group rather than a dedicated platform role check; verify whether platform staff should consume the operational endpoint before exposing it in Angular.  
+`*` R00 is shown as `N*` where the implementation is a `staff` group rather than a dedicated platform role check; verify whether platform staff should consume the operational endpoint before exposing it in Angular.
 `**` The declared catalog contains `attendance.write` for R03, but the current backend implementation excludes R03 from `CanWriteAttendance`; this is a contract mismatch requiring an explicit product decision and integration test before changing.
 
 ### 2.3 Scheduling, groups, supervision, and evaluations

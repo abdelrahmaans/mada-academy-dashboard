@@ -13,15 +13,15 @@ public static class RoleEndpoints
     public static IEndpointRouteBuilder MapMadaRoleEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var api = endpoints.MapGroup("/api/v1/academy").RequireAuthorization("academy-owner");
-        api.MapGet("/roles", GetRolesAsync);
-        api.MapPut("/roles/{roleCode}/permissions", UpdateRolePermissionsAsync);
-        api.MapDelete("/roles/{roleCode}/permissions", ResetRolePermissionsAsync);
-        api.MapGet("/members", GetMembersAsync);
-        api.MapPost("/members", AddMemberAsync);
-        api.MapPut("/members/{membershipId:guid}/role", ChangeRoleAsync);
-        api.MapPut("/members/{membershipId:guid}/permissions", UpdateMemberPermissionsAsync);
-        api.MapDelete("/members/{membershipId:guid}/permissions", ResetMemberPermissionsAsync);
-        api.MapPatch("/members/{membershipId:guid}/status", ChangeStatusAsync);
+        api.MapGet("/roles", GetRolesAsync).RequirePermission("roles.read");
+        api.MapPut("/roles/{roleCode}/permissions", UpdateRolePermissionsAsync).RequirePermission("roles.manage");
+        api.MapDelete("/roles/{roleCode}/permissions", ResetRolePermissionsAsync).RequirePermission("roles.manage");
+        api.MapGet("/members", GetMembersAsync).RequirePermission("staff.read");
+        api.MapPost("/members", AddMemberAsync).RequirePermission("staff.invite");
+        api.MapPut("/members/{membershipId:guid}/role", ChangeRoleAsync).RequirePermission("roles.manage");
+        api.MapPut("/members/{membershipId:guid}/permissions", UpdateMemberPermissionsAsync).RequirePermission("roles.manage");
+        api.MapDelete("/members/{membershipId:guid}/permissions", ResetMemberPermissionsAsync).RequirePermission("roles.manage");
+        api.MapPatch("/members/{membershipId:guid}/status", ChangeStatusAsync).RequirePermission("roles.manage");
         return endpoints;
     }
 

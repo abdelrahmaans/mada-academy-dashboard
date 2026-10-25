@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -13,10 +14,10 @@ public static class ClassroomResourceEndpoints
     public static IEndpointRouteBuilder MapMadaClassroomResourceEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var api = endpoints.MapGroup("/api/v1/academy").RequireAuthorization("academy-owner");
-        api.MapGet("/classrooms/{classroomId:guid}/resources", ListAsync);
-        api.MapPost("/classrooms/{classroomId:guid}/resources", CreateAsync);
-        api.MapPut("/classrooms/{classroomId:guid}/resources/{resourceId:guid}", UpdateAsync);
-        api.MapDelete("/classrooms/{classroomId:guid}/resources/{resourceId:guid}", DeleteAsync);
+        api.MapGet("/classrooms/{classroomId:guid}/resources", ListAsync).RequirePermission("classrooms.manage");
+        api.MapPost("/classrooms/{classroomId:guid}/resources", CreateAsync).RequirePermission("classrooms.manage");
+        api.MapPut("/classrooms/{classroomId:guid}/resources/{resourceId:guid}", UpdateAsync).RequirePermission("classrooms.manage");
+        api.MapDelete("/classrooms/{classroomId:guid}/resources/{resourceId:guid}", DeleteAsync).RequirePermission("classrooms.manage");
         return endpoints;
     }
 

@@ -1,5 +1,7 @@
 using System.Text;
+using MadaAcademy.Api.Modules.Identity;
 using MadaAcademy.Api.Persistence;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -77,12 +79,15 @@ public static class AuthenticationRegistration
             };
         });
 
-        services.AddAuthorizationBuilder()
+        services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
+        var authorization = services.AddAuthorizationBuilder()
             .AddPolicy("staff", policy => policy.RequireAuthenticatedUser().RequireClaim("accountType", "staff"))
             .AddPolicy("consumer", policy => policy.RequireAuthenticatedUser().RequireClaim("accountType", "parent", "student"))
             .AddPolicy("platform-admin", policy => policy.RequireRole("R00_PLATFORM_ADMIN"))
             .AddPolicy("academy-owner", policy => policy.RequireRole("R01_ACADEMY_OWNER"))
             .AddPolicy("branch-manager", policy => policy.RequireRole("R02_BRANCH_MANAGER"));
+        foreach (var permission in RoleCatalog.PermissionCatalog)
+            authorization.AddPolicy($"permission:{permission}", policy => policy.AddRequirements(new PermissionRequirement(permission)));
         return services;
     }
 }

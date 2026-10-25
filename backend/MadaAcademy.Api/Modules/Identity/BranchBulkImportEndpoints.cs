@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using MadaAcademy.Api.Auth;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -20,8 +21,8 @@ public static class BranchBulkImportEndpoints
     public static IEndpointRouteBuilder MapMadaBranchBulkImportEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var api = endpoints.MapGroup("/api/v1/imports/branches").RequireAuthorization("academy-owner");
-        api.MapPost("/csv/preview", PreviewCsvAsync);
-        api.MapPost("/commit", CommitAsync);
+        api.MapPost("/csv/preview", PreviewCsvAsync).RequirePermission("branch.create");
+        api.MapPost("/commit", CommitAsync).RequirePermission("branch.create");
         return endpoints;
     }
 

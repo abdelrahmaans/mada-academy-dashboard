@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using MadaAcademy.Api.Auth;
 using System.Text.RegularExpressions;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
@@ -11,10 +12,10 @@ public static class BranchEndpoints
     public static IEndpointRouteBuilder MapMadaBranchEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var api = endpoints.MapGroup("/api/v1/academy").RequireAuthorization("academy-owner");
-        api.MapGet("/branches", ListAsync);
-        api.MapPost("/branches", CreateAsync);
-        api.MapPut("/branches/{branchId:guid}", UpdateAsync);
-        api.MapPatch("/branches/{branchId:guid}/status", ChangeStatusAsync);
+        api.MapGet("/branches", ListAsync).RequirePermission("branch.read");
+        api.MapPost("/branches", CreateAsync).RequirePermission("branch.create");
+        api.MapPut("/branches/{branchId:guid}", UpdateAsync).RequirePermission("branch.create");
+        api.MapPatch("/branches/{branchId:guid}/status", ChangeStatusAsync).RequirePermission("branch.create");
         return endpoints;
     }
 

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,10 +12,10 @@ public static class AnalyticsEndpoints
     {
         var api = endpoints.MapGroup("/api/v1/reports/analytics").RequireAuthorization("staff");
 
-        api.MapGet("/retention-radar", GetRetentionRadarAsync);
-        api.MapGet("/instructor-scorecard", GetInstructorScorecardAsync);
-        api.MapGet("/course-profitability", GetCourseProfitabilityAsync);
-        api.MapGet("/bi-feed.csv", GetBiFeedCsvAsync);
+        api.MapGet("/retention-radar", GetRetentionRadarAsync).RequirePermission("reports.read");
+        api.MapGet("/instructor-scorecard", GetInstructorScorecardAsync).RequirePermission("reports.read");
+        api.MapGet("/course-profitability", GetCourseProfitabilityAsync).RequirePermission("reports.read");
+        api.MapGet("/bi-feed.csv", GetBiFeedCsvAsync).RequirePermission("reports.read");
 
         return endpoints;
     }

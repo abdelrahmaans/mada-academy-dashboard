@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
 using MadaAcademy.Api.Storage;
@@ -16,13 +17,13 @@ public static class ExpenseEndpoints
     public static IEndpointRouteBuilder MapMadaExpenseEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var api = endpoints.MapGroup("/api/v1/finance/expenses").RequireAuthorization("staff");
-        api.MapGet("", ListAsync);
-        api.MapGet("/{expenseId:guid}", GetAsync);
-        api.MapPost("", CreateAsync);
-        api.MapPost("/{expenseId:guid}/approve", ApproveAsync);
-        api.MapPost("/{expenseId:guid}/reject", RejectAsync);
-        api.MapPost("/{expenseId:guid}/evidence", UploadEvidenceAsync);
-        api.MapGet("/{expenseId:guid}/evidence", DownloadEvidenceAsync);
+        api.MapGet("", ListAsync).RequirePermission("finance.expenses.read");
+        api.MapGet("/{expenseId:guid}", GetAsync).RequirePermission("finance.expenses.read");
+        api.MapPost("", CreateAsync).RequirePermission("finance.expenses.write");
+        api.MapPost("/{expenseId:guid}/approve", ApproveAsync).RequirePermission("finance.expenses.approve");
+        api.MapPost("/{expenseId:guid}/reject", RejectAsync).RequirePermission("finance.expenses.approve");
+        api.MapPost("/{expenseId:guid}/evidence", UploadEvidenceAsync).RequirePermission("payments.evidence.write");
+        api.MapGet("/{expenseId:guid}/evidence", DownloadEvidenceAsync).RequirePermission("payments.evidence.read");
         return endpoints;
     }
 

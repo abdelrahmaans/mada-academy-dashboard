@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -27,7 +28,7 @@ public static class MarketingEndpoints
                 .Select(g => new { Id = g.Key, Leads = g.Count(), Conversions = g.Count(x => x.Status == "REGISTERED") })
                 .ToDictionaryAsync(x => x.Id, cancellationToken);
             return TypedResults.Ok(new ApiEnvelope<IReadOnlyList<CampaignItem>>(campaigns.Select(x => ToItem(x, leadStats.GetValueOrDefault(x.Id))).ToArray()));
-        });
+        }).RequirePermission("marketing.read");
 
         group.MapPost("/campaigns", async Task<Results<Ok<ApiEnvelope<CampaignItem>>, ProblemHttpResult>>(
             CreateCampaignRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken) =>
@@ -40,7 +41,7 @@ public static class MarketingEndpoints
             var item = new MarketingCampaign { TenantId = scope.TenantId, BranchId = branchId.Value, Name = request.Name.Trim(), Channel = request.Channel.Trim().ToUpperInvariant(), Status = "DRAFT", BudgetPiastres = Math.Max(0, request.BudgetPiastres), Notes = request.Notes?.Trim(), CreatedByUserId = Actor(user) };
             db.MarketingCampaigns.Add(item); await db.SaveChangesAsync(cancellationToken);
             return TypedResults.Ok(new ApiEnvelope<CampaignItem>(ToItem(item, null)));
-        });
+        }).RequirePermission("marketing.write");
 
         group.MapPatch("/campaigns/{id:guid}/status", async Task<Results<Ok<ApiEnvelope<CampaignItem>>, ProblemHttpResult>>(
             Guid id, UpdateMarketingStatusRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken) =>
@@ -55,7 +56,7 @@ public static class MarketingEndpoints
             item.Status = status; await db.SaveChangesAsync(cancellationToken);
             var stats = await db.Leads.Where(x => x.CampaignId == item.Id).GroupBy(x => x.CampaignId).Select(g => new { Leads = g.Count(), Conversions = g.Count(x => x.Status == "REGISTERED") }).FirstOrDefaultAsync(cancellationToken);
             return TypedResults.Ok(new ApiEnvelope<CampaignItem>(ToItem(item, stats)));
-        });
+        }).RequirePermission("marketing.write");
 
         group.MapGet("/content", async Task<Results<Ok<ApiEnvelope<IReadOnlyList<ContentItem>>>, ProblemHttpResult>>(
             ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken) =>
@@ -64,7 +65,7 @@ public static class MarketingEndpoints
             if (!TryGetScope(user, out var scope, out var error)) return error;
             var items = await db.MarketingContentItems.AsNoTracking().Where(x => x.TenantId == scope.TenantId && (!scope.BranchId.HasValue || x.BranchId == scope.BranchId.Value)).OrderBy(x => x.DueDate).ThenByDescending(x => x.CreatedAt).Select(x => new ContentItem(x.Id, x.BranchId, x.CampaignId, x.Title, x.ContentType, x.Platform, x.Status, x.DueDate, x.CreatedAt)).ToListAsync(cancellationToken);
             return TypedResults.Ok(new ApiEnvelope<IReadOnlyList<ContentItem>>(items));
-        });
+        }).RequirePermission("marketing.read");
 
         group.MapPost("/content", async Task<Results<Ok<ApiEnvelope<ContentItem>>, ProblemHttpResult>>(
             CreateContentRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken) =>
@@ -78,7 +79,7 @@ public static class MarketingEndpoints
             var item = new MarketingContentItem { TenantId = scope.TenantId, BranchId = branchId.Value, CampaignId = request.CampaignId, Title = request.Title.Trim(), ContentType = request.ContentType.Trim().ToUpperInvariant(), Platform = request.Platform.Trim().ToUpperInvariant(), Status = "DRAFT", DueDate = request.DueDate, Notes = request.Notes?.Trim(), CreatedByUserId = Actor(user) };
             db.MarketingContentItems.Add(item); await db.SaveChangesAsync(cancellationToken);
             return TypedResults.Ok(new ApiEnvelope<ContentItem>(new ContentItem(item.Id, item.BranchId, item.CampaignId, item.Title, item.ContentType, item.Platform, item.Status, item.DueDate, item.CreatedAt)));
-        });
+        }).RequirePermission("marketing.write");
 
         group.MapPatch("/content/{id:guid}/status", async Task<Results<Ok<ApiEnvelope<ContentItem>>, ProblemHttpResult>>(
             Guid id, UpdateMarketingStatusRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken) =>
@@ -92,7 +93,7 @@ public static class MarketingEndpoints
             if (status is null || !allowed.Contains(status)) return Problem(400, "INVALID_CONTENT_STATUS", "Unsupported content status.");
             item.Status = status; await db.SaveChangesAsync(cancellationToken);
             return TypedResults.Ok(new ApiEnvelope<ContentItem>(new ContentItem(item.Id, item.BranchId, item.CampaignId, item.Title, item.ContentType, item.Platform, item.Status, item.DueDate, item.CreatedAt)));
-        });
+        }).RequirePermission("marketing.write");
 
         return endpoints;
     }
