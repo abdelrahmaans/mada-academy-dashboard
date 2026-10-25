@@ -342,7 +342,13 @@ public static class OperationalEndpoints
         return Results.NoContent();
     }
 
-    private static async Task<IResult> ActivateWaitlistedEnrollmentAsync(Guid studentId, Guid enrollmentId, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    private static async Task<IResult> ActivateWaitlistedEnrollmentAsync(
+        Guid studentId,
+        Guid enrollmentId,
+        ActivateWaitlistRequest? request,
+        ClaimsPrincipal user,
+        MadaDbContext db,
+        CancellationToken cancellationToken)
     {
         if (!CanManageStudents(user)) return Problem(403, "STUDENT_WRITE_FORBIDDEN", "The current role cannot manage student enrollments.");
         if (!TryGetScope(user, out var scope, out var scopeError)) return scopeError;
@@ -365,6 +371,44 @@ public static class OperationalEndpoints
         if (!actorId.HasValue) return Problem(403, "ACTOR_REQUIRED", "The authenticated staff identity is missing.");
         enrollment.Enrollment.Status = "ACTIVE";
         enrollment.Enrollment.UpdatedAt = DateTimeOffset.UtcNow;
+
+        Invoice? invoice = null;
+        if (request?.CreateInvoice == true && enrollment.Enrollment.FinalPricePiastres > 0)
+        {
+            var invoiceExists = await db.Invoices.AnyAsync(i => i.EnrollmentId == enrollment.Enrollment.Id, cancellationToken);
+            if (!invoiceExists)
+            {
+                var invoiceCount = await db.Invoices.CountAsync(i => i.TenantId == scope.TenantId, cancellationToken);
+                var branch = await db.Branches.FindAsync([scope.BranchId.Value], cancellationToken);
+                var branchCode = branch?.Code ?? "MAIN";
+                var invoiceNumber = $"MAD-{branchCode}-{DateTime.UtcNow.Year}-{(invoiceCount + 1):D4}";
+                var dueDays = Math.Clamp(request.DueDays ?? 14, 1, 90);
+                var template = await db.CourseTemplates.FindAsync([enrollment.Offering.CourseTemplateId], cancellationToken);
+                var templateName = template?.Name ?? "اشتراك مجموعة";
+
+                invoice = new Invoice
+                {
+                    TenantId = scope.TenantId,
+                    BranchId = scope.BranchId.Value,
+                    StudentId = studentId,
+                    EnrollmentId = enrollment.Enrollment.Id,
+                    InvoiceNumber = invoiceNumber,
+                    IssueDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                    DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(dueDays)),
+                    TotalPiastres = enrollment.Enrollment.FinalPricePiastres,
+                    Status = "UNPAID",
+                    CreatedByUserId = actorId.Value
+                };
+                invoice.Lines.Add(new InvoiceLine
+                {
+                    LineNumber = 1,
+                    Description = $"ترقية من قائمة الانتظار · {templateName}".Trim(),
+                    AmountPiastres = enrollment.Enrollment.FinalPricePiastres
+                });
+                db.Invoices.Add(invoice);
+            }
+        }
+
         db.AuditEvents.Add(new AuditEvent
         {
             ActorUserId = actorId,
@@ -373,11 +417,33 @@ public static class OperationalEndpoints
             Action = "STUDENT_ENROLLMENT_ACTIVATED",
             TargetType = "STUDENT_ENROLLMENT",
             TargetId = enrollment.Enrollment.Id.ToString(),
-            MetadataJson = JsonSerializer.Serialize(new { studentId, courseOfferingId = enrollment.Offering.Id, from = "WAITLISTED", to = "ACTIVE" })
+            MetadataJson = JsonSerializer.Serialize(new
+            {
+                studentId,
+                courseOfferingId = enrollment.Offering.Id,
+                from = "WAITLISTED",
+                to = "ACTIVE",
+                invoiceCreated = invoice is not null,
+                invoiceId = invoice?.Id,
+                invoiceNumber = invoice?.InvoiceNumber
+            })
         });
         await db.SaveChangesAsync(cancellationToken);
 
-        return Results.Ok(new { data = new { enrollmentId, studentId, courseOfferingId = enrollment.Offering.Id, status = enrollment.Enrollment.Status, activeEnrollmentCount = activeCount + 1 } });
+        return Results.Ok(new
+        {
+            data = new
+            {
+                enrollmentId,
+                studentId,
+                courseOfferingId = enrollment.Offering.Id,
+                status = enrollment.Enrollment.Status,
+                activeEnrollmentCount = activeCount + 1,
+                invoiceId = invoice?.Id,
+                invoiceNumber = invoice?.InvoiceNumber,
+                invoiceCreated = invoice is not null
+            }
+        });
     }
 
     private static async Task<List<SessionDetails>> ProjectSessionsAsync(
@@ -507,6 +573,7 @@ public sealed record CreateStudentRequest(string? FullName, DateOnly? DateOfBirt
 public sealed record UpdateStudentRequest(string? FullName, DateOnly? DateOfBirth);
 public sealed record StudentEnrollmentItem(Guid Id, Guid CourseOfferingId, string? CourseName, DateOnly StartDate, DateOnly EndDate, int FinalPricePiastres, string Status, int MaxStudents, int ActiveEnrollmentCount);
 public sealed record CreateStudentEnrollmentRequest(Guid CourseOfferingId, int FinalPricePiastres);
+public sealed record ActivateWaitlistRequest(bool CreateInvoice = false, int? DueDays = 14);
 public sealed record SessionListResponse(IReadOnlyList<SessionDetails> Items, int Total, string ScopeLevel, Guid? BranchId);
 public sealed record SessionDetails(Guid Id, Guid BranchId, Guid? CourseOfferingId, int SessionNumber, DateTimeOffset StartAt, DateTimeOffset EndAt, Guid InstructorId, Guid ClassroomId, string Type, string Status, string? Notes, DateTimeOffset? CompletedAt, string? InstructorName = null, string? ClassroomName = null, string? BranchName = null, string? CourseName = null, Guid? SubstituteInstructorId = null);
 public sealed record AttendanceResponse(Guid SessionId, string SessionStatus, IReadOnlyList<AttendanceItem> Items, int Total);

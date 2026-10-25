@@ -959,7 +959,11 @@ export const apiClient = {
   convertLead: (id: string, input: ConvertLeadInput) => request<ConvertLeadResult>(`/leads/${id}/convert`, { method: "POST", body: JSON.stringify(input) }),
   registerStudent: (input: DirectStudentInput) => request<ConvertLeadResult>("/students/register", { method: "POST", body: JSON.stringify(input) }),
   listSchedulingGroups: () => request<{ items: SchedulingGroupRecord[]; total: number }>("/scheduling/groups"),
-  activateWaitlistedEnrollment: (studentId: string, enrollmentId: string) => request<ActivateEnrollmentResult>(`/students/${studentId}/enrollments/${enrollmentId}/activate`, { method: "POST" }),
+  activateWaitlistedEnrollment: (studentId: string, enrollmentId: string, input?: ActivateWaitlistInput) =>
+    request<ActivateEnrollmentResult>(`/students/${studentId}/enrollments/${enrollmentId}/activate`, {
+      method: "POST",
+      body: input ? JSON.stringify(input) : undefined,
+    }),
   competitions: (params: { status?: string; track?: string; season?: string } = {}) => {
     const query = new URLSearchParams();
     if (params.status) query.set("status", params.status);
@@ -1110,12 +1114,20 @@ export type ConvertLeadResult = {
   enrollmentStatus: "ACTIVE" | "WAITLISTED";
 };
 
+export type ActivateWaitlistInput = {
+  createInvoice?: boolean;
+  dueDays?: number;
+};
+
 export type ActivateEnrollmentResult = {
   enrollmentId: string;
   studentId: string;
   courseOfferingId: string;
   status: "ACTIVE";
   activeEnrollmentCount: number;
+  invoiceId?: string;
+  invoiceNumber?: string;
+  invoiceCreated?: boolean;
 };
 
 export type SubscriptionFreezeRequest = {

@@ -142,7 +142,7 @@ function ClassesPage() {
     );
   };
 
-  const handleEnrollWaitlist = (id: string) => {
+  const handleEnrollWaitlist = (id: string, withInvoice = true) => {
     const updated = waitlistStorage.enrollEntry(id);
     setOfferings(current =>
       current.map(o =>
@@ -152,9 +152,15 @@ function ClassesPage() {
       )
     );
     reloadWaitlist();
-    toast.success(
-      `تم تسكين الطالب ${updated.studentName} وتفعيل اشتراكه في المجموعة بنجاح!`
-    );
+    if (withInvoice) {
+      toast.success(
+        `تم تسكين الطالب ${updated.studentName} وتفعيل اشتراكه مع إصدار فاتورة المصاريف بنجاح!`
+      );
+    } else {
+      toast.success(
+        `تم تسكين الطالب ${updated.studentName} وتفعيل اشتراكه في المجموعة بنجاح!`
+      );
+    }
   };
 
   const handleAddWaitlistEntry = (

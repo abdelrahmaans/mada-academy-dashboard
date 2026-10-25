@@ -25,7 +25,7 @@ type Props = {
   offerings: Offering[];
   waitlistEntries: WaitlistEntry[];
   onNotifyWaitlist: (id: string) => void;
-  onEnrollWaitlist: (id: string) => void;
+  onEnrollWaitlist: (id: string, withInvoice?: boolean) => void;
   onAddWaitlistEntry: (input: Omit<WaitlistEntry, "id" | "status" | "priorityRank" | "addedAt">) => void;
   onCancelWaitlistEntry?: (id: string) => void;
   onDeleteWaitlistEntry?: (id: string) => void;
@@ -376,11 +376,11 @@ export default function WaitlistManagementView({
                           </button>
                           <button
                             className="btn-action btn-enroll-now"
-                            onClick={() => onEnrollWaitlist(entry.id)}
-                            title="تسكين رسمي وتفعيل الاشتراك فوراً"
+                            onClick={() => onEnrollWaitlist(entry.id, true)}
+                            title="تسكين رسمي وتفعيل الاشتراك مع إصدار فاتورة فوراً"
                           >
                             <UserCheck size={15} />
-                            <span>تسكين رسمي</span>
+                            <span>تسكين وفاتورة</span>
                           </button>
                         </>
                       )}
@@ -389,11 +389,11 @@ export default function WaitlistManagementView({
                         <>
                           <button
                             className="btn-action btn-enroll-now"
-                            onClick={() => onEnrollWaitlist(entry.id)}
-                            title="تأكيد الحجز وتسكين الطالب فوراً"
+                            onClick={() => onEnrollWaitlist(entry.id, true)}
+                            title="تأكيد الحجز وتسكين الطالب مع إصدار فاتورة فوراً"
                           >
                             <UserCheck size={15} />
-                            <span>تأكيد التسكين</span>
+                            <span>تأكيد وفاتورة</span>
                           </button>
                           <button
                             className="btn-action btn-re-notify"

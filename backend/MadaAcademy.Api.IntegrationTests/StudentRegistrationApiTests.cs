@@ -133,4 +133,91 @@ public sealed class StudentRegistrationApiTests
         Assert.Equal("ACTIVE", (await verifyDb.StudentEnrollments.FindAsync(waitlistedEnrollmentId))!.Status);
         Assert.True(await verifyDb.AuditEvents.AnyAsync(item => item.Action == "STUDENT_ENROLLMENT_ACTIVATED" && item.TargetId == waitlistedEnrollmentId.ToString()));
     }
+
+    [Fact]
+    public async Task WaitlistedEnrollment_ActivateWithDirectInvoice_CreatesInvoiceAndLineAndAudits()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        var secretary = await TestData.CreateAccountAsync(factory, "R05_SECRETARY");
+        var studentId = Guid.NewGuid();
+        var offeringId = Guid.NewGuid();
+        var templateId = Guid.NewGuid();
+        var enrollmentId = Guid.NewGuid();
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            db.Students.Add(new Student
+            {
+                Id = studentId,
+                TenantId = secretary.TenantId,
+                BranchId = secretary.BranchId,
+                FullName = "طالب من قائمة الانتظار",
+                DateOfBirth = new DateOnly(2013, 6, 1),
+                Status = "ACTIVE"
+            });
+            db.CourseTemplates.Add(new CourseTemplate
+            {
+                Id = templateId,
+                TenantId = secretary.TenantId,
+                Name = "روبوتكس متقدم",
+                TotalSessions = 12,
+                SessionDurationHours = 1.5m,
+                BasePricePiastres = 60_000,
+                Status = "ACTIVE"
+            });
+            db.CourseOfferings.Add(new CourseOffering
+            {
+                Id = offeringId,
+                TenantId = secretary.TenantId,
+                BranchId = secretary.BranchId,
+                CourseTemplateId = templateId,
+                InstructorId = Guid.NewGuid(),
+                ClassroomId = Guid.NewGuid(),
+                StartDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7)),
+                EndDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(45)),
+                MaxStudents = 10,
+                Status = "UPCOMING"
+            });
+            db.StudentEnrollments.Add(new StudentEnrollment
+            {
+                Id = enrollmentId,
+                StudentId = studentId,
+                CourseOfferingId = offeringId,
+                FinalPricePiastres = 55_000,
+                Status = "WAITLISTED"
+            });
+            await db.SaveChangesAsync();
+        }
+
+        using var client = factory.CreateClient();
+        TestData.Authenticate(client, await TestData.LoginAsync(client, secretary));
+
+        using var activateResponse = await client.PostAsJsonAsync(
+            $"/api/v1/students/{studentId}/enrollments/{enrollmentId}/activate",
+            new { createInvoice = true, dueDays = 21 });
+
+        Assert.Equal(HttpStatusCode.OK, activateResponse.StatusCode);
+
+        using var verifyScope = factory.Services.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<MadaDbContext>();
+
+        var enrollment = await verifyDb.StudentEnrollments.FindAsync(enrollmentId);
+        Assert.NotNull(enrollment);
+        Assert.Equal("ACTIVE", enrollment.Status);
+
+        var invoice = await verifyDb.Invoices.Include(i => i.Lines).FirstOrDefaultAsync(i => i.EnrollmentId == enrollmentId);
+        Assert.NotNull(invoice);
+        Assert.Equal(55_000, invoice.TotalPiastres);
+        Assert.Equal("UNPAID", invoice.Status);
+        Assert.Equal(studentId, invoice.StudentId);
+        Assert.Equal(secretary.BranchId, invoice.BranchId);
+        Assert.Single(invoice.Lines);
+        Assert.Contains("روبوتكس متقدم", invoice.Lines.First().Description);
+        Assert.Equal(55_000, invoice.Lines.First().AmountPiastres);
+
+        var auditEvent = await verifyDb.AuditEvents.FirstOrDefaultAsync(item => item.Action == "STUDENT_ENROLLMENT_ACTIVATED" && item.TargetId == enrollmentId.ToString());
+        Assert.NotNull(auditEvent);
+        Assert.Contains(invoice.InvoiceNumber, auditEvent.MetadataJson);
+    }
 }
