@@ -273,9 +273,21 @@ export default function FamilyPortal() {
         )}
 
         {/* Children Switcher */}
-        {children.length > 0 && (
+        {children.length > 0 ? (
           <ChildrenSwitcher children={children} selectedId={selectedId} onSelect={selectChild} />
-        )}
+        ) : !dataLoading && !dataError ? (
+          <div className="consumer-note-box" role="status" style={{ margin: "20px 0", padding: "18px" }}>
+            <AlertCircle size={20} style={{ color: "#0d9488", flexShrink: 0 }} />
+            <div>
+              <strong style={{ display: "block", color: "#0f172a", marginBottom: "4px" }}>
+                لا توجد ملفات أطفال مرتبطة بهذا الحساب.
+              </strong>
+              <small style={{ color: "#64748b" }}>
+                يرجى التواصل مع إدارة الأكاديمية لربط بيانات أطفالك برقم هاتفك المسجل.
+              </small>
+            </div>
+          </div>
+        ) : null}
 
         {/* Selected Child Banner */}
         {child && (

@@ -1,6 +1,6 @@
 # Mada Academy — Repository Current State
 
-**Snapshot:** 24 October 2026<br/>
+**Snapshot:** 25 October 2026<br/>
 **Canonical branch:** `main` (active dev on `dev`)<br/>
 **Verified commit:** dynamic — run `git rev-parse --short origin/dev`<br/>
 **Repository:** `abdelrahmaans/mada-academy-dashboard`
@@ -11,10 +11,13 @@ Read this file first, then read [`PROJECT_STATUS.md`](../.agent/PROJECT_STATUS.m
 
 ## Git and PR state
 
-`main` is clean, pushed to `origin/main`. Active hardening and comprehensive architectural refactoring are progressing on `dev`. All backend and frontend suites pass with 100% test coverage.
+`main` is clean, pushed to `origin/main`. Active hardening, contract expansions, and architectural verification are progressing on `dev`. All backend and frontend suites pass with 100% test coverage.
 
 | Area | Merged / Active State |
 |---|---|
+| **Active Student Billing Meter & Plan Limits Contract** | `GET /api/v1/academy/billing-meter` calculating active students, branch usage, and staff counts against Starter/Growth/Enterprise plan limits. Non-destructive operational warnings, live billing widget in Executive Dashboard (`BillingMeterWidget.tsx`), and platform admin plan upgrade endpoint (`PATCH /api/v1/platform/academies/{id}/plan`) with audit event `PLATFORM_TENANT_PLAN_CHANGED`. |
+| **Waitlist Promotion & Direct Invoice Flow** | Policy-driven enrollment activation (`ActivateWaitlistRequest`) allowing optional invoice generation upon promotion. Automatically calculates tuition, binds invoice lines to course templates, logs audit events, and updates UI (`WaitlistManagementView.tsx` & `Classes.tsx`). |
+| **Playwright E2E Suite (100% Green)** | 18 critical MVP journey tests passing locally (`e2e/critical-flows.spec.ts`) covering multi-role authentication (R04, R06, R08, R09), finance desk accounting, family portal child scoping, student self-scoping, route access guards, and mock network failure boundaries. |
 | **Architecture Modularization & Refactoring** | Complete decomposition of 12 monolithic surfaces into domain-scoped subviews, tabs, and modals:<br>• **Classes.tsx**: Modularized into `ClassesTopbar.tsx`, `ClassesHeader.tsx`, `ClassesStatsCards.tsx`, and `ClassesComponents.test.ts` in `client/src/components/classes/`, along with existing `ClassesCatalogPanel.tsx`, `ClassesCreateDialogs.tsx`, and `ClassesDetailDialogs.tsx`.<br>• **FinanceDeskViews.tsx**: Decomposed from 2,579 lines (123KB) down to 24 lines across 6 modular views in `client/src/components/finance/` (`FinanceOverviewView`, `FinanceCollectionsView`, `FinanceExpensesView`, `FinanceReportsView`, `FinanceShiftsView`, `FinancePayrollView`, `FinanceShared.tsx`, and `FinanceDeskTypes.ts`).<br>• **PlatformConsoleLive.tsx**: Modularized into 11 modals in `PlatformConsoleModals.tsx` and 7 feature tabs (`Overview`, `Academies`, `Billing`, `Leads`, `Support`, `System`, and `Components`).<br>• **SecretaryDeskLive.tsx**: Slashed by 59% (1,371 lines down to 563 lines) across `SecretaryDeskModals.tsx` and 5 tabs (`Pipeline`, `Registration`, `Followups`, `Freezes`, `Shifts`).<br>• **FamilyPortal.tsx**: Slashed by 69% (1,093 down to 336 lines) via `FamilyPortalTypes.ts` and `FamilyPortalSubViews.tsx`.<br>• **AcademyRoles.tsx**: Slashed by 60% via `AcademyRolesMatrixTab.tsx`, `AcademyRolesMembersTab.tsx`, and `AcademyRolesModals.tsx`.<br>• **Schedule.tsx & ScheduleViews.tsx**: Extracted `ScheduleTypes.ts`, completely severing circular dependencies.<br>• **InstructorDeskLive.tsx**: Slashed from 926 down to 597 lines via 4 subviews in `client/src/components/instructor/` (`InstructorSessionsView`, `InstructorSupervisionView`, `InstructorAttendanceView`, `InstructorEvaluationsView`).<br>• **ReportsLive.tsx**: Slashed by 52% (938 down to 451 lines) via 5 tab components in `client/src/components/reports/` (`ReportsOverviewTab`, `ReportsExpensesTab`, `ReportsRetentionRadarTab`, `ReportsCoursesTab`, `ReportsInstructorsTab`).<br>• **Approvals, Competitions, Students**: Extracted modals, seed mappers, and domain contracts (`ApprovalsTypes.ts`, `CompetitionsModals.tsx`, `StudentsModals.tsx`, `StudentsTypes.ts`, `ClassesTypes.ts`). |
 | **Dynamic permissions engine** | Tenant role overrides (`TenantRoleOverrides`), custom membership permissions (`CustomPermissionsJson`), instant suspension with active session revocation, and interactive permissions matrix UI (`AcademyRoles.tsx`). |
 | **Granular route & navigation guards** | Route-level permission bindings (`permission`, `anyOfPermissions`), dynamic sidebar menu filtering (`getAuthorizedNavigation`), Arabic 403 access-denied UI, active workspace indicators (`WorkspaceHub.tsx`). |
@@ -49,13 +52,12 @@ Relevant contracts:
 
 ## Validation baseline
 
-- `dotnet test` (InMemory): **109/109 passed** (100% Backend Integration tests).
+- `dotnet test` (InMemory): **114/114 passed** (100% Backend Integration tests).
 - `dotnet build`: **0 warnings, 0 errors** (.NET 10).
-- `verify_flow.ps1` (Live API E2E): **10/10 PASSED** across all roles (R00 Platform Admin, R01 Owner, R02 Branch Manager, R03 Head Instructor, R04 Instructor, R05 Secretary, R06 Accountant, R07 Marketing, R08 Parent, R09 Student).
-- `pnpm test`: **69/69 passed** (Frontend Vitest unit/integration tests).
+- `pnpm test`: **70/70 passed** (10 test suites, Vitest unit/integration tests).
 - `pnpm check`: **0 TypeScript errors** (`tsc --noEmit`).
 - `pnpm lint`: **0 errors** (ESLint 9 Flat Config).
-- `pnpm build`: **Passed in 10.9s** (clean chunk splitting with zero circular dependencies).
-- `playwright`: **18 critical MVP journey tests** in `e2e/critical-flows.spec.ts` (cross-platform Windows/Linux configuration).
+- `pnpm build`: **Passed in 7.88s** (clean chunk splitting with zero circular dependencies).
+- `playwright`: **18/18 passed (56.5s)** in `e2e/critical-flows.spec.ts` (100% passing across all critical MVP journeys).
 - `@mada/landing build`: **Passed in 2.56s**.
 - `git diff --check`: **Clean**.

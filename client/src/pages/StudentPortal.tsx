@@ -129,6 +129,7 @@ export default function StudentPortal() {
   const [dataLoading, setDataLoading] = useState(isStudentAccount);
   const [dataError, setDataError] = useState<string | null>(null);
   const [dataWarning, setDataWarning] = useState<string | null>(null);
+  const [hasLinkedProfile, setHasLinkedProfile] = useState(true);
   const [retryKey, setRetryKey] = useState(0);
 
   // Sync tab with URL hash
@@ -185,6 +186,7 @@ export default function StudentPortal() {
       }
 
       const student = firstLinkedStudent(studentsResult.value.items);
+      setHasLinkedProfile(Boolean(student));
       const records = sessionsResult.status === "fulfilled" ? sessionsResult.value.items : [];
       const ownRecords = student ? sessionsForStudent(records, student.id) : [];
 
@@ -202,7 +204,7 @@ export default function StudentPortal() {
       setDataError(null);
 
       if (sessionsResult.status === "rejected") {
-        const message = sessionsResult.reason instanceof Error ? sessionsResult.reason.message : "تعذر تحميل جلسات الطالب.";
+        const message = sessionsResult.reason instanceof Error ? sessionsResult.reason.message : "الجلسات غير متاحة مؤقتًا.";
         setDataWarning(message);
         toast.error(`تعذر تحميل الجلسات: ${message}`);
       }
@@ -330,12 +332,26 @@ export default function StudentPortal() {
           </div>
         )}
         {dataWarning && (
-          <div className="consumer-note-box warning" role="alert">
+          <div className="consumer-note-box warning" role="status">
             <ShieldCheck size={16} />
-            <span>تنبيه: {dataWarning}</span>
+            <span>الجلسات غير متاحة مؤقتًا: {dataWarning}</span>
             <button type="button" className="button button-secondary" style={{ padding: "4px 10px", fontSize: "0.8rem", marginInlineStart: "auto" }} onClick={retry}>
               إعادة المحاولة
             </button>
+          </div>
+        )}
+
+        {!dataLoading && !dataError && !hasLinkedProfile && (
+          <div className="consumer-note-box" role="status" style={{ margin: "20px 0", padding: "18px" }}>
+            <ShieldCheck size={20} style={{ color: "#6366f1", flexShrink: 0 }} />
+            <div>
+              <strong style={{ display: "block", color: "#0f172a", marginBottom: "4px" }}>
+                لا يوجد ملف طالب مرتبط بهذا الحساب حتى الآن.
+              </strong>
+              <small style={{ color: "#64748b" }}>
+                يرجى مراجعة إدارة الأكاديمية لتفعيل قيدك التدريبي والربط بحسابك.
+              </small>
+            </div>
           </div>
         )}
 
