@@ -24,6 +24,7 @@ public sealed class PermissionAuthorizationHandler(MadaDbContext db) : Authoriza
         var tokenBranchId = Guid.TryParse(user.FindFirstValue("branchId"), out var branchId)
             ? branchId
             : (Guid?)null;
+        var cancellationToken = (context.Resource as HttpContext)?.RequestAborted ?? CancellationToken.None;
 
         var membership = await db.Memberships.AsNoTracking()
             .Where(item =>
@@ -35,9 +36,7 @@ public sealed class PermissionAuthorizationHandler(MadaDbContext db) : Authoriza
                 item.UserAccount!.Status == "ACTIVE" &&
                 (role == "R00_PLATFORM_ADMIN" || item.Tenant!.Status != "PAUSED"))
             .Select(item => new { item.RoleCode, item.CustomPermissionsJson })
-            .FirstOrDefaultAsync(context.Resource is HttpContext http
-                ? http.RequestAborted
-                : CancellationToken.None);
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (membership is null)
             return;
@@ -45,9 +44,7 @@ public sealed class PermissionAuthorizationHandler(MadaDbContext db) : Authoriza
         var tenantOverride = await db.TenantRoleOverrides.AsNoTracking()
             .Where(item => item.TenantId == tenantId && item.RoleCode == membership.RoleCode)
             .Select(item => item.PermissionsJson)
-            .FirstOrDefaultAsync(context.Resource is HttpContext http
-                ? http.RequestAborted
-                : CancellationToken.None);
+            .FirstOrDefaultAsync(cancellationToken);
 
         var effective = RoleCatalog.ResolveEffectivePermissions(
             membership.RoleCode,
