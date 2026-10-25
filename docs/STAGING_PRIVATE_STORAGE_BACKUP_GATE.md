@@ -6,7 +6,7 @@
 - Supabase private-object adapter uses server-only credentials and never exposes public object URLs.
 - Evidence access remains behind authenticated, tenant/branch-scoped API routes.
 - A staging smoke test now covers private upload and download: `scripts/private-storage-smoke.sh`.
-- A restore verification gate now creates a custom PostgreSQL dump and restores it into an isolated database: `scripts/backup-restore-verify.sh`.
+- A restore verification gate now creates a custom PostgreSQL dump, records a SHA-256 checksum, inspects the archive, and restores it into an explicitly confirmed isolated database: `scripts/backup-restore-verify.sh` (requires `RESTORE_DATABASE_ISOLATED_CONFIRM=YES`).
 - Marketing R07 now uses the persisted `/api/v1/leads` workflow instead of local preview data.
 
 ## What remains externally blocked
@@ -16,7 +16,7 @@ These items cannot be honestly marked complete from the repository without the t
 1. Inject `SUPABASE_SERVICE_ROLE_KEY` into the staging API secret manager.
 2. Run `scripts/private-storage-smoke.sh` against a real staging payment and record the result.
 3. Provide an independent backup target for private Storage objects; a database dump does not include Storage API objects.
-4. Provide a staging PostgreSQL connection and isolated restore database, then run `scripts/backup-restore-verify.sh`.
+4. Provide a staging PostgreSQL connection and isolated restore database, then run `scripts/backup-restore-verify.sh` (requires `RESTORE_DATABASE_ISOLATED_CONFIRM=YES`).
 5. Run `scripts/staging-smoke.sh` against the deployed API and record the commit SHA, API URL, frontend URL, and timestamp.
 
 ## Required evidence before production approval

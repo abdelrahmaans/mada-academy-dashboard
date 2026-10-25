@@ -65,7 +65,7 @@ PARENT_PASSWORD='<staging parent password>' \
 ./scripts/staging-smoke.sh
 ```
 
-The script checks health, staff login, `/me`, staff finance invoices, and optionally linked parent invoices. It does not print credentials or tokens.
+The script checks health, staff login, `/me`, staff finance invoices, and optionally linked parent invoices. It enforces HTTPS for non-local targets, applies connection/request timeouts, and does not print credentials or tokens.
 
 For the real private-evidence smoke, use a staging payment that has no evidence yet and a non-sensitive PDF/JPG/PNG fixture:
 
@@ -78,7 +78,7 @@ EVIDENCE_FILE=./fixtures/staging-receipt.png \
 ./scripts/staging-smoke.sh
 ```
 
-The optional path uploads through the authenticated API, downloads through the same API, compares bytes, and checks the response `Content-Type`. It does not expose the storage bucket URL or service-role key.
+The optional path uploads through the authenticated API, downloads through the same API, compares bytes, validates the response `Content-Type`, and rejects non-HTTPS targets unless explicitly overridden for local testing. It does not expose the storage bucket URL or service-role key.
 
 ## 5. Frontend acceptance
 
@@ -97,6 +97,20 @@ The local E2E suite covers:
 - R06 invoice creation, payment, over-collection rejection, and evidence upload/download.
 - R08 linked-child finance scope.
 - R09 student self-scope.
+
+## 5.1 Database backup/restore verification
+
+The verification script refuses to run when the source and restore URLs are identical and requires an explicit isolated-target confirmation. It creates a custom-format backup, records a SHA-256 checksum, inspects the archive, restores with `--exit-on-error`, and verifies that the restored database contains public tables:
+
+```bash
+DATABASE_URL='<staging-source>' \
+BACKUP_FILE=./artifacts/staging.dump \
+RESTORE_DATABASE_URL='<isolated-restore-database>' \
+RESTORE_DATABASE_ISOLATED_CONFIRM=YES \
+./scripts/backup-restore-verify.sh
+```
+
+This verifies PostgreSQL only. Storage objects require an independent provider backup/export and restore evidence.
 
 ## 6. Release decision
 
