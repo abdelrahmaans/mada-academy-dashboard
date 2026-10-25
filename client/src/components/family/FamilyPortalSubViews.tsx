@@ -1,4 +1,4 @@
-import React, { useEffect, useState, type FormEvent } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Activity,
   AlertCircle,
@@ -19,7 +19,6 @@ import { toast } from "sonner";
 import {
   apiClient,
   freezeStorage,
-  type ConsumerSessionRecord,
   type FinanceInvoice,
   type SubscriptionFreezeRequest,
 } from "@/lib/apiClient";
@@ -33,6 +32,13 @@ export function ChildOverview({
   child: ChildData;
   onTab: (tab: PortalTab) => void;
 }) {
+  const latestEvaluation = [...(child.sessionRecords ?? [])]
+    .filter(item => item.score !== null)
+    .sort((a, b) => b.startAt.localeCompare(a.startAt))[0];
+  const latestEvaluationValue = latestEvaluation?.score == null
+    ? "غير متاح"
+    : `${(latestEvaluation.score / 20).toFixed(1)} / 5`;
+
   return (
     <>
       <div className="portal-metrics-grid">
@@ -41,7 +47,7 @@ export function ChildOverview({
             <span className="portal-metric-label">انتظام الحضور</span>
             <span className="portal-metric-icon teal"><CalendarDays size={18} /></span>
           </div>
-          <div className="portal-metric-value">{child.attendance}%</div>
+          <div className="portal-metric-value">{child.attendance === null ? "—" : `${child.attendance}%`}</div>
           <div className="portal-metric-note">من سجل الجلسات المعتمدة</div>
         </div>
 
@@ -50,8 +56,8 @@ export function ChildOverview({
             <span className="portal-metric-label">التقدم في المسار</span>
             <span className="portal-metric-icon violet"><Activity size={18} /></span>
           </div>
-          <div className="portal-metric-value">{child.progress}%</div>
-          <div className="portal-metric-note">نسبة إنجاز المنهج الحالي</div>
+          <div className="portal-metric-value">{child.progress === null ? "—" : `${child.progress}%`}</div>
+          <div className="portal-metric-note">{child.sessionRecords?.length ? "من الجلسات المسجلة" : "لا توجد جلسات مسجلة"}</div>
         </div>
 
         <div className="portal-metric-card">
@@ -59,8 +65,8 @@ export function ChildOverview({
             <span className="portal-metric-label">آخر تقييم معتمد</span>
             <span className="portal-metric-icon amber"><Star size={18} /></span>
           </div>
-          <div className="portal-metric-value">{child.lastEvaluation.split("·")[1]?.trim() ?? "4.4 / 5"}</div>
-          <div className="portal-metric-note">مراجعة رئيس المدربين</div>
+          <div className="portal-metric-value">{latestEvaluationValue}</div>
+          <div className="portal-metric-note">{latestEvaluation ? "من سجل التقييمات" : "لا توجد تقييمات مسجلة"}</div>
         </div>
 
         <div className="portal-metric-card">
@@ -94,7 +100,7 @@ export function ChildOverview({
                 {child.course} · {child.nextRoom} · فرع {child.branch}
               </small>
             </div>
-            <span className="status-tag scheduled">قادمة ومؤكدة</span>
+            {child.hasUpcomingSession && <span className="status-tag scheduled">قادمة ومؤكدة</span>}
           </div>
         </section>
 
@@ -108,19 +114,23 @@ export function ChildOverview({
               عرض بطاقة التقييم <ChevronLeft size={14} />
             </button>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "14px", padding: "16px", background: "#fefce8", borderRadius: "12px", border: "1px solid #fef08a" }}>
-            <span style={{ display: "grid", placeItems: "center", width: "44px", height: "44px", borderRadius: "12px", background: "#fef08a", color: "#a16207", fontWeight: 800, fontSize: "1.1rem" }}>
-              ★
-            </span>
-            <div style={{ flex: 1 }}>
-              <strong style={{ display: "block", fontSize: "1rem", color: "#0f172a", marginBottom: "2px" }}>
-                تقييم الأداء: {child.lastEvaluation.split("·")[1]?.trim() ?? "4.4 / 5"}
-              </strong>
-              <small style={{ color: "#713f12", fontSize: "0.84rem" }}>
-                تم اعتماد التقييم من رئيس المدربين مع ملاحظات إيجابية على التطبيق العملي.
-              </small>
+          {latestEvaluation ? (
+            <div style={{ display: "flex", alignItems: "center", gap: "14px", padding: "16px", background: "#fefce8", borderRadius: "12px", border: "1px solid #fef08a" }}>
+              <span style={{ display: "grid", placeItems: "center", width: "44px", height: "44px", borderRadius: "12px", background: "#fef08a", color: "#a16207", fontWeight: 800, fontSize: "1.1rem" }}>
+                ★
+              </span>
+              <div style={{ flex: 1 }}>
+                <strong style={{ display: "block", fontSize: "1rem", color: "#0f172a", marginBottom: "2px" }}>
+                  تقييم الجلسة: {latestEvaluationValue}
+                </strong>
+                <small style={{ color: "#713f12", fontSize: "0.84rem" }}>
+                  {latestEvaluation.notes || "لا توجد ملاحظة مسجلة لهذه الجلسة."}
+                </small>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="consumer-note-box" role="status">لا توجد تقييمات مسجلة لهذا الطفل حاليًا.</div>
+          )}
         </section>
       </div>
     </>
@@ -138,29 +148,31 @@ export function ChildAttendance({ child }: { child: ChildData }) {
           <h2>سجل الحضور والانتظام الأكاديمي</h2>
         </div>
         <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
-          إجمالي الجلسات المسجلة: <b>{sessions.length > 0 ? sessions.length : 8} جلسة</b>
+          إجمالي الجلسات المسجلة: <b>{sessions.length} جلسة</b>
         </span>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px", marginBottom: "22px" }}>
         <div style={{ padding: "14px 18px", background: "#f0fdfa", border: "1px solid #ccfbf1", borderRadius: "12px" }}>
           <small style={{ color: "#0d9488", fontWeight: 700, fontSize: "0.8rem" }}>نسبة الحضور الإجمالية</small>
-          <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#0f766e" }}>{child.attendance}%</div>
-          <span style={{ fontSize: "0.78rem", color: "#64748b" }}>حضور منتظم دون انقطاع</span>
+          <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#0f766e" }}>{child.attendance === null ? "—" : `${child.attendance}%`}</div>
+          <span style={{ fontSize: "0.78rem", color: "#64748b" }}>
+            {child.attendance === null ? "لا توجد سجلات حضور" : "من الجلسات ذات الحضور المسجل"}
+          </span>
         </div>
         <div style={{ padding: "14px 18px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px" }}>
           <small style={{ color: "#475569", fontWeight: 700, fontSize: "0.8rem" }}>الجلسات المكتملة</small>
           <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#1e293b" }}>
-            {sessions.filter(s => s.status === "COMPLETED").length || 3}
+            {sessions.filter(s => s.status === "COMPLETED").length}
           </div>
-          <span style={{ fontSize: "0.78rem", color: "#64748b" }}>تم إنجازها وتثبيت الحضور</span>
+          <span style={{ fontSize: "0.78rem", color: "#64748b" }}>من الجلسات المسجلة في النظام</span>
         </div>
         <div style={{ padding: "14px 18px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px" }}>
           <small style={{ color: "#475569", fontWeight: 700, fontSize: "0.8rem" }}>الجلسات المجدولة القادمة</small>
           <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "#0284c7" }}>
-            {sessions.filter(s => s.status === "SCHEDULED" || new Date(s.startAt).getTime() > Date.now()).length || 1}
+            {sessions.filter(s => s.status !== "CANCELLED" && new Date(s.startAt).getTime() > Date.now()).length}
           </div>
-          <span style={{ fontSize: "0.78rem", color: "#64748b" }}>حسب الجدول الأسبوعي</span>
+          <span style={{ fontSize: "0.78rem", color: "#64748b" }}>من مواعيد الجلسات القادمة المسجلة</span>
         </div>
       </div>
 
@@ -228,6 +240,9 @@ export function ChildAttendance({ child }: { child: ChildData }) {
 
 export function ChildEvaluations({ child }: { child: ChildData }) {
   const evaluations = (child.sessionRecords ?? []).filter(item => item.score !== null);
+  const averageScore = evaluations.length
+    ? evaluations.reduce((sum, item) => sum + (item.score ?? 0), 0) / evaluations.length
+    : null;
 
   return (
     <section className="consumer-panel">
@@ -237,25 +252,19 @@ export function ChildEvaluations({ child }: { child: ChildData }) {
           <h2>التقييمات وبطاقات المتابعة الأكاديمية</h2>
         </div>
         <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
-          بطاقات منشورة بعد اعتماد الإدارة
+          درجات وملاحظات مسجلة من الجلسات
         </span>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px", marginBottom: "22px" }}>
         <div style={{ padding: "16px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "12px", textAlign: "center" }}>
-          <small style={{ color: "#92400e", fontWeight: 700, fontSize: "0.82rem" }}>استيعاب المفاهيم</small>
-          <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "#b45309" }}>4.5 / 5</div>
-          <span style={{ fontSize: "0.78rem", color: "#78350f" }}>فهم الخوارزميات والدوائر</span>
-        </div>
-        <div style={{ padding: "16px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "12px", textAlign: "center" }}>
-          <small style={{ color: "#92400e", fontWeight: 700, fontSize: "0.82rem" }}>التطبيق والعملي</small>
-          <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "#b45309" }}>4.3 / 5</div>
-          <span style={{ fontSize: "0.78rem", color: "#78350f" }}>تركيب الروبوت وحل المشكلات</span>
-        </div>
-        <div style={{ padding: "16px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "12px", textAlign: "center" }}>
-          <small style={{ color: "#92400e", fontWeight: 700, fontSize: "0.82rem" }}>التعاون والمبادرة</small>
-          <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "#b45309" }}>4.8 / 5</div>
-          <span style={{ fontSize: "0.78rem", color: "#78350f" }}>العمل الجماعي مع الزملاء</span>
+          <small style={{ color: "#92400e", fontWeight: 700, fontSize: "0.82rem" }}>متوسط درجات الجلسات المسجلة</small>
+          <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "#b45309" }}>
+            {averageScore === null ? "—" : `${(averageScore / 20).toFixed(1)} / 5`}
+          </div>
+          <span style={{ fontSize: "0.78rem", color: "#78350f" }}>
+            {evaluations.length} تقييم{evaluations.length === 1 ? "" : "ات"} مسجل
+          </span>
         </div>
       </div>
 
@@ -295,7 +304,7 @@ export function ChildEvaluations({ child }: { child: ChildData }) {
                   </span>
                 </div>
                 <p style={{ margin: "6px 0 0", color: "#334155", fontSize: "0.88rem", lineHeight: "1.6" }}>
-                  <strong>ملاحظة وتوجيه المدرب:</strong> {ev.notes || "تفاعل إيجابي مع موضوع الجلسة وإتمام المهام بنجاح."}
+                  <strong>ملاحظة وتوجيه المدرب:</strong> {ev.notes || "لا توجد ملاحظة مسجلة لهذه الجلسة."}
                 </p>
               </div>
 
@@ -434,8 +443,11 @@ export function ChildInvoices({
 
 export function ChildFreezeSection({ child, liveMode }: { child: ChildData; liveMode: boolean }) {
   const [requests, setRequests] = useState<SubscriptionFreezeRequest[]>(() => {
-    return freezeStorage.getRequests().filter(r => r.studentId === child.id);
+    return liveMode ? [] : freezeStorage.getRequests().filter(r => r.studentId === child.id);
   });
+  const [requestsLoading, setRequestsLoading] = useState(liveMode);
+  const [requestsError, setRequestsError] = useState<string | null>(null);
+  const [requestRetryKey, setRequestRetryKey] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
   const [formData, setFormData] = useState<{
     startDate: string;
@@ -450,18 +462,35 @@ export function ChildFreezeSection({ child, liveMode }: { child: ChildData; live
   });
 
   useEffect(() => {
-    if (liveMode) {
-      apiClient
-        .consumerFreezeRequests()
-        .then(res => {
-          const matching = res.filter(r => r.studentId === child.id);
-          setRequests(matching.length > 0 ? matching : freezeStorage.getRequests().filter(r => r.studentId === child.id));
-        })
-        .catch(() => {
-          setRequests(freezeStorage.getRequests().filter(r => r.studentId === child.id));
-        });
+    if (!liveMode) {
+      setRequests(freezeStorage.getRequests().filter(r => r.studentId === child.id));
+      setRequestsLoading(false);
+      setRequestsError(null);
+      return;
     }
-  }, [child.id, liveMode]);
+
+    let cancelled = false;
+    setRequests([]);
+    setRequestsLoading(true);
+    setRequestsError(null);
+    apiClient
+      .consumerFreezeRequests()
+      .then(res => {
+        if (cancelled) return;
+        setRequests(res.filter(r => r.studentId === child.id));
+        setRequestsLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setRequests([]);
+        setRequestsLoading(false);
+        setRequestsError("تعذر تحميل طلبات التجميد حاليًا.");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [child.id, liveMode, requestRetryKey]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -489,7 +518,8 @@ export function ChildFreezeSection({ child, liveMode }: { child: ChildData; live
         toast.success("تم إرسال طلب التجميد بنجاح إلى مدير الفرع للمراجعة والاعتماد");
         return;
       } catch {
-        // fallback
+        toast.error("تعذر إرسال طلب التجميد إلى الخادم؛ لم يتم حفظ الطلب. يرجى المحاولة مرة أخرى.");
+        return;
       }
     }
 
@@ -513,6 +543,17 @@ export function ChildFreezeSection({ child, liveMode }: { child: ChildData; live
   const totalMakeUpCredits = requests
     .filter(r => r.status === "APPROVED")
     .reduce((sum, r) => sum + r.makeUpCreditsAwarded, 0);
+  const freezeStatus = requestsLoading
+    ? "جارٍ التحميل"
+    : requestsError
+      ? "غير متاح"
+      : requests.some(r => r.status === "APPROVED")
+        ? "يوجد طلب معتمد"
+        : requests.some(r => r.status === "PENDING")
+          ? "طلب قيد المراجعة"
+          : requests.some(r => r.status === "REJECTED")
+            ? "آخر طلب مرفوض"
+            : "لا توجد طلبات";
 
   return (
     <section className="consumer-panel">
@@ -534,13 +575,13 @@ export function ChildFreezeSection({ child, liveMode }: { child: ChildData; live
       <div className="portal-metrics-grid" style={{ marginBottom: "20px" }}>
         <div className="portal-metric-card">
           <div className="portal-metric-top">
-            <span className="portal-metric-label">حالة التجميد</span>
+            <span className="portal-metric-label">حالة طلبات التجميد</span>
             <span className="portal-metric-icon teal"><Snowflake size={18} /></span>
           </div>
           <div className="portal-metric-value" style={{ fontSize: "1.3rem" }}>
-            {requests.some(r => r.status === "APPROVED") ? "اشتراك ممتد" : "نشط ومستمر"}
+            {freezeStatus}
           </div>
-          <div className="portal-metric-note">طبقًا لقرارات إدارة الفرع</div>
+          <div className="portal-metric-note">{requestsError ? "تعذر تحميل حالة الطلبات من الخادم" : "طبقًا لقرارات إدارة الفرع"}</div>
         </div>
 
         <div className="portal-metric-card">
@@ -548,7 +589,7 @@ export function ChildFreezeSection({ child, liveMode }: { child: ChildData; live
             <span className="portal-metric-label">رصيد حصص التعويض</span>
             <span className="portal-metric-icon violet"><Clock size={18} /></span>
           </div>
-          <div className="portal-metric-value">{totalMakeUpCredits} حصة</div>
+          <div className="portal-metric-value">{requestsLoading || requestsError ? "—" : `${totalMakeUpCredits} حصة`}</div>
           <div className="portal-metric-note">متاحة للتسكين في فصول بديلة</div>
         </div>
 
@@ -557,7 +598,7 @@ export function ChildFreezeSection({ child, liveMode }: { child: ChildData; live
             <span className="portal-metric-label">الطلبات المعلقة</span>
             <span className="portal-metric-icon amber"><AlertCircle size={18} /></span>
           </div>
-          <div className="portal-metric-value">{requests.filter(r => r.status === "PENDING").length}</div>
+          <div className="portal-metric-value">{requestsLoading || requestsError ? "—" : requests.filter(r => r.status === "PENDING").length}</div>
           <div className="portal-metric-note">قيد مراجعة مدير الفرع</div>
         </div>
       </div>
@@ -573,7 +614,19 @@ export function ChildFreezeSection({ child, liveMode }: { child: ChildData; live
         سجل طلبات التجميد السابقة
       </h3>
 
-      {requests.length === 0 ? (
+      {requestsLoading ? (
+        <div className="consumer-note-box" role="status">
+          <RefreshCw size={16} className="animate-spin" /> جارٍ تحميل طلبات التجميد من الخادم…
+        </div>
+      ) : requestsError ? (
+        <div className="consumer-note-box warning" role="alert">
+          <AlertCircle size={16} />
+          <span>{requestsError} لم يتم استخدام بيانات محلية بديلة.</span>
+          <button type="button" className="button button-secondary" onClick={() => setRequestRetryKey(value => value + 1)} style={{ marginInlineStart: "auto" }}>
+            إعادة المحاولة
+          </button>
+        </div>
+      ) : requests.length === 0 ? (
         <div className="consumer-note-box">
           لا توجد طلبات تجميد سابقة مسجلة لهذا الطفل.
         </div>
@@ -703,4 +756,3 @@ export function ChildFreezeSection({ child, liveMode }: { child: ChildData; live
     </section>
   );
 }
-

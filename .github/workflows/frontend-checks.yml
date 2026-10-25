@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - "client/**"
+      - "apps/landing/**"
+      - "packages/mada-tokens/**"
+      - "client-angular/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "vite.config.*"
@@ -11,7 +14,7 @@ on:
       - "index.html"
       - ".github/workflows/frontend-checks.yml"
   push:
-    branches: [main]
+    branches: [dev, main]
   workflow_dispatch:
 
 permissions:
@@ -23,29 +26,48 @@ concurrency:
 
 jobs:
   frontend:
-    name: TypeScript, unit tests, and production build
+    name: React, Landing, and Angular checks
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: pnpm
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Install dependencies
+      - name: Install root dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: TypeScript check
+      - name: ESLint
+        run: pnpm lint
+
+      - name: React typecheck
         run: pnpm check
 
-      - name: Unit tests
+      - name: React unit tests
         run: pnpm test
 
-      - name: Production build
+      - name: React production build
         run: pnpm build
+
+      - name: Landing typecheck
+        run: pnpm check:landing
+
+      - name: Landing production build
+        run: pnpm build:landing
+
+      - name: Install Angular dependencies
+        run: pnpm --dir client-angular install --frozen-lockfile --ignore-workspace
+
+      - name: Angular unit tests
+        run: pnpm --dir client-angular test
+
+      - name: Angular production build
+        run: pnpm --dir client-angular build

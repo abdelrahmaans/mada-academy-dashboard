@@ -18,7 +18,7 @@ on:
       - "index.html"
       - ".github/workflows/e2e.yml"
   push:
-    branches: [main]
+    branches: [dev, main]
   workflow_dispatch:
 
 permissions:

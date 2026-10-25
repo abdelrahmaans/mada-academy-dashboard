@@ -20,6 +20,9 @@ using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 var jwtOptions = JwtOptions.Load(builder.Configuration, builder.Environment);
+var developmentEndpointsEnabled = DevelopmentEndpointPolicy.ShouldEnable(
+    builder.Environment.IsDevelopment(),
+    builder.Configuration["MADA_ENABLE_DEV_ENDPOINTS"]);
 var authSecurityOptions = AuthSecurityOptions.Load(builder.Configuration);
 var rateLimitTopology = RateLimitTopologyOptions.Load(builder.Configuration, builder.Environment);
 var trustedProxyAddresses = LoadTrustedProxyAddresses(builder.Configuration);
@@ -149,7 +152,7 @@ app.MapMadaAnalyticsEndpoints();
 app.MapMadaCompetitionEndpoints();
 
 app.MapMadaAuthEndpoints();
-if (app.Environment.IsDevelopment() || builder.Configuration["MADA_ENABLE_DEV_ENDPOINTS"] == "true")
+if (developmentEndpointsEnabled)
 {
     app.MapMadaDevelopmentAuthEndpoints();
     app.MapPost("/api/v1/dev/reset-and-seed", async (MadaDbContext db, CancellationToken cancellationToken) =>

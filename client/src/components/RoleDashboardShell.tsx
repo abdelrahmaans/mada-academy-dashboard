@@ -7,7 +7,7 @@ import {
   Children,
   isValidElement,
 } from "react";
-import { Menu, ShieldAlert } from "lucide-react";
+import { Menu } from "lucide-react";
 import {
   RoleScopeProvider,
   type RoleCode,
@@ -79,29 +79,6 @@ export default function RoleDashboardShell({
     onCloseMobile?.();
   };
 
-  const [impersonationSession] = useState<{
-    tenantId: string;
-    tenantName: string;
-    reason: string;
-    startedAt: number;
-  } | null>(() => {
-    try {
-      const raw = sessionStorage.getItem("mada_emergency_impersonation");
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  });
-
-  const handleEndImpersonation = () => {
-    try {
-      sessionStorage.removeItem("mada_emergency_impersonation");
-      window.location.href = "/platform";
-    } catch {
-      window.location.href = "/platform";
-    }
-  };
-
   let hasChildrenSidebar = false;
   Children.forEach(children, child => {
     if (isValidElement(child)) {
@@ -170,51 +147,6 @@ export default function RoleDashboardShell({
           data-role-back={roleDefinition.backPath}
           data-scope-level={scopeLevel}
         >
-          {impersonationSession && (
-            <aside
-              className="emergency-impersonation-banner"
-              style={{
-                position: "sticky",
-                top: 0,
-                zIndex: 99999,
-                background: "linear-gradient(90deg, #9a3412 0%, #ea580c 100%)",
-                color: "#ffffff",
-                padding: "8px 16px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                fontSize: "12px",
-                fontWeight: 600,
-                boxShadow: "0 2px 10px rgba(0,0,0,0.25)",
-                width: "100%",
-                gridColumn: "1 / -1",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <ShieldAlert size={16} />
-                <span>
-                  <strong>جلسة فحص طارئة نشطة (Super Access · R00):</strong> سياق ({impersonationSession.tenantName}) لفحص المشاكل التشغيلية.
-                  {impersonationSession.reason ? ` · السبب: ${impersonationSession.reason}` : ""}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={handleEndImpersonation}
-                style={{
-                  background: "#ffffff",
-                  color: "#9a3412",
-                  border: "none",
-                  borderRadius: "6px",
-                  padding: "4px 12px",
-                  fontSize: "11px",
-                  fontWeight: 800,
-                  cursor: "pointer",
-                }}
-              >
-                إنهاء فحص الطوارئ والعودة للمنصة ⬅
-              </button>
-            </aside>
-          )}
           {/* Logout is exclusively located in the sidebar navigation */}
           {shouldRenderSidebar && (
             <>

@@ -1,10 +1,19 @@
 # Mada Academy — Project Status
 
-**As of:** 13 October 2026
-**Verified Git state:** `main` is clean, pushed to `origin/main`, and has no local changes or open PRs. The latest functional delivery is PR #112 (`feat/dynamic-permissions-engine`), which established the dynamic tenant permissions engine, granular route guards, enterprise audit trail indexing/endpoint, and modern landing page redesign. Verify the live commit with `git rev-parse --short origin/main` rather than copying a stale hash into documentation.
-**Current delivery:** full dynamic permissions customization (role and member overrides with active session revocation), fine-grained route guards and dynamic sidebar filtering, compound database indexing on audit/decision records, academy-scoped audit events endpoint (`GET /api/v1/academy/audit-events`) and dashboard UI (`/academy/audit-trail`), and landing page redesign (`apps/landing`).
+**As of:** 25 October 2026
+**Verified Git state:** branch `fix/dev-readiness-20261024` is pushed and PR [#113](https://github.com/abdelrahmaans/mada-academy-dashboard/pull/113) is open against `dev`, based on `origin/dev` at `de21282` (including the newer billing-meter and waitlist-promotion slices). Backend, frontend, Playwright R08/critical-flow, and Vercel Preview checks passed on code commit `dfe6448`; no staging/production migration or deployment was performed. PR #112 (`feat/dynamic-permissions-engine`) remains historical context for previously delivered permissions/audit/landing work; verify live remote refs before future release actions.
+**Current delivery:** the local dev-readiness patch hardens development-only endpoints, aligns EF model/migration state, fixes user-facing false-success behavior, removes unsupported demo-derived data from LIVE R08/R09 surfaces, and extends local regression/CI coverage. The previously delivered dynamic permissions engine, audit trail, and landing redesign remain part of the project baseline.
 **Canonical quick snapshot:** [`docs/REPOSITORY_CURRENT_STATE.md`](../docs/REPOSITORY_CURRENT_STATE.md).
 **Stack:** React + Vite + TypeScript; ASP.NET Core 10; EF Core; PostgreSQL 16; JWT access/refresh sessions.
+
+## Latest local validation — 25 October 2026
+
+- Backend: **133/133** integration tests passed against a disposable local PostgreSQL database with .NET SDK **10.0.401**; no staging or production database was touched.
+- React: **69/69** Vitest tests, `pnpm check`, and `pnpm build` passed.
+- Playwright: **19/19** `critical-flows.spec.ts` tests passed, including R08/R09 scoping/empty/error states and the regression that proves failed live freeze APIs neither display seeded localStorage data nor report successful submission.
+- Angular: **78/78** unit tests, production build, and **2/2** Angular R08 Playwright tests passed; the R08 E2E now covers both linked siblings and verifies selected-child evaluation isolation. Landing typecheck/build passed.
+- `pnpm lint`: **0 errors, 118 warnings** remain repository-wide; `git diff --check` passed.
+- Still pending: applying the migration to staging, authenticated staging smoke tests, and backup/restore proof. SMS provider, external backup integration, and distributed rate limiting remain paused while the core is stabilized; these remain release-readiness gates.
 
 **Security follow-up:** [Issue #98 — rotate historical Supabase/PostgreSQL credentials](https://github.com/abdelrahmaans/mada-academy-dashboard/issues/98) tracks provider credential rotation, environment/log audit, optional Git history purge, and re-scanning. The current working tree is sanitized; rotation and history rewriting require explicit account/repository authorization and are not performed automatically.
 
@@ -111,7 +120,7 @@ Follow-up fixes prepared after PR #41: analytics is now loaded only when both op
 - Strengthened R05 finance boundary coverage: R05 may create invoices/payments but never receives generic `finance.write` or accountant-only expense/report permissions.
 - Added route-registry contract coverage for role home paths, navigation paths, and finance navigation boundaries.
 - Local frontend validation passed: Vitest **58/58**, `pnpm check`, `pnpm build`, and `git diff --check`.
-- Backend integration tests were not runnable in the current sandbox because the .NET SDK is unavailable; they must run in CI/GitHub before merge.
+- Historical note: backend integration tests were unavailable at that checkpoint; the current sandbox now has .NET SDK 10.0.401 and the latest PostgreSQL-backed run is 133/133 as recorded above. GitHub checks are still required before merge.
 
 The P1/P2 consumer acceptance, Finance local acceptance, first page-decomposition wave, frontend scope/finance tests, refresh-token reuse test, auth module extraction, R00 follow-ups, and the single-instance limiter guard are complete. Production-readiness evidence remains open: a shared limiter with two-instance/load evidence before horizontal scaling, private-bucket upload/download smoke, durable object backup/restore, and deployed API/frontend staging acceptance.
 
@@ -131,4 +140,4 @@ Open implementation blockers and product debt:
 
 - The frontend suite and Angular Finance/R08/R09 suites provide the accepted local component, mutation, scope, and browser coverage documented in [ANGULAR_PARITY_MATRIX.md](../ANGULAR_PARITY_MATRIX.md); broad parity beyond the listed routes is intentionally not claimed.
 - Production storage, backup/restore, and deployed staging evidence remain separate from local frontend acceptance.
-- PostgreSQL coverage is separate from the InMemory E2E path. CI backend integration coverage is required for persistence-specific regressions; local sandbox runs without the .NET SDK cannot reproduce those tests.
+- PostgreSQL coverage is separate from the InMemory E2E path. This branch has a local PostgreSQL-backed result of 133/133; CI backend integration coverage and deployed staging acceptance remain required before merge/release.

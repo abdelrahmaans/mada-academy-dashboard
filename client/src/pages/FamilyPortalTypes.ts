@@ -9,10 +9,11 @@ import { sessionsForStudent } from "@/lib/consumerScope";
 export type PortalTab = "overview" | "attendance" | "evaluations" | "invoices" | "freeze";
 
 export type ChildData = FamilyChild & {
-  attendance: number;
-  progress: number;
+  attendance: number | null;
+  progress: number | null;
   nextSession: string;
   nextRoom: string;
+  hasUpcomingSession: boolean;
   lastEvaluation: string;
   invoiceStatus: string;
   invoiceDue: string;
@@ -32,6 +33,7 @@ export const DEMO_CHILDREN: ChildData[] = [
     progress: 75,
     nextSession: "الأحد · ١٠:٠٠ ص",
     nextRoom: "معمل الروبوتكس أ",
+    hasUpcomingSession: true,
     lastEvaluation: "بطاقة منشورة · 4.4 / 5",
     invoiceStatus: "سداد جزئي",
     invoiceDue: "متبقي ١,٩٥٠ ج.م · استحقاق ١٥ أكتوبر",
@@ -47,6 +49,7 @@ export const DEMO_CHILDREN: ChildData[] = [
     progress: 60,
     nextSession: "الثلاثاء · ١٢:٠٠ م",
     nextRoom: "معمل الحاسب ب",
+    hasUpcomingSession: true,
     lastEvaluation: "بطاقة منشورة · 4.7 / 5",
     invoiceStatus: "مدفوع بالكامل",
     invoiceDue: "لا توجد مستحقات حالية",
@@ -79,7 +82,7 @@ export function mapFamilyChild(
   const lastEvaluation = ownSessions
     .filter((item) => item.score !== null)
     .sort((a, b) => b.startAt.localeCompare(a.startAt))[0];
-  const mostRecent = ownSessions[0];
+  const mostRecent = [...ownSessions].sort((a, b) => b.startAt.localeCompare(a.startAt))[0];
   const initials = student.name
     .trim()
     .split(/\s+/)
@@ -92,14 +95,14 @@ export function mapFamilyChild(
     name: student.name,
     initials,
     color: index % 2 ? "violet" : "teal",
-    course: mostRecent?.courseName ?? "الدورة التدريبية",
-    branch: student.branchName ?? "الفرع الرئيسي",
+    course: mostRecent?.courseName ?? "لا توجد جلسات مرتبطة",
+    branch: student.branchName ?? "غير متاح",
     attendance: marked.length
       ? Math.round((attended / marked.length) * 100)
-      : 88,
+      : null,
     progress: ownSessions.length
       ? Math.round((completed / ownSessions.length) * 100)
-      : 67,
+      : null,
     nextSession: next
       ? `${new Date(next.startAt).toLocaleDateString("ar-EG", {
           weekday: "long",
@@ -110,7 +113,8 @@ export function mapFamilyChild(
           minute: "2-digit",
         })}`
       : "لا توجد جلسة قادمة مجدولة",
-    nextRoom: next?.classroomName ?? "معمل الأكاديمية",
+    nextRoom: next?.classroomName ?? "غير متاح",
+    hasUpcomingSession: Boolean(next),
     lastEvaluation: lastEvaluation
       ? `آخر تقييم · ${((lastEvaluation.score ?? 0) / 20).toFixed(1)} / 5`
       : "لا يوجد تقييم منشور",

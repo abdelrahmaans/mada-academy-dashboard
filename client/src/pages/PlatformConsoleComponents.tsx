@@ -26,7 +26,7 @@ export function Metric({
 }: {
   icon: React.ReactNode;
   label: string;
-  value: number;
+  value: number | string;
   note: string;
   isCurrency?: boolean;
 }) {
@@ -36,8 +36,8 @@ export function Metric({
       <div>
         <small>{label}</small>
         <strong>
-          {fmtNumber(value)}
-          {isCurrency ? " ج.م" : ""}
+          {typeof value === "number" ? fmtNumber(value) : value}
+          {isCurrency && typeof value === "number" ? " ج.م" : ""}
         </strong>
         <em>{note}</em>
       </div>
