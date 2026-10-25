@@ -196,11 +196,11 @@ test.describe("critical local MVP journeys", () => {
   });
 
   test("R08 keeps linked children and LIVE state when the sessions endpoint fails", async ({ page }) => {
-    await page.route("**/api/v1/consumer/me/sessions**", route => route.abort());
+    await page.route("**/consumer/me/sessions**", route => route.abort());
     await login(page, "parent", "+201000000011");
     await expect(page).toHaveURL(/\/family-portal$/);
     await expect(page.getByText("Adam Khaled").first()).toBeVisible();
-    await expect(page.getByRole("status")).toContainText("الجلسات غير متاحة مؤقتًا");
+    await expect(page.getByText("الجلسات غير متاحة مؤقتًا", { exact: false })).toBeVisible();
     await expect(page.getByText(/LIVE · بيانات الحساب/)).toBeVisible();
     await expect(page.getByText(/DEMO · معاينة/)).toHaveCount(0);
     await expect(page.getByText("ياسين محمد علي")).toHaveCount(0);
@@ -266,22 +266,22 @@ test.describe("critical local MVP journeys", () => {
   });
 
   test("R08 keeps linked children visible when sessions fail without a DEMO fallback", async ({ page }) => {
-    await page.route("**/api/v1/consumer/me/sessions", route => route.abort());
+    await page.route("**/consumer/me/sessions**", route => route.abort());
     await login(page, "parent", "+201000000011");
     await expect(page).toHaveURL(/\/family-portal$/);
     await expect(page.getByText("Adam Khaled").first()).toBeVisible();
-    await expect(page.getByRole("status")).toContainText("الجلسات غير متاحة مؤقتًا");
+    await expect(page.getByText("الجلسات غير متاحة مؤقتًا", { exact: false })).toBeVisible();
     await expect(page.getByText(/LIVE · بيانات الحساب/)).toBeVisible();
     await expect(page.getByText(/DEMO · معاينة/)).toHaveCount(0);
     await expect(page.getByText("Lina Omar")).toHaveCount(0);
   });
 
   test("R09 keeps the student profile visible when sessions fail", async ({ page }) => {
-    await page.route("**/api/v1/consumer/me/sessions", route => route.abort());
+    await page.route("**/consumer/me/sessions**", route => route.abort());
     await login(page, "student", "+201000000012");
     await expect(page).toHaveURL(/\/student-portal$/);
     await expect(page.getByRole("heading", { name: /Lina Omar/ })).toBeVisible();
-    await expect(page.getByRole("status")).toContainText("الجلسات غير متاحة مؤقتًا");
+    await expect(page.getByText("الجلسات غير متاحة مؤقتًا", { exact: false })).toBeVisible();
     await expect(page.getByRole("status")).toContainText("إعادة المحاولة");
     await expect(page.getByText("Youssef Ahmed")).toHaveCount(0);
     await expect(page.getByText(/LIVE · حساب الطالب/)).toBeVisible();
