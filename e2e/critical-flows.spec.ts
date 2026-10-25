@@ -113,8 +113,8 @@ test.describe("critical local MVP journeys", () => {
     await expect(page).toHaveURL(/\/finance-desk$/);
     await expect(page.getByText("الفواتير والتحصيل", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("heading", { name: "الملخص المالي", exact: true })).toBeVisible();
-    await expect(page.getByText("إجمالي التحصيل", { exact: true })).toBeVisible();
-    await expect(page.getByText("المستحقات", { exact: true })).toBeVisible();
+    await expect(page.getByText("إجمالي التحصيل المحقق", { exact: true })).toBeVisible();
+    await expect(page.getByText("المستحقات غير المحصلة", { exact: true })).toBeVisible();
     await expect(page.getByText(/R06/).first()).toBeVisible();
     await expect(page.getByText("بيانات تجريبية")).toHaveCount(0);
   });
@@ -122,17 +122,18 @@ test.describe("critical local MVP journeys", () => {
   test("R08 sees only linked finance and consumer data", async ({ page }) => {
     await login(page, "parent", "+201000000011");
     await expect(page).toHaveURL(/\/family-portal$/);
-    await expect(page.getByText("بوابة الأسرة", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("R08 · بوابة الأسرة الموحدة", { exact: true })).toBeVisible();
+    await page.getByRole("region", { name: "اختيار الطفل" }).getByRole("button", { name: /Youssef Ahmed/ }).click();
     await expect(page.getByRole("heading", { name: "Youssef Ahmed", exact: true })).toBeVisible();
     await expect(page.getByText("Lina Omar", { exact: true })).toHaveCount(0);
-    await page.getByRole("button", { name: /^الفواتير/ }).click();
-    await expect(page.getByText("الفواتير والمدفوعات", { exact: true })).toBeVisible();
+    await page.getByRole("navigation", { name: "أقسام بوابة الأسرة" }).getByRole("button", { name: "الفواتير والأقساط", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "الفواتير والمدفوعات والأقساط", exact: true })).toBeVisible();
   });
 
   test("R09 remains self-scoped in the student portal", async ({ page }) => {
     await login(page, "student", "+201000000012");
     await expect(page).toHaveURL(/\/student-portal$/);
-    await expect(page.getByText("Lina Omar", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Lina Omar/ })).toBeVisible();
     await expect(page.getByText("Youssef Ahmed", { exact: true })).toHaveCount(0);
   });
 
@@ -160,14 +161,15 @@ test.describe("critical local MVP journeys", () => {
 
     await login(page, "parent", "+201000000011");
     await expect(page).toHaveURL(/\/family-portal$/);
+    await page.getByRole("region", { name: "اختيار الطفل" }).getByRole("button", { name: /Youssef Ahmed/ }).click();
     await expect(page.getByRole("heading", { name: "Youssef Ahmed", exact: true })).toBeVisible();
     await expect(page.getByText("جلسة الطفل المرتبط", { exact: true })).toBeVisible();
     await expect(page.getByText("جلسة طفل غير مرتبط", { exact: true })).toHaveCount(0);
-    await expect(page.getByText("LIVE · بيانات الحساب", { exact: true })).toBeVisible();
+    await expect(page.getByText("LIVE · بيانات الحساب المباشرة", { exact: true })).toBeVisible();
 
-    await page.getByRole("button", { name: /^الفواتير/ }).click();
-    await expect(page.getByText("INV-LINKED-CHILD", { exact: true })).toBeVisible();
-    await expect(page.getByText("INV-UNLINKED-CHILD", { exact: true })).toHaveCount(0);
+    await page.getByRole("navigation", { name: "أقسام بوابة الأسرة" }).getByRole("button", { name: "الفواتير والأقساط", exact: true }).click();
+    await expect(page.getByText(/INV-LINKED-CHILD/)).toBeVisible();
+    await expect(page.getByText(/INV-UNLINKED-CHILD/)).toHaveCount(0);
   });
 
   test("R09 filters sessions to the student's linked profile", async ({ page }) => {
@@ -184,19 +186,21 @@ test.describe("critical local MVP journeys", () => {
 
     await login(page, "student", "+201000000012");
     await expect(page).toHaveURL(/\/student-portal$/);
-    await page.locator("#student-portal-sidebar").getByRole("button", { name: "جلساتي", exact: true }).click();
-    await expect(page.getByRole("main").getByText("جلسة الطالب المرتبط", { exact: true })).toBeVisible();
+    await page.getByRole("navigation", { name: "أقسام مساحة الطالب" }).getByRole("button", { name: "جلساتي ومواعيدي", exact: true }).click();
+    await expect(page.getByText(/جلسة رقم #1 · جلسة الطالب المرتبط/)).toBeVisible();
     await expect(page.getByText("جلسة طالب آخر", { exact: true })).toHaveCount(0);
-    await expect(page.getByText("LIVE · حساب الطالب", { exact: true })).toBeVisible();
+    await expect(page.getByText("LIVE · حساب الطالب المباشر", { exact: true })).toBeVisible();
   });
 
   test("R08 keeps linked children and LIVE state when the sessions endpoint fails", async ({ page }) => {
     await page.route("**/api/v1/consumer/me/sessions**", route => route.abort());
     await login(page, "parent", "+201000000011");
     await expect(page).toHaveURL(/\/family-portal$/);
+    await page.getByRole("region", { name: "اختيار الطفل" }).getByRole("button", { name: /Youssef Ahmed/ }).click();
     await expect(page.getByRole("heading", { name: "Youssef Ahmed", exact: true })).toBeVisible();
-    await expect(page.getByRole("status")).toContainText("الجلسات غير متاحة مؤقتًا");
-    await expect(page.getByText("LIVE · بيانات الحساب", { exact: true })).toBeVisible();
+    const sessionWarning = page.getByRole("status").filter({ hasText: "تم تحميل الأطفال، لكن الجلسات غير متاحة مؤقتًا" });
+    await expect(sessionWarning).toContainText("الجلسات غير متاحة مؤقتًا");
+    await expect(page.getByText("LIVE · بيانات الحساب المباشرة", { exact: true })).toBeVisible();
     await expect(page.getByText("DEMO · معاينة محلية", { exact: true })).toHaveCount(0);
     await expect(page.getByText("ياسين محمد علي", { exact: true })).toHaveCount(0);
     await expect(page.getByText("ليلى أحمد محمود", { exact: true })).toHaveCount(0);
@@ -213,7 +217,7 @@ test.describe("critical local MVP journeys", () => {
     await login(page, "parent", "+201000000011");
     await expect(page).toHaveURL(/\/family-portal$/);
     await expect(page.getByText("لا توجد ملفات أطفال مرتبطة بهذا الحساب.", { exact: false })).toBeVisible();
-    await expect(page.getByText("LIVE · بيانات الحساب", { exact: true })).toBeVisible();
+    await expect(page.getByText("LIVE · بيانات الحساب المباشرة", { exact: true })).toBeVisible();
     await expect(page.getByText("DEMO · معاينة محلية", { exact: true })).toHaveCount(0);
     await expect(page.getByText("ياسين محمد علي", { exact: true })).toHaveCount(0);
     await expect(page.getByText("ليلى أحمد محمود", { exact: true })).toHaveCount(0);
@@ -225,7 +229,7 @@ test.describe("critical local MVP journeys", () => {
     await expect(page).toHaveURL(/\/student-portal$/);
     await expect(page.getByRole("alert")).toContainText("تعذر تحميل بيانات الطالب");
     await expect(page.getByRole("alert")).toContainText("إعادة المحاولة");
-    await expect(page.getByText("LIVE · حساب الطالب", { exact: true })).toBeVisible();
+    await expect(page.getByText("LIVE · حساب الطالب المباشر", { exact: true })).toBeVisible();
     await expect(page.getByText("DEMO · حساب الطالب", { exact: true })).toHaveCount(0);
     await expect(page.getByText("روبوتكس مستوى 2", { exact: true })).toHaveCount(0);
     await expect(page.getByText("مستكشف الحلول", { exact: true })).toHaveCount(0);
@@ -242,7 +246,7 @@ test.describe("critical local MVP journeys", () => {
     await login(page, "student", "+201000000012");
     await expect(page).toHaveURL(/\/student-portal$/);
     await expect(page.getByText("لا يوجد ملف طالب مرتبط بهذا الحساب حتى الآن.", { exact: false })).toBeVisible();
-    await expect(page.getByText("LIVE · حساب الطالب", { exact: true })).toBeVisible();
+    await expect(page.getByText("LIVE · حساب الطالب المباشر", { exact: true })).toBeVisible();
     await expect(page.getByText("DEMO · حساب الطالب", { exact: true })).toHaveCount(0);
     await expect(page.getByText("روبوتكس مستوى 2", { exact: true })).toHaveCount(0);
     await expect(page.getByText("مستكشف الحلول", { exact: true })).toHaveCount(0);
@@ -252,13 +256,14 @@ test.describe("critical local MVP journeys", () => {
     await page.route("**/api/v1/consumer/invoices", route => route.abort());
     await login(page, "parent", "+201000000011");
     await expect(page).toHaveURL(/\/family-portal$/);
+    await page.getByRole("region", { name: "اختيار الطفل" }).getByRole("button", { name: /Youssef Ahmed/ }).click();
     await expect(page.getByRole("heading", { name: "Youssef Ahmed", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: /^الفواتير/ }).click();
+    await page.getByRole("navigation", { name: "أقسام بوابة الأسرة" }).getByRole("button", { name: "الفواتير والأقساط", exact: true }).click();
     await expect(page.getByRole("alert")).toContainText("تعذر تحميل الفواتير");
     await expect(page.getByRole("alert")).toContainText("إعادة المحاولة");
     await expect(page.getByRole("heading", { name: "Youssef Ahmed", exact: true })).toBeVisible();
     await expect(page.getByText("Lina Omar", { exact: true })).toHaveCount(0);
-    await expect(page.getByText("LIVE · بيانات الحساب", { exact: true })).toBeVisible();
+    await expect(page.getByText("LIVE · بيانات الحساب المباشرة", { exact: true })).toBeVisible();
     await expect(page.getByText("DEMO · معاينة محلية", { exact: true })).toHaveCount(0);
   });
 
@@ -266,22 +271,63 @@ test.describe("critical local MVP journeys", () => {
     await page.route("**/api/v1/consumer/me/sessions", route => route.abort());
     await login(page, "parent", "+201000000011");
     await expect(page).toHaveURL(/\/family-portal$/);
+    await page.getByRole("region", { name: "اختيار الطفل" }).getByRole("button", { name: /Youssef Ahmed/ }).click();
     await expect(page.getByRole("heading", { name: "Youssef Ahmed", exact: true })).toBeVisible();
-    await expect(page.getByRole("status")).toContainText("الجلسات غير متاحة مؤقتًا");
-    await expect(page.getByText("LIVE · بيانات الحساب", { exact: true })).toBeVisible();
+    const sessionWarning = page.getByRole("status").filter({ hasText: "تم تحميل الأطفال، لكن الجلسات غير متاحة مؤقتًا" });
+    await expect(sessionWarning).toContainText("الجلسات غير متاحة مؤقتًا");
+    await expect(page.getByText("LIVE · بيانات الحساب المباشرة", { exact: true })).toBeVisible();
     await expect(page.getByText("DEMO · معاينة محلية", { exact: true })).toHaveCount(0);
     await expect(page.getByText("Lina Omar", { exact: true })).toHaveCount(0);
+  });
+
+  test("R08 does not use local freeze data or report success when the live API fails", async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("mada_subscription_freezes_v1", JSON.stringify([{
+        id: "FRZ-LOCAL-ONLY",
+        studentId: "70000000-0000-0000-0000-000000000001",
+        studentName: "Youssef Ahmed",
+        courseName: "Local-only course",
+        branchName: "Main Branch",
+        startDate: "2026-10-20",
+        endDate: "2026-11-03",
+        reason: "OTHER",
+        reasonText: "local-only request",
+        status: "PENDING",
+        submittedByRole: "R08_PARENT",
+        submittedByName: "Local-only parent",
+        createdAt: "2026-10-17T09:30:00Z",
+        affectedSessionsCount: 1,
+        makeUpCreditsAwarded: 0,
+      }]));
+    });
+    await page.route("**/api/v1/consumer/freeze-requests**", route => route.abort());
+    await login(page, "parent", "+201000000011");
+    await expect(page).toHaveURL(/\/family-portal$/);
+    await page.getByRole("region", { name: "اختيار الطفل" }).getByRole("button", { name: /Youssef Ahmed/ }).click();
+    await page.getByRole("navigation", { name: "أقسام بوابة الأسرة" }).getByRole("button", { name: "تجميد وتعويض", exact: true }).click();
+    await expect(page.getByRole("alert")).toContainText("لم يتم استخدام بيانات محلية بديلة");
+    await expect(page.getByText("FRZ-LOCAL-ONLY", { exact: true })).toHaveCount(0);
+
+    await page.getByRole("button", { name: "تقديم طلب تجميد جديد", exact: true }).click();
+    await page.getByPlaceholder(/يرجى كتابة تفاصيل سبب التجميد/).fill("اختبار فشل API من دون fallback محلي");
+    await page.getByRole("button", { name: "إرسال الطلب للاعتماد", exact: true }).click();
+    await expect(page.getByText("تعذر إرسال طلب التجميد إلى الخادم؛ لم يتم حفظ الطلب. يرجى المحاولة مرة أخرى.")).toBeVisible();
+    await expect(page.getByText("تم إرسال طلب التجميد بنجاح إلى مدير الفرع للمراجعة والاعتماد", { exact: true })).toHaveCount(0);
+    const localRequests = await page.evaluate(() => JSON.parse(localStorage.getItem("mada_subscription_freezes_v1") ?? "[]"));
+    expect(localRequests).toHaveLength(1);
+    expect(localRequests[0].id).toBe("FRZ-LOCAL-ONLY");
   });
 
   test("R09 keeps the student profile visible when sessions fail", async ({ page }) => {
     await page.route("**/api/v1/consumer/me/sessions", route => route.abort());
     await login(page, "student", "+201000000012");
     await expect(page).toHaveURL(/\/student-portal$/);
-    await expect(page.getByText("Lina Omar", { exact: true })).toBeVisible();
-    await expect(page.getByRole("status")).toContainText("الجلسات غير متاحة مؤقتًا");
-    await expect(page.getByRole("status")).toContainText("إعادة المحاولة");
+    await expect(page.getByRole("heading", { name: /Lina Omar/ })).toBeVisible();
+    const sessionWarning = page.getByRole("status").filter({ hasText: "الجلسات غير متاحة مؤقتًا" });
+    await expect(sessionWarning).toBeVisible();
+    await expect(sessionWarning).toContainText("إعادة المحاولة");
     await expect(page.getByText("Youssef Ahmed", { exact: true })).toHaveCount(0);
-    await expect(page.getByText("LIVE · حساب الطالب", { exact: true })).toBeVisible();
+    await expect(page.getByText("LIVE · حساب الطالب المباشر", { exact: true })).toBeVisible();
     await expect(page.getByText("DEMO · حساب الطالب", { exact: true })).toHaveCount(0);
     await expect(page.getByText("روبوتكس مستوى 2", { exact: true })).toHaveCount(0);
     await expect(page.getByText("مستكشف الحلول", { exact: true })).toHaveCount(0);

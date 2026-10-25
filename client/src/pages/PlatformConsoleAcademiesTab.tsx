@@ -24,6 +24,11 @@ export interface PlatformConsoleAcademiesTabProps {
   onRequestTenantStatusChange: (academy: PlatformAcademy) => void;
   onResetOwnerPassword: (academy: PlatformAcademy) => void;
   onEmergencyImpersonation: (academy: PlatformAcademy) => void;
+  ownerResetEnabled: boolean;
+  emergencyAccessEnabled: boolean;
+  paymentRemindersEnabled: boolean;
+  planActionsEnabled: boolean;
+  trialActionsEnabled: boolean;
 }
 
 export function PlatformConsoleAcademiesTab({
@@ -41,6 +46,11 @@ export function PlatformConsoleAcademiesTab({
   onRequestTenantStatusChange,
   onResetOwnerPassword,
   onEmergencyImpersonation,
+  ownerResetEnabled,
+  emergencyAccessEnabled,
+  paymentRemindersEnabled,
+  planActionsEnabled,
+  trialActionsEnabled,
 }: PlatformConsoleAcademiesTabProps) {
   return (
     <section className="pc-live-card">
@@ -161,6 +171,8 @@ export function PlatformConsoleAcademiesTab({
                     <button
                       type="button"
                       onClick={() => onOpenPlanUpgradeModal(row)}
+                      disabled={!planActionsEnabled}
+                      title="متوقف حتى اعتماد عقد الفوترة وتسجيل أثر التغيير"
                     >
                       تعديل الباقة
                     </button>
@@ -169,7 +181,7 @@ export function PlatformConsoleAcademiesTab({
                         type="button"
                         style={{ color: "#d97706", borderColor: "#fde68a" }}
                         onClick={() => onExtendTrial(row)}
-                        disabled={busyKey === `extend:${row.id}`}
+                        disabled={!trialActionsEnabled || busyKey === `extend:${row.id}`}
                       >
                         تمديد 7 أيام
                       </button>
@@ -179,6 +191,7 @@ export function PlatformConsoleAcademiesTab({
                         type="button"
                         style={{ color: "#b45309", borderColor: "#fde68a", background: "#fffbeb" }}
                         onClick={() => onPaymentReminder(row)}
+                        disabled={!paymentRemindersEnabled}
                         title="توليد مطالبة مالية ورسالة تجديد واتساب"
                       >
                         مطالبة تجديد
@@ -195,7 +208,8 @@ export function PlatformConsoleAcademiesTab({
                       type="button"
                       style={{ color: "#2563eb" }}
                       onClick={() => onResetOwnerPassword(row)}
-                      disabled={busyKey === `reset:${row.id}`}
+                      disabled={!ownerResetEnabled || busyKey === `reset:${row.id}`}
+                      title={ownerResetEnabled ? "استعادة كلمة مرور المالك" : "متوقف حتى ربط مسار موثوق لتدوير كلمة المرور"}
                     >
                       استعادة المالك
                     </button>
@@ -203,6 +217,7 @@ export function PlatformConsoleAcademiesTab({
                       type="button"
                       style={{ color: "#c2410c", borderColor: "#fed7aa", background: "#fff7ed" }}
                       onClick={() => onEmergencyImpersonation(row)}
+                      disabled={!emergencyAccessEnabled}
                       title="دخول فحص الطوارئ للأكاديمية وحل المشاكل التشغيلية من الداخل"
                     >
                       <ShieldAlert size={12} style={{ display: "inline", verticalAlign: "middle", marginLeft: "2px" }} /> فحص طارئ

@@ -30,12 +30,12 @@ export function PlatformConsoleLeadsTab({
         <div>
           <h2>طلبات المعاينة والعملاء الجدد (Landing Page Leads & Demos)</h2>
           <p>
-            الطلبات الواردة فوراً من نموذج المعاينة في الصفحة الرئيسية (Landing Page) مع إمكانية التواصل عبر واتساب والتفعيل التجريبي بنقرة واحدة.
+            عرض وإدارة الطلبات متوقف حتى ربط شاشة CRM بسجل محفوظ على الخادم؛ لن تظهر بيانات تجريبية محفوظة في المتصفح.
           </p>
         </div>
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           <span className="pc-live-boundary">
-            <Sparkles size={14} /> {filteredLeads.length} طلبات مسجلة
+            <Sparkles size={14} /> CRM غير متصل
           </span>
         </div>
       </header>
@@ -122,6 +122,7 @@ export function PlatformConsoleLeadsTab({
                 </td>
                 <td>
                   <select
+                    disabled
                     value={lead.status}
                     onChange={(e) => handleLeadStatusChange(lead.id, e.target.value as PlatformDemoLead["status"])}
                     style={{
@@ -154,6 +155,7 @@ export function PlatformConsoleLeadsTab({
                   <div className="pc-live-row-actions">
                     <button
                       type="button"
+                      disabled
                       style={{ color: "#15803d", borderColor: "#bbf7d0", background: "#f0fdf4" }}
                       onClick={() => handleWhatsAppLeadChat(lead)}
                       title="فتح محادثة واتساب فورية لترتيب الديمو"
@@ -162,6 +164,7 @@ export function PlatformConsoleLeadsTab({
                     </button>
                     <button
                       type="button"
+                      disabled
                       className="pc-live-link"
                       style={{
                         background: lead.status === "CONVERTED" ? "#f8fafc" : "#eff6ff",
@@ -186,7 +189,7 @@ export function PlatformConsoleLeadsTab({
             {filteredLeads.length === 0 && (
               <tr>
                 <td colSpan={7} className="pc-live-empty-cell">
-                  لا توجد طلبات معاينة مطابقة لمعايير البحث.
+                  لا توجد بيانات CRM محمّلة من الخادم.
                 </td>
               </tr>
             )}

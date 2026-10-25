@@ -37,6 +37,7 @@ export interface PlatformConsoleSupportTabProps {
   onDisableMember: (member: PlatformMember) => void;
   onRestore: (member: PlatformMember) => void;
   onRevokeMemberSessions: (member: PlatformMember) => void;
+  ownerResetEnabled: boolean;
 }
 
 export function PlatformConsoleSupportTab({
@@ -59,6 +60,7 @@ export function PlatformConsoleSupportTab({
   onDisableMember,
   onRestore,
   onRevokeMemberSessions,
+  ownerResetEnabled,
 }: PlatformConsoleSupportTabProps) {
   return (
     <>
@@ -67,21 +69,20 @@ export function PlatformConsoleSupportTab({
         <header>
           <div>
             <h2>تذاكر الدعم الفني والاقتراحات</h2>
-            <p>
-              البلاغات التقنية، طلبات الميزات الجديدة، واستفسارات الباقات والاشتراكات من الأكاديميات.
-            </p>
+            <p>سجل التذاكر متوقف حتى ربطه بقاعدة البيانات؛ إدارة أعضاء الأكاديمية أدناه تستخدم API الخادم.</p>
           </div>
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
             <button
               type="button"
               className="pc-live-primary"
               onClick={onOpenNewTicketModal}
+              disabled
               style={{ padding: "6px 14px", fontSize: "12px", gap: "6px" }}
             >
               <Plus size={14} /> تسجيل تذكرة / اقتراح جديد
             </button>
             <span className="pc-live-boundary">
-              <LifeBuoy size={14} /> {filteredTickets.length} تذاكر مسجلة
+              <LifeBuoy size={14} /> سجل التذاكر غير متصل
             </span>
           </div>
         </header>
@@ -97,6 +98,7 @@ export function PlatformConsoleSupportTab({
             <button
               key={tab.id}
               type="button"
+              disabled
               className={`pc-filter-tab ${ticketFilter === tab.id ? "active" : ""}`}
               onClick={() => setTicketFilter(tab.id as typeof ticketFilter)}
             >
@@ -143,6 +145,9 @@ export function PlatformConsoleSupportTab({
               </article>
             );
           })}
+          {filteredTickets.length === 0 && (
+            <p className="pc-live-empty" role="status">لا توجد بيانات تذاكر من مصدر خادمي.</p>
+          )}
         </div>
       </section>
 
@@ -217,7 +222,7 @@ export function PlatformConsoleSupportTab({
                   gap: "6px",
                 }}
                 onClick={() => onResetOwnerPassword(selectedTenant)}
-                disabled={busyKey === `reset:${selectedTenant.id}`}
+                disabled={!ownerResetEnabled || busyKey === `reset:${selectedTenant.id}`}
               >
                 <KeyRound size={15} />
                 توليد كلمة مرور مؤقتة للمالك

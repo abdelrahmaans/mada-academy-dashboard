@@ -16,8 +16,6 @@ import RoleDashboardShell from "@/components/RoleDashboardShell";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   apiClient,
-  type ConsumerSessionRecord,
-  type ConsumerStudentRecord,
   type FinanceInvoice,
 } from "@/lib/apiClient";
 import "@/components/RoleFoundation.css";
@@ -115,7 +113,7 @@ export default function FamilyPortal() {
           invoices: childInvoices,
           invoiceStatus: childInvoices.length === 0 ? "لا توجد مستحقات" : outstanding > 0 ? "سداد جزئي" : "مدفوع بالكامل",
           invoiceDue: outstanding > 0
-            ? `متبقي ${(outstanding / 100).toLocaleString("ar-EG")} ج.م · استحقاق ${childInvoices.find(inv => inv.remainingPiastres > 0)?.dueDate ?? "أكتوبر"}`
+            ? `متبقي ${(outstanding / 100).toLocaleString("ar-EG")} ج.م · استحقاق ${childInvoices.find(inv => inv.remainingPiastres > 0)?.dueDate ?? "تاريخ الاستحقاق غير متاح"}`
             : "تم سداد كافة الالتزامات",
         };
       });
@@ -138,9 +136,9 @@ export default function FamilyPortal() {
       setDataError(null);
 
       if (sessionsResult.status === "rejected") {
-        const message = sessionsResult.reason instanceof Error ? sessionsResult.reason.message : "تعذر تحميل جلسات الأطفال.";
+        const message = "الجلسات غير متاحة مؤقتًا.";
         setDataWarning(message);
-        toast.error(`تعذر تحميل الجلسات: ${message}`);
+        toast.error(`${message} يمكنك إعادة المحاولة لاحقًا.`);
       }
     });
 
@@ -265,7 +263,7 @@ export default function FamilyPortal() {
         {dataWarning && !dataError && (
           <div className="consumer-note-box warning" role="status">
             <AlertCircle size={16} />
-            <span>تم تحميل الأطفال، لكن الجلسات غير متاحة مؤقتًا: {dataWarning}</span>
+            <span>تم تحميل الأطفال، لكن {dataWarning}</span>
             <button type="button" className="button button-secondary" style={{ padding: "4px 10px", fontSize: "0.8rem", marginInlineStart: "auto" }} onClick={retry}>
               إعادة المحاولة
             </button>
@@ -275,6 +273,11 @@ export default function FamilyPortal() {
         {/* Children Switcher */}
         {children.length > 0 && (
           <ChildrenSwitcher children={children} selectedId={selectedId} onSelect={selectChild} />
+        )}
+        {liveMode && !dataLoading && !dataError && children.length === 0 && (
+          <div className="consumer-note-box" role="status">
+            لا توجد ملفات أطفال مرتبطة بهذا الحساب.
+          </div>
         )}
 
         {/* Selected Child Banner */}
@@ -289,7 +292,7 @@ export default function FamilyPortal() {
               </div>
             </div>
             <span className="family-status-badge">
-              <CheckCircle2 size={15} /> تسجيل نشط بالفصل الحالي
+              <CheckCircle2 size={15} /> ملف مرتبط بالحساب
             </span>
           </div>
         )}
@@ -333,4 +336,3 @@ export default function FamilyPortal() {
     </RoleDashboardShell>
   );
 }
-

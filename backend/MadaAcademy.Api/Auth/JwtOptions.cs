@@ -19,6 +19,7 @@ public sealed class JwtOptions
             ?? options.SigningKey;
         options.TestOtpCode = Environment.GetEnvironmentVariable("MADA_AUTH_TEST_OTP")
             ?? options.TestOtpCode;
+        DevelopmentOtpPolicy.EnsureTestOtpOnlyInDevelopment(environment.IsDevelopment(), options.TestOtpCode);
 
         if (string.IsNullOrWhiteSpace(options.SigningKey))
         {

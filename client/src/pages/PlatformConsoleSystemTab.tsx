@@ -43,17 +43,17 @@ export function PlatformConsoleSystemTab({
       <section className="pc-live-card">
         <header>
           <div>
-            <h2>حالة البنية التحتية والخوادم الحية</h2>
-            <p>فحص استجابة الـ Web API، وقاعدة بيانات Supabase، ونظام المصادقة JWT.</p>
+            <h2>القياس التشغيلي المتاح</h2>
+            <p>الـAPI الحالي لا يوفّر health checks مستقلة لقاعدة البيانات أو التخزين أو مزودي المصادقة.</p>
           </div>
           <button
             type="button"
             className="pc-live-link"
             onClick={() => {
               toast.promise(apiClient.platformOverview(), {
-                loading: "جارٍ فحص استجابة الخوادم وقاعدة البيانات…",
-                success: "جميع خدمات المنصة وقاعدة البيانات تعمل بكفاءة تامة (85ms)",
-                error: "تعذر فحص صحة الخوادم حاليًا",
+                loading: "جارٍ طلب بيانات overview من الـAPI…",
+                success: "استجاب endpoint الـoverview. لم يتم التحقق من قاعدة البيانات أو التخزين أو بقية الخدمات.",
+                error: "تعذر الاتصال بـAPI الـoverview",
               });
             }}
           >
@@ -72,22 +72,20 @@ export function PlatformConsoleSystemTab({
                   <small>academy-dashboard.runasp.net</small>
                 </div>
               </div>
-              <span className="pc-system-badge healthy">
-                <span className="pc-badge-pulse" /> متصل ونشط
-              </span>
+              <span className="pc-system-badge">{overview ? "استجاب API" : "غير متاح"}</span>
             </div>
             <div className="pc-system-metrics">
               <div className="pc-system-metric-row">
                 <span>زمن الاستجابة:</span>
-                <strong>~85ms</strong>
+                <strong>غير مقاس</strong>
               </div>
               <div className="pc-system-metric-row">
-                <span>البروتوكول:</span>
-                <strong>HTTP/2 · TLS 1.3</strong>
+                <span>عنوان الخدمة:</span>
+                <strong>يحدده إعداد البيئة</strong>
               </div>
               <div className="pc-system-metric-row">
                 <span>حالة الخدمة:</span>
-                <strong className="text-emerald">جاهز لاستقبال الطلبات</strong>
+                <strong className="text-emerald">نجح طلب overview الحالي فقط</strong>
               </div>
             </div>
           </article>
@@ -99,22 +97,20 @@ export function PlatformConsoleSystemTab({
                   <Database size={18} />
                 </span>
                 <div>
-                  <strong>قاعدة البيانات (PostgreSQL / Supabase)</strong>
-                  <small>PostgreSQL 16 · Frankfurt Cloud</small>
+                  <strong>حالة قاعدة البيانات</strong>
+                  <small>لا يوجد health endpoint منفصل</small>
                 </div>
               </div>
-              <span className="pc-system-badge healthy">
-                <span className="pc-badge-pulse" /> متصل ومحدث
-              </span>
+              <span className="pc-system-badge">غير مقاسة</span>
             </div>
             <div className="pc-system-metrics">
               <div className="pc-system-metric-row">
                 <span>المخططات المطبقة:</span>
-                <strong>18 Migration مطبق بالكامل</strong>
+                <strong>غير متاح من API الحالي</strong>
               </div>
               <div className="pc-system-metric-row">
                 <span>عزل الأكاديميات:</span>
-                <strong className="text-emerald">Multi-Tenant Isolation صارم</strong>
+                <strong>يلزم تحقق منفصل من قاعدة البيانات</strong>
               </div>
             </div>
           </article>
@@ -127,21 +123,19 @@ export function PlatformConsoleSystemTab({
                 </span>
                 <div>
                   <strong>المصادقة والجلسات (JWT Tokens)</strong>
-                  <small>HS256 Key · Refresh Token Rotation</small>
+                  <small>حالة المصادقة التفصيلية غير معروضة</small>
                 </div>
               </div>
-              <span className="pc-system-badge healthy">
-                <span className="pc-badge-pulse" /> مؤمن
-              </span>
+              <span className="pc-system-badge">غير مقاسة</span>
             </div>
             <div className="pc-system-metrics">
               <div className="pc-system-metric-row">
                 <span>صلاحية التوكن:</span>
-                <strong>15 دقيقة Access · 7 أيام Refresh</strong>
+                <strong>الإعدادات غير معروضة في health API</strong>
               </div>
               <div className="pc-system-metric-row">
                 <span>الجلسات النشطة:</span>
-                <strong>{fmtNumber(overview?.activeSessions ?? 3)} جلسة</strong>
+                <strong>{overview ? fmtNumber(overview.activeSessions) : "غير متاح"} جلسة</strong>
               </div>
             </div>
           </article>
@@ -153,22 +147,20 @@ export function PlatformConsoleSystemTab({
                   <HardDrive size={18} />
                 </span>
                 <div>
-                  <strong>التخزين السحابي (Supabase Storage)</strong>
-                  <small>Private Bucket Mode · Signed URLs</small>
+                  <strong>حالة التخزين</strong>
+                  <small>لا يوجد health endpoint منفصل</small>
                 </div>
               </div>
-              <span className="pc-system-badge healthy">
-                <span className="pc-badge-pulse" /> جاهز
-              </span>
+              <span className="pc-system-badge">غير مقاسة</span>
             </div>
             <div className="pc-system-metrics">
               <div className="pc-system-metric-row">
                 <span>الحاويات:</span>
-                <strong>academy-assets, reports, avatars</strong>
+                <strong>إعدادات الحاويات غير متاحة</strong>
               </div>
               <div className="pc-system-metric-row">
                 <span>الأمان:</span>
-                <strong className="text-emerald">روابط مشفرة ومؤقتة</strong>
+                <strong>لم يتم التحقق من إعدادات الوصول</strong>
               </div>
             </div>
           </article>

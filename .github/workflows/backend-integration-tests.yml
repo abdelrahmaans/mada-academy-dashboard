@@ -6,7 +6,7 @@ on:
       - "backend/**"
       - ".github/workflows/backend-integration-tests.yml"
   push:
-    branches: [main]
+    branches: [dev, main]
   workflow_dispatch:
 
 permissions:
@@ -39,6 +39,7 @@ jobs:
       DATABASE_URL: Host=127.0.0.1;Port=5432;Database=mada_academy_ci;Username=postgres;Password=postgres
       MADA_JWT_SIGNING_KEY: ci-only-not-a-production-secret-32bytes-minimum
       ASPNETCORE_ENVIRONMENT: Development
+      MADA_DATABASE_MODE: postgres
     steps:
       - name: Checkout
         uses: actions/checkout@v4

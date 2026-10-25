@@ -9,19 +9,6 @@ public static class AuthEndpoints
 {
     public static IEndpointRouteBuilder MapMadaAuthEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/v1/auth/otp/send", (OtpSendRequest request, AuthService auth) =>
-        {
-            if (string.IsNullOrWhiteSpace(request.Phone) || request.AccountType is not ("staff" or "parent" or "student"))
-                return Results.BadRequest(new { error = new { code = "INVALID_OTP_REQUEST", message = "Phone and accountType are required." } });
-            return Results.Ok(new { data = auth.SendOtp(request) });
-        }).RequireRateLimiting("auth-sensitive");
-
-        app.MapPost("/api/v1/auth/otp/verify", async (OtpVerifyRequest request, AuthService auth, CancellationToken cancellationToken) =>
-        {
-            var tokens = await auth.VerifyOtpAsync(request, cancellationToken);
-            return tokens is null ? Results.Unauthorized() : Results.Ok(new { data = tokens });
-        }).RequireRateLimiting("auth-sensitive");
-
         app.MapPost("/api/v1/auth/login", async (PasswordLoginRequest request, AuthService auth, CancellationToken cancellationToken) =>
         {
             if (string.IsNullOrWhiteSpace(request.Phone) || string.IsNullOrWhiteSpace(request.Password) || request.AccountType is not ("staff" or "parent" or "student"))
@@ -48,6 +35,19 @@ public static class AuthEndpoints
 
     public static void MapMadaDevelopmentAuthEndpoints(this IEndpointRouteBuilder app)
     {
+        app.MapPost("/api/v1/auth/otp/send", (OtpSendRequest request, AuthService auth) =>
+        {
+            if (string.IsNullOrWhiteSpace(request.Phone) || request.AccountType is not ("staff" or "parent" or "student"))
+                return Results.BadRequest(new { error = new { code = "INVALID_OTP_REQUEST", message = "Phone and accountType are required." } });
+            return Results.Ok(new { data = auth.SendOtp(request) });
+        }).RequireRateLimiting("auth-sensitive");
+
+        app.MapPost("/api/v1/auth/otp/verify", async (OtpVerifyRequest request, AuthService auth, CancellationToken cancellationToken) =>
+        {
+            var tokens = await auth.VerifyOtpAsync(request, cancellationToken);
+            return tokens is null ? Results.Unauthorized() : Results.Ok(new { data = tokens });
+        }).RequireRateLimiting("auth-sensitive");
+
         app.MapPost("/api/v1/auth/dev/seed", async (DevSeedRequest request, MadaDbContext db, PasswordHashService passwords, CancellationToken cancellationToken) =>
         {
             var tenant = await db.Tenants.FindAsync([request.TenantId], cancellationToken);

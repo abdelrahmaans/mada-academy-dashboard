@@ -38,8 +38,6 @@ public sealed class TestApiFactory(bool useInMemory, bool unconfigureSms = false
                     ["MADA_DATABASE_MODE"] = "postgres"
                 }));
         }
-        if (!useInMemory && !unconfigureSms && !unavailableStorage) return;
-
         builder.ConfigureTestServices(services =>
         {
             if (useInMemory)
@@ -48,6 +46,14 @@ public sealed class TestApiFactory(bool useInMemory, bool unconfigureSms = false
                 services.RemoveAll<DbContextOptions<MadaDbContext>>();
                 services.RemoveAll<IDbContextOptionsConfiguration<MadaDbContext>>();
                 services.AddDbContext<MadaDbContext>(options => options.UseInMemoryDatabase(_databaseName));
+            }
+            else if (!string.IsNullOrWhiteSpace(_connectionString))
+            {
+                services.RemoveAll<MadaDbContext>();
+                services.RemoveAll<DbContextOptions<MadaDbContext>>();
+                services.RemoveAll<IDbContextOptionsConfiguration<MadaDbContext>>();
+                services.AddDbContext<MadaDbContext>(options =>
+                    options.UseNpgsql(_connectionString, npgsql => npgsql.EnableRetryOnFailure(3)));
             }
             if (unconfigureSms)
             {

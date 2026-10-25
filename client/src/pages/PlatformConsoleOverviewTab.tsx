@@ -27,7 +27,6 @@ export type EnrichedPlatformAcademy = PlatformAcademy & {
 export interface PlatformConsoleOverviewTabProps {
   overview: PlatformOverview | null;
   enrichedAcademies: EnrichedPlatformAcademy[];
-  financials: { netSurplus: number };
   busyKey: string | null;
   activity: PlatformActivity[];
   onNavigateAcademies: () => void;
@@ -35,12 +34,13 @@ export interface PlatformConsoleOverviewTabProps {
   onExtendTrial: (tenant: EnrichedPlatformAcademy) => void;
   onOpenPlanUpgradeModal: (tenant: EnrichedPlatformAcademy) => void;
   onRequestTenantStatusChange: (tenant: EnrichedPlatformAcademy) => void;
+  planActionsEnabled: boolean;
+  trialActionsEnabled: boolean;
 }
 
 export function PlatformConsoleOverviewTab({
   overview,
   enrichedAcademies,
-  financials,
   busyKey,
   activity,
   onNavigateAcademies,
@@ -48,6 +48,8 @@ export function PlatformConsoleOverviewTab({
   onExtendTrial,
   onOpenPlanUpgradeModal,
   onRequestTenantStatusChange,
+  planActionsEnabled,
+  trialActionsEnabled,
 }: PlatformConsoleOverviewTabProps) {
   return (
     <>
@@ -63,20 +65,19 @@ export function PlatformConsoleOverviewTab({
           icon={<CheckCircle2 />}
           label="اشتراكات نشطة"
           value={enrichedAcademies.filter((a) => a.status === "ACTIVE").length}
-          note="أكاديميات سارية الدفع"
+          note="حالة الحساب ACTIVE حسب API"
         />
         <Metric
           icon={<Clock3 />}
           label="فترات تجريبية سارية"
           value={enrichedAcademies.filter((a) => a.status === "TRIAL").length}
-          note="بانتظار التحويل لمدفوع"
+          note="بحسب حالة الحساب في API"
         />
         <Metric
           icon={<Wallet />}
           label="صافي الفائض الشهري"
-          value={financials.netSurplus}
-          note="بعد حسم استضافة السيرفرات"
-          isCurrency
+          value="غير متاح"
+          note="مصدر الإيرادات والتكاليف غير متصل"
         />
       </section>
 
@@ -133,7 +134,9 @@ export function PlatformConsoleOverviewTab({
                         color: "#b45309",
                       }}
                     >
-                      متبقي {tenant.remainingTrialDays} أيام في التجربة
+                      {tenant.remainingTrialDays === undefined
+                        ? "موعد انتهاء التجربة غير متاح"
+                        : `متبقي ${tenant.remainingTrialDays} أيام في التجربة`}
                     </span>
                   </div>
                   <small style={{ color: "#78350f" }}>
@@ -146,7 +149,7 @@ export function PlatformConsoleOverviewTab({
                     className="pc-live-link"
                     style={{ borderColor: "#d97706", color: "#b45309" }}
                     onClick={() => onExtendTrial(tenant)}
-                    disabled={busyKey === `extend:${tenant.id}`}
+                    disabled={!trialActionsEnabled || busyKey === `extend:${tenant.id}`}
                   >
                     + تمديد 7 أيام
                   </button>
@@ -155,6 +158,7 @@ export function PlatformConsoleOverviewTab({
                     className="pc-live-primary"
                     style={{ padding: "6px 12px", fontSize: "11px" }}
                     onClick={() => onOpenPlanUpgradeModal(tenant)}
+                    disabled={!planActionsEnabled}
                   >
                     ترقية وتفعيل
                   </button>
@@ -227,7 +231,7 @@ export function PlatformConsoleOverviewTab({
               <CheckCircle2 size={28} style={{ margin: "0 auto 8px" }} />
               <strong>لا توجد أكاديميات في طابور التنبيهات العاجلة</strong>
               <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: "12px" }}>
-                جميع الاشتراكات نشطة وتعمل بكفاءة تامة.
+                لا توجد حالات TRIAL أو PAUSED ظاهرة ضمن البيانات المحمّلة.
               </p>
             </div>
           )}

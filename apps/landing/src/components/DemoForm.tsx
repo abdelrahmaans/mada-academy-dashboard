@@ -77,15 +77,11 @@ export const DemoForm: React.FC = () => {
       setFormState('success');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'تعذر إرسال الطلب، يرجى المحاولة لاحقاً.';
-      // Fallback: If network is offline during dev/preview, still gracefully present success with reference
-      if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
-        const refId = `MD-LOCAL-${Math.floor(100000 + Math.random() * 900000)}`;
-        setSubmissionId(refId);
-        setFormState('success');
-      } else {
-        setErrorMessage(msg);
-        setFormState('error');
-      }
+      const connectivityFailure = msg.includes('Failed to fetch') || msg.includes('NetworkError');
+      setErrorMessage(connectivityFailure
+        ? 'تعذر الاتصال بالخادم؛ لم يتم تسجيل طلبك. يرجى المحاولة مرة أخرى لاحقاً.'
+        : msg);
+      setFormState('error');
     }
   };
 

@@ -120,8 +120,8 @@ export default function StudentPortal() {
   const isStudentAccount = me?.role === "R09_STUDENT" || me?.accountType === "student";
 
   const [tab, setTab] = useState<StudentTab>("home");
-  const [progress, setProgress] = useState(67);
-  const [achievements, setAchievements] = useState<StudentAchievement[]>(INITIAL_ACHIEVEMENTS);
+  const [progress, setProgress] = useState<number | null>(isStudentAccount ? null : 67);
+  const [achievements, setAchievements] = useState<StudentAchievement[] | null>(isStudentAccount ? null : INITIAL_ACHIEVEMENTS);
   const [studentName, setStudentName] = useState(isStudentAccount ? me?.user?.displayName ?? "جارٍ التحميل…" : "لينا عمر");
   const [courseName, setCourseName] = useState(isStudentAccount ? "جارٍ التحميل…" : "روبوتكس الناشئين — المستوى 1");
   const [sessions, setSessions] = useState<PortalSession[]>(isStudentAccount ? [] : DEMO_SESSIONS);
@@ -129,6 +129,7 @@ export default function StudentPortal() {
   const [dataLoading, setDataLoading] = useState(isStudentAccount);
   const [dataError, setDataError] = useState<string | null>(null);
   const [dataWarning, setDataWarning] = useState<string | null>(null);
+  const [profileMissing, setProfileMissing] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
   // Sync tab with URL hash
@@ -157,6 +158,9 @@ export default function StudentPortal() {
       setLiveMode(false);
       setDataLoading(false);
       setSessions(DEMO_SESSIONS);
+      setProgress(67);
+      setAchievements(INITIAL_ACHIEVEMENTS);
+      setProfileMissing(false);
       setStudentName("لينا عمر");
       setCourseName("روبوتكس الناشئين — المستوى 1");
       return;
@@ -166,8 +170,12 @@ export default function StudentPortal() {
     setLiveMode(true);
     setDataLoading(true);
     setSessions([]);
+    setProgress(null);
+    setAchievements(null);
+    setCourseName("جارٍ التحميل…");
     setDataError(null);
     setDataWarning(null);
+    setProfileMissing(false);
 
     const studentsRequest = apiClient.consumerStudents();
     const sessionsRequest = apiClient.consumerSessions();
@@ -179,6 +187,10 @@ export default function StudentPortal() {
       if (studentsResult.status === "rejected") {
         const message = studentsResult.reason instanceof Error ? studentsResult.reason.message : "تعذر تحميل ملف الطالب.";
         setSessions([]);
+        setProgress(null);
+        setAchievements(null);
+        setCourseName("غير متاح");
+        setProfileMissing(false);
         setDataError(message);
         toast.error(message);
         return;
@@ -188,8 +200,9 @@ export default function StudentPortal() {
       const records = sessionsResult.status === "fulfilled" ? sessionsResult.value.items : [];
       const ownRecords = student ? sessionsForStudent(records, student.id) : [];
 
+      setProfileMissing(!student);
       setStudentName(student?.name ?? me?.user?.displayName ?? "الطالب");
-      setCourseName(ownRecords[0]?.courseName ?? "روبوتكس الناشئين — المستوى 1");
+      setCourseName(ownRecords[0]?.courseName ?? "لا توجد جلسات مرتبطة");
 
       const mappedSessions = ownRecords.map(mapConsumerSession);
       setSessions(mappedSessions);
@@ -197,14 +210,16 @@ export default function StudentPortal() {
       const completed = mappedSessions.filter(s => s.status === "مكتملة").length;
       if (mappedSessions.length > 0) {
         setProgress(Math.round((completed / mappedSessions.length) * 100));
+      } else {
+        setProgress(null);
       }
 
       setDataError(null);
 
       if (sessionsResult.status === "rejected") {
-        const message = sessionsResult.reason instanceof Error ? sessionsResult.reason.message : "تعذر تحميل جلسات الطالب.";
+        const message = "الجلسات غير متاحة مؤقتًا.";
         setDataWarning(message);
-        toast.error(`تعذر تحميل الجلسات: ${message}`);
+        toast.error(`${message} يمكنك إعادة المحاولة لاحقًا.`);
       }
     });
 
@@ -229,7 +244,7 @@ export default function StudentPortal() {
           attendanceRecords.length) *
           100
       )
-    : 100;
+    : liveMode ? null : 100;
 
   const nextSession = sessions
     .filter(item => item.startAt && new Date(item.startAt).getTime() >= Date.now())
@@ -239,10 +254,16 @@ export default function StudentPortal() {
     .filter(item => item.score !== null && item.score !== undefined)
     .sort((a, b) => (b.startAt ?? "").localeCompare(a.startAt ?? ""))[0];
 
+  const currentUnit = liveMode ? sessions[0]?.title ?? null : "الحساسات وبرمجة الحركة الذكية";
+  const nextCheckpoint = liveMode
+    ? nextSession ? `الجلسة القادمة رقم ${nextSession.sessionNumber}` : null
+    : achievements?.find(a => a.title === "بطل الوحدة")?.unlocked ? "تم اجتيازه بنجاح" : "تحدي نهاية الوحدة";
+
   const completeChallenge = () => {
-    setProgress(current => Math.max(current, 85));
+    if (liveMode) return;
+    setProgress(current => Math.max(current ?? 0, 85));
     setAchievements(prev =>
-      prev.map(a => (a.title === "بطل الوحدة" ? { ...a, unlocked: true } : a))
+      prev?.map(a => (a.title === "بطل الوحدة" ? { ...a, unlocked: true } : a)) ?? null
     );
     toast.success("رائع! تم تسجيل إنجاز بطل الوحدة بنجاح");
   };
@@ -329,8 +350,13 @@ export default function StudentPortal() {
             </button>
           </div>
         )}
+        {profileMissing && !dataError && (
+          <div className="consumer-note-box" role="status">
+            لا يوجد ملف طالب مرتبط بهذا الحساب حتى الآن.
+          </div>
+        )}
         {dataWarning && (
-          <div className="consumer-note-box warning" role="alert">
+          <div className="consumer-note-box warning" role="status">
             <ShieldCheck size={16} />
             <span>تنبيه: {dataWarning}</span>
             <button type="button" className="button button-secondary" style={{ padding: "4px 10px", fontSize: "0.8rem", marginInlineStart: "auto" }} onClick={retry}>
@@ -368,7 +394,9 @@ export default function StudentPortal() {
                 <h2>{courseName}</h2>
                 <p>
                   <CalendarDays size={18} />
-                  {nextSession ? `${nextSession.date} · الساعة ${nextSession.time} · ${nextSession.room}` : "السبت القادم · ١٠:٠٠ ص · معمل الروبوتكس أ"}
+                  {nextSession
+                    ? `${nextSession.date} · الساعة ${nextSession.time} · ${nextSession.room}`
+                    : liveMode ? "لا توجد جلسة قادمة مسجلة حاليًا." : "السبت القادم · ١٠:٠٠ ص · معمل الروبوتكس أ"}
                 </p>
               </div>
               <button type="button" className="student-vibrant-hero-action" onClick={() => selectTab("sessions")}>
@@ -383,8 +411,12 @@ export default function StudentPortal() {
                   <span className="portal-metric-label">انتظام الحضور</span>
                   <span className="portal-metric-icon teal"><CalendarDays size={18} /></span>
                 </div>
-                <div className="portal-metric-value">{attendanceRate}%</div>
-                <div className="portal-metric-note">التزام مستمر بدون غياب</div>
+                <div className="portal-metric-value">{attendanceRate === null ? "—" : `${attendanceRate}%`}</div>
+                <div className="portal-metric-note">
+                  {liveMode
+                    ? attendanceRecords.length ? `${attendanceRecords.length} سجلات حضور` : "لا توجد بيانات حضور مسجلة"
+                    : "التزام مستمر بدون غياب"}
+                </div>
               </div>
 
               <div className="portal-metric-card">
@@ -392,8 +424,10 @@ export default function StudentPortal() {
                   <span className="portal-metric-label">التقدم في المسار</span>
                   <span className="portal-metric-icon violet"><Activity size={18} /></span>
                 </div>
-                <div className="portal-metric-value">{progress}%</div>
-                <div className="portal-metric-note">{completedSessions} من {sessions.length} جلسة مكتملة</div>
+                <div className="portal-metric-value">{progress === null ? "—" : `${progress}%`}</div>
+                <div className="portal-metric-note">
+                  {sessions.length > 0 ? `${completedSessions} من ${sessions.length} جلسة مكتملة` : "لا توجد جلسات مسجلة"}
+                </div>
               </div>
 
               <div className="portal-metric-card">
@@ -402,9 +436,11 @@ export default function StudentPortal() {
                   <span className="portal-metric-icon amber"><Star size={18} /></span>
                 </div>
                 <div className="portal-metric-value">
-                  {latestEvaluation?.score ? `${latestEvaluation.score} / 100` : "92 / 100"}
+                  {latestEvaluation?.score ?? "—"}{latestEvaluation?.score !== null && latestEvaluation?.score !== undefined ? " / 100" : ""}
                 </div>
-                <div className="portal-metric-note">مكافئ 4.6 من 5 نجوم ★</div>
+                <div className="portal-metric-note">
+                  {latestEvaluation ? "تقييم مسجل من جلسات الطالب" : liveMode ? "لا توجد تقييمات مسجلة" : "مكافئ 4.6 من 5 نجوم ★"}
+                </div>
               </div>
 
               <div className="portal-metric-card">
@@ -413,9 +449,11 @@ export default function StudentPortal() {
                   <span className="portal-metric-icon blue"><Trophy size={18} /></span>
                 </div>
                 <div className="portal-metric-value">
-                  {achievements.filter(a => a.unlocked).length} من {achievements.length}
+                  {achievements === null ? "غير متاح" : `${achievements.filter(a => a.unlocked).length} من ${achievements.length}`}
                 </div>
-                <div className="portal-metric-note">إنجازات تعليمية معتمدة</div>
+                <div className="portal-metric-note">
+                  {achievements === null ? "لا تتوفر بيانات إنجازات من الخادم" : "إنجازات تعليمية معتمدة"}
+                </div>
               </div>
             </div>
 
@@ -423,8 +461,8 @@ export default function StudentPortal() {
               {/* Progress Card Component */}
               <StudentProgressCard
                 progress={progress}
-                currentUnit="الحساسات وبرمجة الحركة الذكية"
-                nextCheckpoint={achievements.find(a => a.title === "بطل الوحدة")?.unlocked ? "تم اجتيازه بنجاح" : "تحدي نهاية الوحدة"}
+                currentUnit={currentUnit}
+                nextCheckpoint={nextCheckpoint}
                 achievements={achievements}
               />
 
@@ -447,25 +485,32 @@ export default function StudentPortal() {
                         <strong style={{ color: "#166534", fontSize: "0.95rem" }}>
                           تقييم جلسة #{latestEvaluation.sessionNumber} · درجة {latestEvaluation.score}/100
                         </strong>
-                        <span className="status-tag present">ممتاز</span>
+                        <span className="status-tag score">تقييم مسجل</span>
                       </div>
                       <p style={{ margin: "4px 0 0", color: "#14532d", fontSize: "0.86rem", lineHeight: "1.6" }}>
-                        <strong>ملاحظة المدرب:</strong> {latestEvaluation.notes || "أداء ممتاز وتفاعل متميز في التطبيق العملي."}
+                        <strong>ملاحظة المدرب:</strong> {latestEvaluation.notes || "لا توجد ملاحظة من المدرب."}
                       </p>
                     </div>
                   )}
 
-                  <div style={{ padding: "14px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                      <strong style={{ color: "#0f172a", fontSize: "0.92rem" }}>
-                        حضور الجلسة الافتتاحية بنجاح
-                      </strong>
-                      <span className="status-tag present">حاضر</span>
+                  {!liveMode && (
+                    <div style={{ padding: "14px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                        <strong style={{ color: "#0f172a", fontSize: "0.92rem" }}>
+                          حضور الجلسة الافتتاحية بنجاح
+                        </strong>
+                        <span className="status-tag present">حاضر</span>
+                      </div>
+                      <p style={{ margin: "2px 0 0", color: "#64748b", fontSize: "0.84rem" }}>
+                        تم التعرف على بيئة العمل وتجهيز عدة الروبوت التعليمية.
+                      </p>
                     </div>
-                    <p style={{ margin: "2px 0 0", color: "#64748b", fontSize: "0.84rem" }}>
-                      تم التعرف على بيئة العمل وتجهيز عدة الروبوت التعليمية.
+                  )}
+                  {liveMode && !latestEvaluation && (
+                    <p role="status" style={{ margin: 0, color: "#64748b", fontSize: "0.85rem" }}>
+                      لا توجد تفاعلات أكاديمية مسجلة من الخادم حاليًا.
                     </p>
-                  </div>
+                  )}
                 </div>
               </section>
             </div>
@@ -486,6 +531,11 @@ export default function StudentPortal() {
             </div>
 
             <div className="consumer-sessions-list">
+              {liveMode && !dataLoading && sessions.length === 0 && (
+                <p role="status" style={{ margin: 0, color: "#64748b" }}>
+                  {dataError || dataWarning ? "بيانات الجلسات غير متاحة حاليًا." : "لا توجد جلسات مرتبطة بهذا الحساب."}
+                </p>
+              )}
               {sessions.map(sess => {
                 const isCompleted = sess.status === "مكتملة";
                 const isPresent = sess.attendanceStatus === "PRESENT";
@@ -529,12 +579,12 @@ export default function StudentPortal() {
         )}
 
         {/* Progress & Achievements Tab */}
-        {tab === "progress" && (
+        {tab === "progress" && !liveMode && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "20px" }}>
             <StudentProgressCard
               progress={progress}
               currentUnit="الحساسات وبرمجة الحركة الذكية"
-              nextCheckpoint={achievements.find(a => a.title === "بطل الوحدة")?.unlocked ? "تم اجتيازه بنجاح" : "تحدي نهاية الوحدة"}
+              nextCheckpoint={achievements?.find(a => a.title === "بطل الوحدة")?.unlocked ? "تم اجتيازه بنجاح" : "تحدي نهاية الوحدة"}
               achievements={achievements}
             />
 
@@ -583,7 +633,7 @@ export default function StudentPortal() {
                 </div>
               </div>
 
-              {!achievements.find(a => a.title === "بطل الوحدة")?.unlocked && (
+              {!achievements?.find(a => a.title === "بطل الوحدة")?.unlocked && (
                 <button
                   type="button"
                   className="button button-primary"
@@ -594,6 +644,20 @@ export default function StudentPortal() {
                 </button>
               )}
             </section>
+          </div>
+        )}
+
+        {tab === "progress" && liveMode && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "20px" }}>
+            <StudentProgressCard
+              progress={progress}
+              currentUnit={currentUnit}
+              nextCheckpoint={nextCheckpoint}
+              achievements={achievements}
+            />
+            <div className="consumer-note-box" role="status" style={{ alignSelf: "start" }}>
+              بيانات خارطة المسار والإنجازات غير متاحة من الخادم حاليًا؛ لن نعرض تفاصيل تجريبية على حساب الطالب.
+            </div>
           </div>
         )}
 

@@ -702,55 +702,32 @@ export const apiClient = {
   platformAcademies: () => request<PlatformAcademiesResponse>("/platform/academies"),
   platformRoles: () => request<{ items: PlatformRole[] }>("/platform/roles"),
   changePlatformAcademyStatus: (tenantId: string, status: "ACTIVE" | "TRIAL" | "SETUP" | "PAUSED", reason: string) => request<{ id: string; status: string; revokedSessions: number }>(`/platform/academies/${tenantId}/status`, { method: "PATCH", body: JSON.stringify({ status, reason }) }),
-  changePlatformAcademyPlan: async (tenantId: string, planCode: "starter" | "growth" | "enterprise", branchesLimit: number, reason: string) => {
-    try {
-      return await request<{ tenantId: string; planCode: string; allowedBranches: number }>(`/platform/academies/${tenantId}/plan`, {
-        method: "PATCH",
-        body: JSON.stringify({ planCode, branchesLimit, reason }),
-      });
-    } catch {
-      return platformSaaSStorage.updatePlan(tenantId, planCode, branchesLimit);
-    }
-  },
+  changePlatformAcademyPlan: (tenantId: string, planCode: "starter" | "growth" | "enterprise", branchesLimit: number, reason: string) =>
+    request<{ tenantId: string; planCode: string; allowedBranches: number }>(`/platform/academies/${tenantId}/plan`, {
+      method: "PATCH",
+      body: JSON.stringify({ planCode, branchesLimit, reason }),
+    }),
   billingMeter: () => request<BillingMeterReport>("/academy/billing-meter"),
-  extendPlatformAcademyTrial: async (tenantId: string, daysToAdd = 7, reason: string) => {
-    try {
-      return await request<{ tenantId: string; newEndDate: string; isTrialExtended: boolean }>(`/platform/academies/${tenantId}/trial/extend`, {
-        method: "POST",
-        body: JSON.stringify({ daysToAdd, reason }),
-      });
-    } catch {
-      return platformSaaSStorage.extendTrial(tenantId, daysToAdd);
-    }
-  },
-  resetPlatformOwnerPassword: async (tenantId: string, ownerName: string, ownerPhone: string, reason: string) => {
-    try {
-      return await request<PlatformOwnerResetResult>(`/platform/academies/${tenantId}/owner-reset`, {
-        method: "POST",
-        body: JSON.stringify({ reason }),
-      });
-    } catch {
-      return platformSaaSStorage.generateOwnerTempPassword(tenantId, ownerName, ownerPhone);
-    }
-  },
-  recordPlatformSubscriptionPayment: async (input: Omit<PlatformPaymentRecord, "id" | "receivedAt">) => {
-    try {
-      return await request<PlatformPaymentRecord>(`/platform/academies/${input.tenantId}/payments`, {
-        method: "POST",
-        body: JSON.stringify(input),
-      });
-    } catch {
-      return platformSaaSStorage.recordPayment(input);
-    }
-  },
+  extendPlatformAcademyTrial: (tenantId: string, daysToAdd = 7, reason: string) =>
+    request<{ tenantId: string; newEndDate: string; isTrialExtended: boolean }>(`/platform/academies/${tenantId}/trial/extend`, {
+      method: "POST",
+      body: JSON.stringify({ daysToAdd, reason }),
+    }),
+  resetPlatformOwnerPassword: (tenantId: string, reason: string) =>
+    request<PlatformOwnerResetResult>(`/platform/academies/${tenantId}/owner-reset`, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }),
+  recordPlatformSubscriptionPayment: (input: Omit<PlatformPaymentRecord, "id" | "receivedAt">) =>
+    request<PlatformPaymentRecord>(`/platform/academies/${input.tenantId}/payments`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
   getPlatformPayments: (tenantId?: string) => platformSaaSStorage.getPayments(tenantId),
   getPlatformTenantExtra: (tenantId: string, defaultPlan?: string) => platformSaaSStorage.getTenantExtra(tenantId, defaultPlan),
   getPlatformDemoLeads: () => platformSaaSStorage.getDemoLeads(),
   updatePlatformDemoLeadStatus: (id: string, status: PlatformDemoLead["status"]) => platformSaaSStorage.updateDemoLeadStatus(id, status),
   addPlatformDemoLead: (input: Omit<PlatformDemoLead, "id" | "createdAt" | "status">) => platformSaaSStorage.addDemoLead(input),
-  startEmergencyImpersonation: (tenantId: string, tenantName: string, reason: string) => platformSaaSStorage.startEmergencyImpersonation(tenantId, tenantName, reason),
-  endEmergencyImpersonation: () => platformSaaSStorage.endEmergencyImpersonation(),
-  getEmergencyImpersonation: () => platformSaaSStorage.getEmergencyImpersonation(),
   platformAcademyMembers: (tenantId: string, search = "") => { const query = new URLSearchParams(); if (search.trim()) query.set("search", search.trim()); const suffix = query.toString() ? `?${query.toString()}` : ""; return request<{ items: PlatformMember[]; total: number; tenantId: string }>(`/platform/academies/${tenantId}/members${suffix}`); },
   changePlatformMemberStatus: (tenantId: string, membershipId: string, status: "ACTIVE" | "REVOKED", reason: string) => request<{ membershipId: string; userId: string; status: string; revokedSessions: number }>(`/platform/academies/${tenantId}/members/${membershipId}/status`, { method: "PATCH", body: JSON.stringify({ status, reason }) }),
   revokePlatformUserSessions: (tenantId: string, userId: string, reason: string) => request<{ userId: string; tenantId: string; revokedCount: number }>(`/platform/academies/${tenantId}/users/${userId}/sessions/revoke`, { method: "POST", body: JSON.stringify({ reason }) }),
@@ -2424,4 +2401,3 @@ const DEFAULT_DEMO_LEADS: PlatformDemoLead[] = [
     createdAt: "2026-10-18T16:45:00.000Z",
   },
 ];
-
