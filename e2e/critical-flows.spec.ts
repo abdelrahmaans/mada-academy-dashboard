@@ -200,7 +200,7 @@ test.describe("critical local MVP journeys", () => {
     await login(page, "parent", "+201000000011");
     await expect(page).toHaveURL(/\/family-portal$/);
     await expect(page.getByText("Adam Khaled").first()).toBeVisible();
-    await expect(page.getByText("الجلسات غير متاحة مؤقتًا", { exact: false })).toBeVisible();
+    await expect(page.getByText("الجلسات غير متاحة مؤقتًا", { exact: false }).first()).toBeVisible();
     await expect(page.getByText(/LIVE · بيانات الحساب/)).toBeVisible();
     await expect(page.getByText(/DEMO · معاينة/)).toHaveCount(0);
     await expect(page.getByText("ياسين محمد علي")).toHaveCount(0);
@@ -270,7 +270,7 @@ test.describe("critical local MVP journeys", () => {
     await login(page, "parent", "+201000000011");
     await expect(page).toHaveURL(/\/family-portal$/);
     await expect(page.getByText("Adam Khaled").first()).toBeVisible();
-    await expect(page.getByText("الجلسات غير متاحة مؤقتًا", { exact: false })).toBeVisible();
+    await expect(page.getByText("الجلسات غير متاحة مؤقتًا", { exact: false }).first()).toBeVisible();
     await expect(page.getByText(/LIVE · بيانات الحساب/)).toBeVisible();
     await expect(page.getByText(/DEMO · معاينة/)).toHaveCount(0);
     await expect(page.getByText("Lina Omar")).toHaveCount(0);
@@ -281,7 +281,7 @@ test.describe("critical local MVP journeys", () => {
     await login(page, "student", "+201000000012");
     await expect(page).toHaveURL(/\/student-portal$/);
     await expect(page.getByRole("heading", { name: /Lina Omar/ })).toBeVisible();
-    await expect(page.getByText("الجلسات غير متاحة مؤقتًا", { exact: false })).toBeVisible();
+    await expect(page.getByText("الجلسات غير متاحة مؤقتًا", { exact: false }).first()).toBeVisible();
     await expect(page.getByRole("status")).toContainText("إعادة المحاولة");
     await expect(page.getByText("Youssef Ahmed")).toHaveCount(0);
     await expect(page.getByText(/LIVE · حساب الطالب/)).toBeVisible();
