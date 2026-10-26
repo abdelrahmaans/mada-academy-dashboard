@@ -45,11 +45,16 @@ export function GuidedSessionCompletionModal({
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [localDraft, setLocalDraft] = useState<Record<string, AttendanceDraft>>(attendanceDraft);
   const [evaluationsDraft, setEvaluationsDraft] = useState<
-    Record<string, { score: number; notes: string }>
+    Record<string, { score: number; notes: string; bonusPoints: number; badge?: string }>
   >(() => {
-    const initial: Record<string, { score: number; notes: string }> = {};
+    const initial: Record<string, { score: number; notes: string; bonusPoints: number; badge?: string }> = {};
     attendanceRows.forEach(row => {
-      initial[row.studentId] = { score: 90, notes: "مشاركة ممتازة والتزام بالأنشطة العملية." };
+      initial[row.studentId] = {
+        score: 90,
+        notes: "مشاركة ممتازة والتزام بالأنشطة العملية.",
+        bonusPoints: 10,
+        badge: "CHALLENGE_MASTER",
+      };
     });
     return initial;
   });
@@ -75,6 +80,7 @@ export function GuidedSessionCompletionModal({
     setEvaluationsDraft(current => ({
       ...current,
       [studentId]: {
+        ...current[studentId],
         score,
         notes: current[studentId]?.notes || label,
       },
@@ -96,12 +102,14 @@ export function GuidedSessionCompletionModal({
       });
       await apiClient.upsertSessionAttendance(session.id, attendanceRecords);
 
-      // 2. Save evaluations if not skipped
+      // 2. Save evaluations with Gamification XP & Badges if not skipped
       if (!skipEvaluations && attendanceRows.length > 0) {
         const evalItems = attendanceRows.map(row => ({
           studentId: row.studentId,
           score: evaluationsDraft[row.studentId]?.score ?? 85,
           notes: evaluationsDraft[row.studentId]?.notes?.trim() || "تمت متابعة الحصة وإنجاز المهام.",
+          bonusPoints: evaluationsDraft[row.studentId]?.bonusPoints ?? 0,
+          gamificationBadge: evaluationsDraft[row.studentId]?.badge || undefined,
         }));
         await apiClient.saveSessionEvaluations(session.id, evalItems);
         // Also submit for review / publishing
@@ -313,6 +321,88 @@ export function GuidedSessionCompletionModal({
                                 }))
                               }
                             />
+                          </div>
+                          <div style={{ gridColumn: "1 / -1", display: "flex", flexDirection: "column", gap: "8px", paddingTop: "8px", borderTop: "1px dashed #e2e8f0" }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "6px" }}>
+                              <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#4338ca", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                <Award size={14} /> نقاط تحدي الجلسة (Bonus XP):
+                              </span>
+                              <div style={{ display: "flex", gap: "6px" }}>
+                                {[
+                                  { pts: 0, label: "0" },
+                                  { pts: 10, label: "+10 تحدي 🎯" },
+                                  { pts: 15, label: "+15 إبداع 💡" },
+                                  { pts: 20, label: "+20 بطل الحصة 🏆" },
+                                ].map(btn => (
+                                  <button
+                                    key={btn.pts}
+                                    type="button"
+                                    style={{
+                                      padding: "3px 8px",
+                                      fontSize: "0.75rem",
+                                      borderRadius: "6px",
+                                      border: (evalItem.bonusPoints ?? 0) === btn.pts ? "1px solid #4f46e5" : "1px solid #cbd5e1",
+                                      background: (evalItem.bonusPoints ?? 0) === btn.pts ? "#eef2ff" : "#fff",
+                                      color: (evalItem.bonusPoints ?? 0) === btn.pts ? "#4338ca" : "#64748b",
+                                      fontWeight: (evalItem.bonusPoints ?? 0) === btn.pts ? 700 : 500,
+                                      cursor: "pointer",
+                                    }}
+                                    onClick={() =>
+                                      setEvaluationsDraft(cur => ({
+                                        ...cur,
+                                        [student.studentId]: {
+                                          ...cur[student.studentId],
+                                          bonusPoints: btn.pts,
+                                        },
+                                      }))
+                                    }
+                                  >
+                                    {btn.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "6px" }}>
+                              <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#0f766e", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                <Sparkles size={14} /> وسام الجلسة المكتسب:
+                              </span>
+                              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                                {[
+                                  { id: "", label: "بدون وسام" },
+                                  { id: "CHALLENGE_MASTER", label: "🎯 بطل التحدي" },
+                                  { id: "CREATIVE_THINKER", label: "💡 مفكر مبدع" },
+                                  { id: "TOP_PERFORMER", label: "⭐ أداء استثنائي" },
+                                  { id: "TEAM_PLAYER", label: "🤝 روح الفريق" },
+                                ].map(badge => (
+                                  <button
+                                    key={badge.id}
+                                    type="button"
+                                    style={{
+                                      padding: "3px 8px",
+                                      fontSize: "0.75rem",
+                                      borderRadius: "6px",
+                                      border: evalItem.badge === badge.id ? "1px solid #0d9488" : "1px solid #e2e8f0",
+                                      background: evalItem.badge === badge.id ? "#f0fdfa" : "#fafafa",
+                                      color: evalItem.badge === badge.id ? "#0f766e" : "#64748b",
+                                      fontWeight: evalItem.badge === badge.id ? 700 : 400,
+                                      cursor: "pointer",
+                                    }}
+                                    onClick={() =>
+                                      setEvaluationsDraft(cur => ({
+                                        ...cur,
+                                        [student.studentId]: {
+                                          ...cur[student.studentId],
+                                          badge: badge.id || undefined,
+                                        },
+                                      }))
+                                    }
+                                  >
+                                    {badge.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>

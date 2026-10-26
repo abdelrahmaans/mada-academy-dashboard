@@ -30,6 +30,7 @@ public static class SessionWorkflowEndpoints
         scheduling.MapGet("/sessions/{sessionId:guid}/evaluations", ListSessionEvaluationsAsync);
         scheduling.MapPut("/sessions/{sessionId:guid}/evaluations", UpsertEvaluationsAsync);
         scheduling.MapPost("/sessions/{sessionId:guid}/evaluations/submit", SubmitEvaluationsAsync);
+        scheduling.MapGet("/groups/{groupId:guid}/leaderboard", GetGroupLeaderboardAsync);
         scheduling.MapGet("/evaluation-reviews", ListEvaluationReviewsAsync);
         scheduling.MapGet("/evaluation-status-summary", ListEvaluationStatusSummaryAsync);
         scheduling.MapPost("/evaluation-reviews/{evaluationId:guid}/decision", DecideEvaluationReviewAsync);
@@ -434,9 +435,27 @@ public static class SessionWorkflowEndpoints
         {
             if (current.TryGetValue(item.StudentId, out var evaluation))
             {
-                evaluation.Score = item.Score; evaluation.Notes = item.Notes; evaluation.InstructorId = actorId.Value; evaluation.Status = "DRAFT";
+                evaluation.Score = item.Score;
+                evaluation.Notes = item.Notes;
+                evaluation.BonusPoints = item.BonusPoints ?? 0;
+                evaluation.GamificationBadge = item.GamificationBadge;
+                evaluation.InstructorId = actorId.Value;
+                evaluation.Status = "DRAFT";
             }
-            else db.SessionEvaluations.Add(new SessionEvaluation { SessionId = sessionId, StudentId = item.StudentId, InstructorId = actorId.Value, Score = item.Score, Notes = item.Notes, Status = "DRAFT" });
+            else
+            {
+                db.SessionEvaluations.Add(new SessionEvaluation
+                {
+                    SessionId = sessionId,
+                    StudentId = item.StudentId,
+                    InstructorId = actorId.Value,
+                    Score = item.Score,
+                    Notes = item.Notes,
+                    BonusPoints = item.BonusPoints ?? 0,
+                    GamificationBadge = item.GamificationBadge,
+                    Status = "DRAFT"
+                });
+            }
         }
         await db.SaveChangesAsync(cancellationToken); return Results.Ok(new { data = new { sessionId, saved = request.Items.Count } });
     }
@@ -453,7 +472,17 @@ public static class SessionWorkflowEndpoints
                                  && db.CourseOfferings.Any(offering => offering.Id == session.CourseOfferingId.Value && offering.TenantId == tenantId && offering.BranchId == session.BranchId)
                                  && db.StudentEnrollments.Any(enrollment => enrollment.StudentId == student.Id && enrollment.CourseOfferingId == session.CourseOfferingId.Value && enrollment.Status == "ACTIVE")
                            orderby evaluation.StudentId
-                           select new { evaluation.StudentId, evaluation.Score, evaluation.Notes, evaluation.Status, evaluation.ReviewNote, evaluation.SubmittedAt, evaluation.ReviewedAt })
+                           select new {
+                               evaluation.StudentId,
+                               evaluation.Score,
+                               evaluation.Notes,
+                               evaluation.BonusPoints,
+                               evaluation.GamificationBadge,
+                               evaluation.Status,
+                               evaluation.ReviewNote,
+                               evaluation.SubmittedAt,
+                               evaluation.ReviewedAt
+                           })
             .ToListAsync(cancellationToken);
         return Results.Ok(new { data = new { sessionId, items, total = items.Count } });
     }
@@ -614,6 +643,105 @@ public static class SessionWorkflowEndpoints
     private static IResult Validation(string field, string message) => Results.ValidationProblem(new Dictionary<string, string[]> { [field] = [message] });
     private static IResult Forbidden(string code) => Results.Problem(statusCode: 403, title: code, extensions: new Dictionary<string, object?> { ["code"] = code });
 
+    public static async Task<IResult> GetGroupLeaderboardAsync(Guid groupId, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!Scope(user, out var tenantId, out var branchScope)) return Forbidden("LEADERBOARD_READ_FORBIDDEN");
+
+        var offering = await (from off in db.CourseOfferings.AsNoTracking()
+                              join tmpl in db.CourseTemplates.AsNoTracking() on off.CourseTemplateId equals tmpl.Id
+                              where off.Id == groupId && off.TenantId == tenantId && (!branchScope.HasValue || off.BranchId == branchScope.Value)
+                              select new { off.Id, off.BranchId, GroupName = tmpl.Name })
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (offering is null) return NotFound("GROUP_NOT_FOUND");
+
+        var students = await (from enrollment in db.StudentEnrollments.AsNoTracking()
+                              join student in db.Students.AsNoTracking() on enrollment.StudentId equals student.Id
+                              where enrollment.CourseOfferingId == groupId && enrollment.Status == "ACTIVE"
+                                    && student.TenantId == tenantId && student.BranchId == offering.BranchId
+                              select new { student.Id, student.FullName })
+            .ToListAsync(cancellationToken);
+
+        if (students.Count == 0)
+        {
+            return Results.Ok(new { data = new { groupId, groupName = offering.GroupName, items = Array.Empty<object>() } });
+        }
+
+        var studentIds = students.Select(s => s.Id).ToArray();
+
+        var sessions = await db.AcademySessions.AsNoTracking()
+            .Where(s => s.CourseOfferingId == groupId && s.TenantId == tenantId && s.BranchId == offering.BranchId && s.Status != "CANCELLED")
+            .Select(s => new { s.Id, s.Status })
+            .ToListAsync(cancellationToken);
+
+        var sessionIds = sessions.Select(s => s.Id).ToArray();
+        var totalCompletedSessions = sessions.Count(s => s.Status == "COMPLETED");
+
+        var attendances = await db.SessionAttendances.AsNoTracking()
+            .Where(a => sessionIds.Contains(a.SessionId) && studentIds.Contains(a.StudentId) && (a.Status == "PRESENT" || a.Status == "LATE"))
+            .GroupBy(a => a.StudentId)
+            .Select(g => new { StudentId = g.Key, AttendedCount = g.Count() })
+            .ToDictionaryAsync(g => g.StudentId, g => g.AttendedCount, cancellationToken);
+
+        var evals = await db.SessionEvaluations.AsNoTracking()
+            .Where(e => sessionIds.Contains(e.SessionId) && studentIds.Contains(e.StudentId) && e.Status == "PUBLISHED")
+            .ToListAsync(cancellationToken);
+
+        var evalsByStudent = evals.GroupBy(e => e.StudentId).ToDictionary(g => g.Key, g => g.ToList());
+
+        var items = students.Select(s =>
+        {
+            var attended = attendances.GetValueOrDefault(s.Id, 0);
+            evalsByStudent.TryGetValue(s.Id, out var studentEvals);
+            studentEvals ??= [];
+
+            var avgScore = studentEvals.Count > 0 ? (int)studentEvals.Average(e => e.Score ?? 0) : 0;
+            var bonusPoints = studentEvals.Sum(e => e.BonusPoints);
+
+            var badges = studentEvals.Where(e => !string.IsNullOrEmpty(e.GamificationBadge))
+                .Select(e => e.GamificationBadge!)
+                .Distinct()
+                .ToList();
+
+            if (totalCompletedSessions > 0 && attended >= totalCompletedSessions && !badges.Contains("PERFECT_ATTENDANCE"))
+            {
+                badges.Add("PERFECT_ATTENDANCE");
+            }
+
+            // XP Formula: (Attended Sessions * 15) + (Average Score * 5) + Bonus Challenge Points
+            var totalXp = (attended * 15) + (avgScore * 5) + bonusPoints;
+
+            return new
+            {
+                studentId = s.Id,
+                studentName = s.FullName,
+                totalXp,
+                attendedSessions = attended,
+                totalSessions = sessions.Count,
+                averageScore = avgScore,
+                bonusPoints,
+                badges,
+            };
+        })
+        .OrderByDescending(item => item.totalXp)
+        .ThenByDescending(item => item.averageScore)
+        .Select((item, index) => new
+        {
+            item.studentId,
+            item.studentName,
+            rank = index + 1,
+            item.totalXp,
+            item.attendedSessions,
+            item.totalSessions,
+            item.averageScore,
+            item.bonusPoints,
+            item.badges,
+        })
+        .ToList();
+
+        return Results.Ok(new { data = new { groupId, groupName = offering.GroupName, items } });
+    }
+
     private sealed record SessionDraft(int Number, DateTimeOffset StartAt, DateTimeOffset EndAt);
 }
 
@@ -625,7 +753,7 @@ public sealed record SubstitutionRequest(string Reason);
 public sealed record SubstituteProposalRequest(string? Message);
 public sealed record ApprovalDecision(string Decision, Guid? AssignedInstructorId = null, string? Reason = null);
 public sealed record EvaluationBatchRequest(IReadOnlyList<EvaluationItem> Items);
-public sealed record EvaluationItem(Guid StudentId, int? Score, string? Notes);
+public sealed record EvaluationItem(Guid StudentId, int? Score, string? Notes, int? BonusPoints = 0, string? GamificationBadge = null);
 public sealed record EvaluationSubmissionRequest(IReadOnlyList<Guid> StudentIds);
 public sealed record EvaluationReviewDecision(string Decision, string? Note = null);
 public sealed record AssignSubstituteRequest(Guid SubstituteInstructorId, string? Reason = null);

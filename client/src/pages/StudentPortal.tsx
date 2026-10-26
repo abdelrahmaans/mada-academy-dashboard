@@ -19,6 +19,7 @@ import RoleDashboardShell from "@/components/RoleDashboardShell";
 import StudentProgressCard, {
   type StudentAchievement,
 } from "@/components/StudentProgressCard";
+import GroupLeaderboardCard from "@/components/GroupLeaderboardCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient, type ConsumerSessionRecord } from "@/lib/apiClient";
 import { firstLinkedStudent, sessionsForStudent } from "@/lib/consumerScope";
@@ -130,6 +131,7 @@ export default function StudentPortal() {
   const [dataError, setDataError] = useState<string | null>(null);
   const [dataWarning, setDataWarning] = useState<string | null>(null);
   const [hasLinkedProfile, setHasLinkedProfile] = useState(true);
+  const [linkedStudentId, setLinkedStudentId] = useState<string>("");
   const [retryKey, setRetryKey] = useState(0);
 
   // Sync tab with URL hash
@@ -187,6 +189,7 @@ export default function StudentPortal() {
 
       const student = firstLinkedStudent(studentsResult.value.items);
       setHasLinkedProfile(Boolean(student));
+      setLinkedStudentId(student?.id ?? "");
       const records = sessionsResult.status === "fulfilled" ? sessionsResult.value.items : [];
       const ownRecords = student ? sessionsForStudent(records, student.id) : [];
 
@@ -546,13 +549,16 @@ export default function StudentPortal() {
 
         {/* Progress & Achievements Tab */}
         {tab === "progress" && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "20px" }}>
-            <StudentProgressCard
-              progress={progress}
-              currentUnit="الحساسات وبرمجة الحركة الذكية"
-              nextCheckpoint={achievements.find(a => a.title === "بطل الوحدة")?.unlocked ? "تم اجتيازه بنجاح" : "تحدي نهاية الوحدة"}
-              achievements={achievements}
-            />
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            <GroupLeaderboardCard currentStudentId={linkedStudentId} />
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "20px" }}>
+              <StudentProgressCard
+                progress={progress}
+                currentUnit="الحساسات وبرمجة الحركة الذكية"
+                nextCheckpoint={achievements.find(a => a.title === "بطل الوحدة")?.unlocked ? "تم اجتيازه بنجاح" : "تحدي نهاية الوحدة"}
+                achievements={achievements}
+              />
 
             <section className="consumer-panel">
               <div className="consumer-panel-header">
@@ -611,6 +617,7 @@ export default function StudentPortal() {
               )}
             </section>
           </div>
+        </div>
         )}
 
         {/* Guard footer */}

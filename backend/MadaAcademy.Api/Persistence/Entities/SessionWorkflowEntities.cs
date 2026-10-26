@@ -17,6 +17,8 @@ public sealed class SessionEvaluation : EntityBase
     public Guid InstructorId { get; set; }
     public int? Score { get; set; }
     public string? Notes { get; set; }
+    public int BonusPoints { get; set; } = 0;
+    public string? GamificationBadge { get; set; }
     public string Status { get; set; } = "DRAFT";
     public string? ReviewNote { get; set; }
     public DateTimeOffset? SubmittedAt { get; set; }

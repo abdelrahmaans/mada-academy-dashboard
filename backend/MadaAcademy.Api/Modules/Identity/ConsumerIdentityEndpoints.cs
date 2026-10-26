@@ -23,6 +23,7 @@ public static class ConsumerIdentityEndpoints
         var consumers = endpoints.MapGroup("/api/v1/consumer").RequireAuthorization("consumer");
         consumers.MapGet("/me/students", ListMyStudentsAsync);
         consumers.MapGet("/me/sessions", ListMySessionsAsync);
+        consumers.MapGet("/groups/{groupId:guid}/leaderboard", GetConsumerGroupLeaderboardAsync);
         return endpoints;
     }
 
@@ -199,7 +200,7 @@ public static class ConsumerIdentityEndpoints
         var attendance = await db.SessionAttendances.AsNoTracking().Where(item => sessionIds.Contains(item.SessionId) && scopedStudents.Contains(item.StudentId)).ToDictionaryAsync(item => new { item.SessionId, item.StudentId }, cancellationToken);
         var publishedEvaluations = await db.SessionEvaluations.AsNoTracking()
             .Where(item => sessionIds.Contains(item.SessionId) && scopedStudents.Contains(item.StudentId) && item.Status == "PUBLISHED")
-            .Select(item => new { item.SessionId, item.StudentId, item.Score, item.Notes })
+            .Select(item => new { item.SessionId, item.StudentId, item.Score, item.Notes, item.BonusPoints, item.GamificationBadge })
             .ToDictionaryAsync(item => (item.SessionId, item.StudentId), cancellationToken);
         var names = await db.Students.AsNoTracking().Where(item => scopedStudents.Contains(item.Id)).ToDictionaryAsync(item => item.Id, item => item.FullName, cancellationToken);
         var items = sessions.SelectMany(session => enrollmentsByOffering.GetValueOrDefault(session.CourseOfferingId!.Value, [])
@@ -212,10 +213,121 @@ public static class ConsumerIdentityEndpoints
                     session.SessionNumber, session.StartAt, session.EndAt, session.Status, session.courseName, session.branchName, session.classroomName,
                     attendanceStatus = attendance.TryGetValue(new { SessionId = session.Id, StudentId = id }, out var mark) ? mark.Status : "UNMARKED",
                     score = evaluation?.Score,
+                    bonusPoints = evaluation?.BonusPoints ?? 0,
+                    badge = evaluation?.GamificationBadge,
                     notes = evaluation?.Notes
                 };
             })).OrderByDescending(item => item.StartAt).ToList();
         return Results.Ok(new { data = new { items, total = items.Count } });
+    }
+
+    private static async Task<IResult> GetConsumerGroupLeaderboardAsync(Guid groupId, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!TryConsumer(user, out var accountId, out var tenantId, out var accountType)) return Forbidden("CONSUMER_FORBIDDEN");
+        var linkedStudents = accountType == "parent"
+            ? await db.GuardianStudentLinks.AsNoTracking().Where(link => link.UserAccountId == accountId && link.TenantId == tenantId && link.Status == "ACTIVE").Select(link => link.StudentId).ToListAsync(cancellationToken)
+            : await db.StudentAccountLinks.AsNoTracking().Where(link => link.UserAccountId == accountId && link.TenantId == tenantId).Select(link => link.StudentId).ToListAsync(cancellationToken);
+
+        if (linkedStudents.Count == 0) return Results.Ok(new { data = new { groupId, items = Array.Empty<object>() } });
+
+        var isEnrolled = await (from item in db.StudentEnrollments
+                                join student in db.Students on item.StudentId equals student.Id
+                                where item.CourseOfferingId == groupId && student.TenantId == tenantId && linkedStudents.Contains(item.StudentId)
+                                select item.Id).AnyAsync(cancellationToken);
+        if (!isEnrolled) return Forbidden("GROUP_ACCESS_FORBIDDEN");
+
+        var offering = await (from off in db.CourseOfferings.AsNoTracking()
+                              join tmpl in db.CourseTemplates.AsNoTracking() on off.CourseTemplateId equals tmpl.Id
+                              where off.Id == groupId && off.TenantId == tenantId
+                              select new { off.Id, off.BranchId, GroupName = tmpl.Name })
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (offering is null) return NotFound("GROUP_NOT_FOUND");
+
+        var students = await (from enrollment in db.StudentEnrollments.AsNoTracking()
+                              join student in db.Students.AsNoTracking() on enrollment.StudentId equals student.Id
+                              where enrollment.CourseOfferingId == groupId && enrollment.Status == "ACTIVE"
+                                    && student.TenantId == tenantId && student.BranchId == offering.BranchId
+                              select new { student.Id, student.FullName })
+            .ToListAsync(cancellationToken);
+
+        if (students.Count == 0)
+        {
+            return Results.Ok(new { data = new { groupId, groupName = offering.GroupName, items = Array.Empty<object>() } });
+        }
+
+        var studentIds = students.Select(s => s.Id).ToArray();
+
+        var sessions = await db.AcademySessions.AsNoTracking()
+            .Where(s => s.CourseOfferingId == groupId && s.TenantId == tenantId && s.BranchId == offering.BranchId && s.Status != "CANCELLED")
+            .Select(s => new { s.Id, s.Status })
+            .ToListAsync(cancellationToken);
+
+        var sessionIds = sessions.Select(s => s.Id).ToArray();
+        var totalCompletedSessions = sessions.Count(s => s.Status == "COMPLETED");
+
+        var attendances = await db.SessionAttendances.AsNoTracking()
+            .Where(a => sessionIds.Contains(a.SessionId) && studentIds.Contains(a.StudentId) && (a.Status == "PRESENT" || a.Status == "LATE"))
+            .GroupBy(a => a.StudentId)
+            .Select(g => new { StudentId = g.Key, AttendedCount = g.Count() })
+            .ToDictionaryAsync(g => g.StudentId, g => g.AttendedCount, cancellationToken);
+
+        var evals = await db.SessionEvaluations.AsNoTracking()
+            .Where(e => sessionIds.Contains(e.SessionId) && studentIds.Contains(e.StudentId) && e.Status == "PUBLISHED")
+            .ToListAsync(cancellationToken);
+
+        var evalsByStudent = evals.GroupBy(e => e.StudentId).ToDictionary(g => g.Key, g => g.ToList());
+
+        var items = students.Select(s =>
+        {
+            var attended = attendances.GetValueOrDefault(s.Id, 0);
+            evalsByStudent.TryGetValue(s.Id, out var studentEvals);
+            studentEvals ??= [];
+
+            var avgScore = studentEvals.Count > 0 ? (int)studentEvals.Average(e => e.Score ?? 0) : 0;
+            var bonusPoints = studentEvals.Sum(e => e.BonusPoints);
+
+            var badges = studentEvals.Where(e => !string.IsNullOrEmpty(e.GamificationBadge))
+                .Select(e => e.GamificationBadge!)
+                .Distinct()
+                .ToList();
+
+            if (totalCompletedSessions > 0 && attended >= totalCompletedSessions && !badges.Contains("PERFECT_ATTENDANCE"))
+            {
+                badges.Add("PERFECT_ATTENDANCE");
+            }
+
+            var totalXp = (attended * 15) + (avgScore * 5) + bonusPoints;
+
+            return new
+            {
+                studentId = s.Id,
+                studentName = s.FullName,
+                totalXp,
+                attendedSessions = attended,
+                totalSessions = sessions.Count,
+                averageScore = avgScore,
+                bonusPoints,
+                badges,
+            };
+        })
+        .OrderByDescending(item => item.totalXp)
+        .ThenByDescending(item => item.averageScore)
+        .Select((item, index) => new
+        {
+            item.studentId,
+            item.studentName,
+            rank = index + 1,
+            item.totalXp,
+            item.attendedSessions,
+            item.totalSessions,
+            item.averageScore,
+            item.bonusPoints,
+            item.badges,
+        })
+        .ToList();
+
+        return Results.Ok(new { data = new { groupId, groupName = offering.GroupName, items } });
     }
 
     private static async Task<IResult?> EnsureConsumerMembershipAsync(MadaDbContext db, UserAccount account, Guid tenantId, string roleCode, CancellationToken cancellationToken)

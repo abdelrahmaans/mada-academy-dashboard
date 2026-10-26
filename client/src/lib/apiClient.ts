@@ -509,9 +509,27 @@ export type ConsumerStudentsResponse = { items: ConsumerStudentRecord[]; total: 
 export type ConsumerSessionRecord = {
   sessionId: string; studentId: string; studentName: string; sessionNumber: number; startAt: string; endAt: string;
   status: string; courseName: string; branchName: string; classroomName: string; attendanceStatus: string;
-  score: number | null; notes: string | null;
+  score: number | null; notes: string | null; bonusPoints?: number; badge?: string | null;
 };
 export type ConsumerSessionsResponse = { items: ConsumerSessionRecord[]; total: number };
+
+export interface GroupLeaderboardItem {
+  studentId: string;
+  studentName: string;
+  rank: number;
+  totalXp: number;
+  attendedSessions: number;
+  totalSessions: number;
+  averageScore: number;
+  bonusPoints: number;
+  badges: string[];
+}
+
+export interface GroupLeaderboardResponse {
+  groupId: string;
+  groupName: string;
+  items: GroupLeaderboardItem[];
+}
 export type ConsumerLinksResponse = {
   studentId: string;
   studentAccount: { id: string; name: string | null; phone: string; email: string | null } | null;
@@ -957,9 +975,11 @@ export const apiClient = {
   proposeSubstitute: (approvalId: string, message?: string) => request<{ approvalId: string; proposedInstructorId: string }>(`/scheduling/approvals/${approvalId}/proposals`, { method: "POST", body: JSON.stringify({ message }) }),
   listApprovals: (state: "ALL" | "PENDING" | "APPROVED" | "REJECTED" = "ALL") => request<ApprovalListResponse>(`/scheduling/approvals?state=${state}`),
   decideApproval: (approvalId: string, input: { decision: "APPROVED" | "REJECTED"; assignedInstructorId?: string; reason?: string }) => request<{ approvalId: string; state: string; sessionId: string; sessionStatus: string; substituteInstructorId: string | null }>(`/scheduling/approvals/${approvalId}/decision`, { method: "POST", body: JSON.stringify(input) }),
-  saveSessionEvaluations: (sessionId: string, items: Array<{ studentId: string; score?: number | null; notes?: string }>) => request<{ sessionId: string; saved: number }>(`/scheduling/sessions/${sessionId}/evaluations`, { method: "PUT", body: JSON.stringify({ items }) }),
+  saveSessionEvaluations: (sessionId: string, items: Array<{ studentId: string; score?: number | null; notes?: string; bonusPoints?: number; gamificationBadge?: string }>) => request<{ sessionId: string; saved: number }>(`/scheduling/sessions/${sessionId}/evaluations`, { method: "PUT", body: JSON.stringify({ items }) }),
   listSessionEvaluations: (sessionId: string) => request<SessionEvaluationListResponse>(`/scheduling/sessions/${sessionId}/evaluations`),
   submitSessionEvaluations: (sessionId: string, studentIds: string[]) => request<{ sessionId: string; submitted: number; status: string }>(`/scheduling/sessions/${sessionId}/evaluations/submit`, { method: "POST", body: JSON.stringify({ studentIds }) }),
+  getGroupLeaderboard: (groupId: string) => request<GroupLeaderboardResponse>(`/scheduling/groups/${groupId}/leaderboard`),
+  getConsumerGroupLeaderboard: (groupId: string) => request<GroupLeaderboardResponse>(`/consumer/groups/${groupId}/leaderboard`),
   listEvaluationReviews: () => request<EvaluationReviewQueueResponse>("/scheduling/evaluation-reviews"),
   evaluationStatusSummary: () => request<EvaluationStatusSummary>("/scheduling/evaluation-status-summary"),
   decideEvaluationReview: (evaluationId: string, input: { decision: "PUBLISH" | "REQUEST_CHANGES"; note?: string }) => request<{ evaluationId: string; sessionId: string; status: string; reviewedAt: string; publishedAt: string | null }>(`/scheduling/evaluation-reviews/${evaluationId}/decision`, { method: "POST", body: JSON.stringify(input) }),

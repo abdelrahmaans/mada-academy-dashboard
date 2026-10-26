@@ -273,6 +273,7 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
             entity.Property(x => x.Notes).HasMaxLength(2000);
             entity.Property(x => x.Status).HasMaxLength(32).HasDefaultValue("DRAFT").IsRequired();
             entity.Property(x => x.ReviewNote).HasMaxLength(1000);
+            entity.Property(x => x.GamificationBadge).HasMaxLength(64);
         });
         modelBuilder.Entity<InAppNotification>(entity =>
         {

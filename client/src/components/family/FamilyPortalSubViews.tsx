@@ -24,6 +24,7 @@ import {
 } from "@/lib/apiClient";
 import { attendanceStatusLabel } from "@/lib/statusLabels";
 import type { ChildData, PortalTab } from "@/pages/FamilyPortalTypes";
+import GroupLeaderboardCard from "@/components/GroupLeaderboardCard";
 
 export function ChildOverview({
   child,
@@ -245,11 +246,14 @@ export function ChildEvaluations({ child }: { child: ChildData }) {
     : null;
 
   return (
-    <section className="consumer-panel">
-      <div className="consumer-panel-header">
-        <div>
-          <Star size={18} />
-          <h2>التقييمات وبطاقات المتابعة الأكاديمية</h2>
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      <GroupLeaderboardCard currentStudentId={child.id} />
+
+      <section className="consumer-panel">
+        <div className="consumer-panel-header">
+          <div>
+            <Star size={18} />
+            <h2>التقييمات وبطاقات المتابعة الأكاديمية</h2>
         </div>
         <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
           درجات وملاحظات مسجلة من الجلسات
@@ -320,7 +324,8 @@ export function ChildEvaluations({ child }: { child: ChildData }) {
           ))}
         </div>
       )}
-    </section>
+      </section>
+    </div>
   );
 }
 
