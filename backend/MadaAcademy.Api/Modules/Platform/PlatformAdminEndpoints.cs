@@ -23,8 +23,12 @@ public static class PlatformAdminEndpoints
         api.MapPost("/academies/{tenantId:guid}/users/{userId:guid}/sessions/revoke", RevokeSessionsAsync);
         api.MapGet("/academies/{tenantId:guid}/activity", GetAcademyActivityAsync);
         api.MapGet("/activity", GetPlatformActivityAsync);
+        api.MapGet("/support-tickets", GetPlatformTicketsAsync);
+        api.MapPatch("/support-tickets/{ticketId:guid}", UpdatePlatformTicketAsync);
 
         endpoints.MapGet("/api/v1/academy/my-features", GetMyFeaturesAsync).RequireAuthorization();
+        endpoints.MapPost("/api/v1/academy/support-tickets", CreateTenantSupportTicketAsync).RequireAuthorization();
+        endpoints.MapGet("/api/v1/academy/support-tickets", GetTenantSupportTicketsAsync).RequireAuthorization();
         return endpoints;
     }
 
@@ -393,6 +397,164 @@ public static class PlatformAdminEndpoints
         };
     }
 
+    private static async Task<IResult> CreateTenantSupportTicketAsync(CreateSupportTicketRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(user.FindFirstValue("tenantId"), out var tenantId))
+            return Results.Problem(statusCode: 403, title: "TENANT_SCOPE_REQUIRED");
+        if (string.IsNullOrWhiteSpace(request.Subject) || request.Subject.Trim().Length < 3)
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["subject"] = ["Subject must be at least 3 characters."] });
+        if (string.IsNullOrWhiteSpace(request.Description) || request.Description.Trim().Length < 5)
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["description"] = ["Description must be at least 5 characters."] });
+
+        var userId = ActorId(user) ?? Guid.Empty;
+        var userAccount = await db.UserAccounts.AsNoTracking().SingleOrDefaultAsync(x => x.Id == userId, cancellationToken);
+        var role = user.FindFirstValue(ClaimTypes.Role) ?? "R01_ACADEMY_OWNER";
+        Guid.TryParse(user.FindFirstValue("branchId"), out var branchId);
+
+        var ticket = new PlatformSupportTicket
+        {
+            TenantId = tenantId,
+            BranchId = branchId == Guid.Empty ? null : branchId,
+            RequesterUserId = userId,
+            RequesterName = userAccount?.DisplayName ?? user.Identity?.Name ?? "موظف الأكاديمية",
+            RequesterPhone = userAccount?.Phone ?? "",
+            RequesterRole = role,
+            Subject = request.Subject.Trim(),
+            Description = request.Description.Trim(),
+            Category = request.Category?.Trim().ToUpperInvariant() ?? "TECHNICAL",
+            Priority = request.Priority?.Trim().ToUpperInvariant() ?? "MEDIUM",
+            Status = "NEW",
+        };
+
+        db.PlatformSupportTickets.Add(ticket);
+        db.AuditEvents.Add(new AuditEvent
+        {
+            ActorUserId = userId,
+            TenantId = tenantId,
+            Action = "ACADEMY_SUPPORT_TICKET_CREATED",
+            TargetType = "SUPPORT_TICKET",
+            TargetId = ticket.Id.ToString(),
+            Reason = "Academy created a platform support ticket.",
+            MetadataJson = JsonSerializer.Serialize(new { ticket.Subject, ticket.Category, ticket.Priority })
+        });
+
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.Created($"/api/v1/academy/support-tickets/{ticket.Id}", new { data = new
+        {
+            ticket.Id,
+            ticket.Subject,
+            ticket.Category,
+            ticket.Priority,
+            ticket.Status,
+            ticket.CreatedAt
+        }});
+    }
+
+    private static async Task<IResult> GetTenantSupportTicketsAsync(ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(user.FindFirstValue("tenantId"), out var tenantId))
+            return Results.Problem(statusCode: 403, title: "TENANT_SCOPE_REQUIRED");
+
+        var tickets = await db.PlatformSupportTickets.AsNoTracking()
+            .Where(x => x.TenantId == tenantId)
+            .OrderByDescending(x => x.CreatedAt)
+            .Select(x => new
+            {
+                x.Id,
+                x.Subject,
+                x.Description,
+                x.Category,
+                x.Priority,
+                x.Status,
+                x.MeetingUrl,
+                x.MeetingScheduledAt,
+                x.ResolutionNotes,
+                x.CreatedAt,
+                x.ResolvedAt
+            })
+            .ToListAsync(cancellationToken);
+
+        return Results.Ok(new { data = new { items = tickets, total = tickets.Count } });
+    }
+
+    private static async Task<IResult> GetPlatformTicketsAsync(string? status, string? priority, string? category, Guid? tenantId, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        var query = db.PlatformSupportTickets.AsNoTracking().AsQueryable();
+        if (!string.IsNullOrWhiteSpace(status) && status != "ALL")
+            query = query.Where(x => x.Status == status.ToUpperInvariant());
+        if (!string.IsNullOrWhiteSpace(priority) && priority != "ALL")
+            query = query.Where(x => x.Priority == priority.ToUpperInvariant());
+        if (!string.IsNullOrWhiteSpace(category) && category != "ALL")
+            query = query.Where(x => x.Category == category.ToUpperInvariant());
+        if (tenantId.HasValue && tenantId.Value != Guid.Empty)
+            query = query.Where(x => x.TenantId == tenantId.Value);
+
+        var items = await query.OrderByDescending(x => x.CreatedAt)
+            .Select(x => new
+            {
+                x.Id,
+                x.TenantId,
+                tenantName = db.Tenants.Where(t => t.Id == x.TenantId).Select(t => t.Name).FirstOrDefault() ?? "الأكاديمية",
+                tenantSlug = db.Tenants.Where(t => t.Id == x.TenantId).Select(t => t.Slug).FirstOrDefault() ?? "",
+                x.RequesterUserId,
+                x.RequesterName,
+                x.RequesterPhone,
+                x.RequesterRole,
+                x.Subject,
+                x.Description,
+                x.Category,
+                x.Priority,
+                x.Status,
+                x.MeetingUrl,
+                x.MeetingScheduledAt,
+                x.ResolutionNotes,
+                x.InternalAdminNotes,
+                x.CreatedAt,
+                x.ResolvedAt
+            })
+            .ToListAsync(cancellationToken);
+
+        return Results.Ok(new { data = new { items, total = items.Count } });
+    }
+
+    private static async Task<IResult> UpdatePlatformTicketAsync(Guid ticketId, UpdatePlatformTicketRequest request, MadaDbContext db, ClaimsPrincipal principal, CancellationToken cancellationToken)
+    {
+        var ticket = await db.PlatformSupportTickets.SingleOrDefaultAsync(x => x.Id == ticketId, cancellationToken);
+        if (ticket is null) return Results.NotFound(new { error = new { code = "TICKET_NOT_FOUND", message = "Support ticket was not found." } });
+
+        var previousStatus = ticket.Status;
+        if (!string.IsNullOrWhiteSpace(request.Status))
+            ticket.Status = request.Status.Trim().ToUpperInvariant();
+        if (request.MeetingUrl is not null)
+            ticket.MeetingUrl = string.IsNullOrWhiteSpace(request.MeetingUrl) ? null : request.MeetingUrl.Trim();
+        if (request.MeetingScheduledAt.HasValue)
+            ticket.MeetingScheduledAt = request.MeetingScheduledAt.Value;
+        if (request.ResolutionNotes is not null)
+            ticket.ResolutionNotes = request.ResolutionNotes.Trim();
+        if (request.InternalAdminNotes is not null)
+            ticket.InternalAdminNotes = request.InternalAdminNotes.Trim();
+
+        if (ticket.Status == "RESOLVED" && previousStatus != "RESOLVED")
+        {
+            ticket.ResolvedAt = DateTimeOffset.UtcNow;
+            ticket.ResolvedByUserId = ActorId(principal);
+        }
+
+        db.AuditEvents.Add(new AuditEvent
+        {
+            ActorUserId = ActorId(principal),
+            TenantId = ticket.TenantId,
+            Action = "PLATFORM_SUPPORT_TICKET_UPDATED",
+            TargetType = "SUPPORT_TICKET",
+            TargetId = ticket.Id.ToString(),
+            Reason = request.Reason ?? "Updated platform support ticket status or resolution.",
+            MetadataJson = JsonSerializer.Serialize(new { previousStatus, nextStatus = ticket.Status, ticket.MeetingUrl })
+        });
+
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.Ok(new { data = new { ticket.Id, ticket.Status, ticket.MeetingUrl, ticket.ResolvedAt } });
+    }
+
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     private static Guid? ActorId(ClaimsPrincipal principal) => Guid.TryParse(principal.FindFirstValue("sub"), out var id) ? id : null;
     private sealed record TenantStatusRequest(string Status, string? Reason);
@@ -402,4 +564,6 @@ public static class PlatformAdminEndpoints
     public sealed record UpdateFeaturesRequest(Dictionary<string, bool>? StandardOverrides, List<CustomFeatureAddon>? CustomAddons, string? Reason);
     public sealed record TenantFeaturePayload(Dictionary<string, bool>? StandardOverrides, List<CustomFeatureAddon>? CustomAddons);
     public sealed record CustomFeatureAddon(string Key, string Name, bool Enabled, string? Notes);
+    public sealed record CreateSupportTicketRequest(string Subject, string Description, string? Category, string? Priority);
+    public sealed record UpdatePlatformTicketRequest(string? Status, string? MeetingUrl, DateTimeOffset? MeetingScheduledAt, string? ResolutionNotes, string? InternalAdminNotes, string? Reason);
 }

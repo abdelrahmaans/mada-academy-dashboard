@@ -47,10 +47,27 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
     public DbSet<CompetitionTeamMember> CompetitionTeamMembers => Set<CompetitionTeamMember>();
     public DbSet<CompetitionAward> CompetitionAwards => Set<CompetitionAward>();
     public DbSet<SubscriptionFreezeRequest> SubscriptionFreezeRequests => Set<SubscriptionFreezeRequest>();
+    public DbSet<PlatformSupportTicket> PlatformSupportTickets => Set<PlatformSupportTicket>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<PlatformSupportTicket>(entity =>
+        {
+            entity.HasIndex(x => new { x.TenantId, x.Status });
+            entity.Property(x => x.Subject).HasMaxLength(250).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(4000).IsRequired();
+            entity.Property(x => x.Category).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Priority).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.RequesterName).HasMaxLength(160).IsRequired();
+            entity.Property(x => x.RequesterPhone).HasMaxLength(40).IsRequired();
+            entity.Property(x => x.RequesterRole).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.MeetingUrl).HasMaxLength(500);
+            entity.Property(x => x.ResolutionNotes).HasMaxLength(2000);
+            entity.Property(x => x.InternalAdminNotes).HasMaxLength(2000);
+        });
 
         modelBuilder.Entity<Tenant>(entity =>
         {

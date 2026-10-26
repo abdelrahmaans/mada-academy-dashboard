@@ -433,6 +433,60 @@ export type MyFeaturesResponse = {
   features: Record<string, boolean>;
 };
 
+export type CreateSupportTicketInput = {
+  tenantId?: string;
+  branchId?: string;
+  subject: string;
+  description: string;
+  category?: "TECHNICAL" | "MEETING_REQUEST" | "FEATURE_SUGGESTION" | "BILLING" | "GENERAL" | string;
+  priority?: "URGENT" | "HIGH" | "MEDIUM" | "LOW" | string;
+};
+
+export type TenantSupportTicketItem = {
+  id: string;
+  subject: string;
+  description: string;
+  category: string;
+  priority: string;
+  status: string;
+  meetingUrl: string | null;
+  meetingScheduledAt: string | null;
+  resolutionNotes: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+};
+
+export type PlatformSupportTicketItem = {
+  id: string;
+  tenantId: string;
+  tenantName: string;
+  tenantSlug: string;
+  requesterUserId: string;
+  requesterName: string;
+  requesterPhone: string;
+  requesterRole: string;
+  subject: string;
+  description: string;
+  category: string;
+  priority: string;
+  status: string;
+  meetingUrl: string | null;
+  meetingScheduledAt: string | null;
+  resolutionNotes: string | null;
+  internalAdminNotes: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+};
+
+export type UpdatePlatformTicketInput = {
+  status?: string;
+  meetingUrl?: string | null;
+  meetingScheduledAt?: string | null;
+  resolutionNotes?: string | null;
+  internalAdminNotes?: string | null;
+  reason?: string;
+};
+
 export type AttendanceRecordInput = {
   studentId: string;
   status: Exclude<AttendanceItem["status"], "UNMARKED">;
@@ -834,6 +888,26 @@ export const apiClient = {
       body: JSON.stringify(input),
     }),
   getMyFeatures: () => request<MyFeaturesResponse>("/academy/my-features"),
+  createSupportTicket: (input: CreateSupportTicketInput) =>
+    request<{ id: string; subject: string; category: string; priority: string; status: string; createdAt: string }>("/academy/support-tickets", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  listMySupportTickets: () => request<{ items: TenantSupportTicketItem[]; total: number }>("/academy/support-tickets"),
+  listPlatformSupportTickets: (params?: { status?: string; priority?: string; category?: string; tenantId?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.status && params.status !== "ALL") qs.set("status", params.status);
+    if (params?.priority && params.priority !== "ALL") qs.set("priority", params.priority);
+    if (params?.category && params.category !== "ALL") qs.set("category", params.category);
+    if (params?.tenantId) qs.set("tenantId", params.tenantId);
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    return request<{ items: PlatformSupportTicketItem[]; total: number }>(`/platform/support-tickets${suffix}`);
+  },
+  updatePlatformSupportTicket: (ticketId: string, input: UpdatePlatformTicketInput) =>
+    request<{ id: string; status: string; meetingUrl: string | null; resolvedAt: string | null }>(`/platform/support-tickets/${ticketId}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    }),
   bootstrapAcademy: (input: BootstrapAcademyInput) =>
     request<BootstrapAcademyResponse>("/platform/academies", {
       method: "POST",

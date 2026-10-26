@@ -30,6 +30,7 @@ import {
   type PlatformMember,
   type PlatformOverview,
   type PlatformPaymentRecord,
+  type PlatformSupportTicketItem,
 } from "@/lib/apiClient";
 import {
   type View,
@@ -115,10 +116,15 @@ export default function PlatformConsoleLive() {
   const [paymentNotes, setPaymentNotes] = useState("");
 
   // Tickets state
-  const [tickets] = useState<SupportTicket[]>([]);
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [ticketReloadKey, setTicketReloadKey] = useState(0);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [ticketReplyNote, setTicketReplyNote] = useState("");
   const [ticketStatusDraft, setTicketStatusDraft] = useState<SupportTicket["status"]>("inProgress");
+  const [ticketMeetingUrlDraft, setTicketMeetingUrlDraft] = useState("");
+  const [ticketMeetingDateDraft, setTicketMeetingDateDraft] = useState("");
+  const [ticketResolutionDraft, setTicketResolutionDraft] = useState("");
+  const [ticketUpdating, setTicketUpdating] = useState(false);
 
   // Show/Hide Role RBAC Guide
   const [rbacExpanded, setRbacExpanded] = useState(false);
@@ -224,9 +230,86 @@ export default function PlatformConsoleLive() {
     toast.error("إرسال الإشعارات متوقف حتى ربط مزود وقناة إرسال مسجلة.");
   };
 
-  const handleCreateNewTicket = (e: React.FormEvent) => {
+  const mapPlatformTicketToSupportTicket = (t: PlatformSupportTicketItem): SupportTicket => {
+    const categoryMap: Record<string, SupportTicket["category"]> = {
+      TECHNICAL: "مشكلة تقنية",
+      FEATURE_SUGGESTION: "اقتراح ميزة جديدة",
+      BILLING: "اشتراكات وخطط",
+      MEETING_REQUEST: "استفسار تشغيلي",
+      GENERAL: "استفسار تشغيلي",
+    };
+    const priorityMap: Record<string, SupportTicket["priority"]> = {
+      URGENT: "urgent",
+      HIGH: "high",
+      MEDIUM: "medium",
+      LOW: "low",
+    };
+    const statusMap: Record<string, SupportTicket["status"]> = {
+      NEW: "new",
+      IN_PROGRESS: "inProgress",
+      WAITING_CLIENT: "waiting",
+      RESOLVED: "resolved",
+      CLOSED: "resolved",
+    };
+
+    return {
+      id: t.id,
+      academyId: t.tenantId,
+      academyName: t.tenantName,
+      requesterName: t.requesterName,
+      requesterRole: t.requesterRole,
+      requesterPhone: t.requesterPhone,
+      subject: t.subject,
+      type: t.category === "FEATURE_SUGGESTION" ? "suggestion" : t.category === "BILLING" ? "billing" : "issue",
+      category: categoryMap[t.category] || "مشكلة تقنية",
+      priority: priorityMap[t.priority] || "medium",
+      status: statusMap[t.status] || "new",
+      createdAt: t.createdAt ? new Date(t.createdAt).toLocaleDateString("ar-EG") : "",
+      description: t.description,
+      internalNotes: t.internalAdminNotes || "",
+      meetingUrl: t.meetingUrl || "",
+      meetingScheduledAt: t.meetingScheduledAt || "",
+      resolutionNotes: t.resolutionNotes || "",
+    };
+  };
+
+  const handleCreateNewTicket = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.error("تسجيل تذاكر الدعم متوقف حتى ربطه بقاعدة البيانات وسجل تدقيق.");
+    if (!newTicketSubject.trim() || !newTicketDescription.trim()) {
+      toast.error("يرجى كتابة عنوان ووصف للتذكرة");
+      return;
+    }
+    const catMap: Record<string, "TECHNICAL" | "MEETING_REQUEST" | "FEATURE_SUGGESTION" | "BILLING" | "GENERAL"> = {
+      "مشكلة تقنية": "TECHNICAL",
+      "اشتراكات وخطط": "BILLING",
+      "اقتراح ميزة جديدة": "FEATURE_SUGGESTION",
+      "تفعيل فروع": "GENERAL",
+      "استفسار تشغيلي": "GENERAL",
+    };
+    const prioMap: Record<string, "URGENT" | "HIGH" | "MEDIUM" | "LOW"> = {
+      urgent: "URGENT",
+      high: "HIGH",
+      medium: "MEDIUM",
+      low: "LOW",
+    };
+
+    try {
+      await apiClient.createSupportTicket({
+        tenantId: newTicketAcademyId || selectedTenantId || undefined,
+        subject: newTicketSubject.trim(),
+        description: newTicketDescription.trim(),
+        category: catMap[newTicketCategory] || "TECHNICAL",
+        priority: prioMap[newTicketPriority] || "HIGH",
+      });
+      toast.success("تم تسجيل التذكرة بنجاح في سجل الدعم الخادمي");
+      setNewTicketModalOpen(false);
+      setNewTicketSubject("");
+      setNewTicketDescription("");
+      setTicketReloadKey((v) => v + 1);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "تعذر حفظ التذكرة";
+      toast.error(msg);
+    }
   };
 
   const filteredLeads = useMemo(() => {
@@ -335,6 +418,26 @@ export default function PlatformConsoleLive() {
       window.clearTimeout(delay);
     };
   }, [selectedTenantId, userSearch, view, refreshKey]);
+
+  useEffect(() => {
+    if (view !== "support") return;
+    let active = true;
+
+    apiClient
+      .listPlatformSupportTickets({ tenantId: selectedTenantId || undefined })
+      .then((res) => {
+        if (!active) return;
+        setTickets(res.items.map(mapPlatformTicketToSupportTicket));
+      })
+      .catch((err) => {
+        if (!active) return;
+        console.error("Failed to load platform support tickets", err);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [view, selectedTenantId, ticketReloadKey]);
 
   // Enriched academy metadata (integrating extras: plan, trial, allowedBranches)
   const enrichedAcademies = useMemo(() => {
@@ -508,9 +611,34 @@ export default function PlatformConsoleLive() {
   };
 
   // Ticket status update
-  const handleUpdateTicket = (e: React.FormEvent) => {
+  const handleUpdateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.error("تحديث التذاكر متوقف حتى ربطه بتخزين خادمي.");
+    if (!selectedTicket) return;
+    const statusMap: Record<string, "NEW" | "IN_PROGRESS" | "WAITING_CLIENT" | "RESOLVED"> = {
+      new: "NEW",
+      inProgress: "IN_PROGRESS",
+      waiting: "WAITING_CLIENT",
+      resolved: "RESOLVED",
+    };
+
+    setTicketUpdating(true);
+    try {
+      await apiClient.updatePlatformSupportTicket(selectedTicket.id, {
+        status: statusMap[ticketStatusDraft] || "IN_PROGRESS",
+        internalAdminNotes: ticketReplyNote.trim() || undefined,
+        meetingUrl: ticketMeetingUrlDraft.trim() || undefined,
+        meetingScheduledAt: ticketMeetingDateDraft ? new Date(ticketMeetingDateDraft).toISOString() : undefined,
+        resolutionNotes: ticketResolutionDraft.trim() || undefined,
+      });
+      toast.success("تم تحديث حالة التذكرة وملاحظاتها وموعد الاجتماع بنجاح");
+      setSelectedTicket(null);
+      setTicketReloadKey((v) => v + 1);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "تعذر تحديث التذكرة";
+      toast.error(msg);
+    } finally {
+      setTicketUpdating(false);
+    }
   };
 
   const title = NAV_ITEMS.find((item) => item.id === view)?.label ?? "إدارة المنصة";
@@ -949,6 +1077,9 @@ export default function PlatformConsoleLive() {
                 setSelectedTicket(ticket);
                 setTicketStatusDraft(ticket.status);
                 setTicketReplyNote(ticket.internalNotes || "");
+                setTicketMeetingUrlDraft(ticket.meetingUrl || "");
+                setTicketMeetingDateDraft(ticket.meetingScheduledAt || "");
+                setTicketResolutionDraft(ticket.resolutionNotes || "");
               }}
               selectedTenantId={selectedTenantId}
               setSelectedTenantId={setSelectedTenantId}
@@ -1069,6 +1200,13 @@ export default function PlatformConsoleLive() {
         setTicketStatusDraft={setTicketStatusDraft}
         ticketReplyNote={ticketReplyNote}
         setTicketReplyNote={setTicketReplyNote}
+        ticketMeetingUrlDraft={ticketMeetingUrlDraft}
+        setTicketMeetingUrlDraft={setTicketMeetingUrlDraft}
+        ticketMeetingDateDraft={ticketMeetingDateDraft}
+        setTicketMeetingDateDraft={setTicketMeetingDateDraft}
+        ticketResolutionDraft={ticketResolutionDraft}
+        setTicketResolutionDraft={setTicketResolutionDraft}
+        ticketUpdating={ticketUpdating}
         handleUpdateTicket={handleUpdateTicket}
         reasonModal={reasonModal}
         setReasonModal={setReasonModal}

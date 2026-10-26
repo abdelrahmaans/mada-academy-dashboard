@@ -492,6 +492,13 @@ export interface TicketDetailModalProps {
   setStatusDraft: (val: SupportTicket["status"]) => void;
   replyNote: string;
   setReplyNote: (val: string) => void;
+  meetingUrlDraft?: string;
+  setMeetingUrlDraft?: (val: string) => void;
+  meetingScheduledAtDraft?: string;
+  setMeetingScheduledAtDraft?: (val: string) => void;
+  resolutionNotesDraft?: string;
+  setResolutionNotesDraft?: (val: string) => void;
+  isUpdating?: boolean;
   onUpdateTicket: (e: React.FormEvent) => void;
 }
 
@@ -502,6 +509,13 @@ export function TicketDetailModal({
   setStatusDraft,
   replyNote,
   setReplyNote,
+  meetingUrlDraft = "",
+  setMeetingUrlDraft,
+  meetingScheduledAtDraft = "",
+  setMeetingScheduledAtDraft,
+  resolutionNotesDraft = "",
+  setResolutionNotesDraft,
+  isUpdating = false,
   onUpdateTicket,
 }: TicketDetailModalProps) {
   if (!ticket) return null;
@@ -515,7 +529,7 @@ export function TicketDetailModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="pc-ticket-dialog" dir="rtl">
+      <div className="pc-ticket-dialog" dir="rtl" style={{ maxWidth: "580px" }}>
         <div className="pc-ticket-dialog-head">
           <div>
             <h3>{ticket.subject}</h3>
@@ -551,10 +565,23 @@ export function TicketDetailModal({
             {ticket.category} · <strong>الأولوية: </strong>
             {TICKET_PRIORITY_LABELS[ticket.priority]?.label || ticket.priority}
           </p>
-          <p style={{ margin: "0", color: "#334155" }}>
-            <strong>تفاصيل المشكلة: </strong>
+          <p style={{ margin: "0 0 6px", color: "#334155" }}>
+            <strong>تفاصيل المشكلة / الطلب: </strong>
             {ticket.description}
           </p>
+          {ticket.meetingUrl && (
+            <p style={{ margin: "6px 0 0", padding: "8px", background: "#f0fdfa", borderRadius: "8px", border: "1px solid #ccfbf1" }}>
+              <strong>🔗 رابط الاجتماع الحالي: </strong>
+              <a href={ticket.meetingUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#0d9488", textDecoration: "underline", fontWeight: 700 }}>
+                {ticket.meetingUrl}
+              </a>
+              {ticket.meetingScheduledAt && (
+                <span style={{ display: "block", color: "#115e59", fontSize: "11px", marginTop: "4px" }}>
+                  الموعد: {new Date(ticket.meetingScheduledAt).toLocaleString("ar-EG")}
+                </span>
+              )}
+            </p>
+          )}
         </div>
 
         <form onSubmit={onUpdateTicket} style={{ display: "grid", gap: "12px" }}>
@@ -573,22 +600,74 @@ export function TicketDetailModal({
                 fontSize: "12px",
               }}
             >
-              <option value="new">تذكرة جديدة</option>
-              <option value="inProgress">قيد المتابعة والحل</option>
-              <option value="waiting">بانتظار رد العميل</option>
-              <option value="resolved">تم الحل وإغلاق التذكرة</option>
+              <option value="new">تذكرة جديدة (NEW)</option>
+              <option value="inProgress">قيد المتابعة والحل (IN_PROGRESS)</option>
+              <option value="waiting">بانتظار رد العميل (WAITING_CLIENT)</option>
+              <option value="resolved">تم الحل وإغلاق التذكرة (RESOLVED)</option>
             </select>
           </label>
 
+          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "10px" }}>
+            <label style={{ display: "grid", gap: "6px", fontSize: "12px" }}>
+              <span>رابط الاجتماع المباشر (Google Meet / Zoom)</span>
+              <input
+                type="url"
+                value={meetingUrlDraft}
+                onChange={(e) => setMeetingUrlDraft?.(e.target.value)}
+                placeholder="https://meet.google.com/xyz..."
+                style={{
+                  padding: "8px 10px",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                  font: "inherit",
+                  fontSize: "12px",
+                }}
+              />
+            </label>
+
+            <label style={{ display: "grid", gap: "6px", fontSize: "12px" }}>
+              <span>موعد الاجتماع</span>
+              <input
+                type="datetime-local"
+                value={meetingScheduledAtDraft}
+                onChange={(e) => setMeetingScheduledAtDraft?.(e.target.value)}
+                style={{
+                  padding: "8px 10px",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                  font: "inherit",
+                  fontSize: "12px",
+                }}
+              />
+            </label>
+          </div>
+
           <label style={{ display: "grid", gap: "6px", fontSize: "12px" }}>
-            <span>ملاحظات المتابعة والرد الداخلي</span>
+            <span>ملاحظات الحل للأكاديمية (تظهر للمستخدم)</span>
             <textarea
-              rows={3}
+              rows={2}
+              value={resolutionNotesDraft}
+              onChange={(e) => setResolutionNotesDraft?.(e.target.value)}
+              placeholder="اكتب توضيح الحل أو التعليمات التي ستظهر لإدارة الأكاديمية..."
+              style={{
+                padding: "8px 10px",
+                borderRadius: "8px",
+                border: "1px solid #cbd5e1",
+                font: "inherit",
+                fontSize: "12px",
+              }}
+            />
+          </label>
+
+          <label style={{ display: "grid", gap: "6px", fontSize: "12px" }}>
+            <span>ملاحظات المنصة الداخلية (سري - للمشرفين فقط)</span>
+            <textarea
+              rows={2}
               value={replyNote}
               onChange={(e) => setReplyNote(e.target.value)}
-              placeholder="اكتب ردك وملاحظات المتابعة مع مسؤول الأكاديمية..."
+              placeholder="اكتب ملاحظات الفريق الداخلي والمتابعة..."
               style={{
-                padding: "10px",
+                padding: "8px 10px",
                 borderRadius: "8px",
                 border: "1px solid #cbd5e1",
                 font: "inherit",
@@ -602,15 +681,17 @@ export function TicketDetailModal({
               type="button"
               className="pc-live-link"
               onClick={onClose}
+              disabled={isUpdating}
             >
               إلغاء
             </button>
             <button
               type="submit"
               className="pc-live-primary"
+              disabled={isUpdating}
               style={{ padding: "8px 16px" }}
             >
-              حفظ التحديث والرد
+              {isUpdating ? "جارٍ الحفظ..." : "حفظ التحديث والرد"}
             </button>
           </div>
         </form>
@@ -1806,6 +1887,13 @@ export interface PlatformConsoleModalsContainerProps {
   setTicketStatusDraft: (val: SupportTicket["status"]) => void;
   ticketReplyNote: string;
   setTicketReplyNote: (val: string) => void;
+  ticketMeetingUrlDraft?: string;
+  setTicketMeetingUrlDraft?: (val: string) => void;
+  ticketMeetingDateDraft?: string;
+  setTicketMeetingDateDraft?: (val: string) => void;
+  ticketResolutionDraft?: string;
+  setTicketResolutionDraft?: (val: string) => void;
+  ticketUpdating?: boolean;
   handleUpdateTicket: (e: React.FormEvent) => void;
   // Modal 5
   reasonModal: ReasonModalState | null;
@@ -1909,6 +1997,13 @@ export function PlatformConsoleModals(props: PlatformConsoleModalsContainerProps
         setStatusDraft={props.setTicketStatusDraft}
         replyNote={props.ticketReplyNote}
         setReplyNote={props.setTicketReplyNote}
+        meetingUrlDraft={props.ticketMeetingUrlDraft}
+        setMeetingUrlDraft={props.setTicketMeetingUrlDraft}
+        meetingScheduledAtDraft={props.ticketMeetingDateDraft}
+        setMeetingScheduledAtDraft={props.setTicketMeetingDateDraft}
+        resolutionNotesDraft={props.ticketResolutionDraft}
+        setResolutionNotesDraft={props.setTicketResolutionDraft}
+        isUpdating={props.ticketUpdating}
         onUpdateTicket={props.handleUpdateTicket}
       />
 

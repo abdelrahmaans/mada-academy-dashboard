@@ -60,6 +60,9 @@ export interface SupportTicket {
   createdAt: string;
   description: string;
   internalNotes?: string;
+  meetingUrl?: string;
+  meetingScheduledAt?: string;
+  resolutionNotes?: string;
 }
 
 export interface ReasonModalState {

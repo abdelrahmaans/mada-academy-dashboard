@@ -68,21 +68,20 @@ export function PlatformConsoleSupportTab({
       <section className="pc-live-card">
         <header>
           <div>
-            <h2>تذاكر الدعم الفني والاقتراحات</h2>
-            <p>سجل التذاكر متوقف حتى ربطه بقاعدة البيانات؛ إدارة أعضاء الأكاديمية أدناه تستخدم API الخادم.</p>
+            <h2>تذاكر الدعم الفني والاجتماعات والاقتراحات</h2>
+            <p>سجل مباشر من قاعدة البيانات لمتابعة بلاغات الأكاديميات وطلبات الاجتماعات وجدولتها.</p>
           </div>
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
             <button
               type="button"
               className="pc-live-primary"
               onClick={onOpenNewTicketModal}
-              disabled
               style={{ padding: "6px 14px", fontSize: "12px", gap: "6px" }}
             >
               <Plus size={14} /> تسجيل تذكرة / اقتراح جديد
             </button>
-            <span className="pc-live-boundary">
-              <LifeBuoy size={14} /> سجل التذاكر غير متصل
+            <span className="pc-live-badge">
+              <i /> تذاكر الدعم والاجتماعات متصلة
             </span>
           </div>
         </header>
@@ -98,7 +97,6 @@ export function PlatformConsoleSupportTab({
             <button
               key={tab.id}
               type="button"
-              disabled
               className={`pc-filter-tab ${ticketFilter === tab.id ? "active" : ""}`}
               onClick={() => setTicketFilter(tab.id as typeof ticketFilter)}
             >
@@ -123,7 +121,7 @@ export function PlatformConsoleSupportTab({
                 <div className="pc-ticket-main">
                   <strong>{ticket.subject}</strong>
                   <small>
-                    {ticket.id} · {ticket.category} · {ticket.createdAt}
+                    {ticket.id.slice(0, 8)} · {ticket.category} · {ticket.createdAt}
                   </small>
                 </div>
                 <div className="pc-ticket-academy">
@@ -132,6 +130,11 @@ export function PlatformConsoleSupportTab({
                     {ticket.requesterName} ({ticket.requesterPhone})
                   </small>
                 </div>
+                {ticket.meetingUrl && (
+                  <span style={{ fontSize: "11px", color: "#0d9488", background: "#f0fdfa", padding: "3px 8px", borderRadius: "6px", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    📹 موعد اجتماع محدد
+                  </span>
+                )}
                 <span className={`pc-ticket-status ${status.class}`}>
                   {status.label}
                 </span>
@@ -146,7 +149,7 @@ export function PlatformConsoleSupportTab({
             );
           })}
           {filteredTickets.length === 0 && (
-            <p className="pc-live-empty" role="status">لا توجد بيانات تذاكر من مصدر خادمي.</p>
+            <p className="pc-live-empty" role="status">لا توجد تذاكر دعم مسجلة تطابق التصفية الحالية.</p>
           )}
         </div>
       </section>

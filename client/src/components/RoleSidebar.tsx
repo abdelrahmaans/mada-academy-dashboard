@@ -16,6 +16,7 @@ import {
   CircleHelp,
   CreditCard,
   GraduationCap,
+  Headphones,
   Home,
   KeyRound,
   Layers3,
@@ -41,6 +42,7 @@ import { getAuthorizedNavigation, getRoleDefinition } from "@/lib/roleNavigation
 import type { RoleCode } from "@/contexts/RoleScopeContext";
 import SessionLogoutButton from "./SessionLogoutButton";
 import SettingsModal from "./SettingsModal";
+import { ContactSupportModal } from "./ContactSupportModal";
 
 const ICON_BY_PATH: Record<string, ComponentType<LucideProps>> = {
   "/": LayoutDashboard,
@@ -145,6 +147,7 @@ export default function RoleSidebar({
   const [location, navigate] = useLocation();
   const { me } = useAuth();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [supportModalOpen, setSupportModalOpen] = useState(false);
 
   // Extract user's genuine role from auth token if available to prevent role hijacking
   const userRoleCode = me?.role ? (me.role.replace(/_.*$/, "") as RoleCode) : undefined;
@@ -360,6 +363,19 @@ export default function RoleSidebar({
         <button
           type="button"
           className="nav-link"
+          style={{ color: "#0d9488", fontWeight: 700 }}
+          onClick={() => {
+            setSupportModalOpen(true);
+            onCloseMobile?.();
+          }}
+          aria-label="فتح الدعم الفني وطلب مقابلة"
+        >
+          <Headphones size={19} />
+          <span>الدعم والاجتماعات</span>
+        </button>
+        <button
+          type="button"
+          className="nav-link"
           onClick={() => {
             setSettingsOpen(true);
             onCloseMobile?.();
@@ -377,6 +393,7 @@ export default function RoleSidebar({
       </div>
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <ContactSupportModal open={supportModalOpen} onClose={() => setSupportModalOpen(false)} />
     </aside>
   );
 }
