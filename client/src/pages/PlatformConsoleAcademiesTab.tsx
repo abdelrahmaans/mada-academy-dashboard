@@ -19,6 +19,7 @@ export interface PlatformConsoleAcademiesTabProps {
   busyKey: string | null;
   onInspectAcademy: (academy: PlatformAcademy) => void;
   onOpenPlanUpgradeModal: (academy: PlatformAcademy) => void;
+  onOpenFeaturesModal: (academy: PlatformAcademy) => void;
   onExtendTrial: (academy: PlatformAcademy) => void;
   onPaymentReminder: (academy: PlatformAcademy) => void;
   onRequestTenantStatusChange: (academy: PlatformAcademy) => void;
@@ -41,6 +42,7 @@ export function PlatformConsoleAcademiesTab({
   busyKey,
   onInspectAcademy,
   onOpenPlanUpgradeModal,
+  onOpenFeaturesModal,
   onExtendTrial,
   onPaymentReminder,
   onRequestTenantStatusChange,
@@ -175,6 +177,14 @@ export function PlatformConsoleAcademiesTab({
                       title="متوقف حتى اعتماد عقد الفوترة وتسجيل أثر التغيير"
                     >
                       تعديل الباقة
+                    </button>
+                    <button
+                      type="button"
+                      style={{ color: "#4f46e5", borderColor: "#c7d2fe", background: "#eef2ff" }}
+                      onClick={() => onOpenFeaturesModal(row)}
+                      title="إدارة ميزات الأكاديمية والـ Feature Flags والتخصيص"
+                    >
+                      ميزات الأكاديمية
                     </button>
                     {row.status === "TRIAL" && (
                       <button

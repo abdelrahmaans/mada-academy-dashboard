@@ -13,6 +13,7 @@ public sealed class Tenant : EntityBase
     public required string Slug { get; set; }
     public string Status { get; set; } = "ACTIVE";
     public string PlanCode { get; set; } = "STARTER";
+    public string? FeatureOverridesJson { get; set; }
     public ICollection<Branch> Branches { get; set; } = new List<Branch>();
     public ICollection<Membership> Memberships { get; set; } = new List<Membership>();
 }

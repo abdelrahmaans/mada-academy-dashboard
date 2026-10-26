@@ -59,6 +59,7 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
             entity.Property(x => x.Slug).HasMaxLength(80).IsRequired();
             entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
             entity.Property(x => x.PlanCode).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.FeatureOverridesJson).HasMaxLength(4000);
         });
 
         modelBuilder.Entity<Branch>(entity =>

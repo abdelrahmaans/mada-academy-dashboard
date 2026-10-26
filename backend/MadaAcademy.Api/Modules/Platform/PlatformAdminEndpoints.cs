@@ -16,11 +16,15 @@ public static class PlatformAdminEndpoints
         api.MapGet("/roles", () => GetPlatformRoles());
         api.MapPatch("/academies/{tenantId:guid}/status", ChangeTenantStatusAsync);
         api.MapPatch("/academies/{tenantId:guid}/plan", ChangeTenantPlanAsync);
+        api.MapGet("/academies/{tenantId:guid}/features", GetAcademyFeaturesAsync);
+        api.MapPatch("/academies/{tenantId:guid}/features", UpdateAcademyFeaturesAsync);
         api.MapGet("/academies/{tenantId:guid}/members", GetMembersAsync);
         api.MapPatch("/academies/{tenantId:guid}/members/{membershipId:guid}/status", ChangeMemberStatusAsync);
         api.MapPost("/academies/{tenantId:guid}/users/{userId:guid}/sessions/revoke", RevokeSessionsAsync);
         api.MapGet("/academies/{tenantId:guid}/activity", GetAcademyActivityAsync);
         api.MapGet("/activity", GetPlatformActivityAsync);
+
+        endpoints.MapGet("/api/v1/academy/my-features", GetMyFeaturesAsync).RequireAuthorization();
         return endpoints;
     }
 
@@ -243,9 +247,159 @@ public static class PlatformAdminEndpoints
         return Results.Ok(new { data = new { tenantId = tenant.Id, planCode = tenant.PlanCode, allowedBranches } });
     }
 
+    private static async Task<IResult> GetAcademyFeaturesAsync(Guid tenantId, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        var tenant = await db.Tenants.AsNoTracking().SingleOrDefaultAsync(x => x.Id == tenantId, cancellationToken);
+        if (tenant is null) return Results.NotFound(new { error = new { code = "TENANT_NOT_FOUND", message = "Academy was not found." } });
+
+        var defaultFeatures = DefaultPlanFeatures(tenant.PlanCode);
+        var effective = new Dictionary<string, bool>(defaultFeatures);
+        Dictionary<string, bool> standardOverrides = [];
+        List<CustomFeatureAddon> customAddons = [];
+
+        if (!string.IsNullOrWhiteSpace(tenant.FeatureOverridesJson))
+        {
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<TenantFeaturePayload>(tenant.FeatureOverridesJson, JsonOptions);
+                if (parsed?.StandardOverrides is not null)
+                {
+                    foreach (var (k, v) in parsed.StandardOverrides)
+                    {
+                        standardOverrides[k] = v;
+                        effective[k] = v;
+                    }
+                }
+                if (parsed?.CustomAddons is not null)
+                {
+                    customAddons = parsed.CustomAddons;
+                    foreach (var addon in customAddons)
+                    {
+                        effective[addon.Key] = addon.Enabled;
+                    }
+                }
+            }
+            catch { /* Ignore deserialization error */ }
+        }
+
+        return Results.Ok(new { data = new
+        {
+            tenantId = tenant.Id,
+            planCode = tenant.PlanCode,
+            effectiveFeatures = effective,
+            standardOverrides,
+            customAddons
+        }});
+    }
+
+    private static async Task<IResult> UpdateAcademyFeaturesAsync(Guid tenantId, UpdateFeaturesRequest request, MadaDbContext db, ClaimsPrincipal principal, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Trim().Length < 4)
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["reason"] = ["A reason of at least 4 characters is required for updating features."] });
+
+        var tenant = await db.Tenants.SingleOrDefaultAsync(x => x.Id == tenantId, cancellationToken);
+        if (tenant is null) return Results.NotFound(new { error = new { code = "TENANT_NOT_FOUND", message = "Academy was not found." } });
+
+        var payload = new TenantFeaturePayload(request.StandardOverrides ?? [], request.CustomAddons ?? []);
+        var json = JsonSerializer.Serialize(payload, JsonOptions);
+        var previousJson = tenant.FeatureOverridesJson;
+        tenant.FeatureOverridesJson = json;
+
+        db.AuditEvents.Add(new AuditEvent
+        {
+            ActorUserId = ActorId(principal),
+            TenantId = tenant.Id,
+            Action = "PLATFORM_TENANT_FEATURES_CHANGED",
+            TargetType = "TENANT",
+            TargetId = tenant.Id.ToString(),
+            Reason = request.Reason.Trim(),
+            MetadataJson = JsonSerializer.Serialize(new { previous = previousJson, next = json })
+        });
+
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.Ok(new { data = new { tenantId = tenant.Id, planCode = tenant.PlanCode, updated = true } });
+    }
+
+    private static async Task<IResult> GetMyFeaturesAsync(ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(user.FindFirstValue("tenantId"), out var tenantId))
+            return Results.Problem(statusCode: 403, title: "TENANT_SCOPE_REQUIRED");
+
+        var tenant = await db.Tenants.AsNoTracking().SingleOrDefaultAsync(x => x.Id == tenantId, cancellationToken);
+        if (tenant is null) return Results.NotFound(new { error = new { code = "TENANT_NOT_FOUND" } });
+
+        var effective = new Dictionary<string, bool>(DefaultPlanFeatures(tenant.PlanCode));
+        if (!string.IsNullOrWhiteSpace(tenant.FeatureOverridesJson))
+        {
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<TenantFeaturePayload>(tenant.FeatureOverridesJson, JsonOptions);
+                if (parsed?.StandardOverrides is not null)
+                {
+                    foreach (var (k, v) in parsed.StandardOverrides) effective[k] = v;
+                }
+                if (parsed?.CustomAddons is not null)
+                {
+                    foreach (var addon in parsed.CustomAddons) effective[addon.Key] = addon.Enabled;
+                }
+            }
+            catch { }
+        }
+
+        return Results.Ok(new { data = new { tenantId = tenant.Id, planCode = tenant.PlanCode, features = effective } });
+    }
+
+    public static Dictionary<string, bool> DefaultPlanFeatures(string planCode)
+    {
+        var normalized = planCode.ToUpperInvariant();
+        return normalized switch
+        {
+            "STARTER" => new Dictionary<string, bool>
+            {
+                ["gamification_enabled"] = true,
+                ["guardian_portal"] = true,
+                ["advanced_finance"] = false,
+                ["supervision_quality"] = false,
+                ["custom_whatsapp_notifications"] = false,
+                ["beta_features_enabled"] = false,
+            },
+            "GROWTH" => new Dictionary<string, bool>
+            {
+                ["gamification_enabled"] = true,
+                ["guardian_portal"] = true,
+                ["advanced_finance"] = true,
+                ["supervision_quality"] = true,
+                ["custom_whatsapp_notifications"] = false,
+                ["beta_features_enabled"] = false,
+            },
+            "ENTERPRISE" or "SCALE" => new Dictionary<string, bool>
+            {
+                ["gamification_enabled"] = true,
+                ["guardian_portal"] = true,
+                ["advanced_finance"] = true,
+                ["supervision_quality"] = true,
+                ["custom_whatsapp_notifications"] = true,
+                ["beta_features_enabled"] = false,
+            },
+            _ => new Dictionary<string, bool>
+            {
+                ["gamification_enabled"] = true,
+                ["guardian_portal"] = true,
+                ["advanced_finance"] = false,
+                ["supervision_quality"] = false,
+                ["custom_whatsapp_notifications"] = false,
+                ["beta_features_enabled"] = false,
+            }
+        };
+    }
+
+    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     private static Guid? ActorId(ClaimsPrincipal principal) => Guid.TryParse(principal.FindFirstValue("sub"), out var id) ? id : null;
     private sealed record TenantStatusRequest(string Status, string? Reason);
     private sealed record TenantPlanRequest(string PlanCode, int? BranchesLimit, string? Reason);
     private sealed record MemberStatusRequest(string Status, string? Reason);
     private sealed record SupportReasonRequest(string? Reason);
+    public sealed record UpdateFeaturesRequest(Dictionary<string, bool>? StandardOverrides, List<CustomFeatureAddon>? CustomAddons, string? Reason);
+    public sealed record TenantFeaturePayload(Dictionary<string, bool>? StandardOverrides, List<CustomFeatureAddon>? CustomAddons);
+    public sealed record CustomFeatureAddon(string Key, string Name, bool Enabled, string? Notes);
 }

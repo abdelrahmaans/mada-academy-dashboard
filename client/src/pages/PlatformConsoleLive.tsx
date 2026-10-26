@@ -46,6 +46,7 @@ import { PlatformConsoleBillingTab } from "./PlatformConsoleBillingTab";
 import { PlatformConsoleSupportTab } from "./PlatformConsoleSupportTab";
 import { PlatformConsoleAcademiesTab } from "./PlatformConsoleAcademiesTab";
 import { PlatformConsoleOverviewTab } from "./PlatformConsoleOverviewTab";
+import { AcademyFeaturesModal } from "@/components/platform/AcademyFeaturesModal";
 import "./PlatformConsoleLive.css";
 
 // ── Types, constants, seed data, and formatters imported from PlatformConsoleTypes.ts ──
@@ -80,6 +81,9 @@ export default function PlatformConsoleLive() {
   const [selectedPlanCode, setSelectedPlanCode] = useState<"starter" | "growth" | "enterprise">("growth");
   const [customBranchLimit, setCustomBranchLimit] = useState(3);
   const [planUpgradeReason, setPlanUpgradeReason] = useState("");
+
+  // Feature Flags Modal
+  const [featuresModalAcademy, setFeaturesModalAcademy] = useState<PlatformAcademy | null>(null);
 
   // Diagnostics & Inspection Modal
   const [inspectionAcademy, setInspectionAcademy] = useState<PlatformAcademy | null>(null);
@@ -889,6 +893,7 @@ export default function PlatformConsoleLive() {
               busyKey={busyKey}
               onInspectAcademy={(academy) => setInspectionAcademy(academy)}
               onOpenPlanUpgradeModal={(academy) => openPlanUpgradeModal(academy)}
+              onOpenFeaturesModal={(academy) => setFeaturesModalAcademy(academy)}
               onExtendTrial={(academy) => handleExtendTrial(academy)}
               onPaymentReminder={(academy) => setPaymentReminderTenant(academy)}
               onRequestTenantStatusChange={(academy) => requestTenantStatusChange(academy)}
@@ -1117,6 +1122,13 @@ export default function PlatformConsoleLive() {
         handleConvertLeadSubmit={handleConvertLeadSubmit}
         handleSendCredentialsWhatsApp={handleSendCredentialsWhatsApp}
       />
+      {featuresModalAcademy && (
+        <AcademyFeaturesModal
+          academy={featuresModalAcademy}
+          onClose={() => setFeaturesModalAcademy(null)}
+          onSaved={() => setRefreshKey((k) => k + 1)}
+        />
+      )}
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </RoleDashboardShell>
   );

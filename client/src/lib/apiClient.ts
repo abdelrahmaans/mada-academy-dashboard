@@ -406,6 +406,33 @@ export type CashierShiftsHistoryResponse = {
   total: number;
 };
 
+export type CustomFeatureAddon = {
+  key: string;
+  name: string;
+  enabled: boolean;
+  notes?: string | null;
+};
+
+export type AcademyFeaturesResponse = {
+  tenantId: string;
+  planCode: string;
+  effectiveFeatures: Record<string, boolean>;
+  standardOverrides: Record<string, boolean>;
+  customAddons: CustomFeatureAddon[];
+};
+
+export type UpdateAcademyFeaturesInput = {
+  standardOverrides?: Record<string, boolean>;
+  customAddons?: CustomFeatureAddon[];
+  reason: string;
+};
+
+export type MyFeaturesResponse = {
+  tenantId: string;
+  planCode: string;
+  features: Record<string, boolean>;
+};
+
 export type AttendanceRecordInput = {
   studentId: string;
   status: Exclude<AttendanceItem["status"], "UNMARKED">;
@@ -800,6 +827,13 @@ export const apiClient = {
   revokePlatformUserSessions: (tenantId: string, userId: string, reason: string) => request<{ userId: string; tenantId: string; revokedCount: number }>(`/platform/academies/${tenantId}/users/${userId}/sessions/revoke`, { method: "POST", body: JSON.stringify({ reason }) }),
   platformAcademyActivity: (tenantId: string) => request<PlatformActivityResponse>(`/platform/academies/${tenantId}/activity`),
   platformActivity: () => request<PlatformActivityResponse>("/platform/activity"),
+  getAcademyFeatures: (tenantId: string) => request<AcademyFeaturesResponse>(`/platform/academies/${tenantId}/features`),
+  updateAcademyFeatures: (tenantId: string, input: UpdateAcademyFeaturesInput) =>
+    request<{ tenantId: string; planCode: string; updated: boolean }>(`/platform/academies/${tenantId}/features`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    }),
+  getMyFeatures: () => request<MyFeaturesResponse>("/academy/my-features"),
   bootstrapAcademy: (input: BootstrapAcademyInput) =>
     request<BootstrapAcademyResponse>("/platform/academies", {
       method: "POST",
