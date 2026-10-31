@@ -130,8 +130,3 @@ Open implementation blockers and product debt:
 - The frontend suite and Angular Finance/R08/R09 suites provide the accepted local component, mutation, scope, and browser coverage documented in [ANGULAR_PARITY_MATRIX.md](../ANGULAR_PARITY_MATRIX.md); broad parity beyond the listed routes is intentionally not claimed.
 - Production storage, backup/restore, and deployed staging evidence remain separate from local frontend acceptance.
 - PostgreSQL coverage is separate from the InMemory E2E path. CI backend integration coverage is required for persistence-specific regressions; local sandbox runs without the .NET SDK cannot reproduce those tests.
-
-
-## Backend-only rebuild stream — 31 October 2026
-
-A dedicated backend-only workstream is now defined. It preserves the current `backend/MadaAcademy.Api/` runtime as the functional baseline and introduces a documented target scaffold under `backend/rebuild-scaffold/`. The living plan is `.agent/BACKEND_PLAN.md`; every backend agent must append work to `.agent/BACKEND_AGENT_LOG.md` and follow `.agent/BACKEND_WORKING_RULES.md`. The next implementation task is Phase 0 behavior inventory across endpoints, entities, statuses, permissions, contracts, migrations, and tests. Frontend and mobile are explicitly deferred for this stream.

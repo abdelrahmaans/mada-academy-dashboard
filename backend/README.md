@@ -42,10 +42,3 @@ pnpm backend:test
 ```
 
 Use a disposable PostgreSQL database for PostgreSQL integration tests. Do not point tests at production or a shared academy database, and do not commit `.env` files, secrets, tokens, OTPs, payment evidence, or database dumps.
-
-
-## Rebuild-only planning
-
-The current runtime remains under `MadaAcademy.Api/`. The backend-only rebuild plan is maintained in [`../.agent/BACKEND_PLAN.md`](../.agent/BACKEND_PLAN.md), with agent history in [`../.agent/BACKEND_AGENT_LOG.md`](../.agent/BACKEND_AGENT_LOG.md). The target project boundaries are documented in [`TARGET_STRUCTURE.md`](TARGET_STRUCTURE.md), and the detailed folder map is in [`FOLDER_STRUCTURE.md`](FOLDER_STRUCTURE.md).
-
-`rebuild-scaffold/` is a planning scaffold for the target .NET solution. It must not be treated as a second production runtime until Phase 0 behavior inventory and the migration decision are complete.
