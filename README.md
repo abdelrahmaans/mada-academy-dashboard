@@ -118,3 +118,10 @@ pnpm build
 
 ## 📚 التوثيق المفصل
 للاطلاع على أدلة العمليات والـ API والـ Runbooks المفصلة، تفضل بزيارة [**مركز التوثيق الفني (docs/README.md)**](docs/README.md).
+
+
+## Backend-only rebuild workstream
+
+The current active rebuilding plan is backend-only and uses .NET as the first implementation stream. Start with [`BACKEND_START_HERE.md`](BACKEND_START_HERE.md), then follow the living plan in [`.agent/BACKEND_PLAN.md`](.agent/BACKEND_PLAN.md). The durable agent history is [`.agent/BACKEND_AGENT_LOG.md`](.agent/BACKEND_AGENT_LOG.md), and the target .NET structure is documented in [`backend/TARGET_STRUCTURE.md`](backend/TARGET_STRUCTURE.md).
+
+Frontend and mobile work are intentionally deferred until the backend contracts, domain rules, authorization model, persistence model, and acceptance evidence are stable.
