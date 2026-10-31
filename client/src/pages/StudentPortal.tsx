@@ -438,6 +438,10 @@ export default function StudentPortal() {
               </div>
             </div>
 
+
+            {/* Live Group Leaderboard & Gamification Podium */}
+            <GroupLeaderboardCard currentStudentId={linkedStudentId} />
+
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "20px" }}>
               {/* Progress Card Component */}
               <StudentProgressCard
@@ -551,6 +555,7 @@ export default function StudentPortal() {
         {tab === "progress" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             <GroupLeaderboardCard currentStudentId={linkedStudentId} />
+
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "20px" }}>
               <StudentProgressCard

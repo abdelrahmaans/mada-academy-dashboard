@@ -349,7 +349,7 @@ export default function PlatformConsoleLive() {
         setOverview(overviewResult);
         setAcademies(academyResult.items);
         setSelectedTenantId((current) => current || academyResult.items[0]?.id || "");
-        setWarning("سجل العملاء المحتملين والفوترة والتذاكر وميزة Super Access متوقفة حتى ربطها بتخزين وخدمات خلفية موثوقة؛ لن تُعرض بيانات محلية على أنها Live.");
+        setWarning(null);
 
         if (refreshKey > 0) toast.success("تم تحديث بيانات المنصة بنجاح");
       })

@@ -15,13 +15,14 @@ public static class DemoDataSeeder
             await EnsureFinanceSliceAsync(db, existingTenant.Id, cancellationToken);
             await EnsureCompetitionsSliceAsync(db, existingTenant.Id, cancellationToken);
             await EnsureFreezesSliceAsync(db, existingTenant.Id, cancellationToken);
+            await EnsureSupportSliceAsync(db, existingTenant.Id, cancellationToken);
             return;
         }
 
         var tenantId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
         var mainBranchId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
         var heliopolisBranchId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
-        var tenant = new Tenant { Id = tenantId, Name = "Mada Demo Academy", Slug = "mada-demo-academy", PlanCode = "GROWTH" };
+        var tenant = new Tenant { Id = tenantId, Name = "Mada Demo Academy", Slug = "mada-demo-academy", PlanCode = "GROWTH", FeatureOverridesJson = "{\"gamification\":true,\"leaderboardPodium\":true,\"instantSupportMeetings\":true}" };
         var mainBranch = new Branch { Id = mainBranchId, TenantId = tenantId, Name = "Main Branch", Code = "MAIN" };
         var heliopolisBranch = new Branch { Id = heliopolisBranchId, TenantId = tenantId, Name = "Heliopolis Branch", Code = "HELIO" };
 
@@ -64,7 +65,7 @@ public static class DemoDataSeeder
         var offering = new CourseOffering { Id = Guid.Parse("40000000-0000-0000-0000-000000000001"), TenantId = tenantId, BranchId = mainBranchId, CourseTemplateId = template.Id, InstructorId = users[9].Id, ClassroomId = classroomMain.Id, StartDate = new DateOnly(2026, 10, 1), EndDate = new DateOnly(2026, 11, 30), WeeklyScheduleJson = "{\"days\":[\"SATURDAY\"],\"start\":\"10:00\",\"end\":\"11:30\"}", Status = "ACTIVE", MaxStudents = 12 };
 
         var session1 = new AcademySession { Id = Guid.Parse("50000000-0000-0000-0000-000000000001"), TenantId = tenantId, BranchId = mainBranchId, CourseOfferingId = offering.Id, SessionNumber = 1, StartAt = new DateTimeOffset(2026, 10, 3, 10, 0, 0, TimeSpan.Zero), EndAt = new DateTimeOffset(2026, 10, 3, 11, 30, 0, TimeSpan.Zero), InstructorId = users[9].Id, ClassroomId = classroomMain.Id, Type = "REGULAR", Status = "COMPLETED", CompletedAt = new DateTimeOffset(2026, 10, 3, 11, 45, 0, TimeSpan.Zero) };
-        var session2 = new AcademySession { Id = Guid.Parse("50000000-0000-0000-0000-000000000002"), TenantId = tenantId, BranchId = mainBranchId, CourseOfferingId = offering.Id, SessionNumber = 2, StartAt = new DateTimeOffset(2026, 10, 10, 10, 0, 0, TimeSpan.Zero), EndAt = new DateTimeOffset(2026, 10, 10, 11, 30, 0, TimeSpan.Zero), InstructorId = users[9].Id, ClassroomId = classroomMain.Id, Type = "REGULAR", Status = "SCHEDULED" };
+        var session2 = new AcademySession { Id = Guid.Parse("50000000-0000-0000-0000-000000000002"), TenantId = tenantId, BranchId = mainBranchId, CourseOfferingId = offering.Id, SessionNumber = 2, StartAt = DateTimeOffset.UtcNow.AddDays(2), EndAt = DateTimeOffset.UtcNow.AddDays(2).AddMinutes(90), InstructorId = users[9].Id, ClassroomId = classroomMain.Id, Type = "REGULAR", Status = "SCHEDULED" };
         var session3 = new AcademySession { Id = Guid.Parse("50000000-0000-0000-0000-000000000003"), TenantId = tenantId, BranchId = mainBranchId, CourseOfferingId = offering.Id, SessionNumber = 3, StartAt = new DateTimeOffset(2026, 9, 26, 10, 0, 0, TimeSpan.Zero), EndAt = new DateTimeOffset(2026, 9, 26, 11, 30, 0, TimeSpan.Zero), InstructorId = users[9].Id, ClassroomId = classroomMain.Id, Type = "REGULAR", Status = "COMPLETED", CompletedAt = new DateTimeOffset(2026, 9, 26, 11, 45, 0, TimeSpan.Zero) };
         var kit = new Kit { Id = Guid.Parse("60000000-0000-0000-0000-000000000001"), TenantId = tenantId, BranchId = mainBranchId, Name = "MRT Essential Kit", QuantityAvailable = 18, TrackIndividually = false };
 
@@ -89,7 +90,7 @@ public static class DemoDataSeeder
         db.Add(new StudentAccountLink { Id = Guid.Parse("91000000-0000-0000-0000-000000000001"), TenantId = tenantId, StudentId = students[1].Id, UserAccountId = users[11].Id, CreatedByUserId = users[1].Id });
         db.Add(new GuardianStudentLink { Id = Guid.Parse("92000000-0000-0000-0000-000000000001"), TenantId = tenantId, StudentId = students[0].Id, UserAccountId = users[10].Id, CreatedByUserId = users[1].Id, Relationship = "ولي الأمر", Status = "ACTIVE" });
         db.Add(new GuardianStudentLink { Id = Guid.Parse("92000000-0000-0000-0000-000000000002"), TenantId = tenantId, StudentId = students[2].Id, UserAccountId = users[10].Id, CreatedByUserId = users[1].Id, Relationship = "ولي الأمر", Status = "ACTIVE" });
-        db.Add(new SessionEvaluation { Id = Guid.Parse("93000000-0000-0000-0000-000000000001"), SessionId = session3.Id, StudentId = students[0].Id, InstructorId = users[9].Id, Score = 88, Notes = "تقدم واضح في التطبيق العملي", Status = "PUBLISHED", SubmittedAt = new DateTimeOffset(2026, 9, 26, 12, 0, 0, TimeSpan.Zero), ReviewedByUserId = users[3].Id, ReviewedAt = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero), PublishedAt = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero) });
+        db.Add(new SessionEvaluation { Id = Guid.Parse("93000000-0000-0000-0000-000000000001"), SessionId = session3.Id, StudentId = students[0].Id, InstructorId = users[9].Id, Score = 88, Notes = "تقدم واضح في التطبيق العملي وبناء الدائرة الكهربائية بنجاح", BonusPoints = 15, GamificationBadge = "CHALLENGE_HERO", Status = "PUBLISHED", SubmittedAt = new DateTimeOffset(2026, 9, 26, 12, 0, 0, TimeSpan.Zero), ReviewedByUserId = users[3].Id, ReviewedAt = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero), PublishedAt = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero) });
         db.Add(new StateTransitionEvent { Id = Guid.Parse("94000000-0000-0000-0000-000000000001"), AggregateType = "SESSION_EVALUATION", AggregateId = "93000000-0000-0000-0000-000000000001", FromState = "SUBMITTED", ToState = "PUBLISHED", ActorUserId = users[3].Id });
         if (!await db.Leads.AnyAsync(item => item.TenantId == tenantId, cancellationToken))
         {
@@ -143,6 +144,7 @@ public static class DemoDataSeeder
         await EnsureFinanceSliceAsync(db, tenantId, cancellationToken);
         await EnsureCompetitionsSliceAsync(db, tenantId, cancellationToken);
         await EnsureFreezesSliceAsync(db, tenantId, cancellationToken);
+        await EnsureSupportSliceAsync(db, tenantId, cancellationToken);
     }
 
     private static async Task EnsureCoreSliceAsync(MadaDbContext db, Guid tenantId, CancellationToken cancellationToken)
@@ -214,11 +216,11 @@ public static class DemoDataSeeder
             db.StateTransitions.Add(new StateTransitionEvent { Id = Guid.Parse("94000000-0000-0000-0000-000000000001"), AggregateType = "SESSION_EVALUATION", AggregateId = "93000000-0000-0000-0000-000000000001", FromState = "SUBMITTED", ToState = "PUBLISHED", ActorUserId = reviewerId });
         }
         if (!await db.SessionEvaluations.AnyAsync(item => item.SessionId == sessionId && item.StudentId == secondStudentId, cancellationToken))
-            db.SessionEvaluations.Add(new SessionEvaluation { Id = Guid.Parse("93000000-0000-0000-0000-000000000002"), SessionId = sessionId, StudentId = secondStudentId, InstructorId = mainInstructorId, Score = 92, Notes = "أداء ممتاز وتفاعل متميز", Status = "PUBLISHED", SubmittedAt = new DateTimeOffset(2026, 9, 26, 12, 10, 0, TimeSpan.Zero), PublishedAt = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero) });
+            db.SessionEvaluations.Add(new SessionEvaluation { Id = Guid.Parse("93000000-0000-0000-0000-000000000002"), SessionId = sessionId, StudentId = secondStudentId, InstructorId = mainInstructorId, Score = 96, Notes = "أداء استثنائي وابتكار فكرة جديدة في خوارزمية التحكم", BonusPoints = 20, GamificationBadge = "CREATIVE_THINKER", Status = "PUBLISHED", SubmittedAt = new DateTimeOffset(2026, 9, 26, 12, 10, 0, TimeSpan.Zero), PublishedAt = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero) });
         if (!await db.SessionEvaluations.AnyAsync(item => item.SessionId == sessionId && item.StudentId == thirdStudentId, cancellationToken))
             db.SessionEvaluations.Add(new SessionEvaluation { Id = Guid.Parse("93000000-0000-0000-0000-000000000003"), SessionId = sessionId, StudentId = thirdStudentId, InstructorId = mainInstructorId, Score = 58, Notes = "صعوبة في متابعة الدرس بسبب الغياب المتكرر", Status = "PUBLISHED", SubmittedAt = new DateTimeOffset(2026, 9, 26, 12, 15, 0, TimeSpan.Zero), PublishedAt = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero) });
         if (!await db.SessionEvaluations.AnyAsync(item => item.SessionId == sessionId && item.StudentId == fourthStudentId, cancellationToken))
-            db.SessionEvaluations.Add(new SessionEvaluation { Id = Guid.Parse("93000000-0000-0000-0000-000000000004"), SessionId = sessionId, StudentId = fourthStudentId, InstructorId = mainInstructorId, Score = 84, Notes = "مستوى جيد وثابت", Status = "PUBLISHED", SubmittedAt = new DateTimeOffset(2026, 9, 26, 12, 20, 0, TimeSpan.Zero), PublishedAt = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero) });
+            db.SessionEvaluations.Add(new SessionEvaluation { Id = Guid.Parse("93000000-0000-0000-0000-000000000004"), SessionId = sessionId, StudentId = fourthStudentId, InstructorId = mainInstructorId, Score = 85, Notes = "مستوى متميز وتفاعل إيجابي مع الفريق", BonusPoints = 10, GamificationBadge = "STAR_PERFORMANCE", Status = "PUBLISHED", SubmittedAt = new DateTimeOffset(2026, 9, 26, 12, 20, 0, TimeSpan.Zero), PublishedAt = new DateTimeOffset(2026, 9, 27, 12, 0, 0, TimeSpan.Zero) });
 
         // Heliopolis Course Offering & Enrollment
         var helioTemplateId = Guid.Parse("30000000-0000-0000-0000-000000000002");
@@ -453,6 +455,67 @@ public static class DemoDataSeeder
         }
     }
 
+    private static async Task EnsureSupportSliceAsync(MadaDbContext db, Guid tenantId, CancellationToken cancellationToken)
+    {
+        var mainBranchId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        var ownerId = Guid.Parse("10000000-0000-0000-0000-000000000002");
+        var secretaryId = Guid.Parse("10000000-0000-0000-0000-000000000005");
+
+        var tenant = await db.Tenants.SingleOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
+        if (tenant is not null && string.IsNullOrWhiteSpace(tenant.FeatureOverridesJson))
+        {
+            tenant.FeatureOverridesJson = "{\"gamification\":true,\"leaderboardPodium\":true,\"instantSupportMeetings\":true}";
+        }
+
+        var ticket1Id = Guid.Parse("e1000000-0000-0000-0000-000000000001");
+        if (!await db.PlatformSupportTickets.AnyAsync(t => t.Id == ticket1Id, cancellationToken))
+        {
+            db.PlatformSupportTickets.Add(new PlatformSupportTicket
+            {
+                Id = ticket1Id,
+                TenantId = tenantId,
+                BranchId = mainBranchId,
+                RequesterUserId = ownerId,
+                RequesterName = "د. أحمد البشبيشي",
+                RequesterPhone = "+201000000002",
+                RequesterRole = "R01_ACADEMY_OWNER",
+                Subject = "طلب اجتماع لمناقشة تفعيل ميزات التوسع لفرع مصر الجديدة",
+                Description = "نود الاجتماع مع فريق المنصة لمناقشة خطة تفعيل فرع مصر الجديدة وجدولة الورش التدريبية ونظام التنافسية.",
+                Category = "MEETING_REQUEST",
+                Priority = "HIGH",
+                Status = "IN_PROGRESS",
+                MeetingUrl = "https://meet.google.com/abc-mada-demo",
+                MeetingScheduledAt = DateTimeOffset.UtcNow.AddDays(1),
+                InternalAdminNotes = "تم التنسيق وتحديد رابط Google Meet وإشعار الأكاديمية بالموعد.",
+                CreatedAt = DateTimeOffset.UtcNow.AddHours(-18)
+            });
+        }
+
+        var ticket2Id = Guid.Parse("e1000000-0000-0000-0000-000000000002");
+        if (!await db.PlatformSupportTickets.AnyAsync(t => t.Id == ticket2Id, cancellationToken))
+        {
+            db.PlatformSupportTickets.Add(new PlatformSupportTicket
+            {
+                Id = ticket2Id,
+                TenantId = tenantId,
+                BranchId = mainBranchId,
+                RequesterUserId = secretaryId,
+                RequesterName = "أ. هبة محمود",
+                RequesterPhone = "+201000000005",
+                RequesterRole = "R05_SECRETARY",
+                Subject = "استفسار بخصوص تسكين الطلاب من قائمة الانتظار",
+                Description = "هل يتم إنشاء الفاتورة ومطالبتها تلقائياً عند ترقية الطالب من قائمة الانتظار إلى مجموعة فعالة؟",
+                Category = "TECHNICAL",
+                Priority = "MEDIUM",
+                Status = "NEW",
+                InternalAdminNotes = null,
+                CreatedAt = DateTimeOffset.UtcNow.AddHours(-4)
+            });
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     public static async Task ResetAndSeedAsync(MadaDbContext db, CancellationToken cancellationToken = default)
     {
         if (db.Database.IsRelational())
@@ -469,6 +532,7 @@ public static class DemoDataSeeder
         }
         else
         {
+            db.PlatformSupportTickets.RemoveRange(db.PlatformSupportTickets);
             db.Competitions.RemoveRange(db.Competitions);
             db.CompetitionTeams.RemoveRange(db.CompetitionTeams);
             db.CompetitionTeamMembers.RemoveRange(db.CompetitionTeamMembers);

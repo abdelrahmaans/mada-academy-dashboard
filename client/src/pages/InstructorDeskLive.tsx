@@ -484,7 +484,7 @@ export default function InstructorDeskLive() {
           <InstructorSessionsView
             sessions={sessions}
             selectedSessionId={selectedSessionId}
-            onSelectSession={setSelectedSessionId}
+            onSelectSession={(id) => { setSelectedSessionId(id); setView("attendance"); }}
             branch={branch}
             currentUserId={me?.id}
           />

@@ -80,6 +80,11 @@ export function ChildOverview({
         </div>
       </div>
 
+      {/* Live Group Leaderboard Podium */}
+      <div style={{ marginBottom: "20px" }}>
+        <GroupLeaderboardCard currentStudentId={child.id} />
+      </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "20px" }}>
         <section className="consumer-panel">
           <div className="consumer-panel-header">
