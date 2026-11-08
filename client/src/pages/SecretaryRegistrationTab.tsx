@@ -153,7 +153,7 @@ export function SecretaryRegistrationTab({
               <option value="">بدون ترشيح (تسجيل مباشر)</option>
               {students.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.fullName} ({s.code || "طالب"})
+                  {s.fullName}
                 </option>
               ))}
             </select>

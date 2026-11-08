@@ -19,7 +19,6 @@ import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { useAuth } from "@/contexts/AuthContext";
-import type { RoleCode } from "@/lib/roleNavigation";
 import {
   apiClient,
   type AuthMe,
@@ -28,6 +27,8 @@ import {
   type HallOfFameCardItem,
   type StudentRecord,
 } from "@/lib/apiClient";
+import type { RoleCode } from "@/contexts/RoleScopeContext";
+import { getRoleDefinition } from "@/lib/roleNavigation";
 import "./CompetitionsLive.css";
 import {
   CreateCompetitionModal,
@@ -38,10 +39,18 @@ import {
 
 type TabType = "TOURNAMENTS" | "TEAMS" | "HALL_OF_FAME";
 
-export default function CompetitionsLive({ me }: { me?: AuthMe }) {
+const ROLE_CODE_BY_ROLE: Record<string, RoleCode> = {
+  R01_ACADEMY_OWNER: "R01",
+  R02_BRANCH_MANAGER: "R02",
+  R03_HEAD_INSTRUCTORS: "R03",
+  R04_INSTRUCTOR: "R04",
+  R05_SECRETARY: "R05",
+};
+
+export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
   const { me: authMe } = useAuth();
-  const currentMe = me || authMe;
-  const isOwner = Boolean(currentMe?.role?.startsWith("R01"));
+  const me = propMe || authMe;
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("TOURNAMENTS");
   const [competitions, setCompetitions] = useState<CompetitionSummaryItem[]>([]);
   const [selectedCompId, setSelectedCompId] = useState<string | null>(null);
@@ -77,6 +86,13 @@ export default function CompetitionsLive({ me }: { me?: AuthMe }) {
 
   // Students list for member assignment
   const [studentsList, setStudentsList] = useState<Array<{ id: string; fullName: string }>>([]);
+
+  const roleCode = ROLE_CODE_BY_ROLE[me?.role ?? ""] ?? (me?.role?.startsWith("R01") ? "R01" : "R02");
+  const roleDefinition = getRoleDefinition(roleCode);
+
+  const isOwner = me?.role === "R01_ACADEMY_OWNER" || Boolean(me?.role?.startsWith("R01"));
+  const isBranchManager = me?.role === "R02_BRANCH_MANAGER";
+  const isInstructor = me?.role === "R04_INSTRUCTOR" || me?.role === "R03_HEAD_INSTRUCTORS";
 
   const loadData = useCallback(async () => {
     try {
@@ -236,23 +252,24 @@ export default function CompetitionsLive({ me }: { me?: AuthMe }) {
     }
   };
 
-  const userRoleCode = currentMe?.role ? (currentMe.role.replace(/_.*$/, "") as RoleCode) : (isOwner ? "R01" : "R02");
-  const roleLabel = currentMe?.roleLabel ?? (isOwner ? "مسؤول الأكاديمية" : "إدارة الفرع");
-  const branchName = currentMe?.branches?.[0]?.name ?? "الفرع الحالي";
-
   return (
     <RoleDashboardShell
-      roleCode={userRoleCode}
-      roleLabel={roleLabel}
-      scopeLevel={isOwner ? "tenant" : "branch"}
-      scopeLabel={branchName}
+      roleCode={roleCode}
+      roleLabel={me?.roleLabel ?? roleDefinition.label}
+      scopeLevel={roleDefinition.scopeLevel}
+      scopeLabel={me?.scopeLevel === "tenant" ? roleDefinition.defaultScopeLabel : (me?.branches?.[0]?.name ?? roleDefinition.defaultScopeLabel)}
+      tenantName={me?.academy?.name}
+      branchName={me?.branches?.[0]?.name}
+      mobileOpen={mobileNavOpen}
+      onCloseMobile={() => setMobileNavOpen(false)}
+      demo={false}
     >
       <div className="comp-workspace" dir="rtl">
         {/* Topbar */}
         <RoleSurfaceTopbar
-          onMenu={() => {}}
-          scopeLabel={branchName}
-          roleLabel={roleLabel}
+          roleLabel={me?.roleLabel ?? roleDefinition.label}
+          scopeLabel={me?.scopeLevel === "tenant" ? roleDefinition.defaultScopeLabel : (me?.branches?.[0]?.name ?? roleDefinition.defaultScopeLabel)}
+          onMenu={() => setMobileNavOpen(true)}
         />
 
         <RoleScopeCard />
