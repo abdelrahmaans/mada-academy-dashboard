@@ -90,14 +90,20 @@ if (builder.Environment.IsDevelopment()) builder.Services.AddSingleton<ISmsMessa
 else builder.Services.AddSingleton<ISmsMessageSender, UnconfiguredSmsMessageSender>();
 builder.Services.AddScoped<ConflictService>();
 builder.Services.AddSingleton<IAuditSink, DevelopmentAuditSink>();
-builder.Services.AddCors(options => options.AddPolicy("frontend", policy =>
+builder.Services.AddCors(options =>
 {
-    var configuredOrigins = CorsOriginResolver.Resolve(builder.Environment.IsDevelopment(), builder.Configuration["MADA_CORS_ORIGINS"] ?? Environment.GetEnvironmentVariable("MADA_CORS_ORIGINS"));
-    if (builder.Environment.IsDevelopment() && configuredOrigins.Length == 0)
-        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
-    else
-        policy.WithOrigins(configuredOrigins).AllowAnyHeader().AllowAnyMethod();
-}));
+    void ConfigureCors(Microsoft.AspNetCore.Cors.Infrastructure.CorsPolicyBuilder policy)
+    {
+        var configuredOrigins = CorsOriginResolver.Resolve(builder.Environment.IsDevelopment(), builder.Configuration["MADA_CORS_ORIGINS"] ?? Environment.GetEnvironmentVariable("MADA_CORS_ORIGINS"));
+        if (builder.Environment.IsDevelopment() && configuredOrigins.Length == 0)
+            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+        else
+            policy.WithOrigins(configuredOrigins).AllowAnyHeader().AllowAnyMethod();
+    }
+
+    options.AddDefaultPolicy(ConfigureCors);
+    options.AddPolicy("frontend", ConfigureCors);
+});
 
 var app = builder.Build();
 
@@ -117,7 +123,7 @@ if (IsEnabled("MADA_APPLY_MIGRATIONS") || seedDemoData)
 
 app.UseExceptionHandler();
 app.UseForwardedHeaders();
-app.UseCors("frontend");
+app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
