@@ -1,0 +1,27 @@
+flowchart TD
+    Lead[Lead or Walk-in] --> Register[Register Student]
+    Register --> Link[Link Guardian]
+    Link --> Enroll{Capacity available?}
+    Enroll -- Yes --> Active[Active Enrollment]
+    Enroll -- No --> Waitlist[Waitlist]
+    Waitlist --> Promote[Promote when capacity opens]
+    Promote --> Active
+
+    Active --> Schedule[Schedule Group Session]
+    Schedule --> Conflict{Conflict?}
+    Conflict -- Yes --> Resolve[Resolve room/instructor/student conflict]
+    Resolve --> Schedule
+    Conflict -- No --> Confirm[Confirm Session]
+    Confirm --> Deliver[Deliver Session]
+    Deliver --> Attendance[Record Attendance]
+    Attendance --> Evaluation[Draft / Submit Evaluation]
+    Evaluation --> Review{Review required?}
+    Review -- Yes --> Reviewer[Head Instructor Review]
+    Reviewer --> Publish[Publish Evaluation]
+    Review -- No --> Publish
+    Publish --> Family[Parent/Student Visibility]
+
+    Active --> Invoice[Create Invoice]
+    Invoice --> Payment[Record Payment]
+    Payment --> Reconcile[Reconcile Balance]
+    Reconcile --> Reports[Finance Reports]

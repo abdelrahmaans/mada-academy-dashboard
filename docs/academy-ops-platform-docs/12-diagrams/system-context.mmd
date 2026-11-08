@@ -1,0 +1,40 @@
+flowchart LR
+    Owner[Academy Owner]
+    Manager[Branch Manager]
+    Head[Head Instructor]
+    Instructor[Instructor]
+    Secretary[Secretary]
+    Accountant[Accountant]
+    Parent[Parent / Guardian]
+    Student[Student]
+    Platform[Platform Admin]
+
+    Web[Angular Web Application]
+    Mobile[Responsive Web / Capacitor Mobile]
+    Api[ASP.NET Core API]
+    Domain[Domain and Application Modules]
+    Db[(PostgreSQL)]
+    Storage[(Private Object Storage)]
+    Outbox[Outbox and Background Jobs]
+    Providers[Email / SMS / Push / Payment Providers]
+    Reports[Read Models and Reports]
+
+    Owner --> Web
+    Manager --> Web
+    Head --> Web
+    Instructor --> Web
+    Secretary --> Web
+    Accountant --> Web
+    Parent --> Mobile
+    Student --> Mobile
+    Platform --> Web
+
+    Web --> Api
+    Mobile --> Api
+    Api --> Domain
+    Domain --> Db
+    Domain --> Storage
+    Domain --> Outbox
+    Outbox --> Providers
+    Domain --> Reports
+    Reports --> Api
