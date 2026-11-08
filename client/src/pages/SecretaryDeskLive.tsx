@@ -682,8 +682,8 @@ export default function SecretaryDeskLive() {
                     onChange={e => setDirectRegistration({ ...directRegistration, referredByStudentId: e.target.value || undefined })}
                   >
                     <option value="">بدون ترشيح (تسجيل مباشر)</option>
-                    {students.map(s => (
-                      <option key={s.id} value={s.id}>{s.fullName} ({s.code || "طالب"})</option>
+                    {students.map(student => (
+                      <option key={student.id} value={student.id}>{student.fullName}</option>
                     ))}
                   </select>
                 </label>

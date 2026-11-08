@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import {
   Award,
   Calendar,
@@ -21,24 +21,34 @@ import {
   X
 } from "lucide-react";
 import { toast } from "sonner";
-import RoleDashboardShell from "@/components/RoleDashboardShell";
+import RoleDashboardShell, { useRoleShell } from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
-import BranchManagerSidebar from "@/components/BranchManagerSidebar";
-import R01AcademySidebar from "@/components/R01AcademySidebar";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   apiClient,
-  type AuthMe,
   type CompetitionDetailItem,
   type CompetitionSummaryItem,
   type CompetitionTeamItem,
   type HallOfFameCardItem
 } from "@/lib/apiClient";
+import type { RoleCode } from "@/contexts/RoleScopeContext";
+import { getRoleDefinition } from "@/lib/roleNavigation";
 import "./CompetitionsLive.css";
 
 type TabType = "TOURNAMENTS" | "TEAMS" | "HALL_OF_FAME";
 
-export default function CompetitionsLive({ me }: { me: AuthMe }) {
+const ROLE_CODE_BY_ROLE: Record<string, RoleCode> = {
+  R01_ACADEMY_OWNER: "R01",
+  R02_BRANCH_MANAGER: "R02",
+  R03_HEAD_INSTRUCTORS: "R03",
+  R04_INSTRUCTOR: "R04",
+  R05_SECRETARY: "R05",
+};
+
+export default function CompetitionsLive() {
+  const { me } = useAuth();
+  const { openMobileNav } = useRoleShell();
   const [activeTab, setActiveTab] = useState<TabType>("TOURNAMENTS");
   const [competitions, setCompetitions] = useState<CompetitionSummaryItem[]>([]);
   const [selectedCompId, setSelectedCompId] = useState<string | null>(null);
@@ -76,9 +86,12 @@ export default function CompetitionsLive({ me }: { me: AuthMe }) {
   // Students list for member assignment
   const [studentsList, setStudentsList] = useState<Array<{ id: string; fullName: string }>>([]);
 
-  const isOwner = me.role === "R01_ACADEMY_OWNER";
-  const isBranchManager = me.role === "R02_BRANCH_MANAGER";
-  const isInstructor = me.role === "R04_INSTRUCTOR" || me.role === "R03_HEAD_INSTRUCTORS";
+  const roleCode = ROLE_CODE_BY_ROLE[me?.role ?? ""] ?? "R02";
+  const roleDefinition = getRoleDefinition(roleCode);
+
+  const isOwner = me?.role === "R01_ACADEMY_OWNER";
+  const isBranchManager = me?.role === "R02_BRANCH_MANAGER";
+  const isInstructor = me?.role === "R04_INSTRUCTOR" || me?.role === "R03_HEAD_INSTRUCTORS";
 
   const loadData = async () => {
     try {
@@ -102,8 +115,8 @@ export default function CompetitionsLive({ me }: { me: AuthMe }) {
 
       // Load students for selector
       try {
-        const studRes = await apiClient.students();
-        setStudentsList(studRes.students.map(s => ({ id: s.id, fullName: s.fullName })));
+        const studRes = await apiClient.listStudents();
+        setStudentsList(studRes.items.map(student => ({ id: student.id, fullName: student.fullName })));
       } catch {
         // Fallback
       }
@@ -239,31 +252,25 @@ export default function CompetitionsLive({ me }: { me: AuthMe }) {
     }
   };
 
-  const sidebar = isOwner ? (
-    <R01AcademySidebar activePath="/competitions" mobileOpen={false} onClose={() => {}} />
-  ) : (
-    <BranchManagerSidebar activePath="/competitions" mobileOpen={false} onClose={() => {}} />
-  );
-
   return (
-    <RoleDashboardShell sidebar={sidebar}>
+    <RoleDashboardShell
+      roleCode={roleCode}
+      roleLabel={me?.roleLabel ?? roleDefinition.label}
+      scopeLevel={roleDefinition.scopeLevel}
+      scopeLabel={me?.scopeLevel === "tenant" ? roleDefinition.defaultScopeLabel : (me?.branches?.[0]?.name ?? roleDefinition.defaultScopeLabel)}
+      tenantName={me?.academy?.name}
+      branchName={me?.branches?.[0]?.name}
+      demo={false}
+    >
       <div className="comp-workspace" dir="rtl">
         {/* Topbar */}
         <RoleSurfaceTopbar
-          title="منظومة المسابقات والبطولات الدولية · لوحة الشرف"
-          subtitle="إعداد الفرق، معسكرات التدريب المكثف (Bootcamps)، وتوثيق جوائز FLL, WRO, RoboRave"
-          onOpenMobileNav={() => {}}
+          roleLabel={me?.roleLabel ?? roleDefinition.label}
+          scopeLabel={me?.scopeLevel === "tenant" ? roleDefinition.defaultScopeLabel : (me?.branches?.[0]?.name ?? roleDefinition.defaultScopeLabel)}
+          onMenu={openMobileNav}
         />
 
-        <RoleScopeCard
-          roleLabel={me.roleLabel ?? (isOwner ? "مسؤول الأكاديمية" : "إدارة الفرع")}
-          scopeDescription={
-            isOwner
-              ? "متابعة مشاركات وتمثيل الأكاديمية في كافة المسابقات الرسمية والمحلية"
-              : "إدارة فرق الفرع والمدربين والطلاب المشاركين في البطولات"
-          }
-          branchName={me.branches?.[0]?.name ?? "كل الفروع"}
-        />
+        <RoleScopeCard />
 
         {/* Hero Banner */}
         <div className="comp-hero-banner">
