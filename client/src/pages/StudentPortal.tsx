@@ -39,8 +39,90 @@ type PortalSession = {
   attendanceStatus?: string;
   startAt?: string;
   score?: number | null;
+  bonusPoints?: number;
+  badge?: string | null;
   notes?: string | null;
 };
+
+const BADGE_LABELS: Record<string, { title: string; icon: string }> = {
+  CHALLENGE_MASTER: { title: "بطل التحدي", icon: "🎯" },
+  CHALLENGE_HERO: { title: "بطل التحدي", icon: "🎯" },
+  CREATIVE_THINKER: { title: "مفكر مبدع", icon: "💡" },
+  TOP_PERFORMER: { title: "أداء استثنائي", icon: "⭐" },
+  STAR_PERFORMANCE: { title: "نجم التميز", icon: "⭐" },
+  TEAM_PLAYER: { title: "روح الفريق", icon: "🤝" },
+  TEAM_LEADER: { title: "قائد الفريق", icon: "🤝" },
+  PROBLEM_SOLVER: { title: "مستكشف الحلول", icon: "🧩" },
+  PERFECT_ATTENDANCE: { title: "حضور مثالي", icon: "🌟" },
+};
+
+function buildLiveStudentAchievements(sessions: PortalSession[]): StudentAchievement[] {
+  const markedAttendance = sessions.filter(s => s.attendanceStatus && s.attendanceStatus !== "UNMARKED");
+  const attendedCount = markedAttendance.filter(s => s.attendanceStatus === "PRESENT" || s.attendanceStatus === "LATE").length;
+  const absentCount = markedAttendance.filter(s => s.attendanceStatus === "ABSENT").length;
+
+  const scoredSessions = sessions.filter(s => s.score !== null && s.score !== undefined);
+  const highestScore = scoredSessions.reduce((max, s) => Math.max(max, s.score ?? 0), 0);
+  const totalBonusPoints = sessions.reduce((sum, s) => sum + (s.bonusPoints ?? 0), 0);
+
+  const items: StudentAchievement[] = [
+    {
+      title: "منتظم في التعلم",
+      detail:
+        markedAttendance.length > 0 && absentCount === 0
+          ? `حضور كامل (${attendedCount} من ${markedAttendance.length} جلسات مسجلة)`
+          : markedAttendance.length > 0
+            ? `حضرت ${attendedCount} من ${markedAttendance.length} جلسات مسجلة`
+            : "يُفتح عند تسجيل حضور أول جلسة",
+      unlocked: markedAttendance.length > 0 && absentCount === 0,
+    },
+    {
+      title: "التميز الأكاديمي",
+      detail:
+        highestScore >= 90
+          ? `حققت درجة ${highestScore}/100 في تقييم المدرب`
+          : highestScore > 0
+            ? `أعلى درجة حالية ${highestScore}/100 (الهدف 90+)`
+            : "الحصول على تقييم 90+ من المدرب",
+      unlocked: highestScore >= 90,
+    },
+    {
+      title: "نقاط المكافآت والتحدي",
+      detail:
+        totalBonusPoints > 0
+          ? `رصيد ${totalBonusPoints} نقطة إضافية معتمدة من المدرب`
+          : "تُجمع تلقائياً عند منح نقاط مكافأة في الجلسات",
+      unlocked: totalBonusPoints > 0,
+    },
+  ];
+
+  const earnedBadges = new Map<string, number[]>();
+  for (const s of sessions) {
+    if (!s.badge) continue;
+    const list = earnedBadges.get(s.badge) ?? [];
+    list.push(s.sessionNumber);
+    earnedBadges.set(s.badge, list);
+  }
+
+  if (earnedBadges.size > 0) {
+    earnedBadges.forEach((sessionNums, code) => {
+      const meta = BADGE_LABELS[code] ?? { title: code, icon: "🏅" };
+      items.push({
+        title: `${meta.icon} ${meta.title}`,
+        detail: `وسام معتمد من المدرب في جلسة #${sessionNums.join("، #")}`,
+        unlocked: true,
+      });
+    });
+  } else {
+    items.push({
+      title: "🎯 بطل التحدي",
+      detail: "يُفتح عند حصولك على أول وسام تميز من مدربك",
+      unlocked: false,
+    });
+  }
+
+  return items;
+}
 
 const INITIAL_ACHIEVEMENTS: StudentAchievement[] = [
   { title: "مستكشف الحلول", detail: "أنهيت ٣ تحديات تطبيقية عملية", unlocked: true },
@@ -112,6 +194,8 @@ function mapConsumerSession(item: ConsumerSessionRecord): PortalSession {
     attendanceStatus: item.attendanceStatus,
     startAt: item.startAt,
     score: item.score,
+    bonusPoints: item.bonusPoints,
+    badge: item.badge,
     notes: item.notes,
   };
 }
@@ -122,7 +206,9 @@ export default function StudentPortal() {
 
   const [tab, setTab] = useState<StudentTab>("home");
   const [progress, setProgress] = useState(67);
-  const [achievements, setAchievements] = useState<StudentAchievement[]>(INITIAL_ACHIEVEMENTS);
+  const [achievements, setAchievements] = useState<StudentAchievement[]>(
+    isStudentAccount ? [] : INITIAL_ACHIEVEMENTS
+  );
   const [studentName, setStudentName] = useState(isStudentAccount ? me?.user?.displayName ?? "جارٍ التحميل…" : "لينا عمر");
   const [courseName, setCourseName] = useState(isStudentAccount ? "جارٍ التحميل…" : "روبوتكس الناشئين — المستوى 1");
   const [sessions, setSessions] = useState<PortalSession[]>(isStudentAccount ? [] : DEMO_SESSIONS);
@@ -160,6 +246,7 @@ export default function StudentPortal() {
       setLiveMode(false);
       setDataLoading(false);
       setSessions(DEMO_SESSIONS);
+      setAchievements(INITIAL_ACHIEVEMENTS);
       setStudentName("لينا عمر");
       setCourseName("روبوتكس الناشئين — المستوى 1");
       return;
@@ -169,6 +256,7 @@ export default function StudentPortal() {
     setLiveMode(true);
     setDataLoading(true);
     setSessions([]);
+    setAchievements([]);
     setDataError(null);
     setDataWarning(null);
 
@@ -198,11 +286,10 @@ export default function StudentPortal() {
 
       const mappedSessions = ownRecords.map(mapConsumerSession);
       setSessions(mappedSessions);
+      setAchievements(buildLiveStudentAchievements(mappedSessions));
 
       const completed = mappedSessions.filter(s => s.status === "مكتملة").length;
-      if (mappedSessions.length > 0) {
-        setProgress(Math.round((completed / mappedSessions.length) * 100));
-      }
+      setProgress(mappedSessions.length > 0 ? Math.round((completed / mappedSessions.length) * 100) : 0);
 
       setDataError(null);
 
@@ -387,7 +474,11 @@ export default function StudentPortal() {
                 <h2>{courseName}</h2>
                 <p>
                   <CalendarDays size={18} />
-                  {nextSession ? `${nextSession.date} · الساعة ${nextSession.time} · ${nextSession.room}` : "السبت القادم · ١٠:٠٠ ص · معمل الروبوتكس أ"}
+                  {nextSession
+                    ? `${nextSession.date} · الساعة ${nextSession.time} · ${nextSession.room}`
+                    : liveMode
+                      ? "لا توجد جلسات قادمة مجدولة حالياً"
+                      : "السبت القادم · ١٠:٠٠ ص · معمل الروبوتكس أ"}
                 </p>
               </div>
               <button type="button" className="student-vibrant-hero-action" onClick={() => selectTab("sessions")}>
@@ -421,9 +512,19 @@ export default function StudentPortal() {
                   <span className="portal-metric-icon amber"><Star size={18} /></span>
                 </div>
                 <div className="portal-metric-value">
-                  {latestEvaluation?.score ? `${latestEvaluation.score} / 100` : "92 / 100"}
+                  {latestEvaluation?.score !== null && latestEvaluation?.score !== undefined
+                    ? `${latestEvaluation.score} / 100`
+                    : liveMode
+                      ? "—"
+                      : "92 / 100"}
                 </div>
-                <div className="portal-metric-note">مكافئ 4.6 من 5 نجوم ★</div>
+                <div className="portal-metric-note">
+                  {latestEvaluation?.score !== null && latestEvaluation?.score !== undefined
+                    ? `مكافئ ${(latestEvaluation.score / 20).toFixed(1)} من 5 نجوم ★`
+                    : liveMode
+                      ? "بانتظار نشر أول تقييم من المدرب"
+                      : "مكافئ 4.6 من 5 نجوم ★"}
+                </div>
               </div>
 
               <div className="portal-metric-card">
@@ -539,6 +640,14 @@ export default function StudentPortal() {
                     </div>
 
                     <div className="consumer-session-badges">
+                      {sess.badge && (
+                        <span className="status-tag present">
+                          {BADGE_LABELS[sess.badge]?.icon ?? "🏅"} {BADGE_LABELS[sess.badge]?.title ?? sess.badge}
+                        </span>
+                      )}
+                      {(sess.bonusPoints ?? 0) > 0 && (
+                        <span className="status-tag score">+{sess.bonusPoints} XP</span>
+                      )}
                       {sess.score !== null && sess.score !== undefined && (
                         <span className="status-tag score">★ {sess.score} / 100</span>
                       )}
@@ -610,7 +719,7 @@ export default function StudentPortal() {
                 </div>
               </div>
 
-              {!achievements.find(a => a.title === "بطل الوحدة")?.unlocked && (
+              {!liveMode && !achievements.find(a => a.title === "بطل الوحدة")?.unlocked && (
                 <button
                   type="button"
                   className="button button-primary"

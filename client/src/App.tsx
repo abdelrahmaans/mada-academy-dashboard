@@ -19,7 +19,6 @@ const SecretaryDesk = lazy(() => import("./pages/SecretaryDesk"));
 const FinanceDesk = lazy(() => import("./pages/FinanceDesk"));
 const MarketingDesk = lazy(() => import("./pages/MarketingDesk"));
 const Team = lazy(() => import("./pages/Team"));
-const BranchOperations = lazy(() => import("./pages/BranchOperations"));
 const SupervisionAssignments = lazy(() => import("./pages/SupervisionAssignments"));
 const Approvals = lazy(() => import("./pages/Approvals"));
 const Reports = lazy(() => import("./pages/Reports"));
@@ -116,7 +115,7 @@ const APP_ROUTES = [
   ["/finance-desk", () => <Guard roles={["R05_SECRETARY", "R06_ACCOUNTANT"]} anyOfPermissions={["finance.read", "invoices.read", "payments.create", "finance.expenses.read"]}><FinanceDesk /></Guard>],
   ["/marketing-desk", () => <Guard roles={["R07_MEDIA_MANAGER"]} permission="marketing.read"><MarketingDesk /></Guard>],
   ["/team", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS"]} anyOfPermissions={["staff.read", "branch.read"]}><Team /></Guard>],
-  ["/branch-operations", () => <Guard roles={["R02_BRANCH_MANAGER"]} permission="branch.read"><BranchOperations /></Guard>],
+  ["/branch-operations", () => <Guard roles={["R02_BRANCH_MANAGER"]} permission="branch.read"><Redirect to="/schedule" /></Guard>],
   ["/supervision-assignments", () => <Guard roles={["R02_BRANCH_MANAGER"]} permission="branch.read"><SupervisionAssignments /></Guard>],
   ["/approvals", () => <Guard roles={["R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS", "R05_SECRETARY", "R06_ACCOUNTANT"]} anyOfPermissions={["sessions.create", "evaluations.review", "finance.expenses.approve"]}><Approvals /></Guard>],
   ["/reports", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R06_ACCOUNTANT"]} anyOfPermissions={["reports.read", "finance.summary.read"]}><Reports /></Guard>],
