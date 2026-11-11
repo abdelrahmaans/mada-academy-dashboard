@@ -16,6 +16,7 @@ public static class DemoDataSeeder
             await EnsureCompetitionsSliceAsync(db, existingTenant.Id, cancellationToken);
             await EnsureFreezesSliceAsync(db, existingTenant.Id, cancellationToken);
             await EnsureSupportSliceAsync(db, existingTenant.Id, cancellationToken);
+            await EnsureExtendedShowcaseSliceAsync(db, existingTenant.Id, cancellationToken);
             return;
         }
 
@@ -145,6 +146,7 @@ public static class DemoDataSeeder
         await EnsureCompetitionsSliceAsync(db, tenantId, cancellationToken);
         await EnsureFreezesSliceAsync(db, tenantId, cancellationToken);
         await EnsureSupportSliceAsync(db, tenantId, cancellationToken);
+        await EnsureExtendedShowcaseSliceAsync(db, tenantId, cancellationToken);
     }
 
     private static async Task EnsureCoreSliceAsync(MadaDbContext db, Guid tenantId, CancellationToken cancellationToken)
@@ -533,6 +535,14 @@ public static class DemoDataSeeder
         else
         {
             db.PlatformSupportTickets.RemoveRange(db.PlatformSupportTickets);
+            db.InAppNotifications.RemoveRange(db.InAppNotifications);
+            db.InvoiceCorrectionRequests.RemoveRange(db.InvoiceCorrectionRequests);
+            db.SessionSubstitutionProposals.RemoveRange(db.SessionSubstitutionProposals);
+            db.GroupSupervisionAssignments.RemoveRange(db.GroupSupervisionAssignments);
+            db.MarketingContentItems.RemoveRange(db.MarketingContentItems);
+            db.ClassroomResources.RemoveRange(db.ClassroomResources);
+            db.PaymentEvidences.RemoveRange(db.PaymentEvidences);
+            db.ExpenseEvidences.RemoveRange(db.ExpenseEvidences);
             db.Competitions.RemoveRange(db.Competitions);
             db.CompetitionTeams.RemoveRange(db.CompetitionTeams);
             db.CompetitionTeamMembers.RemoveRange(db.CompetitionTeamMembers);
@@ -567,5 +577,552 @@ public static class DemoDataSeeder
         }
 
         await SeedAsync(db, cancellationToken);
+    }
+
+    private static async Task EnsureExtendedShowcaseSliceAsync(MadaDbContext db, Guid tenantId, CancellationToken cancellationToken)
+    {
+        var mainBranchId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        var heliopolisBranchId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        var ownerId = Guid.Parse("10000000-0000-0000-0000-000000000002");
+        var managerId = Guid.Parse("10000000-0000-0000-0000-000000000003");
+        var headId = Guid.Parse("10000000-0000-0000-0000-000000000004");
+        var secretaryId = Guid.Parse("10000000-0000-0000-0000-000000000005");
+        var accountantId = Guid.Parse("10000000-0000-0000-0000-000000000006");
+        var mediaId = Guid.Parse("10000000-0000-0000-0000-000000000007");
+        var helioSecretaryId = Guid.Parse("10000000-0000-0000-0000-000000000008");
+        var mainInstructorId = Guid.Parse("10000000-0000-0000-0000-000000000010");
+        var parentId = Guid.Parse("10000000-0000-0000-0000-000000000011");
+
+        var classroomMainId = Guid.Parse("20000000-0000-0000-0000-000000000001");
+        var classroomHelioId = Guid.Parse("20000000-0000-0000-0000-000000000002");
+        var classroomMain2Id = Guid.Parse("20000000-0000-0000-0000-000000000003");
+
+        if (!await db.Classrooms.AnyAsync(c => c.Id == classroomMain2Id, cancellationToken))
+        {
+            db.Classrooms.Add(new Classroom
+            {
+                Id = classroomMain2Id,
+                BranchId = mainBranchId,
+                Name = "AI & Coding Lab B",
+                Capacity = 16,
+                Status = "AVAILABLE"
+            });
+        }
+
+        // Classroom resources across rooms
+        var res1Id = Guid.Parse("21000000-0000-0000-0000-000000000001");
+        if (!await db.ClassroomResources.AnyAsync(r => r.Id == res1Id, cancellationToken))
+        {
+            db.ClassroomResources.AddRange(
+                new ClassroomResource { Id = res1Id, ClassroomId = classroomMainId, Kind = "HARDWARE", Name = "شاشة عرض تفاعلية 65 بوصة", Quantity = 1, Status = "AVAILABLE", Notes = "مجهزة بنظام HDMI لاسلكي" },
+                new ClassroomResource { Id = Guid.Parse("21000000-0000-0000-0000-000000000002"), ClassroomId = classroomMainId, Kind = "ROBOTICS_ARENA", Name = "ساحة تحدي الروبوت القياسية", Quantity = 2, Status = "AVAILABLE" },
+                new ClassroomResource { Id = Guid.Parse("21000000-0000-0000-0000-000000000003"), ClassroomId = classroomMain2Id, Kind = "LAPTOPS", Name = "أجهزة لابتوب برمجة Core i5", Quantity = 16, Status = "AVAILABLE" },
+                new ClassroomResource { Id = Guid.Parse("21000000-0000-0000-0000-000000000004"), ClassroomId = classroomHelioId, Kind = "PRINTER_3D", Name = "طابعة ثلاثية الأبعاد Prusa", Quantity = 1, Status = "AVAILABLE" }
+            );
+        }
+
+        // Additional Kits across branches
+        var kit2Id = Guid.Parse("60000000-0000-0000-0000-000000000002");
+        if (!await db.Kits.AnyAsync(k => k.Id == kit2Id, cancellationToken))
+        {
+            db.Kits.AddRange(
+                new Kit { Id = kit2Id, TenantId = tenantId, BranchId = mainBranchId, Name = "Arduino Uno Starter Kit", QuantityAvailable = 22, TrackIndividually = true },
+                new Kit { Id = Guid.Parse("60000000-0000-0000-0000-000000000003"), TenantId = tenantId, BranchId = heliopolisBranchId, Name = "Micro:bit Coding Set", QuantityAvailable = 14, TrackIndividually = false }
+            );
+        }
+
+        // Additional Course Templates + Offering in Heliopolis/Main
+        var template3Id = Guid.Parse("30000000-0000-0000-0000-000000000003");
+        if (!await db.CourseTemplates.AnyAsync(t => t.Id == template3Id, cancellationToken))
+        {
+            db.CourseTemplates.AddRange(
+                new CourseTemplate { Id = template3Id, TenantId = tenantId, Name = "Python & AI Explorers", Track = "coding", Type = "hard", AgeGroup = "10-14", Level = "intermediate", TotalSessions = 10, SessionDurationHours = 2.0m, BasePricePiastres = 380000, Status = "PUBLISHED" },
+                new CourseTemplate { Id = Guid.Parse("30000000-0000-0000-0000-000000000004"), TenantId = tenantId, Name = "Leadership & Presentation Skills", Track = "soft_skills", Type = "soft", AgeGroup = "8-12", Level = "beginner", TotalSessions = 6, SessionDurationHours = 1.5m, BasePricePiastres = 210000, Status = "DRAFT" }
+            );
+        }
+
+        var helioOfferingId = Guid.Parse("40000000-0000-0000-0000-000000000002");
+        var codingOfferingId = Guid.Parse("40000000-0000-0000-0000-000000000003");
+        if (!await db.CourseOfferings.AnyAsync(o => o.Id == codingOfferingId, cancellationToken))
+        {
+            db.CourseOfferings.Add(new CourseOffering
+            {
+                Id = codingOfferingId,
+                TenantId = tenantId,
+                BranchId = mainBranchId,
+                CourseTemplateId = template3Id,
+                InstructorId = mainInstructorId,
+                ClassroomId = classroomMain2Id,
+                StartDate = new DateOnly(2026, 10, 15),
+                EndDate = new DateOnly(2026, 12, 20),
+                WeeklyScheduleJson = "{\"days\":[\"TUESDAY\"],\"start\":\"16:00\",\"end\":\"18:00\"}",
+                Status = "ACTIVE",
+                MaxStudents = 14
+            });
+        }
+
+        // Upcoming sessions for Coding offering (does not alter 40000000-...-0001 sessions)
+        var session5Id = Guid.Parse("50000000-0000-0000-0000-000000000005");
+        var session6Id = Guid.Parse("50000000-0000-0000-0000-000000000006");
+        if (!await db.AcademySessions.AnyAsync(s => s.Id == session5Id, cancellationToken))
+        {
+            var baseDay = DateTime.UtcNow.Date;
+            db.AcademySessions.AddRange(
+                new AcademySession
+                {
+                    Id = session5Id,
+                    TenantId = tenantId,
+                    BranchId = mainBranchId,
+                    CourseOfferingId = codingOfferingId,
+                    SessionNumber = 1,
+                    StartAt = new DateTimeOffset(baseDay.AddHours(16), TimeSpan.Zero),
+                    EndAt = new DateTimeOffset(baseDay.AddHours(18), TimeSpan.Zero),
+                    InstructorId = mainInstructorId,
+                    ClassroomId = classroomMain2Id,
+                    Type = "REGULAR",
+                    Status = "SCHEDULED",
+                    Notes = "حصة تطبيقية على منطق الخوارزميات"
+                },
+                new AcademySession
+                {
+                    Id = session6Id,
+                    TenantId = tenantId,
+                    BranchId = heliopolisBranchId,
+                    CourseOfferingId = helioOfferingId,
+                    SessionNumber = 2,
+                    StartAt = new DateTimeOffset(baseDay.AddDays(1).AddHours(17), TimeSpan.Zero),
+                    EndAt = new DateTimeOffset(baseDay.AddDays(1).AddHours(18).AddMinutes(30), TimeSpan.Zero),
+                    InstructorId = mainInstructorId,
+                    ClassroomId = classroomHelioId,
+                    Type = "REGULAR",
+                    Status = "SCHEDULED",
+                    Notes = "بناء نموذج تصميم 3D مبدئي"
+                }
+            );
+        }
+
+        // Enroll students 5 & 6 into Coding offering so they have active enrollments
+        var enrollment5Id = Guid.Parse("71000000-0000-0000-0000-000000000005");
+        if (!await db.StudentEnrollments.AnyAsync(e => e.Id == enrollment5Id, cancellationToken))
+        {
+            db.StudentEnrollments.AddRange(
+                new StudentEnrollment { Id = enrollment5Id, StudentId = Guid.Parse("70000000-0000-0000-0000-000000000005"), CourseOfferingId = codingOfferingId, FinalPricePiastres = 380000, Status = "ACTIVE" },
+                new StudentEnrollment { Id = Guid.Parse("71000000-0000-0000-0000-000000000006"), StudentId = Guid.Parse("70000000-0000-0000-0000-000000000006"), CourseOfferingId = codingOfferingId, FinalPricePiastres = 380000, Status = "ACTIVE" }
+            );
+        }
+
+        // Kit assignment for Coding offering session
+        var kitAssign2Id = Guid.Parse("61000000-0000-0000-0000-000000000002");
+        if (!await db.KitAssignments.AnyAsync(ka => ka.Id == kitAssign2Id, cancellationToken))
+        {
+            db.KitAssignments.Add(new KitAssignment { Id = kitAssign2Id, SessionId = session5Id, KitId = kit2Id, QuantityUsed = 6 });
+        }
+
+        // Supervision assignment on helioOfferingId & codingOfferingId (safe: P1CoreJourneyApiTests uses offeringId 0001)
+        var supervisionId = Guid.Parse("45000000-0000-0000-0000-000000000001");
+        if (!await db.GroupSupervisionAssignments.AnyAsync(g => g.Id == supervisionId, cancellationToken))
+        {
+            db.GroupSupervisionAssignments.Add(new GroupSupervisionAssignment
+            {
+                Id = supervisionId,
+                TenantId = tenantId,
+                BranchId = heliopolisBranchId,
+                SupervisorUserId = headId,
+                CourseOfferingId = helioOfferingId,
+                CanReadAttendance = true,
+                CanReadEvaluations = true,
+                CanDecideEvaluations = true,
+                StartsAt = DateTimeOffset.UtcNow.AddDays(-7),
+                EndsAt = DateTimeOffset.UtcNow.AddDays(60),
+                Status = "ACTIVE",
+                CreatedByUserId = ownerId
+            });
+        }
+
+        var codingSupervisionId = Guid.Parse("45000000-0000-0000-0000-000000000002");
+        if (!await db.GroupSupervisionAssignments.AnyAsync(g => g.Id == codingSupervisionId, cancellationToken))
+        {
+            db.GroupSupervisionAssignments.Add(new GroupSupervisionAssignment
+            {
+                Id = codingSupervisionId,
+                TenantId = tenantId,
+                BranchId = mainBranchId,
+                SupervisorUserId = headId,
+                CourseOfferingId = codingOfferingId,
+                CanReadAttendance = true,
+                CanReadEvaluations = true,
+                CanDecideEvaluations = true,
+                StartsAt = DateTimeOffset.UtcNow.AddDays(-7),
+                EndsAt = DateTimeOffset.UtcNow.AddDays(60),
+                Status = "ACTIVE",
+                CreatedByUserId = ownerId
+            });
+        }
+
+        // Pending submitted evaluations on session1 & session5 for Head Instructor review queue
+        // Use Adam (0003), Mariam (0004), and Omar (0005) so P1CoreJourneyApiTests assertions on Youssef (0001) & Lina (0002) remain isolated
+        var evalSubmittedId = Guid.Parse("93000000-0000-0000-0000-000000000006");
+        if (!await db.SessionEvaluations.AnyAsync(e => e.Id == evalSubmittedId, cancellationToken))
+        {
+            var session1Id = Guid.Parse("50000000-0000-0000-0000-000000000001");
+            db.SessionEvaluations.AddRange(
+                new SessionEvaluation
+                {
+                    Id = evalSubmittedId,
+                    SessionId = session1Id,
+                    StudentId = Guid.Parse("70000000-0000-0000-0000-000000000003"),
+                    InstructorId = mainInstructorId,
+                    Score = 84,
+                    Notes = "تحسن ملحوظ في توصيل الحساسات والعمل ضمن الفريق.",
+                    BonusPoints = 10,
+                    GamificationBadge = "PROBLEM_SOLVER",
+                    Status = "SUBMITTED",
+                    SubmittedAt = DateTimeOffset.UtcNow.AddDays(-1)
+                },
+                new SessionEvaluation
+                {
+                    Id = Guid.Parse("93000000-0000-0000-0000-000000000007"),
+                    SessionId = session1Id,
+                    StudentId = Guid.Parse("70000000-0000-0000-0000-000000000004"),
+                    InstructorId = mainInstructorId,
+                    Score = 89,
+                    Notes = "تنظيم ممتاز للكود وشرح واضح لفكرة المشروع.",
+                    BonusPoints = 15,
+                    GamificationBadge = "TEAM_LEADER",
+                    Status = "SUBMITTED",
+                    SubmittedAt = DateTimeOffset.UtcNow.AddDays(-1)
+                },
+                new SessionEvaluation
+                {
+                    Id = Guid.Parse("93000000-0000-0000-0000-000000000008"),
+                    SessionId = session5Id,
+                    StudentId = Guid.Parse("70000000-0000-0000-0000-000000000005"),
+                    InstructorId = mainInstructorId,
+                    Score = 93,
+                    Notes = "أداء مميز في منطق الحلقات التكرارية بلغة بايثون.",
+                    BonusPoints = 20,
+                    GamificationBadge = "CREATIVE_THINKER",
+                    Status = "SUBMITTED",
+                    SubmittedAt = DateTimeOffset.UtcNow.AddHours(-6)
+                }
+            );
+        }
+
+        // Marketing Campaigns + Content Items
+        var campaign2Id = Guid.Parse("b1000000-0000-0000-0000-000000000002");
+        if (!await db.MarketingCampaigns.AnyAsync(c => c.Id == campaign2Id, cancellationToken))
+        {
+            var campaign1Id = Guid.Parse("b1000000-0000-0000-0000-000000000001");
+            if (!await db.MarketingCampaigns.AnyAsync(c => c.Id == campaign1Id, cancellationToken))
+            {
+                db.MarketingCampaigns.Add(new MarketingCampaign
+                {
+                    Id = campaign1Id,
+                    TenantId = tenantId,
+                    BranchId = mainBranchId,
+                    Name = "حملة العودة للمدارس — روبوتكس",
+                    Channel = "META_ADS",
+                    Status = "ACTIVE",
+                    BudgetPiastres = 450000,
+                    Notes = "استهداف أولياء الأمور في نطاق مدينة نصر ومصر الجديدة",
+                    CreatedByUserId = mediaId
+                });
+            }
+
+            db.MarketingCampaigns.Add(new MarketingCampaign
+            {
+                Id = campaign2Id,
+                TenantId = tenantId,
+                BranchId = heliopolisBranchId,
+                Name = "ورشة الذكاء الاصطناعي التمهيدية",
+                Channel = "INSTAGRAM",
+                Status = "ACTIVE",
+                BudgetPiastres = 280000,
+                Notes = "جلسات مجانية للتعريف بمسار البرمجة",
+                CreatedByUserId = mediaId
+            });
+
+            db.MarketingContentItems.AddRange(
+                new MarketingContentItem { Id = Guid.Parse("b2000000-0000-0000-0000-000000000001"), TenantId = tenantId, BranchId = mainBranchId, CampaignId = campaign1Id, Title = "ريلز استعراض مشروع السيارة الذكية", ContentType = "REEL", Platform = "INSTAGRAM", Status = "PUBLISHED", DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-2)), CreatedByUserId = mediaId },
+                new MarketingContentItem { Id = Guid.Parse("b2000000-0000-0000-0000-000000000002"), TenantId = tenantId, BranchId = heliopolisBranchId, CampaignId = campaign2Id, Title = "تصميم بوست مواعيد مجموعات نوفمبر", ContentType = "POST", Platform = "FACEBOOK", Status = "IN_REVIEW", DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(3)), CreatedByUserId = mediaId },
+                new MarketingContentItem { Id = Guid.Parse("b2000000-0000-0000-0000-000000000003"), TenantId = tenantId, BranchId = mainBranchId, CampaignId = campaign1Id, Title = "فيديو شهادة ولي أمر الطالب يوسف", ContentType = "VIDEO", Platform = "TIKTOK", Status = "DRAFT", DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(5)), CreatedByUserId = mediaId }
+            );
+        }
+
+        // Additional Leads (NEW, CONTACTED, WAITLISTED) across branches
+        var lead2Id = Guid.Parse("b3000000-0000-0000-0000-000000000002");
+        if (!await db.Leads.AnyAsync(l => l.Id == lead2Id, cancellationToken))
+        {
+            db.Leads.AddRange(
+                new Lead { Id = lead2Id, TenantId = tenantId, BranchId = mainBranchId, ChildName = "تيم طارق", ParentName = "أ. طارق حسام", Phone = "+201022334455", Channel = "INSTAGRAM", Notes = "مهتم بمسار Python & AI المسائي", Status = "NEW", CampaignId = campaign2Id, CourseOfferingId = codingOfferingId, CreatedByUserId = secretaryId },
+                new Lead { Id = Guid.Parse("b3000000-0000-0000-0000-000000000003"), TenantId = tenantId, BranchId = mainBranchId, ChildName = "سلمى هشام", ParentName = "د. هشام عادل", Phone = "+201099887766", Channel = "REFERRAL", Notes = "في قائمة الانتظار لمجموعة السبت الصباحية", Status = "WAITLISTED", CourseOfferingId = Guid.Parse("40000000-0000-0000-0000-000000000001"), CreatedByUserId = secretaryId },
+                new Lead { Id = Guid.Parse("b3000000-0000-0000-0000-000000000004"), TenantId = tenantId, BranchId = heliopolisBranchId, ChildName = "زينب كريم", ParentName = "أ. كريم سمير", Phone = "+201144556677", Channel = "WALK_IN", Notes = "تمت معاينة المعمل وطلب المتابعة غداً", Status = "CONTACTED", CourseOfferingId = helioOfferingId, CreatedByUserId = helioSecretaryId }
+            );
+        }
+
+        // Pending ApprovalRequests (EXTRA session & INSTRUCTOR_SUBSTITUTION + proposal)
+        var extraSessionApprovalId = Guid.Parse("84000000-0000-0000-0000-000000000003");
+        if (!await db.ApprovalRequests.AnyAsync(a => a.Id == extraSessionApprovalId, cancellationToken))
+        {
+            var subApprovalId = Guid.Parse("84000000-0000-0000-0000-000000000004");
+            db.ApprovalRequests.AddRange(
+                new ApprovalRequest
+                {
+                    Id = extraSessionApprovalId,
+                    TenantId = tenantId,
+                    BranchId = mainBranchId,
+                    RequestType = "EXTRA",
+                    TargetType = "SESSION",
+                    TargetId = session5Id.ToString(),
+                    SubmittedByRole = "R03_HEAD_INSTRUCTORS",
+                    State = "PENDING",
+                    Reason = "طلب حصة مراجعة إضافية قبل المسابقة الوطنية"
+                },
+                new ApprovalRequest
+                {
+                    Id = subApprovalId,
+                    TenantId = tenantId,
+                    BranchId = heliopolisBranchId,
+                    RequestType = "INSTRUCTOR_SUBSTITUTION",
+                    TargetType = "SESSION",
+                    TargetId = session6Id.ToString(),
+                    SubmittedByRole = "R04_INSTRUCTOR",
+                    State = "PENDING",
+                    Reason = "تعارض موعد امتحانات جامعية للمدرب"
+                }
+            );
+
+            db.SessionSubstitutionProposals.Add(new SessionSubstitutionProposal
+            {
+                Id = Guid.Parse("85000000-0000-0000-0000-000000000001"),
+                ApprovalRequestId = subApprovalId,
+                SessionId = session6Id,
+                ProposedInstructorId = headId,
+                SubmittedByUserId = mainInstructorId,
+                Message = "تم التنسيق مع رئيس المدربين لتغطية الحصة بالكامل",
+                State = "PENDING"
+            });
+        }
+
+        // Pending Invoice Correction Request (for Approval Center visibility)
+        var invCorrectionId = Guid.Parse("86000000-0000-0000-0000-000000000001");
+        if (!await db.InvoiceCorrectionRequests.AnyAsync(c => c.Id == invCorrectionId, cancellationToken))
+        {
+            var invoice2Id = Guid.Parse("81000000-0000-0000-0000-000000000002");
+            var corrApprovalId = Guid.Parse("84000000-0000-0000-0000-000000000005");
+            db.ApprovalRequests.Add(new ApprovalRequest
+            {
+                Id = corrApprovalId,
+                TenantId = tenantId,
+                BranchId = mainBranchId,
+                RequestType = "INVOICE_CORRECTION",
+                TargetType = "INVOICE",
+                TargetId = invoice2Id.ToString(),
+                SubmittedByRole = "R06_ACCOUNTANT",
+                State = "PENDING",
+                Reason = "تطبيق خصم الأشقاء 10% على فاتورة الطالب آدم خالد"
+            });
+
+            db.InvoiceCorrectionRequests.Add(new InvoiceCorrectionRequest
+            {
+                Id = invCorrectionId,
+                TenantId = tenantId,
+                BranchId = mainBranchId,
+                InvoiceId = invoice2Id,
+                ApprovalRequestId = corrApprovalId,
+                RequestedByUserId = accountantId,
+                CurrentTotalPiastres = 320000,
+                CurrentDueDate = new DateOnly(2026, 10, 15),
+                ProposedTotalPiastres = 288000,
+                ProposedDueDate = new DateOnly(2026, 10, 20),
+                ProposedLinesJson = "[{\"Description\":\"رسوم كورس الروبوتكس بعد خصم الأشقاء 10%\",\"AmountPiastres\":288000}]",
+                Reason = "تطبيق خصم الأشقاء 10% بناءً على طلب ولي الأمر وموافقة الفرع",
+                Status = "PENDING"
+            });
+        }
+
+        // Pending Freeze Request for Main Branch Secretary/Manager queue
+        var freeze2Id = Guid.Parse("f1000000-0000-0000-0000-000000000002");
+        if (!await db.SubscriptionFreezeRequests.AnyAsync(f => f.Id == freeze2Id, cancellationToken))
+        {
+            db.SubscriptionFreezeRequests.Add(new SubscriptionFreezeRequest
+            {
+                Id = freeze2Id,
+                TenantId = tenantId,
+                BranchId = mainBranchId,
+                StudentId = Guid.Parse("70000000-0000-0000-0000-000000000001"),
+                CourseOfferingId = Guid.Parse("40000000-0000-0000-0000-000000000001"),
+                StartDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(4)),
+                EndDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(11)),
+                Reason = "TRAVEL",
+                ReasonText = "سفر عائلي لمدة أسبوع خلال الإجازة الدراسية",
+                Status = "PENDING",
+                SubmittedByRole = "R08_PARENT",
+                SubmittedByName = "ولي أمر يوسف أحمد",
+                AffectedSessionsCount = 1,
+                MakeUpCreditsAwarded = 1
+            });
+        }
+
+        // Seeded Cashier Shift Handover + Confirmation AuditEvents so Shift History & Accountant Queue are populated immediately
+        var shiftTarget1 = $"{DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1)):yyyyMMdd}-{mainBranchId}";
+        var shiftClosedExists = await db.AuditEvents.AnyAsync(
+            a => a.TenantId == tenantId && a.Action == "CASHIER_SHIFT_CLOSED" && a.TargetId == shiftTarget1,
+            cancellationToken);
+        if (!shiftClosedExists)
+        {
+            var yestDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1));
+            var yestHelioTarget = $"{yestDate:yyyyMMdd}-{heliopolisBranchId}";
+            var twoDaysAgo = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-2));
+            var olderTarget = $"{twoDaysAgo:yyyyMMdd}-{mainBranchId}";
+
+            db.AuditEvents.AddRange(
+                new AuditEvent
+                {
+                    Id = Guid.Parse("96000000-0000-0000-0000-000000000001"),
+                    ActorUserId = secretaryId,
+                    TenantId = tenantId,
+                    BranchId = mainBranchId,
+                    Action = "CASHIER_SHIFT_CLOSED",
+                    TargetType = "SHIFT_CLOSEOUT",
+                    TargetId = shiftTarget1,
+                    Reason = "إغلاق الوردية المسائية — الفرع الرئيسي",
+                    MetadataJson = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        date = yestDate,
+                        shiftName = "الوردية المسائية",
+                        expectedCash = 320000L,
+                        countedCash = 320000L,
+                        electronicPiastres = 160000L,
+                        totalReceiptsCount = 3,
+                        discrepancy = 0L,
+                        status = "MATCHED",
+                        notes = "تمت مطابقة الدرج وتسليم الخزينة دون عجز"
+                    })
+                },
+                new AuditEvent
+                {
+                    Id = Guid.Parse("96000000-0000-0000-0000-000000000002"),
+                    ActorUserId = helioSecretaryId,
+                    TenantId = tenantId,
+                    BranchId = heliopolisBranchId,
+                    Action = "CASHIER_SHIFT_CLOSED",
+                    TargetType = "SHIFT_CLOSEOUT",
+                    TargetId = yestHelioTarget,
+                    Reason = "إغلاق وردية مصر الجديدة",
+                    MetadataJson = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        date = yestDate,
+                        shiftName = "الوردية الصباحية",
+                        expectedCash = 260000L,
+                        countedCash = 260000L,
+                        electronicPiastres = 0L,
+                        totalReceiptsCount = 2,
+                        discrepancy = 0L,
+                        status = "MATCHED",
+                        notes = "تسليم نقدي جاهز لمراجعة المحاسب"
+                    })
+                },
+                new AuditEvent
+                {
+                    Id = Guid.Parse("96000000-0000-0000-0000-000000000003"),
+                    ActorUserId = secretaryId,
+                    TenantId = tenantId,
+                    BranchId = mainBranchId,
+                    Action = "CASHIER_SHIFT_CLOSED",
+                    TargetType = "SHIFT_CLOSEOUT",
+                    TargetId = olderTarget,
+                    Reason = "إغلاق وردية سابقة — مطابق",
+                    MetadataJson = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        date = twoDaysAgo,
+                        shiftName = "الوردية الصباحية",
+                        expectedCash = 190000L,
+                        countedCash = 190000L,
+                        electronicPiastres = 95000L,
+                        totalReceiptsCount = 2,
+                        discrepancy = 0L,
+                        status = "MATCHED",
+                        notes = "وردية سابقة مؤكدة من المحاسب"
+                    })
+                },
+                new AuditEvent
+                {
+                    Id = Guid.Parse("96000000-0000-0000-0000-000000000004"),
+                    ActorUserId = accountantId,
+                    TenantId = tenantId,
+                    BranchId = mainBranchId,
+                    Action = "CASHIER_SHIFT_CONFIRMED_BY_ACCOUNTANT",
+                    TargetType = "SHIFT_CLOSEOUT",
+                    TargetId = olderTarget,
+                    Reason = "تم استلام النقدية ومطابقة الإيصالات",
+                    MetadataJson = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        date = twoDaysAgo,
+                        confirmedByUserId = accountantId,
+                        notes = "تم الاستلام والمطابقة الدفترية"
+                    })
+                }
+            );
+        }
+
+        // Second Competition + Resolved Support Ticket + Notifications
+        var comp2Id = Guid.Parse("c1000000-0000-0000-0000-000000000002");
+        if (!await db.Competitions.AnyAsync(c => c.Id == comp2Id, cancellationToken))
+        {
+            db.Competitions.Add(new Competition
+            {
+                Id = comp2Id,
+                TenantId = tenantId,
+                Name = "Cairo Young Coders Hackathon 2026",
+                Organizer = "Egypt STEM Alliance",
+                Season = "2026/2027",
+                Track = "coding",
+                AgeMin = 10,
+                AgeMax = 15,
+                RegistrationDeadline = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(20)),
+                EventDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(45)),
+                Location = "القاهرة الجديدة — مركز الإبداع",
+                Status = "OPEN",
+                Notes = "مسابقة برمجة تطبيقات الذكاء الاصطناعي للناشئين",
+                CreatedByUserId = ownerId
+            });
+        }
+
+        var ticket3Id = Guid.Parse("e1000000-0000-0000-0000-000000000003");
+        if (!await db.PlatformSupportTickets.AnyAsync(t => t.Id == ticket3Id, cancellationToken))
+        {
+            db.PlatformSupportTickets.Add(new PlatformSupportTicket
+            {
+                Id = ticket3Id,
+                TenantId = tenantId,
+                BranchId = heliopolisBranchId,
+                RequesterUserId = managerId,
+                RequesterName = "Main Branch Manager",
+                RequesterPhone = "+201000000003",
+                RequesterRole = "R02_BRANCH_MANAGER",
+                Subject = "تفعيل إشعارات تذكير الحصص لأولياء الأمور",
+                Description = "نحتاج تأكيد تفعيل قوالب إشعارات التذكير قبل الحصة بـ 24 ساعة.",
+                Category = "GENERAL",
+                Priority = "LOW",
+                Status = "RESOLVED",
+                ResolutionNotes = "تم التفعيل وتجربة الإشعار التجريبي بنجاح.",
+                ResolvedAt = DateTimeOffset.UtcNow.AddDays(-2),
+                ResolvedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000001")
+            });
+        }
+
+        var notif1Id = Guid.Parse("97000000-0000-0000-0000-000000000001");
+        if (!await db.InAppNotifications.AnyAsync(n => n.Id == notif1Id, cancellationToken))
+        {
+            db.InAppNotifications.AddRange(
+                new InAppNotification { Id = notif1Id, TenantId = tenantId, BranchId = mainBranchId, RecipientUserId = ownerId, Type = "APPROVAL_PENDING", Title = "3 طلبات بانتظار الاعتماد", Body = "يوجد مصروف معلق وطلب تعديل فاتورة وحصة إضافية بانتظار المراجعة.", TargetType = "APPROVAL", TargetId = extraSessionApprovalId.ToString(), IsRead = false },
+                new InAppNotification { Id = Guid.Parse("97000000-0000-0000-0000-000000000002"), TenantId = tenantId, BranchId = mainBranchId, RecipientUserId = headId, Type = "EVALUATION_SUBMITTED", Title = "تقييمات جاهزة للمراجعة", Body = "أرسل المدرب الرئيسي تقييمين جديدين على حصة الروبوتكس للمراجعة والاعتماد.", TargetType = "EVALUATION", TargetId = evalSubmittedId.ToString(), IsRead = false },
+                new InAppNotification { Id = Guid.Parse("97000000-0000-0000-0000-000000000003"), TenantId = tenantId, BranchId = mainBranchId, RecipientUserId = accountantId, Type = "SHIFT_HANDOVER", Title = "وردية جاهزة للاستلام والمطابقة", Body = "تم إغلاق الوردية المسائية بالفرع الرئيسي بمبلغ 3,200 ج.م.", TargetType = "SHIFT_CLOSEOUT", TargetId = shiftTarget1, IsRead = false },
+                new InAppNotification { Id = Guid.Parse("97000000-0000-0000-0000-000000000004"), TenantId = tenantId, BranchId = mainBranchId, RecipientUserId = parentId, Type = "FREEZE_SUBMITTED", Title = "تم استلام طلب التجميد", Body = "طلب تجميد اشتراك الطالب يوسف أحمد قيد المراجعة من الإدارة.", TargetType = "FREEZE", TargetId = freeze2Id.ToString(), IsRead = false }
+            );
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
     }
 }

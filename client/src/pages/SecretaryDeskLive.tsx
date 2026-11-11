@@ -19,14 +19,14 @@ import RoleScopeCard from "@/components/RoleScopeCard";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   apiClient,
-  freezeStorage,
-  shiftStorage,
+  mapServerShiftHistoryToHandover,
   waitlistStorage,
   type ConvertLeadInput,
   type CreateLeadInput,
   type DirectStudentInput,
   type LeadRecord,
   type SchedulingGroupRecord,
+  type ShiftCashHandover,
   type StudentRecord,
   type SubscriptionFreezeRequest,
 } from "@/lib/apiClient";
@@ -129,6 +129,7 @@ export default function SecretaryDeskLive() {
   });
 
   const [serverFreezes, setServerFreezes] = useState<SubscriptionFreezeRequest[]>([]);
+  const [serverShifts, setServerShifts] = useState<ShiftCashHandover[]>([]);
 
   const branchName =
     me?.branches?.find((branch) => branch.id === me?.branchId)?.name ??
@@ -151,22 +152,8 @@ export default function SecretaryDeskLive() {
       if (groupsRes.status === "fulfilled") setGroups(groupsRes.value.items);
       if (studentsRes.status === "fulfilled") setStudents(studentsRes.value.items);
       if (freezesRes.status === "fulfilled") setServerFreezes(freezesRes.value);
-      if (shiftsRes.status === "fulfilled" && shiftsRes.value?.items?.length) {
-        const currentHandovers = shiftStorage.getHandovers();
-        const updated = currentHandovers.map(h => {
-          const serverMatch = shiftsRes.value.items.find(item => item.targetId === h.id || item.closedAt?.startsWith(h.shiftDate));
-          if (serverMatch && serverMatch.isConfirmed) {
-            return {
-              ...h,
-              status: "ACCEPTED" as const,
-              receivedByName: serverMatch.confirmedBy || h.receivedByName || "المحاسب المالي",
-              receivedAt: serverMatch.confirmedAt || h.receivedAt,
-              notes: serverMatch.confirmNotes || h.notes,
-            };
-          }
-          return h;
-        });
-        shiftStorage.saveHandovers(updated);
+      if (shiftsRes.status === "fulfilled" && shiftsRes.value?.items) {
+        setServerShifts(shiftsRes.value.items.map(mapServerShiftHistoryToHandover));
       }
       setLoading(false);
     });
@@ -333,19 +320,9 @@ export default function SecretaryDeskLive() {
         reasonText: freezeFormData.reasonText,
       });
       setServerFreezes((prev) => [created, ...prev]);
-    } catch {
-      freezeStorage.createRequest({
-        studentId: student.id,
-        studentName: student.fullName,
-        courseName: group?.courseName || "برنامج تدريبي",
-        branchName: branchName,
-        startDate: freezeFormData.startDate,
-        endDate: freezeFormData.endDate,
-        reason: freezeFormData.reason,
-        reasonText: freezeFormData.reasonText,
-        submittedByRole: "R05_SECRETARY",
-        submittedByName: `${me?.user?.displayName || "موظف الاستقبال"} (السكرتارية)`,
-      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "تعذر تسجيل طلب التجميد على الخادم");
+      return;
     }
     setFreezeModalOpen(false);
     setFreezeFormData({
@@ -359,7 +336,7 @@ export default function SecretaryDeskLive() {
     toast.success(`تم تسجيل طلب التجميد للطالب ${student.fullName} ورفعه لمدير الفرع`);
   };
 
-  const handleShiftSubmit = (e: React.FormEvent) => {
+  const handleShiftSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const cash = parseFloat(shiftFormData.cashAmount) || 0;
     const electronic = parseFloat(shiftFormData.electronicAmount) || 0;
@@ -370,23 +347,19 @@ export default function SecretaryDeskLive() {
       return;
     }
 
-    const newShift = shiftStorage.submitShift({
-      branchName: branchName,
-      shiftDate: new Date().toISOString().split("T")[0],
-      shiftName: shiftFormData.shiftName,
-      submittedByUserId: me?.id || "SEC-01",
-      submittedByName: `${me?.user?.displayName || "موظف الاستقبال"} (السكرتارية)`,
-      cashAmount: cash,
-      electronicAmount: electronic,
-      totalReceiptsCount: receipts,
-      notes: shiftFormData.notes || undefined,
-    });
-
-    if (apiClient.hasSession()) {
-      apiClient.closeoutCashierShift({
+    const shiftLabel = shiftFormData.shiftName === "MORNING" ? "الوردية الصباحية" : "الوردية المسائية";
+    try {
+      await apiClient.closeoutCashierShift({
         countedCashPiastres: Math.round(cash * 100),
-        notes: shiftFormData.notes || `تقفيل وردية ${shiftFormData.shiftName === "MORNING" ? "صباحية" : "مسائية"} (${newShift.id})`,
-      }).catch(() => undefined);
+        electronicPiastres: Math.round(electronic * 100),
+        totalReceiptsCount: receipts,
+        shiftName: shiftLabel,
+        shiftDate: new Date().toISOString().split("T")[0],
+        notes: shiftFormData.notes || `تقفيل ${shiftLabel}`,
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "تعذر إغلاق الوردية على الخادم");
+      return;
     }
 
     setShiftModalOpen(false);
@@ -398,7 +371,7 @@ export default function SecretaryDeskLive() {
       notes: "",
     });
     setRefreshKey((v) => v + 1);
-    toast.success(`تم تقفيل الوردية ${newShift.id} وتوريد إشعار للمحاسب للاستلام`);
+    toast.success("تم تقفيل الوردية وتسجيلها للمحاسب للاستلام والمطابقة");
   };
 
   const openConvertModal = (lead: LeadRecord) => {
@@ -611,6 +584,7 @@ export default function SecretaryDeskLive() {
         {/* TAB 5: Shift Cash Handover */}
         {activeTab === "shifts" && (
           <SecretaryShiftsTab
+            shifts={serverShifts}
             onOpenShiftModal={() => setShiftModalOpen(true)}
           />
         )}

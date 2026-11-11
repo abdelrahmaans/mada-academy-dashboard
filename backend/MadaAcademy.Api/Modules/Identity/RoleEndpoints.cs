@@ -22,7 +22,115 @@ public static class RoleEndpoints
         api.MapPut("/members/{membershipId:guid}/permissions", UpdateMemberPermissionsAsync).RequirePermission("roles.manage");
         api.MapDelete("/members/{membershipId:guid}/permissions", ResetMemberPermissionsAsync).RequirePermission("roles.manage");
         api.MapPatch("/members/{membershipId:guid}/status", ChangeStatusAsync).RequirePermission("roles.manage");
+
+        var staffApi = endpoints.MapGroup("/api/v1/academy").RequireAuthorization("staff");
+        staffApi.MapGet("/branch-team", GetBranchTeamAsync).RequirePermission("branch.read");
+        staffApi.MapPatch("/branch-team/{membershipId:guid}/status", ChangeBranchMemberStatusAsync).RequirePermission("branch.read");
         return endpoints;
+    }
+
+    private static async Task<IResult> GetBranchTeamAsync(
+        Guid? branchId,
+        MadaDbContext db,
+        ClaimsPrincipal principal,
+        CancellationToken cancellationToken)
+    {
+        if (!TryTenant(principal, out var tenantId)) return ScopeError();
+
+        Guid? claimBranchId = Guid.TryParse(principal.FindFirstValue("branchId"), out var bid) ? bid : null;
+        var effectiveBranchId = claimBranchId ?? branchId;
+
+        var query = db.Memberships.AsNoTracking()
+            .Include(item => item.UserAccount)
+            .Include(item => item.Branch)
+            .Where(item => item.TenantId == tenantId && item.Status != "REVOKED" && item.UserAccount != null);
+
+        if (effectiveBranchId.HasValue)
+        {
+            query = query.Where(item => item.BranchId == effectiveBranchId.Value);
+        }
+
+        var members = await query
+            .OrderBy(item => item.RoleCode)
+            .ThenBy(item => item.UserAccount!.DisplayName)
+            .ToListAsync(cancellationToken);
+
+        var items = members.Select(item =>
+        {
+            var roleDef = RoleCatalog.Find(item.RoleCode);
+            return new
+            {
+                membershipId = item.Id,
+                userId = item.UserAccountId,
+                name = item.UserAccount!.DisplayName,
+                email = item.UserAccount.Email,
+                phone = item.UserAccount.Phone,
+                roleCode = item.RoleCode,
+                roleLabel = roleDef?.Label ?? item.RoleCode,
+                scopeLevel = item.ScopeLevel,
+                status = item.Status,
+                userStatus = item.UserAccount.Status,
+                branch = item.Branch == null ? null : new { item.Branch.Id, item.Branch.Name, item.Branch.Code },
+                joinedAt = item.CreatedAt
+            };
+        }).ToList();
+
+        return Results.Ok(new { data = new { items, total = items.Count, branchId = effectiveBranchId } });
+    }
+
+    private static async Task<IResult> ChangeBranchMemberStatusAsync(
+        Guid membershipId,
+        ChangeStatusRequest request,
+        MadaDbContext db,
+        ClaimsPrincipal principal,
+        CancellationToken cancellationToken)
+    {
+        if (!TryTenant(principal, out var tenantId)) return ScopeError();
+        if (!principal.IsInRole("R01_ACADEMY_OWNER") && !principal.IsInRole("R02_BRANCH_MANAGER"))
+            return Results.Problem(statusCode: 403, title: "FORBIDDEN", extensions: new Dictionary<string, object?> { ["code"] = "BRANCH_TEAM_MANAGE_FORBIDDEN" });
+        if (request.Status is not ("ACTIVE" or "SUSPENDED"))
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["status"] = ["Status must be ACTIVE or SUSPENDED."] });
+
+        var membership = await db.Memberships
+            .Include(item => item.UserAccount)
+            .SingleOrDefaultAsync(item => item.Id == membershipId && item.TenantId == tenantId, cancellationToken);
+        if (membership?.UserAccount is null)
+            return Results.NotFound(new { error = new { code = "MEMBERSHIP_NOT_FOUND", message = "Member was not found in this academy." } });
+        if (membership.RoleCode == "R01_ACADEMY_OWNER")
+            return Results.Problem(statusCode: 403, title: "CANNOT_MODIFY_OWNER", extensions: new Dictionary<string, object?> { ["code"] = "CANNOT_MODIFY_OWNER" });
+        if (membership.UserAccountId == ActorId(principal))
+            return Results.Conflict(new { error = new { code = "CANNOT_CHANGE_SELF", message = "You cannot suspend your own account." } });
+
+        if (Guid.TryParse(principal.FindFirstValue("branchId"), out var callerBranchId) && membership.BranchId != callerBranchId)
+            return Results.Problem(statusCode: 403, title: "CROSS_BRANCH_FORBIDDEN", extensions: new Dictionary<string, object?> { ["code"] = "CROSS_BRANCH_FORBIDDEN" });
+
+        membership.Status = request.Status;
+        if (request.Status == "SUSPENDED")
+        {
+            membership.UserAccount.Status = "SUSPENDED";
+            var sessions = await db.RefreshSessions
+                .Where(s => s.UserAccountId == membership.UserAccountId && s.RevokedAt == null)
+                .ToListAsync(cancellationToken);
+            foreach (var s in sessions) s.RevokedAt = DateTimeOffset.UtcNow;
+        }
+        else if (membership.UserAccount.Status == "SUSPENDED")
+        {
+            membership.UserAccount.Status = "ACTIVE";
+        }
+
+        db.Add(new AuditEvent
+        {
+            ActorUserId = ActorId(principal),
+            TenantId = tenantId,
+            BranchId = membership.BranchId,
+            Action = "BRANCH_MEMBER_STATUS_CHANGED",
+            TargetType = "MEMBERSHIP",
+            TargetId = membership.Id.ToString(),
+            MetadataJson = $"{{\"status\":\"{request.Status}\",\"userId\":\"{membership.UserAccountId}\"}}"
+        });
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Results.Ok(new { data = new { membershipId = membership.Id, status = membership.Status, userStatus = membership.UserAccount.Status } });
     }
 
     private static async Task<IResult> GetRolesAsync(

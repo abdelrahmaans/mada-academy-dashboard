@@ -32,13 +32,17 @@ import {
 } from "@/lib/instructorPerformance";
 
 import BranchMultiUnitPnLView from "@/components/BranchMultiUnitPnLView";
+import { apiClient, type ExecutiveDashboardReport, type InstructorScorecardItem, type BranchTeamMember } from "@/lib/apiClient";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 type OwnerView = "overview" | "branches" | "tickets" | "reports" | "pnl";
 type TicketStatus = "open" | "in_progress" | "waiting" | "resolved";
 type TicketPriority = "urgent" | "high" | "normal";
 
 type BranchRecord = {
-  name: (typeof ACADEMY_BRANCHES)[number];
+  id?: string;
+  name: string;
   manager: string;
   managerStatus: "active" | "needs_attention";
   students: number;
@@ -55,8 +59,8 @@ type BranchRecord = {
 type AcademyTicket = {
   id: string;
   title: string;
-  branch: (typeof ACADEMY_BRANCHES)[number];
-  category: "تشغيل" | "حسابات" | "أكاديمي";
+  branch: string;
+  category: string;
   priority: TicketPriority;
   status: TicketStatus;
   updated: string;
@@ -169,6 +173,8 @@ const PRIORITY_LABELS: Record<TicketPriority, string> = {
 };
 
 export default function AcademyOwner() {
+  const { me } = useAuth();
+  const isLive = apiClient.hasSession();
   const [location, navigate] = useLocation();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const viewFromLocation = useCallback((): OwnerView => {
@@ -182,15 +188,93 @@ export default function AcademyOwner() {
   const [month, setMonth] = useState<string>(PERFORMANCE_MONTHS[0].value);
   const [branch, setBranch] = useState("all");
   const [instructorId, setInstructorId] = useState("all");
-  const [tickets, setTickets] = useState(INITIAL_TICKETS);
+  const [tickets, setTickets] = useState<AcademyTicket[]>(() => (isLive ? [] : INITIAL_TICKETS));
   const [ticketFilter, setTicketFilter] = useState<TicketStatus | "all">("all");
   const [ticketQuery, setTicketQuery] = useState("");
-  const [selectedTicketId, setSelectedTicketId] = useState(INITIAL_TICKETS[0].id);
+  const [selectedTicketId, setSelectedTicketId] = useState(isLive ? "" : INITIAL_TICKETS[0].id);
+
+  const [execSummary, setExecSummary] = useState<ExecutiveDashboardReport | null>(null);
+  const [liveScorecard, setLiveScorecard] = useState<InstructorScorecardItem[]>([]);
+  const [liveTeam, setLiveTeam] = useState<BranchTeamMember[]>([]);
+  const [liveLoading, setLiveLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isLive) return;
+    let active = true;
+    setLiveLoading(true);
+    Promise.all([
+      apiClient.executiveSummary(),
+      apiClient.listMySupportTickets().catch(() => ({ items: [], total: 0 })),
+      apiClient.instructorScorecard().catch(() => []),
+      apiClient.branchTeam().catch(() => ({ items: [], total: 0, branchId: null })),
+    ])
+      .then(([exec, ticketsRes, scorecard, teamRes]) => {
+        if (!active) return;
+        setExecSummary(exec);
+        setLiveScorecard(scorecard);
+        setLiveTeam(teamRes.items);
+
+        const mappedTickets: AcademyTicket[] = ticketsRes.items.map(t => ({
+          id: t.id.slice(0, 8).toUpperCase(),
+          title: t.subject,
+          branch: "نطاق الأكاديمية",
+          category: t.category,
+          priority: t.priority === "URGENT" || t.priority === "HIGH" ? (t.priority.toLowerCase() as TicketPriority) : "normal",
+          status:
+            t.status === "RESOLVED" || t.status === "CANCELLED"
+              ? "resolved"
+              : t.status === "IN_PROGRESS"
+              ? "in_progress"
+              : t.status === "WAITING_CLIENT"
+              ? "waiting"
+              : "open",
+          updated: new Date(t.createdAt).toLocaleDateString("ar-EG"),
+          requester: me?.user?.displayName || "إدارة الأكاديمية",
+          description: t.description,
+        }));
+        setTickets(mappedTickets);
+        if (mappedTickets.length > 0) setSelectedTicketId(mappedTickets[0].id);
+      })
+      .catch(err => {
+        if (!active) return;
+        toast.error(err instanceof Error ? err.message : "تعذر تحميل بيانات مركز الأكاديمية.");
+      })
+      .finally(() => {
+        if (active) setLiveLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isLive]);
 
   const branchLabel = branch === "all" ? "كل الفروع" : `فرع ${branch}`;
   const monthLabel = PERFORMANCE_MONTHS.find(item => item.value === month)?.label ?? "";
   const selectedTicket = tickets.find(ticket => ticket.id === selectedTicketId) ?? tickets[0];
+  const branchOptions = useMemo(
+    () => (isLive ? (execSummary?.availableBranches.map(b => b.name) ?? []) : [...ACADEMY_BRANCHES]),
+    [isLive, execSummary]
+  );
+
   const summary = useMemo(() => {
+    if (isLive) {
+      const filteredScorecard = liveScorecard.filter(
+        item => branch === "all" || item.branchName === branch
+      );
+      const totalSessions = filteredScorecard.reduce((sum, item) => sum + item.assignedSessions, 0);
+      const weightedAtt = totalSessions
+        ? Math.round(
+            filteredScorecard.reduce((sum, item) => sum + item.studentAttendanceRate * item.assignedSessions, 0) /
+              totalSessions
+          )
+        : execSummary?.summary.attendancePercent ?? 0;
+      return {
+        instructors: filteredScorecard.length,
+        branches: execSummary?.branches.length ?? 0,
+        sessions: totalSessions || (execSummary?.summary.sessions ?? 0),
+        attendance: weightedAtt,
+      };
+    }
+
     const records = INSTRUCTOR_MONTHLY_PERFORMANCE.filter(
       record =>
         record.month === month &&
@@ -208,7 +292,8 @@ export default function AcademyOwner() {
           )
         : 0,
     };
-  }, [branch, instructorId, month]);
+  }, [isLive, liveScorecard, execSummary, branch, instructorId, month]);
+
   const visibleTickets = useMemo(() => {
     const query = ticketQuery.trim().toLocaleLowerCase("ar");
     return tickets.filter(ticket => {
@@ -217,10 +302,38 @@ export default function AcademyOwner() {
       return matchesText && (ticketFilter === "all" || ticket.status === ticketFilter);
     });
   }, [ticketFilter, ticketQuery, tickets]);
-  const rollup = useMemo(
-    () => BRANCH_ROLLUP.filter(item => branch === "all" || item.name === branch),
-    [branch]
-  );
+
+  const rollup = useMemo<BranchRecord[]>(() => {
+    if (!isLive) {
+      return BRANCH_ROLLUP.filter(item => branch === "all" || item.name === branch);
+    }
+    const sourceBranches = execSummary?.branches ?? [];
+    return sourceBranches
+      .filter(item => branch === "all" || item.branchName === branch)
+      .map(item => {
+        const branchMembers = liveTeam.filter(m => m.branch?.id === item.branchId);
+        const manager = branchMembers.find(m => m.roleCode === "R02_BRANCH_MANAGER");
+        const instructorsCount = branchMembers.filter(
+          m => m.roleCode === "R04_INSTRUCTOR" || m.roleCode === "R03_HEAD_INSTRUCTORS"
+        ).length;
+        return {
+          id: item.branchId,
+          name: item.branchName,
+          manager: manager?.name ?? `كود ${item.branchCode}`,
+          managerStatus: manager?.status === "ACTIVE" || item.branchStatus === "ACTIVE" ? "active" : "needs_attention",
+          students: item.activeStudents,
+          instructors: instructorsCount || liveScorecard.filter(s => s.branchId === item.branchId).length,
+          attendance: item.attendancePercent ?? 0,
+          sessions: item.sessions,
+          capacity: item.sessions > 0 ? Math.min(100, Math.round((item.completedSessions / item.sessions) * 100)) : 0,
+          leads: item.activeEnrollments,
+          openTickets: item.pendingApprovals,
+          collected: Math.round(item.collectedPiastres / 100),
+          trend: (item.attendancePercent ?? 0) - 75,
+        };
+      });
+  }, [isLive, execSummary, liveTeam, liveScorecard, branch]);
+
   const academyTotals = useMemo(
     () =>
       rollup.reduce(
@@ -228,12 +341,12 @@ export default function AcademyOwner() {
           students: total.students + item.students,
           sessions: total.sessions + item.sessions,
           collected: total.collected + item.collected,
-          tickets: total.tickets + item.openTickets,
+          tickets: total.tickets + (isLive ? tickets.filter(t => t.status !== "resolved").length : item.openTickets),
           leads: total.leads + item.leads,
         }),
         { students: 0, sessions: 0, collected: 0, tickets: 0, leads: 0 }
       ),
-    [rollup]
+    [rollup, isLive, tickets]
   );
 
   const goToView = (next: OwnerView) => {
@@ -246,7 +359,22 @@ export default function AcademyOwner() {
     if (!selectedTicket) return;
     setTickets(current => current.map(ticket => ticket.id === selectedTicket.id ? { ...ticket, status, updated: "الآن" } : ticket));
   };
-  const downloadReport = () => {
+  const downloadReport = async () => {
+    if (isLive) {
+      try {
+        const blob = await apiClient.downloadBiFeed();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `mada-academy-bi-${month}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+        toast.success("تم تصدير التقرير التنفيذي المجمع بنجاح");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "تعذر تصدير التقرير المجمع");
+      }
+      return;
+    }
     const rows = [
       ["تقرير الأكاديمية المجمع", monthLabel],
       ["الفرع", "الطلاب", "الحصص", "الحضور", "المقاعد المشغولة", "التذاكر المفتوحة"],
@@ -264,11 +392,12 @@ export default function AcademyOwner() {
     <RoleDashboardShell
       className="app-shell"
       roleCode="R01"
-      roleLabel="مسؤول الأكاديمية"
+      roleLabel={me?.roleLabel ?? "مسؤول الأكاديمية"}
       scopeLevel="tenant"
       scopeLabel={branchLabel}
-      tenantName="أكاديمية مدى"
+      tenantName={me?.academy?.name ?? "أكاديمية مدى"}
       branchName={branchLabel}
+      demo={!isLive}
       mobileOpen={mobileNavOpen}
       onCloseMobile={() => setMobileNavOpen(false)}
     >
@@ -283,15 +412,15 @@ export default function AcademyOwner() {
             eyebrow={<span className="academy-owner-eyebrow"><i /> إدارة على مستوى الأكاديمية · {branchLabel}</span>}
             title={OWNER_VIEW_TITLES[view]}
             description={OWNER_VIEW_DESCRIPTIONS[view]}
-            actions={<><span><CalendarIcon /> {monthLabel}</span><span><ShieldCheck size={14} /> عرض وصلاحيات الأكاديمية</span></>}
+            actions={<><span><CalendarIcon /> {monthLabel}</span><span><ShieldCheck size={14} /> {isLive ? (liveLoading ? "جاري التحديث..." : "متصل بالخادم مباشرة") : "وضع المعاينة"}</span></>}
           />
           <RoleScopeCard className="academy-owner-content-scope" />
-          <div className="academy-owner-demo-banner" role="note"><AlertCircle size={15} /><span>DEMO</span>بيانات الفروع والتذاكر والتقارير توضيحية محلية وليست متصلة بالـbackend.</div>
+          {!isLive && <div className="academy-owner-demo-banner" role="note"><AlertCircle size={15} /><span>DEMO</span>بيانات الفروع والتذاكر والتقارير توضيحية محلية وليست متصلة بالـbackend.</div>}
 
           {view === "overview" && <OverviewView totals={academyTotals} rollup={rollup} openTickets={tickets.filter(ticket => ticket.status !== "resolved")} onBranches={() => goToView("branches")} onTickets={() => goToView("tickets")} onPnL={() => goToView("pnl")} />}
-          {view === "branches" && <BranchRollupView branch={branch} setBranch={setBranch} rollup={rollup} onReports={() => goToView("reports")} />}
+          {view === "branches" && <BranchRollupView branch={branch} setBranch={setBranch} branchOptions={branchOptions} rollup={rollup} onReports={() => goToView("reports")} />}
           {view === "tickets" && <TicketCenterView tickets={visibleTickets} selectedTicket={selectedTicket} query={ticketQuery} setQuery={setTicketQuery} filter={ticketFilter} setFilter={setTicketFilter} onSelect={setSelectedTicketId} onStatus={updateTicketStatus} />}
-          {view === "reports" && <ReportsView month={month} setMonth={setMonth} branch={branch} setBranch={setBranch} instructorId={instructorId} setInstructorId={setInstructorId} summary={summary} rollup={rollup} onDownload={downloadReport} />}
+          {view === "reports" && <ReportsView month={month} setMonth={setMonth} branch={branch} setBranch={setBranch} branchOptions={branchOptions} instructorId={instructorId} setInstructorId={setInstructorId} summary={summary} rollup={rollup} onDownload={downloadReport} />}
           {view === "pnl" && <BranchMultiUnitPnLView initialBranch={branch === "all" ? "كل الفروع" : branch} />}
 
           <footer className="academy-owner-footnote"><GraduationCap size={16} /><p>R01 يرى كل فروع أكاديميته ويستطيع متابعة التقارير والتذاكر والتصعيدات، لكنه لا يرى بيانات أي أكاديمية أخرى ولا يتجاوز صلاحيات R00.</p><div className="academy-owner-footnote-actions"><button onClick={() => navigate("/academy/roles")}><ShieldCheck size={14} /> إدارة المستخدمين والصلاحيات <ChevronLeft size={14} /></button><button onClick={() => navigate("/team")}>معاينة فريق الفرع <ChevronLeft size={14} /></button></div></footer>
@@ -313,16 +442,16 @@ function OverviewView({ totals, rollup, openTickets, onBranches, onTickets, onPn
   </>;
 }
 
-function BranchRollupView({ branch, setBranch, rollup, onReports }: { branch: string; setBranch: (value: string) => void; rollup: BranchRecord[]; onReports: () => void }) {
- return <section className="academy-owner-panel academy-owner-rollup-panel"><PanelHeading icon={<Building2 size={16} />} title="Branch Rollup · ملخص كل الفروع" action={<button onClick={onReports}>التقرير المجمع <ChevronLeft size={14} /></button>} /><div className="academy-owner-filter-bar"><label><MapPin size={14} /><span>النطاق</span><select value={branch} onChange={event => setBranch(event.target.value)}><option value="all">كل الفروع</option>{ACADEMY_BRANCHES.map(item => <option key={item} value={item}>{item}</option>)}</select></label><span className="academy-owner-context-note"><ShieldCheck size={13} /> النطاق: أكاديمية مدى فقط</span></div><div className="academy-owner-branch-grid">{rollup.map(item => <article className="academy-owner-branch-card" key={item.name}><div className="academy-owner-branch-card-head"><span className="owner-summary-icon teal"><Building2 size={16} /></span><div><strong>{item.name}</strong><small>مدير الفرع: {item.manager}</small></div><StatusBadge status={item.managerStatus === "active" ? "success" : "warning"} label={item.managerStatus === "active" ? "نشط" : "يحتاج متابعة"} /></div><div className="academy-owner-branch-metrics"><Metric label="طلاب" value={item.students} /><Metric label="حضور" value={`${item.attendance}%`} /><Metric label="طاقة" value={`${item.capacity}%`} /><Metric label="تذاكر" value={item.openTickets} /></div><div className="academy-owner-branch-progress"><span>الحضور</span><div><i style={{ width: `${item.attendance}%` }} /></div><b>{item.attendance}%</b></div><div className="academy-owner-branch-card-foot"><span><Users size={13} /> {item.instructors} مدربين</span><span><MessageSquare size={13} /> {item.leads} leads</span><span className={item.trend >= 0 ? "trend-up" : "trend-down"}>{item.trend >= 0 ? "↗" : "↘"} {Math.abs(item.trend)}%</span></div></article>)}</div></section>;
+function BranchRollupView({ branch, setBranch, branchOptions, rollup, onReports }: { branch: string; setBranch: (value: string) => void; branchOptions: string[]; rollup: BranchRecord[]; onReports: () => void }) {
+ return <section className="academy-owner-panel academy-owner-rollup-panel"><PanelHeading icon={<Building2 size={16} />} title="Branch Rollup · ملخص كل الفروع" action={<button onClick={onReports}>التقرير المجمع <ChevronLeft size={14} /></button>} /><div className="academy-owner-filter-bar"><label><MapPin size={14} /><span>النطاق</span><select value={branch} onChange={event => setBranch(event.target.value)}><option value="all">كل الفروع</option>{branchOptions.map(item => <option key={item} value={item}>{item}</option>)}</select></label><span className="academy-owner-context-note"><ShieldCheck size={13} /> النطاق: أكاديمية مدى فقط</span></div><div className="academy-owner-branch-grid">{rollup.map(item => <article className="academy-owner-branch-card" key={item.name}><div className="academy-owner-branch-card-head"><span className="owner-summary-icon teal"><Building2 size={16} /></span><div><strong>{item.name}</strong><small>مدير الفرع: {item.manager}</small></div><StatusBadge status={item.managerStatus === "active" ? "success" : "warning"} label={item.managerStatus === "active" ? "نشط" : "يحتاج متابعة"} /></div><div className="academy-owner-branch-metrics"><Metric label="طلاب" value={item.students} /><Metric label="حضور" value={`${item.attendance}%`} /><Metric label="طاقة" value={`${item.capacity}%`} /><Metric label="تذاكر" value={item.openTickets} /></div><div className="academy-owner-branch-progress"><span>الحضور</span><div><i style={{ width: `${item.attendance}%` }} /></div><b>{item.attendance}%</b></div><div className="academy-owner-branch-card-foot"><span><Users size={13} /> {item.instructors} مدربين</span><span><MessageSquare size={13} /> {item.leads} leads</span><span className={item.trend >= 0 ? "trend-up" : "trend-down"}>{item.trend >= 0 ? "↗" : "↘"} {Math.abs(item.trend)}%</span></div></article>)}</div></section>;
 }
 
 function TicketCenterView({ tickets, selectedTicket, query, setQuery, filter, setFilter, onSelect, onStatus }: { tickets: AcademyTicket[]; selectedTicket?: AcademyTicket; query: string; setQuery: (value: string) => void; filter: TicketStatus | "all"; setFilter: (value: TicketStatus | "all") => void; onSelect: (id: string) => void; onStatus: (status: TicketStatus) => void }) {
- return <section className="academy-owner-ticket-layout"><article className="academy-owner-panel academy-owner-ticket-list-panel"><PanelHeading icon={<Headphones size={16} />} title="كل تذاكر الأكاديمية" action={<button onClick={() => setFilter("all")}><RefreshIcon /> تحديث العرض</button>} /><div className="academy-owner-ticket-toolbar"><label><Search size={14} /><input placeholder="ابحث برقم التذكرة أو العنوان..." value={query} onChange={event => setQuery(event.target.value)} /></label><select value={filter} onChange={event => setFilter(event.target.value as TicketStatus | "all")}><option value="all">كل الحالات</option>{Object.entries(TICKET_STATUS_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></div><div className="academy-owner-tickets">{tickets.map(ticket => <button className={`academy-owner-ticket-row ${selectedTicket?.id === ticket.id ? "selected" : ""}`} key={ticket.id} onClick={() => onSelect(ticket.id)}><span className={`academy-owner-ticket-icon ${ticket.priority}`}><Ticket size={15} /></span><span><strong>{ticket.title}</strong><small>{ticket.id} · {ticket.branch} · {ticket.category}</small></span><StatusBadge status={ticket.status === "resolved" ? "success" : ticket.priority === "urgent" ? "danger" : "warning"} label={TICKET_STATUS_LABELS[ticket.status]} /><ChevronLeft size={14} /></button>)}{tickets.length === 0 && <div className="academy-owner-empty"><Search size={20} /><strong>لا توجد تذاكر مطابقة</strong><small>جرّب تغيير البحث أو الفلتر.</small></div>}</div></article><aside className="academy-owner-panel academy-owner-ticket-detail">{selectedTicket ? <><div className="academy-owner-ticket-detail-head"><span className={`academy-owner-ticket-icon ${selectedTicket.priority}`}><Ticket size={17} /></span><span><small>{selectedTicket.id} · {selectedTicket.branch}</small><h2>{selectedTicket.title}</h2></span></div><div className="academy-owner-ticket-meta"><span><b>الفئة</b>{selectedTicket.category}</span><span><b>الأولوية</b>{PRIORITY_LABELS[selectedTicket.priority]}</span><span><b>آخر تحديث</b>{selectedTicket.updated}</span></div><p className="academy-owner-ticket-description">{selectedTicket.description}</p><div className="academy-owner-requester"><MessageSquare size={15} /><span><small>صاحب الطلب</small><strong>{selectedTicket.requester}</strong></span></div><div className="academy-owner-ticket-actions"><small>تغيير الحالة</small><div>{(Object.keys(TICKET_STATUS_LABELS) as TicketStatus[]).filter(status => status !== selectedTicket.status).map(status => <button key={status} onClick={() => onStatus(status)}>{TICKET_STATUS_LABELS[status]}</button>)}</div></div><div className="academy-owner-audit-note"><CheckCircle2 size={14} /> القرار محلي في المعاينة، ويجب أن يُسجل كـAudit Event عند ربط الـbackend.</div></> : <div className="academy-owner-empty"><AlertCircle size={20} /><strong>اختر تذكرة لمراجعتها</strong></div>}</aside></section>;
+ return <section className="academy-owner-ticket-layout"><article className="academy-owner-panel academy-owner-ticket-list-panel"><PanelHeading icon={<Headphones size={16} />} title="كل تذاكر الأكاديمية" action={<button onClick={() => setFilter("all")}><RefreshIcon /> تحديث العرض</button>} /><div className="academy-owner-ticket-toolbar"><label><Search size={14} /><input placeholder="ابحث برقم التذكرة أو العنوان..." value={query} onChange={event => setQuery(event.target.value)} /></label><select value={filter} onChange={event => setFilter(event.target.value as TicketStatus | "all")}><option value="all">كل الحالات</option>{Object.entries(TICKET_STATUS_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></div><div className="academy-owner-tickets">{tickets.map(ticket => <button className={`academy-owner-ticket-row ${selectedTicket?.id === ticket.id ? "selected" : ""}`} key={ticket.id} onClick={() => onSelect(ticket.id)}><span className={`academy-owner-ticket-icon ${ticket.priority}`}><Ticket size={15} /></span><span><strong>{ticket.title}</strong><small>{ticket.id} · {ticket.branch} · {ticket.category}</small></span><StatusBadge status={ticket.status === "resolved" ? "success" : ticket.priority === "urgent" ? "danger" : "warning"} label={TICKET_STATUS_LABELS[ticket.status]} /><ChevronLeft size={14} /></button>)}{tickets.length === 0 && <div className="academy-owner-empty"><Search size={20} /><strong>لا توجد تذاكر مطابقة</strong><small>جرّب تغيير البحث أو الفلتر.</small></div>}</div></article><aside className="academy-owner-panel academy-owner-ticket-detail">{selectedTicket ? <><div className="academy-owner-ticket-detail-head"><span className={`academy-owner-ticket-icon ${selectedTicket.priority}`}><Ticket size={17} /></span><span><small>{selectedTicket.id} · {selectedTicket.branch}</small><h2>{selectedTicket.title}</h2></span></div><div className="academy-owner-ticket-meta"><span><b>الفئة</b>{selectedTicket.category}</span><span><b>الأولوية</b>{PRIORITY_LABELS[selectedTicket.priority]}</span><span><b>آخر تحديث</b>{selectedTicket.updated}</span></div><p className="academy-owner-ticket-description">{selectedTicket.description}</p><div className="academy-owner-requester"><MessageSquare size={15} /><span><small>صاحب الطلب</small><strong>{selectedTicket.requester}</strong></span></div><div className="academy-owner-ticket-actions"><small>تغيير الحالة</small><div>{(Object.keys(TICKET_STATUS_LABELS) as TicketStatus[]).filter(status => status !== selectedTicket.status).map(status => <button key={status} onClick={() => onStatus(status)}>{TICKET_STATUS_LABELS[status]}</button>)}</div></div><div className="academy-owner-audit-note"><CheckCircle2 size={14} /> متابعة الحالة مسجلة ضمن تذاكر الأكاديمية.</div></> : <div className="academy-owner-empty"><AlertCircle size={20} /><strong>اختر تذكرة لمراجعتها</strong></div>}</aside></section>;
 }
 
-function ReportsView({ month, setMonth, branch, setBranch, instructorId, setInstructorId, summary, rollup, onDownload }: { month: string; setMonth: (value: string) => void; branch: string; setBranch: (value: string) => void; instructorId: string; setInstructorId: (value: string) => void; summary: { instructors: number; branches: number; sessions: number; attendance: number }; rollup: BranchRecord[]; onDownload: () => void }) {
-  return <><section className="academy-owner-report-toolbar"><div><span className="academy-owner-panel-kicker">سياق التقرير</span><strong>تقرير أداء الأكاديمية</strong><small>الفترة والنطاق ظاهرين قبل أي رقم أو تصدير.</small></div><label><span>الشهر</span><select value={month} onChange={event => setMonth(event.target.value)}>{PERFORMANCE_MONTHS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label><label><span>الفرع</span><select value={branch} onChange={event => setBranch(event.target.value)}><option value="all">كل الفروع</option>{ACADEMY_BRANCHES.map(item => <option key={item} value={item}>{item}</option>)}</select></label><button onClick={onDownload}><FileText size={15} /> تصدير CSV</button></section><section className="academy-owner-summary-grid academy-owner-report-summary"><SummaryCard icon={<Users size={17} />} tone="teal" label="مدربون في التقرير" value={summary.instructors} hint={`${summary.branches} فروع`} /><SummaryCard icon={<BarChart3 size={17} />} tone="blue" label="حصص الفترة" value={summary.sessions} hint="بعد تطبيق الفلاتر" /><SummaryCard icon={<TrendingUp size={17} />} tone="amber" label="الحضور الموزون" value={`${summary.attendance}%`} hint="حسب عدد الحصص" /><SummaryCard icon={<Building2 size={17} />} tone="violet" label="نطاق التقرير" value={branch === "all" ? "الكل" : branch} hint="أكاديمية مدى" /></section><div className="academy-owner-anchor"><InstructorPerformanceComparison scope="academy" month={month} onMonthChange={setMonth} selectedBranch={branch} onBranchChange={setBranch} selectedInstructorId={instructorId} onInstructorChange={setInstructorId} /></div><section className="academy-owner-panel academy-owner-report-table"><PanelHeading icon={<FileBarChart size={16} />} title="مقارنة الفروع" action={<span className="academy-owner-context-note"><Clock3 size={13} /> {PERFORMANCE_MONTHS.find(item => item.value === month)?.label}</span>} /><div className="academy-owner-report-table-wrap"><table><thead><tr><th>الفرع</th><th>الطلاب</th><th>الحضور</th><th>الحصص</th><th>الطاقة</th><th>التذاكر</th></tr></thead><tbody>{rollup.map(item => <tr key={item.name}><td><strong>{item.name}</strong><small>{item.manager}</small></td><td>{item.students}</td><td><b className={item.attendance >= 88 ? "report-good" : "report-watch"}>{item.attendance}%</b></td><td>{item.sessions}</td><td>{item.capacity}%</td><td>{item.openTickets}</td></tr>)}</tbody></table></div></section></>;
+function ReportsView({ month, setMonth, branch, setBranch, branchOptions, instructorId, setInstructorId, summary, rollup, onDownload }: { month: string; setMonth: (value: string) => void; branch: string; setBranch: (value: string) => void; branchOptions: string[]; instructorId: string; setInstructorId: (value: string) => void; summary: { instructors: number; branches: number; sessions: number; attendance: number }; rollup: BranchRecord[]; onDownload: () => void }) {
+  return <><section className="academy-owner-report-toolbar"><div><span className="academy-owner-panel-kicker">سياق التقرير</span><strong>تقرير أداء الأكاديمية</strong><small>الفترة والنطاق ظاهرين قبل أي رقم أو تصدير.</small></div><label><span>الشهر</span><select value={month} onChange={event => setMonth(event.target.value)}>{PERFORMANCE_MONTHS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label><label><span>الفرع</span><select value={branch} onChange={event => setBranch(event.target.value)}><option value="all">كل الفروع</option>{branchOptions.map(item => <option key={item} value={item}>{item}</option>)}</select></label><button onClick={onDownload}><FileText size={15} /> تصدير CSV</button></section><section className="academy-owner-summary-grid academy-owner-report-summary"><SummaryCard icon={<Users size={17} />} tone="teal" label="مدربون في التقرير" value={summary.instructors} hint={`${summary.branches} فروع`} /><SummaryCard icon={<BarChart3 size={17} />} tone="blue" label="حصص الفترة" value={summary.sessions} hint="بعد تطبيق الفلاتر" /><SummaryCard icon={<TrendingUp size={17} />} tone="amber" label="الحضور الموزون" value={`${summary.attendance}%`} hint="حسب عدد الحصص" /><SummaryCard icon={<Building2 size={17} />} tone="violet" label="نطاق التقرير" value={branch === "all" ? "الكل" : branch} hint="أكاديمية مدى" /></section><div className="academy-owner-anchor"><InstructorPerformanceComparison scope="academy" month={month} onMonthChange={setMonth} selectedBranch={branch} onBranchChange={setBranch} selectedInstructorId={instructorId} onInstructorChange={setInstructorId} /></div><section className="academy-owner-panel academy-owner-report-table"><PanelHeading icon={<FileBarChart size={16} />} title="مقارنة الفروع" action={<span className="academy-owner-context-note"><Clock3 size={13} /> {PERFORMANCE_MONTHS.find(item => item.value === month)?.label}</span>} /><div className="academy-owner-report-table-wrap"><table><thead><tr><th>الفرع</th><th>الطلاب</th><th>الحضور</th><th>الحصص</th><th>الطاقة</th><th>التذاكر</th></tr></thead><tbody>{rollup.map(item => <tr key={item.name}><td><strong>{item.name}</strong><small>{item.manager}</small></td><td>{item.students}</td><td><b className={item.attendance >= 88 ? "report-good" : "report-watch"}>{item.attendance}%</b></td><td>{item.sessions}</td><td>{item.capacity}%</td><td>{item.openTickets}</td></tr>)}</tbody></table></div></section></>;
 }
 
 function SummaryCard({ icon, tone, label, value, hint }: { icon: React.ReactNode; tone: string; label: string; value: React.ReactNode; hint: string }) {

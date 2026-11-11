@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   AlertCircle,
   ArrowDownToLine,
@@ -13,8 +13,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
-import { getRoleDefinition } from "@/lib/roleNavigation";
+import { getRoleDefinition, type RoleCode as NavRoleCode } from "@/lib/roleNavigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { apiClient } from "@/lib/apiClient";
 import { TeamManagementViews } from "@/components/TeamManagementViews";
 import {
   ROLE_BY_CODE,
@@ -116,8 +117,20 @@ const INITIAL_STAFF: StaffMember[] = [
 
 export default function Team() {
   const [, navigate] = useLocation();
-  const [staff, setStaff] = useState(INITIAL_STAFF);
-  const branch = "مدينة نصر";
+  const { me } = useAuth();
+  const isLive = apiClient.hasSession();
+  const assignedBranchName =
+    me?.branchId
+      ? me.branches?.find(b => b.id === me.branchId)?.name ?? "الفرع الحالي"
+      : isLive
+      ? "كل الفروع"
+      : "مدينة نصر";
+  const branch = assignedBranchName;
+
+  const [staff, setStaff] = useState<StaffMember[]>(() => (isLive ? [] : INITIAL_STAFF));
+  const [liveManagerCount, setLiveManagerCount] = useState(0);
+  const [liveLoading, setLiveLoading] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
@@ -127,11 +140,50 @@ export default function Team() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [newRole, setNewRole] = useState<StaffMember["role"]>("R04");
-  const [supervisorId, setSupervisorId] = useState("USR-0201");
+  const [supervisorId, setSupervisorId] = useState("");
+
+  useEffect(() => {
+    if (!isLive) return;
+    let active = true;
+    setLiveLoading(true);
+    apiClient
+      .branchTeam(me?.branchId ?? undefined)
+      .then(res => {
+        if (!active) return;
+        const managers = res.items.filter(m => m.roleCode.startsWith("R02"));
+        setLiveManagerCount(managers.length);
+        const mapped: StaffMember[] = res.items
+          .filter(m => ["R03", "R04", "R05", "R06", "R07"].includes(m.roleCode.slice(0, 3)))
+          .map(m => ({
+            id: m.membershipId,
+            name: m.name,
+            phone: m.phone,
+            role: m.roleCode.slice(0, 3) as StaffMember["role"],
+            branch: m.branch?.name ?? assignedBranchName,
+            status: m.status === "ACTIVE" ? "active" : "on_leave",
+            joined: new Date(m.joinedAt).toLocaleDateString("ar-EG", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            }),
+          }));
+        setStaff(mapped);
+      })
+      .catch(err => {
+        if (!active) return;
+        toast.error(err instanceof Error ? err.message : "تعذر تحميل قائمة فريق الفرع");
+      })
+      .finally(() => {
+        if (active) setLiveLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isLive, me?.branchId, assignedBranchName, refreshTick]);
 
   const branchStaff = useMemo(
-    () => staff.filter(member => member.branch === branch),
-    [staff, branch]
+    () => (isLive ? staff : staff.filter(member => member.branch === branch)),
+    [isLive, staff, branch]
   );
   const activeInstructorHeads = branchStaff.filter(
     member => member.role === "R03" && member.status === "active"
@@ -164,17 +216,23 @@ export default function Team() {
     const counts = new Map<RoleCode, number>();
     for (const member of branchStaff)
       counts.set(member.role, (counts.get(member.role) ?? 0) + 1);
-    counts.set("R02", 1);
+    counts.set("R02", isLive ? liveManagerCount : 1);
     return counts;
-  }, [branchStaff]);
+  }, [branchStaff, isLive, liveManagerCount]);
   const openAddDialog = () => {
+    if (isLive && !me?.permissions?.includes("staff.invite")) {
+      toast.info("إضافة حسابات الموظفين متاحة لمسؤول الأكاديمية من شاشة الأدوار", {
+        action: { label: "تعديل الصلاحيات", onClick: () => navigate("/academy/roles") },
+      });
+      return;
+    }
     setName("");
     setPhone("");
     setNewRole("R04");
     setSupervisorId(activeInstructorHeads[0]?.id ?? "");
     setDialog("add");
   };
-  const submitStaff = (event: FormEvent<HTMLFormElement>) => {
+  const submitStaff = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const normalizedPhone = phone.replace(/[\s-]/g, "");
     if (!name.trim() || !/^01[0125]\d{8}$/.test(normalizedPhone)) {
@@ -182,9 +240,40 @@ export default function Team() {
       return;
     }
     if (staff.some(member => member.phone === normalizedPhone)) {
-      toast.error("رقم الموبايل مسجل بالفعل في بيانات العرض");
+      toast.error("رقم الموبايل مسجل بالفعل في الفريق");
       return;
     }
+
+    if (isLive) {
+      const fullRoleCode =
+        newRole === "R03"
+          ? "R03_HEAD_INSTRUCTORS"
+          : newRole === "R04"
+          ? "R04_INSTRUCTOR"
+          : newRole === "R05"
+          ? "R05_SECRETARY"
+          : newRole === "R06"
+          ? "R06_ACCOUNTANT"
+          : "R07_MEDIA_MANAGER";
+      try {
+        const slug = normalizedPhone.slice(-6);
+        await apiClient.addAcademyMember({
+          fullName: name.trim(),
+          email: `staff.${slug}@mada.demo`,
+          phone: `+2${normalizedPhone}`,
+          password: "Mada@2026",
+          roleCode: fullRoleCode,
+          branchId: me?.branchId ?? me?.branches?.[0]?.id,
+        });
+        setDialog(null);
+        setRefreshTick(v => v + 1);
+        toast.success("تم إنشاء حساب العضو وتفعيله في قاعدة البيانات");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "تعذر إضافة العضو");
+      }
+      return;
+    }
+
     if (
       newRole === "R04" &&
       !activeInstructorHeads.some(member => member.id === supervisorId)
@@ -215,9 +304,30 @@ export default function Team() {
       description: "لم يتم إرسال OTP أو إنشاء حساب دخول حقيقي.",
     });
   };
-  const toggleStatus = (member: StaffMember) => {
+  const toggleStatus = async (member: StaffMember) => {
     const nextStatus: StaffStatus =
       member.status === "active" ? "on_leave" : "active";
+
+    if (isLive) {
+      const apiStatus = nextStatus === "active" ? "ACTIVE" : "SUSPENDED";
+      try {
+        await apiClient.changeBranchMemberStatus(member.id, apiStatus);
+        setStaff(current =>
+          current.map(item =>
+            item.id === member.id ? { ...item, status: nextStatus } : item
+          )
+        );
+        toast.success(
+          apiStatus === "ACTIVE"
+            ? "تم تفعيل حساب الموظف بنجاح"
+            : "تم إيقاف حساب الموظف مؤقتاً"
+        );
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "تعذر تحديث حالة الحساب");
+      }
+      return;
+    }
+
     setStaff(current =>
       current.map(item =>
         item.id === member.id ? { ...item, status: nextStatus } : item
@@ -257,22 +367,23 @@ export default function Team() {
     toast.success("تم تنزيل نسخة CSV من الفريق الظاهر");
   };
 
-  const { me } = useAuth();
-  const userRoleCode = me?.role ? (me.role.replace(/_.*$/, "") as RoleCode) : undefined;
-  const activeRoleCode: RoleCode = userRoleCode || "R02";
+  const userRoleCode = me?.role ? (me.role.replace(/_.*$/, "") as NavRoleCode) : undefined;
+  const activeRoleCode: NavRoleCode = userRoleCode || "R02";
   const roleDef = getRoleDefinition(activeRoleCode);
   const branchContext = me?.branchId ? me.branches?.find(b => b.id === me.branchId)?.name : branch;
+  const displayName = me?.user?.displayName || "أحمد محمود";
+  const roleTitle = me?.roleLabel || roleDef.label;
 
   return (
     <RoleDashboardShell
       className="app-shell team-shell"
       roleCode={activeRoleCode}
-      roleLabel={me?.roleLabel || roleDef.label}
+      roleLabel={roleTitle}
       scopeLevel={roleDef.scopeLevel}
       scopeLabel={roleDef.defaultScopeLabel}
       tenantName={me?.academy?.name}
       branchName={branchContext}
-      demo
+      demo={!isLive}
       mobileOpen={mobileNavOpen}
       onCloseMobile={() => setMobileNavOpen(false)}
     >
@@ -288,12 +399,12 @@ export default function Team() {
             </button>
             <div
               className="branch-select assigned-branch"
-              aria-label={`النطاق: فرع ${branch}`}
+              aria-label={`النطاق: ${branch}`}
             >
               <span className="branch-icon">
                 <MapPin size={17} />
               </span>
-              <span>فرع {branch}</span>
+              <span>{branch}</span>
             </div>
             <label className="top-search">
               <Search size={18} />
@@ -321,10 +432,10 @@ export default function Team() {
               onClick={() => toast("إعدادات الحساب قيد التجهيز")}
             >
               <span className="profile-copy">
-                <strong>أحمد محمود</strong>
-                <small>مدير الفرع</small>
+                <strong>{displayName}</strong>
+                <small>{roleTitle}</small>
               </span>
-              <span className="profile-avatar">أم</span>
+              <span className="profile-avatar">{displayName.slice(0, 2)}</span>
               <ChevronDown size={14} />
             </button>
           </div>
@@ -339,8 +450,8 @@ export default function Team() {
           <section className="students-welcome team-welcome">
             <div>
               <div className="eyebrow">
-                <span className="eyebrow-dot" /> إدارة فريق الفرع · الحسابات
-                والأدوار
+                <span className="eyebrow-dot" /> إدارة فريق الفرع ·{" "}
+                {isLive ? (liveLoading ? "جاري التحميل..." : "بيانات حية") : "الأدوار والحسابات"}
               </div>
               <h1>الفريق والأدوار</h1>
               <p>
@@ -362,14 +473,16 @@ export default function Team() {
               </button>
             </div>
           </section>
-          <section className="team-demo-note" role="note">
-            <AlertCircle size={16} />
-            <span>
-              بيانات توضيحية محلية. لا يتم إرسال رمز دخول أو إنشاء حساب فعلي،
-              والتغييرات لا تُحفظ بعد إغلاق المعاينة.
-            </span>
-            <span className="demo-tag">DEMO</span>
-          </section>
+          {!isLive && (
+            <section className="team-demo-note" role="note">
+              <AlertCircle size={16} />
+              <span>
+                بيانات توضيحية محلية. لا يتم إرسال رمز دخول أو إنشاء حساب فعلي،
+                والتغييرات لا تُحفظ بعد إغلاق المعاينة.
+              </span>
+              <span className="demo-tag">DEMO</span>
+            </section>
+          )}
 
           <TeamManagementViews
             branch={branch}

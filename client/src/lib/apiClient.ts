@@ -392,6 +392,15 @@ export type CashierShiftHistoryItem = {
   targetId: string;
   branchId: string | null;
   branchName: string | null;
+  shiftDate?: string | null;
+  shiftName?: string | null;
+  expectedCashPiastres?: number;
+  countedCashPiastres?: number;
+  electronicPiastres?: number;
+  totalReceiptsCount?: number;
+  discrepancyPiastres?: number;
+  status?: string | null;
+  notes?: string | null;
   closedAt: string | null;
   closedBy: string | null;
   closeoutMetadata: string | null;
@@ -399,6 +408,27 @@ export type CashierShiftHistoryItem = {
   confirmedAt: string | null;
   confirmedBy: string | null;
   confirmNotes: string | null;
+};
+
+export type BranchTeamMember = {
+  membershipId: string;
+  userId: string;
+  name: string;
+  email: string | null;
+  phone: string;
+  roleCode: string;
+  roleLabel: string;
+  scopeLevel: string;
+  status: "ACTIVE" | "SUSPENDED" | "REVOKED" | string;
+  userStatus: string;
+  branch: { id: string; name: string; code: string } | null;
+  joinedAt: string;
+};
+
+export type BranchTeamResponse = {
+  items: BranchTeamMember[];
+  total: number;
+  branchId: string | null;
 };
 
 export type CashierShiftsHistoryResponse = {
@@ -986,6 +1016,9 @@ export const apiClient = {
   listNotifications: (unreadOnly = false) => request<NotificationListResponse>(`/scheduling/notifications?unreadOnly=${unreadOnly}`),
   markNotificationRead: (notificationId: string) => request<void>(`/scheduling/notifications/${notificationId}/read`, { method: "POST" }),
   academyMembers: () => request<AcademyMembersResponse>("/academy/members"),
+  branchTeam: (branchId?: string) => request<BranchTeamResponse>(`/academy/branch-team${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`),
+  changeBranchMemberStatus: (membershipId: string, status: "ACTIVE" | "SUSPENDED") =>
+    request<{ membershipId: string; status: string; userStatus: string }>(`/academy/branch-team/${membershipId}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
   addAcademyMember: (input: { fullName: string; email: string; phone: string; password: string; roleCode: string; branchId?: string }) =>
     request<AcademyMember>("/academy/members", { method: "POST", body: JSON.stringify(input) }),
   changeAcademyMemberRole: (membershipId: string, input: { roleCode: string; branchId?: string }) =>
@@ -1082,7 +1115,8 @@ export const apiClient = {
     return response.blob();
   },
   cashierShiftSummary: () => request<CashierShiftSummary>("/finance/cashier/shift-summary"),
-  closeoutCashierShift: (input: { countedCashPiastres: number; notes?: string }) => request<CloseoutCashierResponse>("/finance/cashier/closeout", { method: "POST", body: JSON.stringify(input) }),
+  closeoutCashierShift: (input: { countedCashPiastres: number; notes?: string; shiftName?: string; electronicPiastres?: number; totalReceiptsCount?: number; shiftDate?: string }) =>
+    request<CloseoutCashierResponse>("/finance/cashier/closeout", { method: "POST", body: JSON.stringify(input) }),
   confirmCashierShift: (input: { date: string; branchId?: string; notes?: string }) => request<{ status: string; targetId: string; confirmedAt: string }>("/finance/cashier/confirm-shift", { method: "POST", body: JSON.stringify(input) }),
   listCashierShiftsHistory: () => request<CashierShiftsHistoryResponse>("/finance/cashier/shifts-history"),
   myInstructorEarnings: (month?: string) => request<MyInstructorEarnings>("/finance/instructor/my-earnings" + (month ? `?month=${encodeURIComponent(month)}` : "")),
@@ -1489,6 +1523,43 @@ export type ShiftCashHandover = {
   pettyExpenses?: number;
   receipts?: ShiftReceiptDetail[];
 };
+
+export function mapServerShiftHistoryToHandover(item: CashierShiftHistoryItem): ShiftCashHandover {
+  let meta: Record<string, unknown> = {};
+  if (item.closeoutMetadata) {
+    try {
+      meta = JSON.parse(item.closeoutMetadata) as Record<string, unknown>;
+    } catch {
+      meta = {};
+    }
+  }
+  const countedPiastres = item.countedCashPiastres ?? (typeof meta.countedCash === "number" ? meta.countedCash : 0);
+  const electronicPiastres = item.electronicPiastres ?? (typeof meta.electronicPiastres === "number" ? meta.electronicPiastres : 0);
+  const discrepancyPiastres = item.discrepancyPiastres ?? (typeof meta.discrepancy === "number" ? meta.discrepancy : 0);
+  const rawShiftName = item.shiftName ?? (typeof meta.shiftName === "string" ? meta.shiftName : "");
+  const shiftDate =
+    item.shiftDate ??
+    (typeof meta.date === "string" ? meta.date : null) ??
+    (item.closedAt ? item.closedAt.slice(0, 10) : new Date().toISOString().slice(0, 10));
+
+  return {
+    id: item.targetId,
+    branchName: item.branchName ?? "فرع الأكاديمية",
+    shiftDate,
+    shiftName: rawShiftName.includes("مسائ") || rawShiftName === "EVENING" ? "EVENING" : "MORNING",
+    submittedByUserId: "",
+    submittedByName: item.closedBy ?? "السكرتارية",
+    cashAmount: Math.round(countedPiastres / 100),
+    electronicAmount: Math.round(electronicPiastres / 100),
+    totalReceiptsCount: item.totalReceiptsCount ?? (typeof meta.totalReceiptsCount === "number" ? meta.totalReceiptsCount : 0),
+    status: item.isConfirmed ? "ACCEPTED" : discrepancyPiastres !== 0 ? "DISCREPANCY" : "SUBMITTED",
+    receivedByName: item.confirmedBy ?? undefined,
+    receivedAt: item.confirmedAt ?? undefined,
+    discrepancyAmount: Math.round(discrepancyPiastres / 100),
+    notes: item.confirmNotes || item.notes || (typeof meta.notes === "string" ? meta.notes : undefined),
+    createdAt: item.closedAt ?? new Date().toISOString(),
+  };
+}
 
 export type TrainerSessionDetail = {
   sessionId: string;

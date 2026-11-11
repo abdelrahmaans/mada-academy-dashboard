@@ -1,15 +1,17 @@
 import React from "react";
 import { Plus } from "lucide-react";
-import { shiftStorage } from "@/lib/apiClient";
+import { shiftStorage, type ShiftCashHandover } from "@/lib/apiClient";
 
 export interface SecretaryShiftsTabProps {
+  shifts?: ShiftCashHandover[];
   onOpenShiftModal: () => void;
 }
 
 export function SecretaryShiftsTab({
+  shifts,
   onOpenShiftModal,
 }: SecretaryShiftsTabProps) {
-  const allShifts = shiftStorage.getHandovers();
+  const allShifts = shifts ?? shiftStorage.getHandovers();
 
   return (
     <section className="secretary-panel">

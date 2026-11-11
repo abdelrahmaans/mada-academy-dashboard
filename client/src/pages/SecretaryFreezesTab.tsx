@@ -1,6 +1,6 @@
 import React from "react";
 import { Plus } from "lucide-react";
-import { freezeStorage, type SubscriptionFreezeRequest } from "@/lib/apiClient";
+import { type SubscriptionFreezeRequest } from "@/lib/apiClient";
 
 export interface SecretaryFreezesTabProps {
   serverFreezes: SubscriptionFreezeRequest[];
@@ -11,8 +11,7 @@ export function SecretaryFreezesTab({
   serverFreezes,
   onOpenFreezeModal,
 }: SecretaryFreezesTabProps) {
-  const allFreezes =
-    serverFreezes.length > 0 ? serverFreezes : freezeStorage.getRequests();
+  const allFreezes = serverFreezes;
 
   return (
     <section className="secretary-panel">

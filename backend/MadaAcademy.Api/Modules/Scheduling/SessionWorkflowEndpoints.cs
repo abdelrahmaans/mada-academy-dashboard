@@ -604,7 +604,7 @@ public static class SessionWorkflowEndpoints
         return Results.Ok(new { data = new { evaluationId, sessionId = session.Id, status = evaluation.Status, reviewedAt = evaluation.ReviewedAt, publishedAt = evaluation.PublishedAt } });
     }
 
-    private static async Task<IResult> ListNotificationsAsync(ClaimsPrincipal user, MadaDbContext db, bool unreadOnly, CancellationToken cancellationToken)
+    private static async Task<IResult> ListNotificationsAsync(ClaimsPrincipal user, MadaDbContext db, bool unreadOnly = false, CancellationToken cancellationToken = default)
     {
         if (!Actor(user).HasValue) return Forbidden("ACTOR_REQUIRED"); var id = Actor(user)!.Value; var rows = await db.InAppNotifications.AsNoTracking().Where(item => item.RecipientUserId == id && (!unreadOnly || !item.IsRead)).OrderByDescending(item => item.CreatedAt).Take(100).ToListAsync(cancellationToken); return Results.Ok(new { data = new { items = rows, total = rows.Count } });
     }

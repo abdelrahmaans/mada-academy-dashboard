@@ -38,6 +38,7 @@ import {
 } from "@/lib/financeAccess";
 import {
   apiClient,
+  mapServerShiftHistoryToHandover,
   shiftStorage,
   payrollStorage,
   generateTrainerSessions,
@@ -147,9 +148,14 @@ export default function FinanceDesk() {
   const [loadError, setLoadError] = useState("");
   const [loadAttempt, setLoadAttempt] = useState(0);
 
-  const [handovers, setHandovers] = useState<ShiftCashHandover[]>(() => shiftStorage.getHandovers());
+  const [handovers, setHandovers] = useState<ShiftCashHandover[]>(() => (liveMode ? [] : shiftStorage.getHandovers()));
   const [payrolls, setPayrolls] = useState<TrainerPayrollRecord[]>(() => payrollStorage.getPayrolls());
   const [showScopeInfo, setShowScopeInfo] = useState(false);
+
+  const refreshFinanceSummary = () => {
+    if (!liveMode) return;
+    apiClient.financeReport().then(setReport).catch(() => undefined);
+  };
 
   useEffect(() => {
     if (liveMode) {
@@ -185,23 +191,8 @@ export default function FinanceDesk() {
 
       apiClient.listCashierShiftsHistory()
         .then(res => {
-          if (res && res.items && res.items.length > 0) {
-            const currentHandovers = shiftStorage.getHandovers();
-            const updated = currentHandovers.map(h => {
-              const serverMatch = res.items.find(item => item.targetId === h.id || item.closedAt?.startsWith(h.shiftDate));
-              if (serverMatch && serverMatch.isConfirmed) {
-                return {
-                  ...h,
-                  status: "ACCEPTED" as const,
-                  receivedByName: serverMatch.confirmedBy || h.receivedByName || "المحاسب المالي",
-                  receivedAt: serverMatch.confirmedAt || h.receivedAt,
-                  notes: serverMatch.confirmNotes || h.notes,
-                };
-              }
-              return h;
-            });
-            shiftStorage.saveHandovers(updated);
-            setHandovers(updated);
+          if (res?.items) {
+            setHandovers(res.items.map(mapServerShiftHistoryToHandover));
           }
         })
         .catch(() => undefined);
@@ -210,17 +201,27 @@ export default function FinanceDesk() {
 
   const acceptShiftHandover = async (id: string, notes?: string) => {
     const shift = handovers.find(h => h.id === id);
-    if (liveMode && shift) {
+    if (liveMode) {
+      if (!shift) return;
       try {
-        await apiClient.closeoutCashierShift({ countedCashPiastres: Math.round(shift.cashAmount * 100), notes: notes || "تم استلام ومطابقة النقدية" });
-        await apiClient.depositCashierSafe({ amountPiastres: Math.round(shift.cashAmount * 100), notes: `توريد عهدة وردية ${shift.id} إلى الخزينة الرئيسية` });
+        if (shift.cashAmount > 0) {
+          await apiClient.depositCashierSafe({
+            amountPiastres: Math.round(shift.cashAmount * 100),
+            notes: `توريد عهدة وردية ${shift.id} إلى الخزينة الرئيسية`,
+          });
+        }
         await apiClient.confirmCashierShift({
           date: shift.shiftDate,
           notes: notes || `اعتماد وردية ${shift.id} وتوريد ${shift.cashAmount} ج.م للخزينة`,
         });
-      } catch {
-        // Gracefully handle or log
+        const refreshed = await apiClient.listCashierShiftsHistory();
+        setHandovers(refreshed.items.map(mapServerShiftHistoryToHandover));
+        refreshFinanceSummary();
+        toast.success(`تم استلام وتوريد عهدة الوردية ${shift.id} للخزينة بنجاح!`);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "تعذر اعتماد الوردية على الخادم");
       }
+      return;
     }
     const updated = shiftStorage.acceptShift(id, financeMe?.user?.displayName || "المحاسب المالي", 0, notes);
     setHandovers(shiftStorage.getHandovers());
@@ -475,6 +476,7 @@ export default function FinanceDesk() {
             )
           );
           toast.success("تم تسجيل التحصيل على الـAPI");
+          refreshFinanceSummary();
           setPaymentAmount("");
           setExternalReference("");
         },
@@ -514,6 +516,7 @@ export default function FinanceDesk() {
             ...mutation,
           });
           setExpenses(current => [mapFinanceExpense(expense), ...current]);
+          refreshFinanceSummary();
           toast.success("تم رفع المصروف للمراجعة");
           setExpenseDescription("");
           setExpenseAmount("");
@@ -564,6 +567,7 @@ export default function FinanceDesk() {
               item.id === expenseId ? mapFinanceExpense(expense) : item
             )
           );
+          refreshFinanceSummary();
           toast.success("تم اعتماد المصروف");
         },
         pending =>
@@ -604,6 +608,7 @@ export default function FinanceDesk() {
               item.id === expenseId ? mapFinanceExpense(expense) : item
             )
           );
+          refreshFinanceSummary();
           toast.success("تم رفض المصروف بسبب موثق");
           setRejecting(null);
           setRejectReason("");
@@ -653,6 +658,7 @@ export default function FinanceDesk() {
           ...mutation,
         });
         setInvoices(current => [mapFinanceInvoice(invoice), ...current]);
+        refreshFinanceSummary();
         toast.success("تم إنشاء الفاتورة");
         setInvoiceDialogOpen(false);
         setInvoiceDescription("");

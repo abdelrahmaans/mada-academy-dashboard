@@ -35,7 +35,7 @@ public static class FinanceEndpoints
         api.MapGet("/instructor/my-earnings", GetMyInstructorEarningsAsync);
         api.MapPost("/cashier/deposit-to-safe", DepositCashierSafeAsync).RequirePermission("payments.create");
         api.MapPost("/cashier/confirm-shift", ConfirmCashierShiftAsync).RequirePermission("finance.summary.read");
-        api.MapGet("/cashier/shifts-history", ListCashierShiftsHistoryAsync).RequirePermission("finance.summary.read");
+        api.MapGet("/cashier/shifts-history", ListCashierShiftsHistoryAsync);
 
         endpoints.MapGet("/api/v1/consumer/invoices", ListConsumerInvoicesAsync).RequireAuthorization("consumer");
         return endpoints;
@@ -341,7 +341,7 @@ public static class FinanceEndpoints
         if (!Guid.TryParse(context.User.FindFirstValue("sub"), out var actorId)) return Forbidden("ACTOR_REQUIRED");
         if (request.CountedCashPiastres < 0) return Validation("countedCashPiastres", "Counted cash cannot be negative.");
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = request.ShiftDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
         var cashTotal = await db.PaymentTransactions.AsNoTracking()
             .Where(x => x.TenantId == scope.TenantId && (!scope.BranchId.HasValue || x.BranchId == scope.BranchId.Value) && x.ReceivedOn == today && x.Method == "CASH")
             .SumAsync(x => (long)x.AmountPiastres, cancellationToken);
@@ -353,6 +353,9 @@ public static class FinanceEndpoints
         var expectedCash = Math.Max(0, cashTotal - cashExpenses);
         var discrepancy = request.CountedCashPiastres - expectedCash;
         var status = discrepancy == 0 ? "BALANCED" : discrepancy > 0 ? "SURPLUS" : "DEFICIT";
+        var shiftName = string.IsNullOrWhiteSpace(request.ShiftName) ? "الوردية اليومية" : request.ShiftName.Trim();
+        var electronicPiastres = Math.Max(0L, request.ElectronicPiastres ?? 0L);
+        var totalReceiptsCount = Math.Max(0, request.TotalReceiptsCount ?? 0);
 
         db.AuditEvents.Add(new AuditEvent
         {
@@ -366,8 +369,11 @@ public static class FinanceEndpoints
             MetadataJson = JsonSerializer.Serialize(new
             {
                 date = today,
+                shiftName,
                 expectedCash,
                 countedCash = request.CountedCashPiastres,
+                electronicPiastres,
+                totalReceiptsCount,
                 discrepancy,
                 status,
                 notes = request.Notes
@@ -381,10 +387,14 @@ public static class FinanceEndpoints
             data = new
             {
                 date = today,
+                shiftName,
+                targetId = $"{today:yyyyMMdd}-{scope.BranchId}",
                 closedAt = DateTimeOffset.UtcNow,
                 closedByUserId = actorId,
                 expectedCashPiastres = expectedCash,
                 countedCashPiastres = request.CountedCashPiastres,
+                electronicPiastres,
+                totalReceiptsCount,
                 discrepancyPiastres = discrepancy,
                 status,
                 notes = request.Notes
@@ -634,6 +644,7 @@ public static class FinanceEndpoints
         HttpContext context, MadaDbContext db, CancellationToken cancellationToken)
     {
         if (!TryStaffScope(context.User, out var scope, out var error)) return error;
+        if (!CanReadInvoices(context.User) && !CanReadFinancialReports(context.User)) return Forbidden("SHIFT_HISTORY_FORBIDDEN");
         var events = await db.AuditEvents.AsNoTracking()
             .Where(x => x.TenantId == scope.TenantId &&
                         (!scope.BranchId.HasValue || x.BranchId == scope.BranchId.Value) &&
@@ -657,11 +668,55 @@ public static class FinanceEndpoints
         {
             var closeout = g.FirstOrDefault(x => x.Action == "CASHIER_SHIFT_CLOSED");
             var confirmation = g.FirstOrDefault(x => x.Action == "CASHIER_SHIFT_CONFIRMED_BY_ACCOUNTANT");
+            string? shiftDate = null;
+            string? shiftName = null;
+            long expectedCashPiastres = 0;
+            long countedCashPiastres = 0;
+            long electronicPiastres = 0;
+            int totalReceiptsCount = 0;
+            long discrepancyPiastres = 0;
+            string? closeoutStatus = null;
+            string? notes = closeout?.Reason;
+
+            if (!string.IsNullOrWhiteSpace(closeout?.MetadataJson))
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(closeout.MetadataJson);
+                    var root = doc.RootElement;
+                    if (root.TryGetProperty("date", out var d)) shiftDate = d.ToString();
+                    if (root.TryGetProperty("shiftName", out var sn)) shiftName = sn.GetString();
+                    if (root.TryGetProperty("expectedCash", out var ec) && ec.TryGetInt64(out var ecVal)) expectedCashPiastres = ecVal;
+                    if (root.TryGetProperty("countedCash", out var cc) && cc.TryGetInt64(out var ccVal)) countedCashPiastres = ccVal;
+                    if (root.TryGetProperty("electronicPiastres", out var ep) && ep.TryGetInt64(out var epVal)) electronicPiastres = epVal;
+                    if (root.TryGetProperty("totalReceiptsCount", out var rc) && rc.TryGetInt32(out var rcVal)) totalReceiptsCount = rcVal;
+                    if (root.TryGetProperty("discrepancy", out var disc) && disc.TryGetInt64(out var discVal)) discrepancyPiastres = discVal;
+                    if (root.TryGetProperty("status", out var st)) closeoutStatus = st.GetString();
+                    if (root.TryGetProperty("notes", out var nt) && !string.IsNullOrWhiteSpace(nt.GetString())) notes = nt.GetString();
+                }
+                catch { }
+            }
+
+            if (string.IsNullOrWhiteSpace(shiftDate) && g.Key.Length >= 8 &&
+                DateOnly.TryParseExact(g.Key[..8], "yyyyMMdd", out var parsedDate))
+            {
+                shiftDate = parsedDate.ToString("yyyy-MM-dd");
+            }
+
             return new
             {
                 targetId = g.Key,
                 branchId = closeout?.BranchId ?? confirmation?.BranchId,
                 branchName = (closeout?.BranchId.HasValue == true && branchNames.TryGetValue(closeout.BranchId.Value, out var bn)) ? bn : null,
+                shiftDate,
+                shiftName = shiftName ?? "الوردية اليومية",
+                expectedCashPiastres,
+                countedCashPiastres,
+                electronicPiastres,
+                totalReceiptsCount,
+                discrepancyPiastres,
+                status = confirmation != null ? "CONFIRMED" : (closeoutStatus ?? "CLOSED"),
+                notes,
                 closedAt = closeout?.CreatedAt,
                 closedBy = closeout != null && closeout.ActorUserId.HasValue && userNames.TryGetValue(closeout.ActorUserId.Value, out var cName) ? cName : null,
                 closeoutMetadata = closeout?.MetadataJson,
@@ -685,6 +740,6 @@ public static class FinanceEndpoints
 public sealed record CreateInvoiceRequest(Guid StudentId, DateOnly DueDate, IReadOnlyList<CreateInvoiceLineRequest> Lines, Guid? EnrollmentId = null);
 public sealed record CreateInvoiceLineRequest(string Description, int AmountPiastres);
 public sealed record CreatePaymentRequest(int AmountPiastres, string Method, DateOnly? ReceivedOn = null, string? ExternalReference = null, string? Note = null, string? IdempotencyKey = null);
-public sealed record CloseoutCashierRequest(long CountedCashPiastres, string? Notes = null);
+public sealed record CloseoutCashierRequest(long CountedCashPiastres, string? Notes = null, string? ShiftName = null, long? ElectronicPiastres = null, int? TotalReceiptsCount = null, DateOnly? ShiftDate = null);
 public sealed record DepositCashierSafeRequest(long AmountPiastres, string? Notes = null);
 public sealed record ConfirmShiftCloseoutRequest(DateOnly Date, Guid? BranchId = null, string? Notes = null);

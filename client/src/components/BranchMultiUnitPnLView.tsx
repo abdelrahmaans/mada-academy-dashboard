@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   AlertCircle,
   BarChart3,
@@ -25,6 +25,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
+  apiClient,
+  type CourseProfitabilityItem,
+  type ExecutiveDashboardReport,
+  type FinanceExpense,
+  type RetentionRadarResponse,
+} from "@/lib/apiClient";
+import {
   BRANCH_NAMES,
   PNL_PERIODS,
   pnlAndRetentionStorage,
@@ -40,27 +47,257 @@ export default function BranchMultiUnitPnLView({
   initialBranch?: string;
   onNavigateToBranch?: (branchName: string) => void;
 }) {
+  const isLive = apiClient.hasSession();
   const [selectedMonth, setSelectedMonth] = useState<string>(PNL_PERIODS[0].value);
   const [selectedBranch, setSelectedBranch] = useState<string>(initialBranch);
   const [activeTab, setActiveTab] = useState<SubTab>("pnl");
   const [searchRiskQuery, setSearchRiskQuery] = useState("");
   const [riskSeverityFilter, setRiskSeverityFilter] = useState<string>("all");
-  const [atRiskList, setAtRiskList] = useState<AtRiskStudent[]>(() => pnlAndRetentionStorage.getAtRiskStudents());
+  const [atRiskList, setAtRiskList] = useState<AtRiskStudent[]>(() =>
+    isLive ? [] : pnlAndRetentionStorage.getAtRiskStudents()
+  );
   const [selectedRiskStudent, setSelectedRiskStudent] = useState<AtRiskStudent | null>(null);
   const [actionNote, setActionNote] = useState("");
   const [showInsightsModal, setShowInsightsModal] = useState(false);
 
-  // Load PnL data
-  const { list: pnlList, totals: pnlTotals } = useMemo(
-    () => pnlAndRetentionStorage.getPnL(selectedMonth, selectedBranch),
-    [selectedMonth, selectedBranch]
-  );
+  const [execReport, setExecReport] = useState<ExecutiveDashboardReport | null>(null);
+  const [retentionReport, setRetentionReport] = useState<RetentionRadarResponse | null>(null);
+  const [courseProf, setCourseProf] = useState<CourseProfitabilityItem[]>([]);
+  const [liveExpenses, setLiveExpenses] = useState<FinanceExpense[]>([]);
+  const [livePayrollTotalEgp, setLivePayrollTotalEgp] = useState<number>(0);
+  const [liveLoading, setLiveLoading] = useState(false);
+  const [liveError, setLiveError] = useState<string | null>(null);
+  const [liveStudentStatuses, setLiveStudentStatuses] = useState<
+    Record<string, { status: AtRiskStudent["status"]; note?: string }>
+  >({});
 
-  // Load Retention data
-  const { list: retentionList, aggregate: retentionAggregate } = useMemo(
-    () => pnlAndRetentionStorage.getRetention(selectedMonth, selectedBranch),
-    [selectedMonth, selectedBranch]
-  );
+  const selectedBranchId = useMemo(() => {
+    if (!isLive || selectedBranch === "كل الفروع") return undefined;
+    return execReport?.availableBranches.find(
+      b => b.name === selectedBranch || b.id === selectedBranch
+    )?.id;
+  }, [isLive, selectedBranch, execReport]);
+
+  useEffect(() => {
+    if (!isLive) return;
+    let active = true;
+    setLiveLoading(true);
+    setLiveError(null);
+
+    Promise.all([
+      apiClient.executiveSummary({ branchId: selectedBranchId }),
+      apiClient.retentionRadar(selectedBranchId),
+      apiClient.courseProfitability(selectedBranchId),
+      apiClient.financeExpenses({ branchId: selectedBranchId }).catch(() => ({ items: [], total: 0 })),
+      apiClient.instructorPayroll({ month: selectedMonth, branchId: selectedBranchId }).catch(() => null),
+    ])
+      .then(([exec, ret, prof, exp, pay]) => {
+        if (!active) return;
+        setExecReport(exec);
+        setRetentionReport(ret);
+        setCourseProf(prof);
+        setLiveExpenses(exp.items);
+        setLivePayrollTotalEgp(
+          (pay ?? []).reduce((sum, item) => sum + Math.round(item.totalCompensationPiastres / 100), 0)
+        );
+
+        const mappedRisk: AtRiskStudent[] = ret.items.map(item => ({
+          id: item.studentId,
+          name: item.fullName,
+          branch: item.branchName,
+          track: item.courseName,
+          attendanceRate: Math.round(item.attendancePercent),
+          sessionsMissed: item.consecutiveAbsences,
+          daysRemainingInSub: item.maxOverdueDays > 0 ? 0 : Math.max(0, 30 - item.totalSessionsMarked * 4),
+          riskSeverity:
+            item.riskLevel === "HIGH"
+              ? "critical"
+              : item.riskLevel === "MEDIUM"
+              ? "warning"
+              : "moderate",
+          riskReason: item.riskFactor,
+          suggestedAction: item.recommendedAction,
+          status: liveStudentStatuses[item.studentId]?.status ?? "pending",
+          lastContactNote: liveStudentStatuses[item.studentId]?.note,
+        }));
+        setAtRiskList(mappedRisk);
+      })
+      .catch(err => {
+        if (!active) return;
+        setLiveError(err instanceof Error ? err.message : "تعذر تحميل بيانات التحليلات التنفيذية.");
+      })
+      .finally(() => {
+        if (active) setLiveLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [isLive, selectedBranchId, selectedMonth]);
+
+  const branchOptions = useMemo(() => {
+    if (!isLive) return BRANCH_NAMES;
+    return execReport?.availableBranches.map(b => b.name) ?? [];
+  }, [isLive, execReport]);
+
+  // Load PnL data (live vs demo)
+  const { list: pnlList, totals: pnlTotals } = useMemo(() => {
+    if (!isLive) {
+      return pnlAndRetentionStorage.getPnL(selectedMonth, selectedBranch);
+    }
+
+    const branches = execReport?.branches ?? [];
+    const totalCollectedAll = branches.reduce((s, b) => s + Math.round(b.collectedPiastres / 100), 0);
+    const branchCount = Math.max(1, branches.length);
+
+    const rows = branches.map(b => {
+      const tuitionRevenue = Math.round(b.collectedPiastres / 100);
+      const pendingRevenue = courseProf
+        .filter(c => c.branchId === b.branchId)
+        .reduce((sum, c) => sum + Math.round(c.outstandingPiastres / 100), 0);
+      const totalRevenue = tuitionRevenue;
+      const approvedFromReport = Math.round(b.approvedExpensesPiastres / 100);
+      const branchExpenses =
+        approvedFromReport > 0
+          ? approvedFromReport
+          : liveExpenses
+              .filter(e => e.branchId === b.branchId && e.status === "APPROVED")
+              .reduce((sum, e) => sum + Math.round(e.amountPiastres / 100), 0);
+      const payrollShare = Math.round(livePayrollTotalEgp / branchCount);
+      const totalExpenses = branchExpenses + payrollShare;
+      const netProfit = totalRevenue - totalExpenses;
+      const netMarginPercent = totalRevenue > 0 ? Math.round((netProfit / totalRevenue) * 100) : 0;
+      const students = Math.max(0, b.activeStudents);
+      const revenueContributionPercent =
+        totalCollectedAll > 0 ? Math.round((totalRevenue / totalCollectedAll) * 100) : 0;
+
+      return {
+        branchId: b.branchId,
+        branchName: b.branchName,
+        manager: `كود ${b.branchCode}`,
+        city: pendingRevenue > 0 ? `مستحق ${pendingRevenue.toLocaleString("en-US")} ج.م` : "محصل بالكامل",
+        activeStudents: students,
+        tuitionRevenue,
+        privateCoachingRevenue: 0,
+        kitsAndRegistrationRevenue: 0,
+        competitionRevenue: 0,
+        totalRevenue,
+        trainerPayroll: payrollShare,
+        facilityLease: branchExpenses,
+        utilitiesAndNet: 0,
+        marketingAndAds: 0,
+        equipmentAndSupplies: 0,
+        adminAndMisc: 0,
+        totalExpenses,
+        netProfit,
+        netMarginPercent,
+        revenueContributionPercent,
+        revenuePerStudent: students > 0 ? Math.round(totalRevenue / students) : 0,
+        costPerStudent: students > 0 ? Math.round(totalExpenses / students) : 0,
+        profitPerStudent: students > 0 ? Math.round(netProfit / students) : 0,
+      };
+    });
+
+    const sumStudents = rows.reduce((s, r) => s + r.activeStudents, 0);
+    const sumRevenue = rows.reduce((s, r) => s + r.totalRevenue, 0);
+    const sumExpenses = rows.reduce((s, r) => s + r.totalExpenses, 0);
+    const sumPayroll = rows.reduce((s, r) => s + r.trainerPayroll, 0);
+    const sumFacility = rows.reduce((s, r) => s + r.facilityLease, 0);
+    const sumNet = sumRevenue - sumExpenses;
+
+    return {
+      list: rows,
+      totals: {
+        branchId: "all",
+        branchName: "إجمالي الأكاديمية (البيانات الحية)",
+        manager: "",
+        city: "",
+        activeStudents: sumStudents,
+        tuitionRevenue: sumRevenue,
+        privateCoachingRevenue: 0,
+        kitsAndRegistrationRevenue: 0,
+        competitionRevenue: 0,
+        totalRevenue: sumRevenue,
+        trainerPayroll: sumPayroll,
+        facilityLease: sumFacility,
+        utilitiesAndNet: 0,
+        marketingAndAds: 0,
+        equipmentAndSupplies: 0,
+        adminAndMisc: 0,
+        totalExpenses: sumExpenses,
+        netProfit: sumNet,
+        netMarginPercent: sumRevenue > 0 ? Math.round((sumNet / sumRevenue) * 100) : 0,
+        revenueContributionPercent: 100,
+        revenuePerStudent: sumStudents > 0 ? Math.round(sumRevenue / sumStudents) : 0,
+        costPerStudent: sumStudents > 0 ? Math.round(sumExpenses / sumStudents) : 0,
+        profitPerStudent: sumStudents > 0 ? Math.round(sumNet / sumStudents) : 0,
+      },
+    };
+  }, [isLive, selectedMonth, selectedBranch, execReport, liveExpenses, livePayrollTotalEgp]);
+
+  // Load Retention data (live vs demo)
+  const { list: retentionList, aggregate: retentionAggregate } = useMemo(() => {
+    if (!isLive) {
+      return pnlAndRetentionStorage.getRetention(selectedMonth, selectedBranch);
+    }
+
+    const branches = execReport?.branches ?? [];
+    const items = retentionReport?.items ?? [];
+    const totalStudents = retentionReport?.summary.totalStudents ?? 0;
+    const atRiskPercent = retentionReport?.summary.atRiskPercent ?? 0;
+    const retentionRate = Math.max(0, Math.round((100 - atRiskPercent) * 10) / 10);
+
+    const list = branches.map(b => {
+      const branchItems = items.filter(i => i.branchId === b.branchId);
+      const branchHighRisk = branchItems.filter(i => i.riskLevel === "HIGH").length;
+      const branchTotal = Math.max(b.activeStudents, branchItems.length);
+      const churnRate = branchTotal > 0 ? Math.round((branchHighRisk / branchTotal) * 1000) / 10 : 0;
+      const branchRetention = Math.max(0, Math.round((100 - churnRate) * 10) / 10);
+
+      const branchTracks = courseProf
+        .filter(c => c.branchId === b.branchId)
+        .map(c => ({
+          track: c.courseOfferingId,
+          trackLabel: c.courseName,
+          retentionRate: c.occupancyPercent,
+        }));
+
+      const status: "top_performer" | "healthy" | "needs_attention" =
+        branchHighRisk === 0 ? "top_performer" : churnRate <= 15 ? "healthy" : "needs_attention";
+
+      return {
+        branchId: b.branchId,
+        branchName: b.branchName,
+        retentionRate: branchRetention,
+        churnRate,
+        renewalOnTimeRate: b.attendancePercent ?? 0,
+        churnedStudents: branchHighRisk,
+        frozenStudents: b.pendingApprovals,
+        newEnrollments: b.activeEnrollments,
+        atRiskCount: branchItems.filter(i => i.riskLevel !== "LOW").length,
+        status,
+        tracks: branchTracks,
+        trend: [
+          {
+            month: selectedMonth,
+            monthLabel: "الشهر الحالي",
+            retentionRate: branchRetention,
+            churnRate,
+            activeCount: b.activeStudents,
+          },
+        ],
+      };
+    });
+
+    return {
+      list,
+      aggregate: {
+        totalStudents,
+        retentionRate,
+        churnRate: atRiskPercent,
+      },
+    };
+  }, [isLive, selectedMonth, selectedBranch, execReport, retentionReport, courseProf]);
 
   // Filtered at-risk students
   const filteredAtRisk = useMemo(() => {
@@ -74,6 +311,20 @@ export default function BranchMultiUnitPnLView({
   }, [atRiskList, selectedBranch, riskSeverityFilter, searchRiskQuery]);
 
   const handleUpdateStudentStatus = (id: string, status: AtRiskStudent["status"]) => {
+    if (isLive) {
+      const note = actionNote.trim() || undefined;
+      setLiveStudentStatuses(prev => ({ ...prev, [id]: { status, note } }));
+      setAtRiskList(prev =>
+        prev.map(s => (s.id === id ? { ...s, status, lastContactNote: note ?? s.lastContactNote } : s))
+      );
+      setSelectedRiskStudent(null);
+      setActionNote("");
+      toast.success("تم تسجيل المتابعة في هذه الجلسة", {
+        description: status === "retained" ? "تم تأكيد حالة استمرار الطالب." : "تم تحديث حالة الطالب في الرادار.",
+      });
+      return;
+    }
+
     const updated = pnlAndRetentionStorage.updateStudentStatus(id, status, actionNote.trim() || undefined);
     setAtRiskList(updated);
     setSelectedRiskStudent(null);
@@ -87,7 +338,22 @@ export default function BranchMultiUnitPnLView({
     }
   };
 
-  const handleExportCSV = () => {
+  const handleExportCSV = async () => {
+    if (isLive) {
+      try {
+        const blob = await apiClient.downloadBiFeed(selectedBranchId);
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `mada-bi-feed-${selectedMonth}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+        toast.success("تم تصدير تقرير التحليلات المالي المباشر بصيغة CSV");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "تعذر تصدير ملف التحليلات");
+      }
+      return;
+    }
     pnlAndRetentionStorage.downloadCSV(selectedMonth);
     toast.success("تم تصدير ملف P&L والاستبقاء المجمع بصيغة CSV");
   };
@@ -122,14 +388,19 @@ export default function BranchMultiUnitPnLView({
               className="pnl-select"
             >
               <option value="كل الفروع">كل فروع الأكاديمية (مجمع)</option>
-              {BRANCH_NAMES.map(b => (
-                <option key={b} value={b}>فرع {b}</option>
+              {branchOptions.map(b => (
+                <option key={b} value={b}>{b}</option>
               ))}
             </select>
           </label>
         </div>
 
         <div className="pnl-action-group">
+          {isLive && (
+            <span className="pnl-scope-indicator" style={{ fontSize: "0.78rem" }}>
+              {liveLoading ? "جاري تحديث البيانات..." : liveError ? `⚠️ ${liveError}` : "✅ متصل بالبيانات الحية"}
+            </span>
+          )}
           <button
             type="button"
             className="pnl-btn pnl-btn-secondary"
@@ -171,7 +442,13 @@ export default function BranchMultiUnitPnLView({
           <div className="pnl-kpi-body">
             <small>المصروفات التشغيلية الكلية</small>
             <strong>{formatEGP(pnlTotals.totalExpenses)}</strong>
-            <p>أجور المدربين {formatEGP(pnlTotals.trainerPayroll)} ({((pnlTotals.trainerPayroll / pnlTotals.totalExpenses) * 100).toFixed(0)}% من المصروفات)</p>
+            <p>
+              أجور المدربين {formatEGP(pnlTotals.trainerPayroll)} (
+              {pnlTotals.totalExpenses > 0
+                ? ((pnlTotals.trainerPayroll / pnlTotals.totalExpenses) * 100).toFixed(0)
+                : 0}
+              % من المصروفات)
+            </p>
           </div>
         </article>
 
@@ -361,7 +638,11 @@ export default function BranchMultiUnitPnLView({
                 </div>
                 <div className="pnl-note-banner">
                   <Lightbulb size={16} className="text-amber-600" />
-                  <span>فرع المعادي يحقق أعلى ربحية للطالب (386 ج.م) بفضل ضبط الإيجار وكثافة قاعات التدريب.</span>
+                  <span>
+                    {isLive
+                      ? `متوسط صافي الربحية للطالب ${pnlTotals.profitPerStudent} ج.م عبر ${pnlList.length} فرع نشط و${pnlTotals.activeStudents} طالب.`
+                      : "فرع المعادي يحقق أعلى ربحية للطالب (386 ج.م) بفضل ضبط الإيجار وكثافة قاعات التدريب."}
+                  </span>
                 </div>
               </div>
             </div>
