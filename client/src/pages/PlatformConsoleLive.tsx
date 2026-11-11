@@ -130,7 +130,9 @@ export default function PlatformConsoleLive() {
   const [rbacExpanded, setRbacExpanded] = useState(false);
 
   // Leads & Landing Page Demo Requests
-  const [leads] = useState<PlatformDemoLead[]>([]);
+  const [leads, setLeads] = useState<PlatformDemoLead[]>([]);
+  const [payments, setPayments] = useState<PlatformPaymentRecord[]>([]);
+  const [paymentsRevenue, setPaymentsRevenue] = useState(0);
   const [leadFilter, setLeadFilter] = useState<"ALL" | "NEW" | "CONTACTED" | "DEMO_SCHEDULED" | "CONVERTED">("ALL");
   const [leadSearch, setLeadSearch] = useState("");
 
@@ -147,10 +149,14 @@ export default function PlatformConsoleLive() {
   const [newTicketDescription, setNewTicketDescription] = useState("");
   const [ticketFilter, setTicketFilter] = useState<"ALL" | "ISSUE" | "SUGGESTION" | "BILLING">("ALL");
 
-  const handleLeadStatusChange = (leadId: string, status: PlatformDemoLead["status"]) => {
-    void leadId;
-    void status;
-    toast.error("تحديث حالة الـlead متوقف حتى ربطه بسجل CRM محفوظ على الخادم.");
+  const handleLeadStatusChange = async (leadId: string, status: PlatformDemoLead["status"]) => {
+    try {
+      const updated = await apiClient.updatePlatformDemoLeadStatusLive(leadId, status);
+      setLeads((prev) => prev.map((l) => (l.id === leadId ? updated : l)));
+      toast.success("تم تحديث حالة طلب المعاينة في قاعدة البيانات");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "تعذر تحديث حالة طلب المعاينة.");
+    }
   };
 
   const handleWhatsAppLeadChat = (lead: PlatformDemoLead) => {
@@ -207,9 +213,38 @@ export default function PlatformConsoleLive() {
     setConvertForm((prev) => ({ ...prev, ownerPassword: `Mada#${randomPin}!` }));
   };
 
-  const handleConvertLeadSubmit = (e: React.FormEvent) => {
+  const handleConvertLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.error("تحويل lead إلى أكاديمية متوقف حتى تنفيذ تدفق CRM ذريّ يحفظ الـlead والأكاديمية وبيانات المالك معًا.");
+    if (!convertLeadModal) return;
+    setConverting(true);
+    try {
+      const res = await apiClient.convertPlatformDemoLead(convertLeadModal.id, {
+        name: convertForm.name.trim(),
+        slug: convertForm.slug.trim(),
+        planCode: convertForm.planCode,
+        branchName: convertForm.branchName.trim(),
+        branchCode: convertForm.branchCode.trim(),
+        ownerName: convertForm.ownerName.trim(),
+        ownerPhone: convertForm.ownerPhone.trim(),
+        ownerEmail: convertForm.ownerEmail.trim(),
+        ownerPassword: convertForm.ownerPassword,
+      });
+      setLeads((prev) => prev.map((l) => (l.id === convertLeadModal.id ? res.lead : l)));
+      setConvertSuccess({
+        academy: { id: res.academy.id, name: res.academy.name, slug: res.academy.slug },
+        owner: {
+          displayName: res.owner.displayName,
+          phone: res.owner.phone,
+          tempPass: convertForm.ownerPassword,
+        },
+      });
+      setRefreshKey((k) => k + 1);
+      toast.success(`تم إنشاء وتفعيل أكاديمية ${res.academy.name} بنجاح!`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "تعذر تحويل طلب المعاينة إلى أكاديمية.");
+    } finally {
+      setConverting(false);
+    }
   };
 
   const handleSendCredentialsWhatsApp = () => {
@@ -343,12 +378,21 @@ export default function PlatformConsoleLive() {
     setError(null);
     setWarning(null);
 
-    Promise.all([apiClient.platformOverview(), apiClient.platformAcademies()])
-      .then(([overviewResult, academyResult]) => {
+    Promise.all([
+      apiClient.platformOverview(),
+      apiClient.platformAcademies(),
+      apiClient.listPlatformDemoLeads().catch(() => ({ items: [] as PlatformDemoLead[], total: 0 })),
+      apiClient.listPlatformPayments().catch(() => ({ items: [] as PlatformPaymentRecord[], total: 0, totalRevenue: 0 })),
+    ])
+      .then(([overviewResult, academyResult, leadsResult, paymentsResult]) => {
         if (!active) return;
         setOverview(overviewResult);
         setAcademies(academyResult.items);
+        setLeads(leadsResult.items);
+        setPayments(paymentsResult.items);
+        setPaymentsRevenue(paymentsResult.totalRevenue ?? 0);
         setSelectedTenantId((current) => current || academyResult.items[0]?.id || "");
+        setPaymentTargetAcademyId((current) => current || academyResult.items[0]?.id || "");
         setWarning(null);
 
         if (refreshKey > 0) toast.success("تم تحديث بيانات المنصة بنجاح");
@@ -450,6 +494,7 @@ export default function PlatformConsoleLive() {
         planCode,
         planName,
         allowedBranches: academy.allowedBranches ?? academy.branches,
+        remainingTrialDays: academy.remainingTrialDays ?? undefined,
       };
     });
   }, [academies, refreshKey]);
@@ -605,9 +650,39 @@ export default function PlatformConsoleLive() {
   };
 
   // 5. ACTION: Record Subscription Payment
-  const handleRecordPayment = (e: React.FormEvent) => {
+  const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.error("تسجيل الدفعات متوقف حتى اكتمال سجل مالي خادمي ومراجعة الصلاحيات.");
+    const targetId = paymentTargetAcademyId || academies[0]?.id;
+    if (!targetId) {
+      toast.error("يرجى اختيار الأكاديمية المستهدفة أولًا.");
+      return;
+    }
+    if (!paymentRef.trim() || Number(paymentAmount) <= 0) {
+      toast.error("يرجى إدخال مبلغ صحيح ورقم مرجع للدفعة.");
+      return;
+    }
+    const targetAcademy = academies.find((a) => a.id === targetId);
+    setBusyKey(`payment:${targetId}`);
+    try {
+      await apiClient.recordPlatformSubscriptionPayment({
+        tenantId: targetId,
+        tenantName: targetAcademy?.name || "أكاديمية",
+        amount: Number(paymentAmount),
+        method: paymentMethod,
+        referenceNumber: paymentRef.trim(),
+        recordedByName: "",
+        notes: paymentNotes.trim() || undefined,
+      });
+      toast.success("تم تسجيل دفعة الاشتراك في قاعدة البيانات بنجاح");
+      setPaymentModalOpen(false);
+      setPaymentRef("");
+      setPaymentNotes("");
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "تعذر تسجيل دفعة الاشتراك.");
+    } finally {
+      setBusyKey("");
+    }
   };
 
   // Ticket status update
@@ -658,11 +733,34 @@ export default function PlatformConsoleLive() {
         );
       case "billing":
         return (
-          <span className="pc-live-count-badge">الفوترة متوقفة لحين ربط backend</span>
+          <button
+            className="pc-live-primary"
+            type="button"
+            onClick={() => {
+              setPaymentTargetAcademyId((cur) => cur || academies[0]?.id || "");
+              setPaymentModalOpen(true);
+            }}
+          >
+            <Plus size={16} /> تسجيل دفعة اشتراك
+          </button>
         );
       case "support":
         return (
-          <span className="pc-live-count-badge">سجل التذاكر غير متصل</span>
+          <button
+            className="pc-live-primary"
+            type="button"
+            onClick={() => {
+              setNewTicketAcademyId((cur) => cur || academies[0]?.id || "");
+              setNewTicketType("issue");
+              setNewTicketCategory("مشكلة تقنية");
+              setNewTicketPriority("high");
+              setNewTicketSubject("");
+              setNewTicketDescription("");
+              setNewTicketModalOpen(true);
+            }}
+          >
+            <Plus size={16} /> تذكرة دعم جديدة
+          </button>
         );
       case "system":
         return (
@@ -1002,8 +1100,9 @@ export default function PlatformConsoleLive() {
               onExtendTrial={(tenant) => handleExtendTrial(tenant)}
               onOpenPlanUpgradeModal={(tenant) => openPlanUpgradeModal(tenant)}
               onRequestTenantStatusChange={(tenant) => requestTenantStatusChange(tenant)}
-              planActionsEnabled={false}
-              trialActionsEnabled={false}
+              planActionsEnabled={true}
+              trialActionsEnabled={true}
+              totalCollectedRevenue={paymentsRevenue}
             />
           )}
 
@@ -1027,11 +1126,11 @@ export default function PlatformConsoleLive() {
               onRequestTenantStatusChange={(academy) => requestTenantStatusChange(academy)}
               onResetOwnerPassword={(academy) => handleResetOwnerPassword(academy)}
               onEmergencyImpersonation={() => toast.error("Super Access متوقف لحين إضافة تفويض خادمي وتدقيق غير قابل للتلاعب.")}
-              ownerResetEnabled={false}
+              ownerResetEnabled={true}
               emergencyAccessEnabled={false}
               paymentRemindersEnabled={false}
-              planActionsEnabled={false}
-              trialActionsEnabled={false}
+              planActionsEnabled={true}
+              trialActionsEnabled={true}
             />
           )}
 
@@ -1054,7 +1153,16 @@ export default function PlatformConsoleLive() {
           {/* ========================================================= */}
           {/* VIEW 3: BILLING & SUBSCRIPTIONS (التحصيل والاشتراكات)     */}
           {/* ========================================================= */}
-          {!loading && !error && view === "billing" && <PlatformConsoleBillingTab />}
+          {!loading && !error && view === "billing" && (
+            <PlatformConsoleBillingTab
+              payments={payments}
+              totalRevenue={paymentsRevenue}
+              onOpenPaymentModal={() => {
+                setPaymentTargetAcademyId((cur) => cur || academies[0]?.id || "");
+                setPaymentModalOpen(true);
+              }}
+            />
+          )}
 
           {/* ========================================================= */}
           {/* VIEW 4: SUPPORT & OWNER RECOVERY (الدعم واستعادة الحسابات) */}
@@ -1147,7 +1255,7 @@ export default function PlatformConsoleLive() {
                   },
                 });
               }}
-              ownerResetEnabled={false}
+              ownerResetEnabled={true}
             />
           )}
 

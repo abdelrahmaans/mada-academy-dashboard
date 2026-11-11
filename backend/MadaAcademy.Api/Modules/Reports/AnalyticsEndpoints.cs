@@ -1,7 +1,9 @@
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Persistence;
+using MadaAcademy.Api.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace MadaAcademy.Api.Modules.Reports;
@@ -13,6 +15,7 @@ public static class AnalyticsEndpoints
         var api = endpoints.MapGroup("/api/v1/reports/analytics").RequireAuthorization("staff");
 
         api.MapGet("/retention-radar", GetRetentionRadarAsync).RequirePermission("reports.read");
+        api.MapPost("/retention-radar/{studentId:guid}/outreach", RecordRetentionOutreachAsync).RequirePermission("reports.read");
         api.MapGet("/instructor-scorecard", GetInstructorScorecardAsync).RequirePermission("reports.read");
         api.MapGet("/course-profitability", GetCourseProfitabilityAsync).RequirePermission("reports.read");
         api.MapGet("/bi-feed.csv", GetBiFeedCsvAsync).RequirePermission("reports.read");
@@ -103,6 +106,44 @@ public static class AnalyticsEndpoints
         ).ToListAsync(cancellationToken);
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var studentIdKeys = studentIds.Select(id => id.ToString()).ToList();
+        var outreachEvents = studentIdKeys.Count == 0
+            ? []
+            : await db.AuditEvents.AsNoTracking()
+                .Where(e =>
+                    e.TenantId == tenantId &&
+                    e.Action == "RETENTION_OUTREACH_RECORDED" &&
+                    e.TargetType == "STUDENT_RETENTION" &&
+                    studentIdKeys.Contains(e.TargetId))
+                .OrderByDescending(e => e.CreatedAt)
+                .Select(e => new { e.TargetId, e.Reason, e.MetadataJson })
+                .ToListAsync(cancellationToken);
+
+        var outreachByStudent = new Dictionary<string, (string Status, string? Note)>(StringComparer.OrdinalIgnoreCase);
+        foreach (var ev in outreachEvents)
+        {
+            if (outreachByStudent.ContainsKey(ev.TargetId)) continue;
+            var status = "contacted";
+            var note = ev.Reason;
+            if (!string.IsNullOrWhiteSpace(ev.MetadataJson))
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(ev.MetadataJson);
+                    if (doc.RootElement.TryGetProperty("status", out var statusProp))
+                    {
+                        var parsedStatus = statusProp.GetString()?.Trim().ToLowerInvariant();
+                        if (parsedStatus is "pending" or "contacted" or "retained" or "lost")
+                            status = parsedStatus;
+                    }
+                    if (doc.RootElement.TryGetProperty("note", out var noteProp) && !string.IsNullOrWhiteSpace(noteProp.GetString()))
+                        note = noteProp.GetString();
+                }
+                catch { /* Keep AuditEvent fallback fields when MetadataJson is malformed */ }
+            }
+            outreachByStudent[ev.TargetId] = (status, note);
+        }
+
         var radarItems = new List<RetentionRadarItem>();
 
         foreach (var student in enrolledStudents)
@@ -181,6 +222,10 @@ public static class AnalyticsEndpoints
                 recommendedAction = "متابعة دورية من السكرتارية وتقديم دعم أكاديمي أو تذكير لطيف بالسداد.";
             }
 
+            var (outreachStatus, lastContactNote) = outreachByStudent.TryGetValue(student.StudentId.ToString(), out var savedOutreach)
+                ? savedOutreach
+                : ("pending", (string?)null);
+
             radarItems.Add(new RetentionRadarItem(
                 student.StudentId,
                 student.FullName,
@@ -198,7 +243,9 @@ public static class AnalyticsEndpoints
                 maxOverdueDays,
                 riskLevel,
                 riskFactors.Count > 0 ? string.Join(" · ", riskFactors) : "سجل ممتاز",
-                recommendedAction
+                recommendedAction,
+                outreachStatus,
+                lastContactNote
             ));
         }
 
@@ -522,6 +569,61 @@ public static class AnalyticsEndpoints
         return Results.File(Encoding.UTF8.GetBytes(sb.ToString()), "text/csv; charset=utf-8", $"mada-analyst-bi-feed-{DateTime.UtcNow:yyyyMMdd}.csv");
     }
 
+    private static async Task<IResult> RecordRetentionOutreachAsync(
+        Guid studentId,
+        RetentionOutreachRequest request,
+        ClaimsPrincipal user,
+        MadaDbContext db,
+        CancellationToken cancellationToken)
+    {
+        if (!CanReadAnalytics(user)) return Results.Forbid();
+        if (!Guid.TryParse(user.FindFirstValue("tenantId"), out var tenantId))
+            return Results.Problem(statusCode: 403, title: "Missing academy scope");
+
+        var normalizedStatus = request.Status?.Trim().ToLowerInvariant() ?? string.Empty;
+        if (normalizedStatus is not ("pending" or "contacted" or "retained" or "lost"))
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["status"] = ["Status must be pending, contacted, retained, or lost."] });
+
+        var effectiveBranch = ResolveEffectiveBranch(user, null);
+        var student = await db.Students.AsNoTracking()
+            .SingleOrDefaultAsync(x => x.Id == studentId && x.TenantId == tenantId, cancellationToken);
+        if (student is null)
+            return Results.NotFound(new { error = new { code = "STUDENT_NOT_FOUND", message = "Student was not found in this academy." } });
+        if (effectiveBranch.HasValue && student.BranchId != effectiveBranch.Value)
+            return Results.Forbid();
+
+        var cleanNote = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
+        if (cleanNote is { Length: > 1000 })
+            cleanNote = cleanNote[..1000];
+
+        var actorUserId = Guid.TryParse(user.FindFirstValue("sub"), out var parsedActorId) ? parsedActorId : (Guid?)null;
+        var audit = new AuditEvent
+        {
+            ActorUserId = actorUserId,
+            TenantId = tenantId,
+            BranchId = student.BranchId,
+            Action = "RETENTION_OUTREACH_RECORDED",
+            TargetType = "STUDENT_RETENTION",
+            TargetId = student.Id.ToString(),
+            Reason = cleanNote ?? $"Retention outreach updated to {normalizedStatus}",
+            MetadataJson = JsonSerializer.Serialize(new { status = normalizedStatus, note = cleanNote })
+        };
+
+        db.AuditEvents.Add(audit);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Results.Ok(new
+        {
+            data = new
+            {
+                studentId = student.Id,
+                outreachStatus = normalizedStatus,
+                lastContactNote = cleanNote,
+                recordedAt = audit.CreatedAt
+            }
+        });
+    }
+
     private static string EscapeCsv(string value) => $"\"{value.Replace("\"", "\"\"")}\"";
 
     private static bool CanReadAnalytics(ClaimsPrincipal user) =>
@@ -536,6 +638,8 @@ public static class AnalyticsEndpoints
         return isBranchScoped ? claimedBranchId : requestedBranchId;
     }
 }
+
+public sealed record RetentionOutreachRequest(string Status, string? Note);
 
 public sealed record RetentionRadarItem(
     Guid StudentId,
@@ -554,7 +658,9 @@ public sealed record RetentionRadarItem(
     int MaxOverdueDays,
     string RiskLevel,
     string RiskFactor,
-    string RecommendedAction
+    string RecommendedAction,
+    string OutreachStatus = "pending",
+    string? LastContactNote = null
 );
 
 public sealed record InstructorScorecardItem(

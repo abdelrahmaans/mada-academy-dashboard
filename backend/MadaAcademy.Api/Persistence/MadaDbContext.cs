@@ -48,12 +48,23 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
     public DbSet<CompetitionAward> CompetitionAwards => Set<CompetitionAward>();
     public DbSet<SubscriptionFreezeRequest> SubscriptionFreezeRequests => Set<SubscriptionFreezeRequest>();
     public DbSet<PlatformSupportTicket> PlatformSupportTickets => Set<PlatformSupportTicket>();
+    public DbSet<PlatformSubscriptionPayment> PlatformSubscriptionPayments => Set<PlatformSubscriptionPayment>();
     public DbSet<InstructorPayrollRecord> InstructorPayrollRecords => Set<InstructorPayrollRecord>();
     public DbSet<EvaluationRubric> EvaluationRubrics => Set<EvaluationRubric>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<PlatformSubscriptionPayment>(entity =>
+        {
+            entity.HasIndex(x => new { x.TenantId, x.ReceivedAt });
+            entity.Property(x => x.Method).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.ReferenceNumber).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.Notes).HasMaxLength(1000);
+            entity.Property(x => x.RecordedByName).HasMaxLength(160).IsRequired();
+            entity.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
+        });
 
         modelBuilder.Entity<InstructorPayrollRecord>(entity =>
         {
@@ -385,7 +396,7 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
             entity.Property(x => x.Phone).HasMaxLength(32).IsRequired();
             entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
             entity.Property(x => x.Channel).HasMaxLength(32).IsRequired();
-            entity.Property(x => x.Notes).HasMaxLength(500);
+            entity.Property(x => x.Notes).HasMaxLength(2000);
         });
         modelBuilder.Entity<MarketingCampaign>(entity =>
         {

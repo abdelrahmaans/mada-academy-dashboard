@@ -1,5 +1,9 @@
+using System.Net.Mail;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +20,8 @@ public static class PlatformAdminEndpoints
         api.MapGet("/roles", () => GetPlatformRoles());
         api.MapPatch("/academies/{tenantId:guid}/status", ChangeTenantStatusAsync);
         api.MapPatch("/academies/{tenantId:guid}/plan", ChangeTenantPlanAsync);
+        api.MapPost("/academies/{tenantId:guid}/trial/extend", ExtendTenantTrialAsync);
+        api.MapPost("/academies/{tenantId:guid}/owner-reset", ResetTenantOwnerPasswordAsync);
         api.MapGet("/academies/{tenantId:guid}/features", GetAcademyFeaturesAsync);
         api.MapPatch("/academies/{tenantId:guid}/features", UpdateAcademyFeaturesAsync);
         api.MapGet("/academies/{tenantId:guid}/members", GetMembersAsync);
@@ -23,9 +29,17 @@ public static class PlatformAdminEndpoints
         api.MapPost("/academies/{tenantId:guid}/users/{userId:guid}/sessions/revoke", RevokeSessionsAsync);
         api.MapGet("/academies/{tenantId:guid}/activity", GetAcademyActivityAsync);
         api.MapGet("/activity", GetPlatformActivityAsync);
+        api.MapGet("/payments", GetPlatformPaymentsAsync);
+        api.MapPost("/academies/{tenantId:guid}/payments", RecordSubscriptionPaymentAsync);
+        api.MapGet("/demo-leads", GetPlatformDemoLeadsAsync);
+        api.MapPatch("/demo-leads/{leadId:guid}/status", UpdatePlatformDemoLeadStatusAsync);
+        api.MapPost("/demo-leads/{leadId:guid}/convert", ConvertPlatformDemoLeadAsync);
         api.MapGet("/support-tickets", GetPlatformTicketsAsync);
         api.MapPatch("/support-tickets/{ticketId:guid}", UpdatePlatformTicketAsync);
 
+        endpoints.MapPost("/api/v1/public/demo-requests", CreatePublicDemoRequestAsync)
+            .AllowAnonymous()
+            .RequireRateLimiting("public-lead");
         endpoints.MapGet("/api/v1/academy/my-features", GetMyFeaturesAsync).RequireAuthorization();
         endpoints.MapPost("/api/v1/academy/support-tickets", CreateTenantSupportTicketAsync).RequireAuthorization();
         endpoints.MapGet("/api/v1/academy/support-tickets", GetTenantSupportTicketsAsync).RequireAuthorization();
@@ -52,7 +66,7 @@ public static class PlatformAdminEndpoints
 
     private static async Task<IResult> GetAcademiesAsync(MadaDbContext db, CancellationToken cancellationToken)
     {
-        var academies = await db.Tenants.AsNoTracking().OrderBy(x => x.Name).Select(tenant => new
+        var rawTenants = await db.Tenants.AsNoTracking().OrderBy(x => x.Name).Select(tenant => new
         {
             id = tenant.Id,
             name = tenant.Name,
@@ -62,8 +76,81 @@ public static class PlatformAdminEndpoints
             createdAt = tenant.CreatedAt,
             branches = db.Branches.Count(branch => branch.TenantId == tenant.Id),
             users = db.Memberships.Count(member => member.TenantId == tenant.Id && member.Status == "ACTIVE"),
-            owner = db.Memberships.Where(member => member.TenantId == tenant.Id && member.RoleCode == "R01_ACADEMY_OWNER" && member.Status == "ACTIVE").Select(member => member.UserAccount!.DisplayName).FirstOrDefault()
+            owner = db.Memberships.Where(member => member.TenantId == tenant.Id && member.RoleCode == "R01_ACADEMY_OWNER" && member.Status == "ACTIVE").Select(member => member.UserAccount!.DisplayName).FirstOrDefault(),
+            ownerPhone = db.Memberships.Where(member => member.TenantId == tenant.Id && member.RoleCode == "R01_ACADEMY_OWNER" && member.Status == "ACTIVE").Select(member => member.UserAccount!.Phone).FirstOrDefault(),
+            ownerEmail = db.Memberships.Where(member => member.TenantId == tenant.Id && member.RoleCode == "R01_ACADEMY_OWNER" && member.Status == "ACTIVE").Select(member => member.UserAccount!.Email).FirstOrDefault()
         }).ToListAsync(cancellationToken);
+
+        var paymentSums = await db.PlatformSubscriptionPayments.AsNoTracking()
+            .GroupBy(p => p.TenantId)
+            .Select(g => new { TenantId = g.Key, TotalPaid = g.Sum(x => x.AmountEgp) })
+            .ToDictionaryAsync(x => x.TenantId, x => x.TotalPaid, cancellationToken);
+
+        var tenantAuditMeta = await db.AuditEvents.AsNoTracking()
+            .Where(e => e.TenantId != null && (e.Action == "PLATFORM_TENANT_TRIAL_EXTENDED" || e.Action == "PLATFORM_TENANT_PLAN_CHANGED"))
+            .OrderByDescending(e => e.CreatedAt)
+            .Select(e => new { TenantId = e.TenantId!.Value, e.Action, e.MetadataJson })
+            .ToListAsync(cancellationToken);
+
+        var now = DateTimeOffset.UtcNow;
+        var academies = rawTenants.Select(tenant =>
+        {
+            var latestPlanAudit = tenantAuditMeta.FirstOrDefault(a => a.TenantId == tenant.id && a.Action == "PLATFORM_TENANT_PLAN_CHANGED");
+            int? overrideBranches = null;
+            if (!string.IsNullOrWhiteSpace(latestPlanAudit?.MetadataJson))
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(latestPlanAudit.MetadataJson);
+                    if (doc.RootElement.TryGetProperty("allowedBranches", out var bProp) && bProp.TryGetInt32(out var bVal))
+                        overrideBranches = bVal;
+                }
+                catch { /* ignore malformed metadata */ }
+            }
+            var defaultBranches = tenant.plan.ToUpperInvariant() switch
+            {
+                "STARTER" => 1,
+                "GROWTH" => 3,
+                "ENTERPRISE" or "SCALE" => 99,
+                _ => 3
+            };
+            var trialAudits = tenantAuditMeta.Where(a => a.TenantId == tenant.id && a.Action == "PLATFORM_TENANT_TRIAL_EXTENDED").ToList();
+            DateTimeOffset? trialEnd = tenant.status == "TRIAL" ? tenant.createdAt.AddDays(14) : null;
+            if (trialAudits.Count > 0 && !string.IsNullOrWhiteSpace(trialAudits[0].MetadataJson))
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(trialAudits[0].MetadataJson!);
+                    if (doc.RootElement.TryGetProperty("newEndDate", out var endProp) && DateTimeOffset.TryParse(endProp.GetString(), out var parsedEnd))
+                        trialEnd = parsedEnd;
+                }
+                catch { /* ignore malformed metadata */ }
+            }
+            int? remainingTrialDays = trialEnd.HasValue
+                ? Math.Max(0, (int)Math.Ceiling((trialEnd.Value - now).TotalDays))
+                : null;
+
+            return new
+            {
+                tenant.id,
+                tenant.name,
+                tenant.slug,
+                tenant.status,
+                tenant.plan,
+                planCode = tenant.plan,
+                allowedBranches = overrideBranches ?? Math.Max(defaultBranches, tenant.branches),
+                isTrialExtended = trialAudits.Count > 0,
+                remainingTrialDays,
+                totalPaidAmount = paymentSums.TryGetValue(tenant.id, out var paid) ? paid : 0L,
+                tenant.createdAt,
+                tenant.branches,
+                tenant.users,
+                tenant.owner,
+                ownerPhone = tenant.ownerPhone,
+                ownerEmail = tenant.ownerEmail
+            };
+        }).ToList();
+
         return Results.Ok(new { data = new { items = academies, total = academies.Count } });
     }
 
@@ -556,7 +643,404 @@ public static class PlatformAdminEndpoints
     }
 
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    private static async Task<IResult> ExtendTenantTrialAsync(Guid tenantId, ExtendTrialRequest request, MadaDbContext db, ClaimsPrincipal principal, CancellationToken cancellationToken)
+    {
+        if (request.DaysToAdd is < 1 or > 90)
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["daysToAdd"] = ["Days to add must be between 1 and 90."] });
+        if (string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Trim().Length < 4)
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["reason"] = ["A reason of at least four characters is required."] });
+
+        var tenant = await db.Tenants.SingleOrDefaultAsync(x => x.Id == tenantId, cancellationToken);
+        if (tenant is null) return Results.NotFound(new { error = new { code = "TENANT_NOT_FOUND", message = "Academy was not found." } });
+
+        var now = DateTimeOffset.UtcNow;
+        var baseEnd = tenant.Status == "TRIAL" ? tenant.CreatedAt.AddDays(14) : now;
+        if (baseEnd < now) baseEnd = now;
+
+        var latestTrialAudit = await db.AuditEvents.AsNoTracking()
+            .Where(e => e.TenantId == tenantId && e.Action == "PLATFORM_TENANT_TRIAL_EXTENDED")
+            .OrderByDescending(e => e.CreatedAt)
+            .Select(e => e.MetadataJson)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(latestTrialAudit))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(latestTrialAudit);
+                if (doc.RootElement.TryGetProperty("newEndDate", out var endProp) &&
+                    DateTimeOffset.TryParse(endProp.GetString(), out var previousEnd) &&
+                    previousEnd > baseEnd)
+                    baseEnd = previousEnd;
+            }
+            catch { /* ignore malformed metadata */ }
+        }
+
+        var newEndDate = baseEnd.AddDays(request.DaysToAdd);
+        if (tenant.Status is "SETUP" or "PAUSED") tenant.Status = "TRIAL";
+
+        db.AuditEvents.Add(new AuditEvent
+        {
+            ActorUserId = ActorId(principal),
+            TenantId = tenant.Id,
+            Action = "PLATFORM_TENANT_TRIAL_EXTENDED",
+            TargetType = "TENANT",
+            TargetId = tenant.Id.ToString(),
+            Reason = request.Reason.Trim(),
+            MetadataJson = JsonSerializer.Serialize(new { daysToAdd = request.DaysToAdd, newEndDate = newEndDate.ToString("O") })
+        });
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Results.Ok(new { data = new { tenantId = tenant.Id, newEndDate = newEndDate.ToString("O"), isTrialExtended = true } });
+    }
+
+    private static async Task<IResult> ResetTenantOwnerPasswordAsync(Guid tenantId, SupportReasonRequest request, MadaDbContext db, PasswordHashService passwords, ClaimsPrincipal principal, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Trim().Length < 4)
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["reason"] = ["A reason of at least four characters is required for owner recovery."] });
+
+        var ownerMembership = await db.Memberships
+            .Include(m => m.UserAccount)
+            .Where(m => m.TenantId == tenantId && m.RoleCode == "R01_ACADEMY_OWNER" && m.Status == "ACTIVE")
+            .OrderBy(m => m.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (ownerMembership?.UserAccount is null)
+            return Results.NotFound(new { error = new { code = "OWNER_NOT_FOUND", message = "Active academy owner was not found." } });
+
+        var owner = ownerMembership.UserAccount;
+        var tempPassword = GenerateTempPassword();
+        owner.PasswordHash = passwords.Hash(tempPassword);
+        owner.FailedPasswordAttempts = 0;
+        owner.PasswordLockedUntil = null;
+        if (owner.Status == "INVITED") owner.Status = "ACTIVE";
+
+        var sessions = await db.RefreshSessions
+            .Where(s => s.UserAccountId == owner.Id && s.RevokedAt == null)
+            .ToListAsync(cancellationToken);
+        var now = DateTimeOffset.UtcNow;
+        foreach (var session in sessions) session.RevokedAt = now;
+
+        db.AuditEvents.Add(new AuditEvent
+        {
+            ActorUserId = ActorId(principal),
+            TenantId = tenantId,
+            Action = "PLATFORM_OWNER_PASSWORD_RESET",
+            TargetType = "USER_ACCOUNT",
+            TargetId = owner.Id.ToString(),
+            Reason = request.Reason.Trim(),
+            MetadataJson = JsonSerializer.Serialize(new { ownerPhone = owner.Phone, revokedSessions = sessions.Count })
+        });
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Results.Ok(new
+        {
+            data = new
+            {
+                tenantId,
+                ownerName = owner.DisplayName ?? owner.Phone,
+                ownerPhone = owner.Phone,
+                tempPassword,
+                generatedAt = now
+            }
+        });
+    }
+
+    private static async Task<IResult> GetPlatformPaymentsAsync(Guid? tenantId, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        var query = db.PlatformSubscriptionPayments.AsNoTracking();
+        if (tenantId.HasValue) query = query.Where(p => p.TenantId == tenantId.Value);
+
+        var items = await (
+            from p in query
+            join t in db.Tenants.AsNoTracking() on p.TenantId equals t.Id
+            orderby p.ReceivedAt descending
+            select new
+            {
+                id = p.Id,
+                tenantId = p.TenantId,
+                tenantName = t.Name,
+                amount = p.AmountEgp,
+                method = p.Method,
+                referenceNumber = p.ReferenceNumber,
+                receivedAt = p.ReceivedAt,
+                recordedByName = p.RecordedByName,
+                notes = p.Notes
+            }
+        ).ToListAsync(cancellationToken);
+
+        return Results.Ok(new { data = new { items, total = items.Count, totalRevenue = items.Sum(x => x.amount) } });
+    }
+
+    private static async Task<IResult> RecordSubscriptionPaymentAsync(Guid tenantId, RecordSubscriptionPaymentRequest request, MadaDbContext db, ClaimsPrincipal principal, CancellationToken cancellationToken)
+    {
+        if (request.Amount <= 0)
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["amount"] = ["Payment amount must be greater than zero."] });
+        var normalizedMethod = (request.Method ?? "BANK_TRANSFER").Trim().ToUpperInvariant();
+        if (normalizedMethod is not ("BANK_TRANSFER" or "FAWRY" or "CREDIT_CARD" or "CASH" or "INSTAPAY" or "VODAFONE_CASH"))
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["method"] = ["Unsupported payment method."] });
+        if (string.IsNullOrWhiteSpace(request.ReferenceNumber) || request.ReferenceNumber.Trim().Length < 2)
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["referenceNumber"] = ["Reference number is required."] });
+
+        var tenant = await db.Tenants.SingleOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
+        if (tenant is null)
+            return Results.NotFound(new { error = new { code = "TENANT_NOT_FOUND", message = "Academy was not found." } });
+
+        var actorId = ActorId(principal);
+        var recorderName = request.RecordedByName?.Trim();
+        if (string.IsNullOrWhiteSpace(recorderName) && actorId.HasValue)
+            recorderName = await db.UserAccounts.AsNoTracking().Where(u => u.Id == actorId.Value).Select(u => u.DisplayName).FirstOrDefaultAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(recorderName)) recorderName = "مسؤول المنصة";
+
+        var payment = new PlatformSubscriptionPayment
+        {
+            TenantId = tenant.Id,
+            AmountEgp = (long)Math.Round(request.Amount),
+            Method = normalizedMethod,
+            ReferenceNumber = request.ReferenceNumber.Trim(),
+            Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
+            RecordedByUserId = actorId,
+            RecordedByName = recorderName,
+            ReceivedAt = DateTimeOffset.UtcNow
+        };
+        if (tenant.Status is "PAUSED" or "SETUP") tenant.Status = "ACTIVE";
+
+        db.PlatformSubscriptionPayments.Add(payment);
+        db.AuditEvents.Add(new AuditEvent
+        {
+            ActorUserId = actorId,
+            TenantId = tenant.Id,
+            Action = "PLATFORM_SUBSCRIPTION_PAYMENT_RECORDED",
+            TargetType = "PLATFORM_SUBSCRIPTION_PAYMENT",
+            TargetId = payment.Id.ToString(),
+            Reason = $"Recorded {payment.AmountEgp} EGP via {payment.Method} ({payment.ReferenceNumber})",
+            MetadataJson = JsonSerializer.Serialize(new { payment.AmountEgp, payment.Method, payment.ReferenceNumber })
+        });
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Results.Created($"/api/v1/platform/payments", new
+        {
+            data = new
+            {
+                id = payment.Id,
+                tenantId = tenant.Id,
+                tenantName = tenant.Name,
+                amount = payment.AmountEgp,
+                method = payment.Method,
+                referenceNumber = payment.ReferenceNumber,
+                receivedAt = payment.ReceivedAt,
+                recordedByName = payment.RecordedByName,
+                notes = payment.Notes
+            }
+        });
+    }
+
+    private static async Task<IResult> GetPlatformDemoLeadsAsync(MadaDbContext db, CancellationToken cancellationToken)
+    {
+        var leads = await db.Leads.AsNoTracking()
+            .Where(l => l.Channel == "LANDING_DEMO")
+            .OrderByDescending(l => l.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        var items = leads.Select(MapDemoLead).ToList();
+        return Results.Ok(new { data = new { items, total = items.Count } });
+    }
+
+    private static async Task<IResult> UpdatePlatformDemoLeadStatusAsync(Guid leadId, UpdateDemoLeadStatusRequest request, MadaDbContext db, ClaimsPrincipal principal, CancellationToken cancellationToken)
+    {
+        var normalizedStatus = (request.Status ?? string.Empty).Trim().ToUpperInvariant();
+        if (normalizedStatus is not ("NEW" or "CONTACTED" or "DEMO_SCHEDULED" or "CONVERTED" or "REJECTED"))
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["status"] = ["Status must be NEW, CONTACTED, DEMO_SCHEDULED, CONVERTED, or REJECTED."] });
+
+        var lead = await db.Leads.SingleOrDefaultAsync(l => l.Id == leadId && l.Channel == "LANDING_DEMO", cancellationToken);
+        if (lead is null)
+            return Results.NotFound(new { error = new { code = "DEMO_LEAD_NOT_FOUND", message = "Demo lead was not found." } });
+
+        var previous = lead.Status;
+        lead.Status = normalizedStatus;
+        lead.UpdatedAt = DateTimeOffset.UtcNow;
+
+        db.AuditEvents.Add(new AuditEvent
+        {
+            ActorUserId = ActorId(principal),
+            TenantId = lead.TenantId == Guid.Empty ? null : lead.TenantId,
+            Action = "PLATFORM_DEMO_LEAD_STATUS_CHANGED",
+            TargetType = "LEAD",
+            TargetId = lead.Id.ToString(),
+            Reason = $"Lead status updated from {previous} to {normalizedStatus}"
+        });
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Results.Ok(new { data = MapDemoLead(lead) });
+    }
+
+    private static async Task<IResult> ConvertPlatformDemoLeadAsync(
+        Guid leadId,
+        ConvertDemoLeadRequest request,
+        MadaDbContext db,
+        PasswordHashService passwords,
+        ClaimsPrincipal principal,
+        CancellationToken cancellationToken)
+    {
+        var lead = await db.Leads.SingleOrDefaultAsync(l => l.Id == leadId && l.Channel == "LANDING_DEMO", cancellationToken);
+        if (lead is null)
+            return Results.NotFound(new { error = new { code = "DEMO_LEAD_NOT_FOUND", message = "Demo lead was not found." } });
+        if (lead.Status == "CONVERTED")
+            return Results.Conflict(new { error = new { code = "DEMO_LEAD_ALREADY_CONVERTED", message = "This demo lead has already been converted into an academy." } });
+
+        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length < 2)
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["name"] = ["Academy name is required."] });
+        if (string.IsNullOrWhiteSpace(request.BranchName) || string.IsNullOrWhiteSpace(request.BranchCode))
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["branch"] = ["Primary branch name and code are required."] });
+        if (string.IsNullOrWhiteSpace(request.OwnerName) || string.IsNullOrWhiteSpace(request.OwnerPhone) || OtpChallengeStore.Normalize(request.OwnerPhone).Length < 8)
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["ownerPhone"] = ["Owner name and valid phone are required."] });
+        if (string.IsNullOrWhiteSpace(request.OwnerPassword) || request.OwnerPassword.Length < 8)
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["ownerPassword"] = ["Owner password must be at least 8 characters."] });
+        try { _ = new MailAddress(request.OwnerEmail); }
+        catch { return Results.ValidationProblem(new Dictionary<string, string[]> { ["ownerEmail"] = ["A valid owner email is required."] }); }
+
+        var planCode = (request.PlanCode ?? "GROWTH").Trim().ToUpperInvariant();
+        if (planCode is not ("STARTER" or "GROWTH" or "ENTERPRISE" or "SCALE"))
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["planCode"] = ["Unsupported plan code."] });
+
+        var cleanedSlug = Regex.Replace((request.Slug ?? request.Name).Trim().ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
+        var slug = string.IsNullOrWhiteSpace(cleanedSlug) ? $"academy-{Guid.NewGuid().ToString("N")[..6]}" : cleanedSlug;
+        var phone = OtpChallengeStore.Normalize(request.OwnerPhone);
+        var email = request.OwnerEmail.Trim().ToLowerInvariant();
+        var branchCode = request.BranchCode.Trim().ToUpperInvariant();
+
+        if (await db.Tenants.AnyAsync(t => t.Slug == slug, cancellationToken))
+            return Results.Conflict(new { error = new { code = "ACADEMY_SLUG_EXISTS", message = "An academy with this slug already exists." } });
+        if (await db.UserAccounts.AnyAsync(u => u.Email == email, cancellationToken))
+            return Results.Conflict(new { error = new { code = "OWNER_EMAIL_EXISTS", message = "The owner email is already registered." } });
+        if (await db.UserAccounts.AnyAsync(u => u.Phone == phone && u.AccountType == "staff", cancellationToken))
+            return Results.Conflict(new { error = new { code = "OWNER_PHONE_EXISTS", message = "The owner phone is already registered." } });
+
+        var tenant = new Tenant { Name = request.Name.Trim(), Slug = slug, PlanCode = planCode, Status = "TRIAL" };
+        var branch = new Branch { TenantId = tenant.Id, Name = request.BranchName.Trim(), Code = branchCode };
+        var owner = new UserAccount
+        {
+            Email = email,
+            Phone = phone,
+            DisplayName = request.OwnerName.Trim(),
+            AccountType = "staff",
+            PasswordHash = passwords.Hash(request.OwnerPassword),
+            Status = "ACTIVE"
+        };
+        var membership = new Membership
+        {
+            UserAccountId = owner.Id,
+            TenantId = tenant.Id,
+            RoleCode = "R01_ACADEMY_OWNER",
+            ScopeLevel = "TENANT",
+            Status = "ACTIVE"
+        };
+
+        lead.Status = "CONVERTED";
+        lead.TenantId = tenant.Id;
+        lead.BranchId = branch.Id;
+        lead.UpdatedAt = DateTimeOffset.UtcNow;
+
+        db.Tenants.Add(tenant);
+        db.Branches.Add(branch);
+        db.UserAccounts.Add(owner);
+        db.Memberships.Add(membership);
+        db.AuditEvents.Add(new AuditEvent
+        {
+            ActorUserId = ActorId(principal),
+            TenantId = tenant.Id,
+            Action = "PLATFORM_DEMO_LEAD_CONVERTED",
+            TargetType = "LEAD",
+            TargetId = lead.Id.ToString(),
+            Reason = $"Converted landing demo lead {lead.ChildName} into academy {tenant.Slug}",
+            MetadataJson = JsonSerializer.Serialize(new { tenantId = tenant.Id, slug = tenant.Slug, ownerId = owner.Id })
+        });
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Results.Created($"/api/v1/academy/{tenant.Id}", new
+        {
+            data = new
+            {
+                lead = MapDemoLead(lead),
+                academy = new { id = tenant.Id, name = tenant.Name, slug = tenant.Slug, status = tenant.Status, planCode = tenant.PlanCode },
+                primaryBranch = new { id = branch.Id, branch.Name, branch.Code },
+                owner = new { id = owner.Id, displayName = owner.DisplayName ?? owner.Phone, phone = owner.Phone, email = owner.Email }
+            }
+        });
+    }
+
+    private static async Task<IResult> CreatePublicDemoRequestAsync(PublicDemoRequestInput request, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name) || string.IsNullOrWhiteSpace(request.AcademyName) || string.IsNullOrWhiteSpace(request.Phone))
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["request"] = ["Name, academy name, and phone are required."] });
+
+        var lead = new Lead
+        {
+            TenantId = Guid.Empty,
+            BranchId = Guid.Empty,
+            ChildName = request.AcademyName.Trim(),
+            ParentName = request.Name.Trim(),
+            Phone = request.Phone.Trim(),
+            Channel = "LANDING_DEMO",
+            Status = "NEW",
+            Notes = SerializeDemoLeadMeta(request.Email?.Trim() ?? "", request.BranchCount?.Trim() ?? "1", request.OperationalNeed?.Trim() ?? "", request.Notes?.Trim())
+        };
+        db.Leads.Add(lead);
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.Created($"/api/v1/platform/demo-leads", new { data = MapDemoLead(lead) });
+    }
+
+    public static string SerializeDemoLeadMeta(string email, string branchCount, string operationalNeed, string? notes) =>
+        JsonSerializer.Serialize(new DemoLeadMeta(email, branchCount, operationalNeed, notes));
+
+    private static object MapDemoLead(Lead lead)
+    {
+        var meta = ParseDemoLeadMeta(lead.Notes);
+        return new
+        {
+            id = lead.Id.ToString(),
+            name = lead.ParentName,
+            email = meta.Email,
+            phone = lead.Phone,
+            academyName = lead.ChildName,
+            branchCount = meta.BranchCount,
+            operationalNeed = meta.OperationalNeed,
+            notes = meta.Notes,
+            status = lead.Status,
+            createdAt = lead.CreatedAt
+        };
+    }
+
+    private static DemoLeadMeta ParseDemoLeadMeta(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return new DemoLeadMeta("", "1", "", null);
+        if (raw.TrimStart().StartsWith('{'))
+        {
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<DemoLeadMeta>(raw, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (parsed is not null) return parsed;
+            }
+            catch { /* fall back to plain text notes */ }
+        }
+        return new DemoLeadMeta("", "1", raw, null);
+    }
+
+    private static string GenerateTempPassword()
+    {
+        const string alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+        var chars = new char[8];
+        for (var i = 0; i < chars.Length; i++)
+            chars[i] = alphabet[RandomNumberGenerator.GetInt32(alphabet.Length)];
+        return $"Mada#{new string(chars)}";
+    }
+
     private static Guid? ActorId(ClaimsPrincipal principal) => Guid.TryParse(principal.FindFirstValue("sub"), out var id) ? id : null;
+    private sealed record DemoLeadMeta(string Email, string BranchCount, string OperationalNeed, string? Notes);
+    private sealed record ExtendTrialRequest(int DaysToAdd, string? Reason);
+    private sealed record RecordSubscriptionPaymentRequest(decimal Amount, string? Method, string? ReferenceNumber, string? Notes, string? RecordedByName);
+    private sealed record UpdateDemoLeadStatusRequest(string Status);
+    private sealed record ConvertDemoLeadRequest(string Name, string? Slug, string? PlanCode, string BranchName, string BranchCode, string OwnerName, string OwnerPhone, string OwnerEmail, string OwnerPassword);
+    private sealed record PublicDemoRequestInput(string Name, string? Email, string Phone, string AcademyName, string? BranchCount, string? OperationalNeed, string? Notes);
     private sealed record TenantStatusRequest(string Status, string? Reason);
     private sealed record TenantPlanRequest(string PlanCode, int? BranchesLimit, string? Reason);
     private sealed record MemberStatusRequest(string Status, string? Reason);

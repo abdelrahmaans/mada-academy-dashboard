@@ -30,12 +30,13 @@ export function PlatformConsoleLeadsTab({
         <div>
           <h2>طلبات المعاينة والعملاء الجدد (Landing Page Leads & Demos)</h2>
           <p>
-            عرض وإدارة الطلبات متوقف حتى ربط شاشة CRM بسجل محفوظ على الخادم؛ لن تظهر بيانات تجريبية محفوظة في المتصفح.
+            متابعة طلبات المعاينة المسجلة على الخادم وتحويلها إلى أكاديميات مفعّلة بنقرة واحدة.
           </p>
         </div>
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <span className="pc-live-boundary">
-            <Sparkles size={14} /> CRM غير متصل
+          <span className="pc-live-count-badge">
+            <Sparkles size={14} style={{ display: "inline", marginLeft: "4px" }} />
+            {filteredLeads.length} طلب معاينة
           </span>
         </div>
       </header>
@@ -122,8 +123,8 @@ export function PlatformConsoleLeadsTab({
                 </td>
                 <td>
                   <select
-                    disabled
                     value={lead.status}
+                    disabled={lead.status === "CONVERTED"}
                     onChange={(e) => handleLeadStatusChange(lead.id, e.target.value as PlatformDemoLead["status"])}
                     style={{
                       padding: "4px 8px",
@@ -155,7 +156,6 @@ export function PlatformConsoleLeadsTab({
                   <div className="pc-live-row-actions">
                     <button
                       type="button"
-                      disabled
                       style={{ color: "#15803d", borderColor: "#bbf7d0", background: "#f0fdf4" }}
                       onClick={() => handleWhatsAppLeadChat(lead)}
                       title="فتح محادثة واتساب فورية لترتيب الديمو"
@@ -164,7 +164,7 @@ export function PlatformConsoleLeadsTab({
                     </button>
                     <button
                       type="button"
-                      disabled
+                      disabled={lead.status === "CONVERTED"}
                       className="pc-live-link"
                       style={{
                         background: lead.status === "CONVERTED" ? "#f8fafc" : "#eff6ff",

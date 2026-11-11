@@ -174,7 +174,7 @@ export function PlatformConsoleAcademiesTab({
                       type="button"
                       onClick={() => onOpenPlanUpgradeModal(row)}
                       disabled={!planActionsEnabled}
-                      title="متوقف حتى اعتماد عقد الفوترة وتسجيل أثر التغيير"
+                      title={planActionsEnabled ? "تعديل باقة الاشتراك وحد الفروع" : "متوقف حتى اعتماد عقد الفوترة وتسجيل أثر التغيير"}
                     >
                       تعديل الباقة
                     </button>

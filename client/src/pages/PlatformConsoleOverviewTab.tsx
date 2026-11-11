@@ -36,6 +36,7 @@ export interface PlatformConsoleOverviewTabProps {
   onRequestTenantStatusChange: (tenant: EnrichedPlatformAcademy) => void;
   planActionsEnabled: boolean;
   trialActionsEnabled: boolean;
+  totalCollectedRevenue?: number;
 }
 
 export function PlatformConsoleOverviewTab({
@@ -50,6 +51,7 @@ export function PlatformConsoleOverviewTab({
   onRequestTenantStatusChange,
   planActionsEnabled,
   trialActionsEnabled,
+  totalCollectedRevenue = 0,
 }: PlatformConsoleOverviewTabProps) {
   return (
     <>
@@ -75,9 +77,9 @@ export function PlatformConsoleOverviewTab({
         />
         <Metric
           icon={<Wallet />}
-          label="صافي الفائض الشهري"
-          value="غير متاح"
-          note="مصدر الإيرادات والتكاليف غير متصل"
+          label="إجمالي تحصيل الاشتراكات"
+          value={`${totalCollectedRevenue.toLocaleString("en-US")} ج.م`}
+          note="من سجل مدفوعات المنصة الفعلي"
         />
       </section>
 

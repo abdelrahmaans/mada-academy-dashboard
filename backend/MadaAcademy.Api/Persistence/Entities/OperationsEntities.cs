@@ -36,3 +36,15 @@ public sealed class StateTransitionEvent : EntityBase
     public Guid? ActorUserId { get; set; }
     public string? Reason { get; set; }
 }
+
+public sealed class PlatformSubscriptionPayment : EntityBase
+{
+    public Guid TenantId { get; set; }
+    public long AmountEgp { get; set; }
+    public string Method { get; set; } = "BANK_TRANSFER";
+    public required string ReferenceNumber { get; set; }
+    public string? Notes { get; set; }
+    public Guid? RecordedByUserId { get; set; }
+    public string RecordedByName { get; set; } = "مسؤول المنصة";
+    public DateTimeOffset ReceivedAt { get; set; } = DateTimeOffset.UtcNow;
+}

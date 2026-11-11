@@ -117,8 +117,8 @@ export default function BranchMultiUnitPnLView({
               : "moderate",
           riskReason: item.riskFactor,
           suggestedAction: item.recommendedAction,
-          status: liveStudentStatuses[item.studentId]?.status ?? "pending",
-          lastContactNote: liveStudentStatuses[item.studentId]?.note,
+          status: (item.outreachStatus as AtRiskStudent["status"]) || liveStudentStatuses[item.studentId]?.status || "pending",
+          lastContactNote: item.lastContactNote ?? liveStudentStatuses[item.studentId]?.note ?? undefined,
         }));
         setAtRiskList(mappedRisk);
       })
@@ -310,18 +310,25 @@ export default function BranchMultiUnitPnLView({
     });
   }, [atRiskList, selectedBranch, riskSeverityFilter, searchRiskQuery]);
 
-  const handleUpdateStudentStatus = (id: string, status: AtRiskStudent["status"]) => {
+  const handleUpdateStudentStatus = async (id: string, status: AtRiskStudent["status"]) => {
     if (isLive) {
       const note = actionNote.trim() || undefined;
-      setLiveStudentStatuses(prev => ({ ...prev, [id]: { status, note } }));
-      setAtRiskList(prev =>
-        prev.map(s => (s.id === id ? { ...s, status, lastContactNote: note ?? s.lastContactNote } : s))
-      );
-      setSelectedRiskStudent(null);
-      setActionNote("");
-      toast.success("تم تسجيل المتابعة في هذه الجلسة", {
-        description: status === "retained" ? "تم تأكيد حالة استمرار الطالب." : "تم تحديث حالة الطالب في الرادار.",
-      });
+      try {
+        const res = await apiClient.recordRetentionOutreach(id, { status, note });
+        const savedStatus = (res.outreachStatus as AtRiskStudent["status"]) || status;
+        const savedNote = res.lastContactNote ?? note;
+        setLiveStudentStatuses(prev => ({ ...prev, [id]: { status: savedStatus, note: savedNote } }));
+        setAtRiskList(prev =>
+          prev.map(s => (s.id === id ? { ...s, status: savedStatus, lastContactNote: savedNote ?? s.lastContactNote } : s))
+        );
+        setSelectedRiskStudent(null);
+        setActionNote("");
+        toast.success("تم حفظ متابعة الطالب في قاعدة البيانات", {
+          description: savedStatus === "retained" ? "تم تأكيد حالة استمرار الطالب." : "تم تحديث حالة الطالب في الرادار.",
+        });
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "تعذر حفظ حالة متابعة الطالب.");
+      }
       return;
     }
 

@@ -534,6 +534,7 @@ public static class DemoDataSeeder
         }
         else
         {
+            db.PlatformSubscriptionPayments.RemoveRange(db.PlatformSubscriptionPayments);
             db.PlatformSupportTickets.RemoveRange(db.PlatformSupportTickets);
             db.EvaluationRubrics.RemoveRange(db.EvaluationRubrics);
             db.InstructorPayrollRecords.RemoveRange(db.InstructorPayrollRecords);
@@ -1277,6 +1278,100 @@ public static class DemoDataSeeder
                     ApprovedAt = DateTimeOffset.UtcNow.AddDays(-1)
                 });
             }
+        }
+
+        // Seeded Platform Demo Leads (LANDING_DEMO channel, isolated from academy tenant leads)
+        var demoLead1Id = Guid.Parse("9a000000-0000-0000-0000-000000000001");
+        if (!await db.Leads.AnyAsync(l => l.Id == demoLead1Id, cancellationToken))
+        {
+            db.Leads.AddRange(
+                new Lead
+                {
+                    Id = demoLead1Id,
+                    TenantId = Guid.Empty,
+                    BranchId = Guid.Empty,
+                    ChildName = "أكاديمية الأبطال للسباحة والجمباز",
+                    ParentName = "م. طارق السعيد",
+                    Phone = "+201023456789",
+                    Channel = "LANDING_DEMO",
+                    Status = "NEW",
+                    Notes = MadaAcademy.Api.Modules.Platform.PlatformAdminEndpoints.SerializeDemoLeadMeta(
+                        "tarek@champion-academy.example",
+                        "3",
+                        "تشتت إدارة الفروع وتعدد الجداول وحساب رواتب المدربين",
+                        "مهتمون بتفعيل فروع المعادي والتجمع ونظام حساب الحصص التلقائي")
+                },
+                new Lead
+                {
+                    Id = Guid.Parse("9a000000-0000-0000-0000-000000000002"),
+                    TenantId = Guid.Empty,
+                    BranchId = Guid.Empty,
+                    ChildName = "نادي النجوم للرياضات التنافسية",
+                    ParentName = "أ. ميادة بدر",
+                    Phone = "+201278901234",
+                    Channel = "LANDING_DEMO",
+                    Status = "DEMO_SCHEDULED",
+                    Notes = MadaAcademy.Api.Modules.Platform.PlatformAdminEndpoints.SerializeDemoLeadMeta(
+                        "mayada@star-gymnastics.example",
+                        "2",
+                        "إدارة الخزينة ومسيرات الرواتب وبوابة ولي الأمر",
+                        "طلب عرض توضيحي مباشر يوم الثلاثاء")
+                }
+            );
+        }
+
+        // Seeded Platform Subscription Payments
+        var subPay1Id = Guid.Parse("9b000000-0000-0000-0000-000000000001");
+        if (!await db.PlatformSubscriptionPayments.AnyAsync(p => p.Id == subPay1Id, cancellationToken))
+        {
+            db.PlatformSubscriptionPayments.AddRange(
+                new PlatformSubscriptionPayment
+                {
+                    Id = subPay1Id,
+                    TenantId = tenantId,
+                    AmountEgp = 15000,
+                    Method = "BANK_TRANSFER",
+                    ReferenceNumber = "MADA-SUB-2026-091",
+                    Notes = "تجديد اشتراك باقة Growth — الربع الرابع",
+                    RecordedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000001"),
+                    RecordedByName = "أ. عبد الرحمن شريف",
+                    ReceivedAt = DateTimeOffset.UtcNow.AddDays(-18)
+                },
+                new PlatformSubscriptionPayment
+                {
+                    Id = Guid.Parse("9b000000-0000-0000-0000-000000000002"),
+                    TenantId = tenantId,
+                    AmountEgp = 12000,
+                    Method = "INSTAPAY",
+                    ReferenceNumber = "INSTA-2026-8841",
+                    Notes = "دفعة تفعيل باقة إضافية وبوابة المسابقات",
+                    RecordedByUserId = Guid.Parse("10000000-0000-0000-0000-000000000001"),
+                    RecordedByName = "أ. عبد الرحمن شريف",
+                    ReceivedAt = DateTimeOffset.UtcNow.AddDays(-5)
+                }
+            );
+        }
+
+        // Seeded Retention Outreach AuditEvent for showcase continuity
+        var retentionAuditId = Guid.Parse("9c000000-0000-0000-0000-000000000001");
+        if (!await db.AuditEvents.AnyAsync(e => e.Id == retentionAuditId, cancellationToken))
+        {
+            db.AuditEvents.Add(new AuditEvent
+            {
+                Id = retentionAuditId,
+                ActorUserId = ownerId,
+                TenantId = tenantId,
+                BranchId = mainBranchId,
+                Action = "RETENTION_OUTREACH_RECORDED",
+                TargetType = "STUDENT_RETENTION",
+                TargetId = "70000000-0000-0000-0000-000000000003",
+                Reason = "تم التواصل هاتفياً مع ولي أمر الطالب وتنسيق حصة تعويضية هذا الأسبوع.",
+                MetadataJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    status = "contacted",
+                    note = "تم التواصل هاتفياً مع ولي أمر الطالب وتنسيق حصة تعويضية هذا الأسبوع."
+                })
+            });
         }
 
         await db.SaveChangesAsync(cancellationToken);

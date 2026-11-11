@@ -26,6 +26,9 @@ export type PlatformAcademy = {
   planName?: string;
   planCode?: string;
   allowedBranches?: number;
+  isTrialExtended?: boolean;
+  remainingTrialDays?: number;
+  totalPaidAmount?: number;
   ownerPhone?: string;
   ownerEmail?: string;
 };
@@ -598,6 +601,8 @@ export type RetentionRadarItem = {
   riskLevel: "HIGH" | "MEDIUM" | "LOW" | string;
   riskFactor: string;
   recommendedAction: string;
+  outreachStatus?: "pending" | "contacted" | "retained" | "lost" | string;
+  lastContactNote?: string | null;
 };
 
 export type RetentionRadarResponse = {
@@ -919,10 +924,47 @@ export const apiClient = {
       method: "POST",
       body: JSON.stringify(input),
     }),
+  listPlatformPayments: (tenantId?: string) =>
+    request<{ items: PlatformPaymentRecord[]; total: number; totalRevenue: number }>(
+      `/platform/payments${tenantId ? `?tenantId=${encodeURIComponent(tenantId)}` : ""}`
+    ),
+  listPlatformDemoLeads: () =>
+    request<{ items: PlatformDemoLead[]; total: number }>("/platform/demo-leads"),
+  updatePlatformDemoLeadStatusLive: (id: string, status: PlatformDemoLead["status"]) =>
+    request<PlatformDemoLead>(`/platform/demo-leads/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }),
+  convertPlatformDemoLead: (
+    id: string,
+    input: {
+      name: string;
+      slug: string;
+      planCode: string;
+      branchName: string;
+      branchCode: string;
+      ownerName: string;
+      ownerPhone: string;
+      ownerEmail: string;
+      ownerPassword: string;
+    }
+  ) =>
+    request<{
+      lead: PlatformDemoLead;
+      academy: { id: string; name: string; slug: string; status: string; planCode: string };
+      primaryBranch: { id: string; name: string; code: string };
+      owner: { id: string; displayName: string; phone: string; email: string | null };
+    }>(`/platform/demo-leads/${id}/convert`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
   getPlatformPayments: (tenantId?: string) => platformSaaSStorage.getPayments(tenantId),
   getPlatformTenantExtra: (tenantId: string, defaultPlan?: string) => platformSaaSStorage.getTenantExtra(tenantId, defaultPlan),
   getPlatformDemoLeads: () => platformSaaSStorage.getDemoLeads(),
-  updatePlatformDemoLeadStatus: (id: string, status: PlatformDemoLead["status"]) => platformSaaSStorage.updateDemoLeadStatus(id, status),
+  updatePlatformDemoLeadStatus: (id: string, status: PlatformDemoLead["status"]) =>
+    accessToken
+      ? request<PlatformDemoLead>(`/platform/demo-leads/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) })
+      : Promise.resolve(platformSaaSStorage.updateDemoLeadStatus(id, status)),
   addPlatformDemoLead: (input: Omit<PlatformDemoLead, "id" | "createdAt" | "status">) => platformSaaSStorage.addDemoLead(input),
   platformAcademyMembers: (tenantId: string, search = "") => { const query = new URLSearchParams(); if (search.trim()) query.set("search", search.trim()); const suffix = query.toString() ? `?${query.toString()}` : ""; return request<{ items: PlatformMember[]; total: number; tenantId: string }>(`/platform/academies/${tenantId}/members${suffix}`); },
   changePlatformMemberStatus: (tenantId: string, membershipId: string, status: "ACTIVE" | "REVOKED", reason: string) => request<{ membershipId: string; userId: string; status: string; revokedSessions: number }>(`/platform/academies/${tenantId}/members/${membershipId}/status`, { method: "PATCH", body: JSON.stringify({ status, reason }) }),
@@ -1106,6 +1148,11 @@ export const apiClient = {
   downloadOperationalReport: async (params: { from?: string; to?: string; branchId?: string } = {}) => { const query = new URLSearchParams(); if (params.from) query.set("from", params.from); if (params.to) query.set("to", params.to); if (params.branchId) query.set("branchId", params.branchId); const response = await fetch(`${API_BASE}/reports/operational.csv?${query}`, { headers: accessToken ? { authorization: `Bearer ${accessToken}` } : undefined }); if (!response.ok) throw new ApiRequestError("تعذر تصدير التقرير التشغيلي", response.status); return response.blob(); },
   downloadFinanceReport: async (params: { from?: string; to?: string; branchId?: string } = {}) => { const query = new URLSearchParams(); if (params.from) query.set("from", params.from); if (params.to) query.set("to", params.to); if (params.branchId) query.set("branchId", params.branchId); const response = await fetch(`${API_BASE}/finance/reports/summary.csv?${query}`, { headers: accessToken ? { authorization: `Bearer ${accessToken}` } : undefined }); if (!response.ok) throw new ApiRequestError("تعذر تصدير التقرير المالي", response.status); return response.blob(); },
   retentionRadar: (branchId?: string) => request<RetentionRadarResponse>(`/reports/analytics/retention-radar${branchId ? `?branchId=${branchId}` : ""}`),
+  recordRetentionOutreach: (studentId: string, input: { status: "pending" | "contacted" | "retained" | "lost"; note?: string }) =>
+    request<{ studentId: string; outreachStatus: string; lastContactNote: string | null; recordedAt: string }>(
+      `/reports/analytics/retention-radar/${studentId}/outreach`,
+      { method: "POST", body: JSON.stringify(input) }
+    ),
   instructorScorecard: (branchId?: string) => request<InstructorScorecardItem[]>(`/reports/analytics/instructor-scorecard${branchId ? `?branchId=${branchId}` : ""}`),
   courseProfitability: (branchId?: string) => request<CourseProfitabilityItem[]>(`/reports/analytics/course-profitability${branchId ? `?branchId=${branchId}` : ""}`),
   downloadBiFeed: async (branchId?: string) => {
