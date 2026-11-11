@@ -55,3 +55,28 @@ public sealed class PaymentEvidence : EntityBase
     public Guid UploadedByUserId { get; set; }
     public PaymentTransaction? PaymentTransaction { get; set; }
 }
+
+public sealed class InstructorPayrollRecord : EntityBase
+{
+    public Guid TenantId { get; set; }
+    public Guid BranchId { get; set; }
+    public Guid InstructorId { get; set; }
+    public required string Month { get; set; }
+    public int CompletedSessionsCountSnapshot { get; set; }
+    public int SubstituteSessionsCountSnapshot { get; set; }
+    public long RatePerSessionPiastresSnapshot { get; set; }
+    public long BaseSalaryPiastres { get; set; }
+    public long BonusPiastres { get; set; }
+    public string? BonusReason { get; set; }
+    public long DeductionPiastres { get; set; }
+    public string? DeductionReason { get; set; }
+    public long NetPayablePiastres { get; set; }
+    public string Status { get; set; } = "SUBMITTED";
+    public Guid? ApprovedByUserId { get; set; }
+    public DateTimeOffset? ApprovedAt { get; set; }
+    public Guid? PaidByUserId { get; set; }
+    public DateTimeOffset? PaidAt { get; set; }
+    public string? PaymentMethod { get; set; }
+    public string? PaymentReference { get; set; }
+    public Guid? LinkedExpenseId { get; set; }
+}

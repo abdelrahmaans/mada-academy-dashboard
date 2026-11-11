@@ -20,7 +20,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   apiClient,
   mapServerShiftHistoryToHandover,
-  waitlistStorage,
   type ConvertLeadInput,
   type CreateLeadInput,
   type DirectStudentInput,
@@ -215,20 +214,6 @@ export default function SecretaryDeskLive() {
         joinWaitlistIfFull: true,
       });
 
-      if (result.enrollmentStatus === "WAITLISTED") {
-        const matchedGrp = groups.find((g) => g.id === convertData.courseOfferingId);
-        waitlistStorage.addEntry({
-          studentId: result.studentId,
-          studentName: result.studentName,
-          parentName: convertingLead.parentName || "ولي الأمر",
-          phone: convertingLead.phone || "",
-          groupId: convertData.courseOfferingId || "",
-          courseName: matchedGrp?.courseName || "كورس الأكاديمية",
-          branchName: matchedGrp?.branchName || branchName,
-          notes: `تحويل من استفسار (${convertingLead.childName}) - إدراج بالانتظار لاكتمال المقاعد.`,
-        });
-      }
-
       toast.success(
         result.enrollmentStatus === "WAITLISTED"
           ? `تمت إضافة ${result.studentName} إلى قائمة الانتظار`
@@ -265,17 +250,6 @@ export default function SecretaryDeskLive() {
       });
 
       if (result.enrollmentStatus === "WAITLISTED") {
-        const matchedGrp = groups.find((g) => g.id === directRegistration.courseOfferingId);
-        waitlistStorage.addEntry({
-          studentId: result.studentId,
-          studentName: result.studentName,
-          parentName: directRegistration.fullName.split(" ").slice(1).join(" ") || "ولي الأمر",
-          phone: directRegistration.phone || "",
-          groupId: directRegistration.courseOfferingId || "",
-          courseName: matchedGrp?.courseName || "كورس الأكاديمية",
-          branchName: matchedGrp?.branchName || branchName,
-          notes: "تسجيل مكتبي فوري - أدرج في قائمة الانتظار لاكتمال مقاعد المجموعة.",
-        });
         toast.success(`تم إدراج الطالب ${result.studentName} في قائمة الانتظار بنجاح!`, {
           description: "المجموعة مكتملة السعة. تم حجز أسبقية للطالب وسيتم إشعاره فور توفر مقعد شاغر.",
         });

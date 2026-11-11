@@ -535,6 +535,8 @@ public static class DemoDataSeeder
         else
         {
             db.PlatformSupportTickets.RemoveRange(db.PlatformSupportTickets);
+            db.EvaluationRubrics.RemoveRange(db.EvaluationRubrics);
+            db.InstructorPayrollRecords.RemoveRange(db.InstructorPayrollRecords);
             db.InAppNotifications.RemoveRange(db.InAppNotifications);
             db.InvoiceCorrectionRequests.RemoveRange(db.InvoiceCorrectionRequests);
             db.SessionSubstitutionProposals.RemoveRange(db.SessionSubstitutionProposals);
@@ -1121,6 +1123,160 @@ public static class DemoDataSeeder
                 new InAppNotification { Id = Guid.Parse("97000000-0000-0000-0000-000000000003"), TenantId = tenantId, BranchId = mainBranchId, RecipientUserId = accountantId, Type = "SHIFT_HANDOVER", Title = "وردية جاهزة للاستلام والمطابقة", Body = "تم إغلاق الوردية المسائية بالفرع الرئيسي بمبلغ 3,200 ج.م.", TargetType = "SHIFT_CLOSEOUT", TargetId = shiftTarget1, IsRead = false },
                 new InAppNotification { Id = Guid.Parse("97000000-0000-0000-0000-000000000004"), TenantId = tenantId, BranchId = mainBranchId, RecipientUserId = parentId, Type = "FREEZE_SUBMITTED", Title = "تم استلام طلب التجميد", Body = "طلب تجميد اشتراك الطالب يوسف أحمد قيد المراجعة من الإدارة.", TargetType = "FREEZE", TargetId = freeze2Id.ToString(), IsRead = false }
             );
+        }
+
+        // Seeded Evaluation Rubrics for all tracks
+        var roboticsRubricId = Guid.Parse("98000000-0000-0000-0000-000000000001");
+        if (!await db.EvaluationRubrics.AnyAsync(r => r.Id == roboticsRubricId, cancellationToken))
+        {
+            db.EvaluationRubrics.AddRange(
+                new EvaluationRubric
+                {
+                    Id = roboticsRubricId,
+                    TenantId = tenantId,
+                    TrackKey = "robotics",
+                    TrackLabel = "روبوتكس وميكاترونكس",
+                    Title = "نموذج تقييم مهارات الروبوتكس والمستشعرات",
+                    Description = "معايير معتمدة لقياس الدقة الميكانيكية، ربط المستشعرات، والبرمجة الحركية للروبوت.",
+                    ScaleMax = 5,
+                    IsActive = true,
+                    IsDefault = true,
+                    AuthorName = "رئيس المدربين",
+                    CriteriaJson = System.Text.Json.JsonSerializer.Serialize(new[]
+                    {
+                        new { id = "crt-101", key = "mechanical_assembly", label = "دقة التركيب والتجميع الميكانيكي", category = "TECHNICAL", categoryLabel = "مهارة فنية", maxScore = 5, weightPercent = 25, hint = "ثبات الهيكل، سلامة التروس، وتركيب المحركات في مسارها الصحيح." },
+                        new { id = "crt-102", key = "sensor_programming", label = "برمجة المستشعرات واتخاذ القرار", category = "PRACTICAL", categoryLabel = "تطبيق عملي", maxScore = 5, weightPercent = 30, hint = "قراءة الحساسات وتنفيذ ردود الفعل البرمجية." },
+                        new { id = "crt-103", key = "troubleshooting", label = "استكشاف الأعطال وحل المشكلات (Debugging)", category = "CREATIVE", categoryLabel = "تفكير تحليلي", maxScore = 5, weightPercent = 25, hint = "القدرة على تشخيص الخلل وإعادة تجربة الحلول المستقلة." },
+                        new { id = "crt-104", key = "lab_safety_teamwork", label = "السلامة المعملية والعمل الجماعي", category = "BEHAVIORAL", categoryLabel = "سلوك وانضباط", maxScore = 5, weightPercent = 20, hint = "المحافظة على المكونات وتنظيم مساحة العمل والمشاركة البناءة." }
+                    })
+                },
+                new EvaluationRubric
+                {
+                    Id = Guid.Parse("98000000-0000-0000-0000-000000000002"),
+                    TenantId = tenantId,
+                    TrackKey = "coding",
+                    TrackLabel = "برمجة وتطوير ألعاب",
+                    Title = "نموذج تقييم التفكير البرمجي وبناء الألعاب",
+                    Description = "معايير تقييم خوارزميات البرمجة، التعامل مع المتغيرات والدوال، وتصميم بيئة اللعبة.",
+                    ScaleMax = 5,
+                    IsActive = true,
+                    IsDefault = true,
+                    AuthorName = "رئيس المدربين",
+                    CriteriaJson = System.Text.Json.JsonSerializer.Serialize(new[]
+                    {
+                        new { id = "crt-201", key = "algorithmic_logic", label = "التفكير الخوارزمي والمنطقي", category = "TECHNICAL", categoryLabel = "مهارة فنية", maxScore = 5, weightPercent = 35, hint = "تقسيم المشكلة البرمجية وبناء الشروط والحلقات بفعالية." },
+                        new { id = "crt-202", key = "clean_code", label = "تطبيق الأكواد وبناء الوظائف", category = "PRACTICAL", categoryLabel = "تطبيق عملي", maxScore = 5, weightPercent = 35, hint = "كتابة دوال واضحة وتسمية المتغيرات دون تكرار." },
+                        new { id = "crt-203", key = "ui_creativity", label = "الابتكار وتجربة المستخدم", category = "CREATIVE", categoryLabel = "إبداع وتصميم", maxScore = 5, weightPercent = 30, hint = "جماليات التصميم وتفاعل المستخدم مع المشروع النهائي." }
+                    })
+                },
+                new EvaluationRubric
+                {
+                    Id = Guid.Parse("98000000-0000-0000-0000-000000000003"),
+                    TenantId = tenantId,
+                    TrackKey = "circuits",
+                    TrackLabel = "دوائر إلكترونية وأنظمة مدمجة",
+                    Title = "نموذج تقييم الإلكترونيات واللوحات المدمجة",
+                    Description = "تقييم توصيل اللوحات الإلكترونية، قراءة القياسات الكهربائية، وأمان التوصيلات.",
+                    ScaleMax = 5,
+                    IsActive = true,
+                    IsDefault = true,
+                    AuthorName = "رئيس المدربين",
+                    CriteriaJson = System.Text.Json.JsonSerializer.Serialize(new[]
+                    {
+                        new { id = "crt-301", key = "circuit_wiring", label = "سلامة توصيل الدائرة الإلكترونية", category = "TECHNICAL", categoryLabel = "مهارة فنية", maxScore = 5, weightPercent = 40, hint = "توصيل المقاومات والأسلاك في اللوحة بدقة دون قصر كهربائي." },
+                        new { id = "crt-302", key = "mcu_upload", label = "ربط المتحكم الدقيق واختبار الأداء", category = "PRACTICAL", categoryLabel = "تطبيق عملي", maxScore = 5, weightPercent = 35, hint = "رفع الكود واختبار الاستجابة مع المكونات المادية." },
+                        new { id = "crt-303", key = "lab_discipline", label = "الالتزام بقواعد السلامة", category = "BEHAVIORAL", categoryLabel = "سلوك وانضباط", maxScore = 5, weightPercent = 25, hint = "اتباع خطوات فحص الطاقة قبل التشغيل." }
+                    })
+                },
+                new EvaluationRubric
+                {
+                    Id = Guid.Parse("98000000-0000-0000-0000-000000000004"),
+                    TenantId = tenantId,
+                    TrackKey = "sports_swimming",
+                    TrackLabel = "سباحة ورياضات مائية",
+                    Title = "نموذج التقييم الحركي والفني للسباحة",
+                    Description = "تقييم التوافق العضلي، تقنية التنفس والطفو، والالتزام بأنظمة الأمان داخل المسبح.",
+                    ScaleMax = 5,
+                    IsActive = true,
+                    IsDefault = true,
+                    AuthorName = "رئيس المدربين",
+                    CriteriaJson = System.Text.Json.JsonSerializer.Serialize(new[]
+                    {
+                        new { id = "crt-401", key = "stroke_technique", label = "دقة أداء الضربة وحركة الساقين", category = "TECHNICAL", categoryLabel = "تكنيك رياضي", maxScore = 5, weightPercent = 40, hint = "انسيابية الذراعين وتوقيت ضربات الرجلين." },
+                        new { id = "crt-402", key = "breathing_stamina", label = "التنفس والتحمل البدني", category = "PHYSICAL", categoryLabel = "لياقة بدنية", maxScore = 5, weightPercent = 35, hint = "انتظام التنفس الجانبي والقدرة على إكمال المسافة." },
+                        new { id = "crt-403", key = "pool_safety", label = "الالتزام بتعليمات الأمان", category = "BEHAVIORAL", categoryLabel = "انضباط وأمان", maxScore = 5, weightPercent = 25, hint = "الاستجابة السريعة لإشارات المدرب." }
+                    })
+                },
+                new EvaluationRubric
+                {
+                    Id = Guid.Parse("98000000-0000-0000-0000-000000000005"),
+                    TenantId = tenantId,
+                    TrackKey = "soft_skills",
+                    TrackLabel = "مهارات قيادية وشخصية",
+                    Title = "نموذج تقييم المهارات الشخصية والعرض",
+                    Description = "قياس مهارات التواصل، القيادة ضمن الفريق، وجودة الإلقاء والعرض التقديمي.",
+                    ScaleMax = 5,
+                    IsActive = true,
+                    IsDefault = true,
+                    AuthorName = "رئيس المدربين",
+                    CriteriaJson = System.Text.Json.JsonSerializer.Serialize(new[]
+                    {
+                        new { id = "crt-501", key = "presentation", label = "الثقة وجودة العرض والتقديم", category = "CREATIVE", categoryLabel = "تواصل وإلقاء", maxScore = 5, weightPercent = 40, hint = "وضوح الصوت، التواصل البصري، وتنظيم الأفكار." },
+                        new { id = "crt-502", key = "team_leadership", label = "المبادرة والقيادة التعاونية", category = "BEHAVIORAL", categoryLabel = "عمل جماعي", maxScore = 5, weightPercent = 35, hint = "الاستماع للآخرين وتوزيع الأدوار داخل الفريق." },
+                        new { id = "crt-503", key = "task_delivery", label = "إنجاز المهام في الوقت المحدد", category = "PRACTICAL", categoryLabel = "التزام عملي", maxScore = 5, weightPercent = 25, hint = "تسليم المطلوب وفق الجدول الزمني المحدد." }
+                    })
+                }
+            );
+        }
+
+        // Seeded current-month Instructor Payroll snapshots (no extra Expenses added to keep Expenses==2 intact)
+        var currentMonth = DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM");
+        var payrollMainId = Guid.Parse("99000000-0000-0000-0000-000000000001");
+        if (!await db.InstructorPayrollRecords.AnyAsync(p => p.Id == payrollMainId, cancellationToken))
+        {
+            var headApprovedExists = await db.InstructorPayrollRecords.AnyAsync(
+                p => p.TenantId == tenantId && p.BranchId == mainBranchId && p.InstructorId == headId && p.Month == currentMonth,
+                cancellationToken);
+
+            db.InstructorPayrollRecords.Add(new InstructorPayrollRecord
+            {
+                Id = payrollMainId,
+                TenantId = tenantId,
+                BranchId = mainBranchId,
+                InstructorId = mainInstructorId,
+                Month = currentMonth,
+                CompletedSessionsCountSnapshot = 3,
+                SubstituteSessionsCountSnapshot = 0,
+                RatePerSessionPiastresSnapshot = 20_000L,
+                BaseSalaryPiastres = 0L,
+                BonusPiastres = 25_000L,
+                BonusReason = "مكافأة تجهيز فريق المسابقة الوطنية للروبوتكس",
+                DeductionPiastres = 0L,
+                NetPayablePiastres = 85_000L,
+                Status = "SUBMITTED"
+            });
+
+            if (!headApprovedExists)
+            {
+                db.InstructorPayrollRecords.Add(new InstructorPayrollRecord
+                {
+                    Id = Guid.Parse("99000000-0000-0000-0000-000000000002"),
+                    TenantId = tenantId,
+                    BranchId = mainBranchId,
+                    InstructorId = headId,
+                    Month = currentMonth,
+                    CompletedSessionsCountSnapshot = 2,
+                    SubstituteSessionsCountSnapshot = 1,
+                    RatePerSessionPiastresSnapshot = 25_000L,
+                    BaseSalaryPiastres = 100_000L,
+                    BonusPiastres = 0L,
+                    DeductionPiastres = 0L,
+                    NetPayablePiastres = 150_000L,
+                    Status = "APPROVED",
+                    ApprovedByUserId = ownerId,
+                    ApprovedAt = DateTimeOffset.UtcNow.AddDays(-1)
+                });
+            }
         }
 
         await db.SaveChangesAsync(cancellationToken);

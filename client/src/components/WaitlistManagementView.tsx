@@ -26,7 +26,7 @@ type Props = {
   waitlistEntries: WaitlistEntry[];
   onNotifyWaitlist: (id: string) => void;
   onEnrollWaitlist: (id: string, withInvoice?: boolean) => void;
-  onAddWaitlistEntry: (input: Omit<WaitlistEntry, "id" | "status" | "priorityRank" | "addedAt">) => void;
+  onAddWaitlistEntry: (input: Omit<WaitlistEntry, "id" | "status" | "priorityRank" | "addedAt">) => Promise<void> | void;
   onCancelWaitlistEntry?: (id: string) => void;
   onDeleteWaitlistEntry?: (id: string) => void;
   initialSelectedGroupId?: string;
@@ -93,7 +93,7 @@ export default function WaitlistManagementView({
     });
   }, [waitlistEntries, search, statusFilter, groupFilter]);
 
-  const handleCreateSubmit = (e: FormEvent) => {
+  const handleCreateSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!formData.studentName.trim() || !formData.groupId) {
       toast.error("يرجى كتابة اسم الطالب واختيار المجموعة");
@@ -101,26 +101,30 @@ export default function WaitlistManagementView({
     }
 
     const targetOffering = offerings.find(o => o.id === formData.groupId);
-    onAddWaitlistEntry({
-      studentId: `STU-TEMP-${Date.now().toString().slice(-4)}`,
-      studentName: formData.studentName.trim(),
-      parentName: formData.parentName.trim() || "ولي الأمر",
-      phone: formData.phone.trim() || "+201000000000",
-      groupId: formData.groupId,
-      courseName: targetOffering?.courseName || "كورس عام",
-      branchName: targetOffering?.branch || "الفرع الرئيسي",
-      notes: formData.notes.trim() || "حجز بقائمة الانتظار عبر إدارة الحصص",
-    });
+    try {
+      await onAddWaitlistEntry({
+        studentId: `STU-TEMP-${Date.now().toString().slice(-4)}`,
+        studentName: formData.studentName.trim(),
+        parentName: formData.parentName.trim() || "ولي الأمر",
+        phone: formData.phone.trim() || "+201000000000",
+        groupId: formData.groupId,
+        courseName: targetOffering?.courseName || "كورس عام",
+        branchName: targetOffering?.branch || "الفرع الرئيسي",
+        notes: formData.notes.trim() || "حجز بقائمة الانتظار عبر إدارة الحصص",
+      });
 
-    toast.success(`تم إدراج الطالب ${formData.studentName} في قائمة الانتظار بنجاح!`);
-    setFormData({
-      groupId: offerings[0]?.id || "",
-      studentName: "",
-      parentName: "",
-      phone: "",
-      notes: "",
-    });
-    setAddModalOpen(false);
+      toast.success(`تم إدراج الطالب ${formData.studentName} في قائمة الانتظار بنجاح!`);
+      setFormData({
+        groupId: offerings[0]?.id || "",
+        studentName: "",
+        parentName: "",
+        phone: "",
+        notes: "",
+      });
+      setAddModalOpen(false);
+    } catch {
+      // Error toast is already handled by caller in live mode
+    }
   };
 
   const openWhatsAppNotice = (entry: WaitlistEntry) => {

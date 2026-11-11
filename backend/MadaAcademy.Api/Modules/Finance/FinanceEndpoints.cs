@@ -30,8 +30,11 @@ public static class FinanceEndpoints
         api.MapGet("/payments/{paymentId:guid}/evidence", DownloadEvidenceAsync).RequirePermission("payments.evidence.read");
         api.MapGet("/cashier/shift-summary", GetCashierShiftSummaryAsync).RequirePermission("finance.summary.read");
         api.MapPost("/cashier/closeout", CloseoutCashierShiftAsync).RequirePermission("payments.create");
-        api.MapGet("/instructor-payroll", GetInstructorPayrollAsync).RequirePermission("finance.read");
-        api.MapGet("/payroll/instructors", GetInstructorPayrollAsync).RequirePermission("finance.read");
+        api.MapGet("/instructor-payroll", GetInstructorPayrollAsync).RequirePermission("finance.summary.read");
+        api.MapGet("/payroll/instructors", GetInstructorPayrollAsync).RequirePermission("finance.summary.read");
+        api.MapPut("/instructor-payroll/{instructorId:guid}/adjustments", AdjustInstructorPayrollAsync).RequirePermission("finance.summary.read");
+        api.MapPost("/instructor-payroll/{instructorId:guid}/approve", ApproveInstructorPayrollAsync).RequirePermission("finance.expenses.approve");
+        api.MapPost("/instructor-payroll/{instructorId:guid}/pay", PayInstructorPayrollAsync).RequirePermission("finance.expenses.approve");
         api.MapGet("/instructor/my-earnings", GetMyInstructorEarningsAsync);
         api.MapPost("/cashier/deposit-to-safe", DepositCashierSafeAsync).RequirePermission("payments.create");
         api.MapPost("/cashier/confirm-shift", ConfirmCashierShiftAsync).RequirePermission("finance.summary.read");
@@ -406,17 +409,216 @@ public static class FinanceEndpoints
         HttpContext context, MadaDbContext db, string? month, Guid? branchId, CancellationToken cancellationToken)
     {
         if (!TryStaffScope(context.User, out var scope, out var error)) return error;
-        if (!context.User.IsInRole("R01_ACADEMY_OWNER") && !context.User.IsInRole("R02_BRANCH_MANAGER") && !context.User.IsInRole("R06_ACCOUNTANT"))
+        if (!CanManagePayroll(context.User))
             return Forbidden("PAYROLL_READ_FORBIDDEN");
 
         var targetBranchId = branchId ?? scope.BranchId;
+        var startMonth = ParsePayrollMonth(month);
+        var monthKey = startMonth.ToString("yyyy-MM");
 
-        DateOnly startMonth;
+        var items = await BuildPayrollListAsync(db, scope.TenantId, scope.BranchId, targetBranchId, startMonth, cancellationToken);
+        return Results.Ok(new { data = new { items, total = items.Length, month = monthKey } });
+    }
+
+    private static async Task<IResult> AdjustInstructorPayrollAsync(
+        Guid instructorId,
+        AdjustInstructorPayrollRequest request,
+        HttpContext context,
+        MadaDbContext db,
+        CancellationToken cancellationToken)
+    {
+        if (!TryStaffScope(context.User, out var scope, out var error)) return error;
+        if (!CanManagePayroll(context.User)) return Forbidden("PAYROLL_WRITE_FORBIDDEN");
+        if (request.BonusPiastres < 0 || request.DeductionPiastres < 0 || (request.BaseSalaryPiastres ?? 0) < 0)
+            return Validation("adjustments", "Payroll adjustments must be non-negative.");
+
+        var startMonth = ParsePayrollMonth(request.Month);
+        var monthKey = startMonth.ToString("yyyy-MM");
+        var resolved = await ResolveInstructorSnapshotAsync(db, scope.TenantId, scope.BranchId, request.BranchId ?? scope.BranchId, instructorId, startMonth, cancellationToken);
+        if (resolved is null) return NotFound("INSTRUCTOR_NOT_FOUND");
+
+        var record = await db.InstructorPayrollRecords.FirstOrDefaultAsync(
+            p => p.TenantId == scope.TenantId && p.BranchId == resolved.BranchId && p.InstructorId == instructorId && p.Month == monthKey,
+            cancellationToken);
+
+        if (record is not null && record.Status is "APPROVED" or "PAID")
+            return Conflict("PAYROLL_LOCKED");
+
+        if (record is null)
+        {
+            record = new InstructorPayrollRecord
+            {
+                TenantId = scope.TenantId,
+                BranchId = resolved.BranchId,
+                InstructorId = instructorId,
+                Month = monthKey,
+                Status = "SUBMITTED"
+            };
+            db.InstructorPayrollRecords.Add(record);
+        }
+
+        record.CompletedSessionsCountSnapshot = resolved.CompletedSessionsCount;
+        record.SubstituteSessionsCountSnapshot = resolved.SubstituteSessionsCount;
+        record.RatePerSessionPiastresSnapshot = resolved.RatePerSessionPiastres;
+        if (request.BaseSalaryPiastres.HasValue) record.BaseSalaryPiastres = request.BaseSalaryPiastres.Value;
+        record.BonusPiastres = request.BonusPiastres;
+        record.BonusReason = string.IsNullOrWhiteSpace(request.BonusReason) ? null : request.BonusReason.Trim();
+        record.DeductionPiastres = request.DeductionPiastres;
+        record.DeductionReason = string.IsNullOrWhiteSpace(request.DeductionReason) ? null : request.DeductionReason.Trim();
+        record.NetPayablePiastres = Math.Max(0, (resolved.CompletedSessionsCount * resolved.RatePerSessionPiastres) + record.BaseSalaryPiastres + record.BonusPiastres - record.DeductionPiastres);
+        record.UpdatedAt = DateTimeOffset.UtcNow;
+
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.Ok(new { data = ToPayrollDto(resolved, record, monthKey) });
+    }
+
+    private static async Task<IResult> ApproveInstructorPayrollAsync(
+        Guid instructorId,
+        ApproveInstructorPayrollRequest? request,
+        HttpContext context,
+        MadaDbContext db,
+        CancellationToken cancellationToken)
+    {
+        if (!TryStaffScope(context.User, out var scope, out var error)) return error;
+        if (!CanManagePayroll(context.User)) return Forbidden("PAYROLL_APPROVE_FORBIDDEN");
+        if (!Guid.TryParse(context.User.FindFirstValue("sub"), out var actorId)) return Forbidden("ACTOR_REQUIRED");
+
+        var startMonth = ParsePayrollMonth(request?.Month);
+        var monthKey = startMonth.ToString("yyyy-MM");
+        var resolved = await ResolveInstructorSnapshotAsync(db, scope.TenantId, scope.BranchId, request?.BranchId ?? scope.BranchId, instructorId, startMonth, cancellationToken);
+        if (resolved is null) return NotFound("INSTRUCTOR_NOT_FOUND");
+
+        var record = await db.InstructorPayrollRecords.FirstOrDefaultAsync(
+            p => p.TenantId == scope.TenantId && p.BranchId == resolved.BranchId && p.InstructorId == instructorId && p.Month == monthKey,
+            cancellationToken);
+
+        if (record is not null && record.Status == "PAID")
+            return Conflict("PAYROLL_ALREADY_PAID");
+
+        if (record is null)
+        {
+            record = new InstructorPayrollRecord
+            {
+                TenantId = scope.TenantId,
+                BranchId = resolved.BranchId,
+                InstructorId = instructorId,
+                Month = monthKey,
+                Status = "SUBMITTED"
+            };
+            db.InstructorPayrollRecords.Add(record);
+        }
+
+        record.CompletedSessionsCountSnapshot = resolved.CompletedSessionsCount;
+        record.SubstituteSessionsCountSnapshot = resolved.SubstituteSessionsCount;
+        record.RatePerSessionPiastresSnapshot = resolved.RatePerSessionPiastres;
+        if (request?.BonusPiastres.HasValue == true) record.BonusPiastres = Math.Max(0, request.BonusPiastres.Value);
+        if (!string.IsNullOrWhiteSpace(request?.BonusReason)) record.BonusReason = request.BonusReason.Trim();
+        if (request?.DeductionPiastres.HasValue == true) record.DeductionPiastres = Math.Max(0, request.DeductionPiastres.Value);
+        if (!string.IsNullOrWhiteSpace(request?.DeductionReason)) record.DeductionReason = request.DeductionReason.Trim();
+
+        record.NetPayablePiastres = Math.Max(0, (record.CompletedSessionsCountSnapshot * record.RatePerSessionPiastresSnapshot) + record.BaseSalaryPiastres + record.BonusPiastres - record.DeductionPiastres);
+        record.Status = "APPROVED";
+        record.ApprovedByUserId = actorId;
+        record.ApprovedAt = DateTimeOffset.UtcNow;
+        record.UpdatedAt = DateTimeOffset.UtcNow;
+
+        db.AuditEvents.Add(new AuditEvent
+        {
+            ActorUserId = actorId,
+            TenantId = scope.TenantId,
+            BranchId = resolved.BranchId,
+            Action = "INSTRUCTOR_PAYROLL_APPROVED",
+            TargetType = "INSTRUCTOR_PAYROLL",
+            TargetId = record.Id.ToString(),
+            Reason = $"اعتماد مستحقات المدرب {resolved.InstructorName} لشهر {monthKey}",
+            MetadataJson = JsonSerializer.Serialize(new { instructorId, month = monthKey, netPayablePiastres = record.NetPayablePiastres })
+        });
+
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.Ok(new { data = ToPayrollDto(resolved, record, monthKey) });
+    }
+
+    private static async Task<IResult> PayInstructorPayrollAsync(
+        Guid instructorId,
+        PayInstructorPayrollRequest request,
+        HttpContext context,
+        MadaDbContext db,
+        CancellationToken cancellationToken)
+    {
+        if (!TryStaffScope(context.User, out var scope, out var error)) return error;
+        if (!CanManagePayroll(context.User)) return Forbidden("PAYROLL_PAY_FORBIDDEN");
+        if (!Guid.TryParse(context.User.FindFirstValue("sub"), out var actorId)) return Forbidden("ACTOR_REQUIRED");
+
+        var method = string.IsNullOrWhiteSpace(request.PaymentMethod) ? "INSTAPAY" : request.PaymentMethod.Trim().ToUpperInvariant();
+        var startMonth = ParsePayrollMonth(request.Month);
+        var monthKey = startMonth.ToString("yyyy-MM");
+        var resolved = await ResolveInstructorSnapshotAsync(db, scope.TenantId, scope.BranchId, request.BranchId ?? scope.BranchId, instructorId, startMonth, cancellationToken);
+        if (resolved is null) return NotFound("INSTRUCTOR_NOT_FOUND");
+
+        var record = await db.InstructorPayrollRecords.FirstOrDefaultAsync(
+            p => p.TenantId == scope.TenantId && p.BranchId == resolved.BranchId && p.InstructorId == instructorId && p.Month == monthKey,
+            cancellationToken);
+
+        if (record is null || record.Status == "SUBMITTED")
+            return Conflict("PAYROLL_APPROVAL_REQUIRED");
+        if (record.Status == "PAID")
+            return Conflict("PAYROLL_ALREADY_PAID");
+
+        Expense? createdExpense = null;
+        if (record.NetPayablePiastres > 0)
+        {
+            createdExpense = new Expense
+            {
+                TenantId = scope.TenantId,
+                BranchId = resolved.BranchId,
+                Category = "SALARIES",
+                Description = $"صرف مستحقات المدرب {resolved.InstructorName} لشهر {monthKey} ({method})",
+                AmountPiastres = (int)Math.Min(int.MaxValue, record.NetPayablePiastres),
+                SpentOn = DateOnly.FromDateTime(DateTime.UtcNow),
+                Status = "APPROVED",
+                CreatedByUserId = actorId
+            };
+            db.Expenses.Add(createdExpense);
+        }
+
+        record.Status = "PAID";
+        record.PaidByUserId = actorId;
+        record.PaidAt = DateTimeOffset.UtcNow;
+        record.PaymentMethod = method;
+        record.PaymentReference = string.IsNullOrWhiteSpace(request.PaymentReference) ? $"PAY-{DateTimeOffset.UtcNow:yyyyMMdd}-{instructorId.ToString("N")[..6].ToUpperInvariant()}" : request.PaymentReference.Trim();
+        record.LinkedExpenseId = createdExpense?.Id;
+        record.UpdatedAt = DateTimeOffset.UtcNow;
+
+        db.AuditEvents.Add(new AuditEvent
+        {
+            ActorUserId = actorId,
+            TenantId = scope.TenantId,
+            BranchId = resolved.BranchId,
+            Action = "INSTRUCTOR_PAYROLL_PAID",
+            TargetType = "INSTRUCTOR_PAYROLL",
+            TargetId = record.Id.ToString(),
+            Reason = string.IsNullOrWhiteSpace(request.Notes) ? $"صرف راتب {resolved.InstructorName} عبر {method}" : request.Notes.Trim(),
+            MetadataJson = JsonSerializer.Serialize(new { instructorId, month = monthKey, netPayablePiastres = record.NetPayablePiastres, method, reference = record.PaymentReference, expenseId = createdExpense?.Id })
+        });
+
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.Ok(new { data = ToPayrollDto(resolved, record, monthKey) });
+    }
+
+    private static bool CanManagePayroll(ClaimsPrincipal user)
+        => user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R06_ACCOUNTANT");
+
+    private static DateOnly ParsePayrollMonth(string? month)
+    {
         if (!string.IsNullOrWhiteSpace(month) && DateOnly.TryParseExact(month.Trim() + "-01", "yyyy-MM-dd", out var parsed))
-            startMonth = parsed;
-        else
-            startMonth = new DateOnly(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+            return parsed;
+        return new DateOnly(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
+    }
 
+    private static async Task<InstructorPayrollDto[]> BuildPayrollListAsync(
+        MadaDbContext db, Guid tenantId, Guid? userBranchScope, Guid? targetBranchId, DateOnly startMonth, CancellationToken cancellationToken)
+    {
+        var monthKey = startMonth.ToString("yyyy-MM");
         var nextMonth = startMonth.AddMonths(1);
         var startUtc = new DateTimeOffset(startMonth.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
         var endUtc = new DateTimeOffset(nextMonth.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
@@ -425,11 +627,12 @@ public static class FinanceEndpoints
                                  join u in db.UserAccounts.AsNoTracking() on m.UserAccountId equals u.Id
                                  join b in db.Branches.AsNoTracking() on m.BranchId equals b.Id into branchJoin
                                  from b in branchJoin.DefaultIfEmpty()
-                                 where m.TenantId == scope.TenantId && m.Status == "ACTIVE" &&
+                                 where m.TenantId == tenantId && m.Status == "ACTIVE" &&
                                        (m.RoleCode == "R04_INSTRUCTOR" || m.RoleCode == "R03_HEAD_INSTRUCTORS") &&
-                                       (!scope.BranchId.HasValue || m.BranchId == scope.BranchId.Value) &&
+                                       (!userBranchScope.HasValue || m.BranchId == userBranchScope.Value) &&
                                        (!targetBranchId.HasValue || m.BranchId == targetBranchId.Value)
-                                 select new {
+                                 select new
+                                 {
                                      InstructorId = u.Id,
                                      InstructorName = u.DisplayName ?? "Instructor",
                                      RoleCode = m.RoleCode,
@@ -438,53 +641,175 @@ public static class FinanceEndpoints
                                  }).Distinct().ToListAsync(cancellationToken);
 
         var completedSessions = await db.AcademySessions.AsNoTracking()
-            .Where(s => s.TenantId == scope.TenantId &&
+            .Where(s => s.TenantId == tenantId &&
                         s.Status == "COMPLETED" &&
                         s.StartAt >= startUtc && s.StartAt < endUtc &&
-                        (!scope.BranchId.HasValue || s.BranchId == scope.BranchId.Value) &&
+                        (!userBranchScope.HasValue || s.BranchId == userBranchScope.Value) &&
                         (!targetBranchId.HasValue || s.BranchId == targetBranchId.Value))
-            .Select(s => new {
+            .Select(s => new
+            {
                 s.Id,
                 ActualInstructorId = s.SubstituteInstructorId.HasValue ? s.SubstituteInstructorId.Value : s.InstructorId,
-                s.SessionNumber,
-                s.StartAt
+                IsSubstitute = s.SubstituteInstructorId.HasValue
             })
             .ToListAsync(cancellationToken);
 
         var sessionsByInstructor = completedSessions
             .GroupBy(s => s.ActualInstructorId)
-            .ToDictionary(g => g.Key, g => g.Count());
+            .ToDictionary(g => g.Key, g => (Total: g.Count(), Substitutes: g.Count(x => x.IsSubstitute)));
 
-        var defaultRatePiastres = 20_000L;
+        var persisted = await db.InstructorPayrollRecords.AsNoTracking()
+            .Where(p => p.TenantId == tenantId && p.Month == monthKey &&
+                        (!userBranchScope.HasValue || p.BranchId == userBranchScope.Value) &&
+                        (!targetBranchId.HasValue || p.BranchId == targetBranchId.Value))
+            .ToListAsync(cancellationToken);
 
-        var result = instructors.Select(ins =>
+        var persistedByKey = persisted.ToDictionary(p => (p.BranchId, p.InstructorId));
+
+        return instructors.Select(ins =>
         {
-            var sessionsCount = sessionsByInstructor.GetValueOrDefault(ins.InstructorId, 0);
-            var rate = ins.RoleCode == "R03_HEAD_INSTRUCTORS" ? 25_000L : defaultRatePiastres;
-            var earned = sessionsCount * rate;
-
-            return new
-            {
-                id = $"PAY-{startMonth:yyyy-MM}-{ins.InstructorId:N}"[..18],
-                instructorId = ins.InstructorId,
-                instructorName = ins.InstructorName,
-                branchId = ins.BranchId,
-                branchName = ins.BranchName,
-                month = startMonth.ToString("yyyy-MM"),
-                completedSessionsCount = sessionsCount,
-                ratePerSession = (int)(rate / 100),
-                ratePerSessionPiastres = rate,
-                baseSalary = 0,
-                bonusAmount = 0,
-                deductionAmount = 0,
-                netPayable = (int)(earned / 100),
-                netPayablePiastres = earned,
-                status = "CALCULATED"
-            };
-        }).OrderByDescending(x => x.completedSessionsCount).ThenBy(x => x.instructorName).ToArray();
-
-        return Results.Ok(new { data = new { items = result, total = result.Length, month = startMonth.ToString("yyyy-MM") } });
+            var counts = sessionsByInstructor.GetValueOrDefault(ins.InstructorId, (Total: 0, Substitutes: 0));
+            var rate = ins.RoleCode == "R03_HEAD_INSTRUCTORS" ? 25_000L : 20_000L;
+            var snapshot = new ResolvedInstructorPayrollSnapshot(
+                ins.InstructorId,
+                ins.InstructorName,
+                ins.BranchId,
+                ins.BranchName,
+                counts.Total,
+                counts.Substitutes,
+                rate);
+            persistedByKey.TryGetValue((ins.BranchId, ins.InstructorId), out var record);
+            return ToPayrollDto(snapshot, record, monthKey);
+        }).OrderByDescending(x => x.CompletedSessionsCount).ThenBy(x => x.InstructorName).ToArray();
     }
+
+    private static async Task<ResolvedInstructorPayrollSnapshot?> ResolveInstructorSnapshotAsync(
+        MadaDbContext db, Guid tenantId, Guid? userBranchScope, Guid? targetBranchId, Guid instructorId, DateOnly startMonth, CancellationToken cancellationToken)
+    {
+        var items = await (from m in db.Memberships.AsNoTracking()
+                           join u in db.UserAccounts.AsNoTracking() on m.UserAccountId equals u.Id
+                           join b in db.Branches.AsNoTracking() on m.BranchId equals b.Id into branchJoin
+                           from b in branchJoin.DefaultIfEmpty()
+                           where m.TenantId == tenantId && m.Status == "ACTIVE" && m.UserAccountId == instructorId &&
+                                 (m.RoleCode == "R04_INSTRUCTOR" || m.RoleCode == "R03_HEAD_INSTRUCTORS") &&
+                                 (!userBranchScope.HasValue || m.BranchId == userBranchScope.Value) &&
+                                 (!targetBranchId.HasValue || m.BranchId == targetBranchId.Value)
+                           select new
+                           {
+                               InstructorId = u.Id,
+                               InstructorName = u.DisplayName ?? "Instructor",
+                               RoleCode = m.RoleCode,
+                               BranchId = m.BranchId ?? Guid.Empty,
+                               BranchName = b != null ? b.Name : "Main Branch"
+                           }).FirstOrDefaultAsync(cancellationToken);
+        if (items is null) return null;
+
+        var nextMonth = startMonth.AddMonths(1);
+        var startUtc = new DateTimeOffset(startMonth.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+        var endUtc = new DateTimeOffset(nextMonth.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+
+        var completed = await db.AcademySessions.AsNoTracking()
+            .Where(s => s.TenantId == tenantId && s.Status == "COMPLETED" &&
+                        s.StartAt >= startUtc && s.StartAt < endUtc &&
+                        (!userBranchScope.HasValue || s.BranchId == userBranchScope.Value) &&
+                        (s.SubstituteInstructorId.HasValue ? s.SubstituteInstructorId.Value : s.InstructorId) == instructorId)
+            .Select(s => s.SubstituteInstructorId.HasValue)
+            .ToListAsync(cancellationToken);
+
+        var rate = items.RoleCode == "R03_HEAD_INSTRUCTORS" ? 25_000L : 20_000L;
+        return new ResolvedInstructorPayrollSnapshot(
+            items.InstructorId,
+            items.InstructorName,
+            items.BranchId,
+            items.BranchName,
+            completed.Count,
+            completed.Count(x => x),
+            rate);
+    }
+
+    private static InstructorPayrollDto ToPayrollDto(ResolvedInstructorPayrollSnapshot snapshot, InstructorPayrollRecord? record, string monthKey)
+    {
+        var isLocked = record is not null && record.Status is "APPROVED" or "PAID";
+        var completedCount = isLocked ? record!.CompletedSessionsCountSnapshot : snapshot.CompletedSessionsCount;
+        var subCount = isLocked ? record!.SubstituteSessionsCountSnapshot : snapshot.SubstituteSessionsCount;
+        var ratePiastres = isLocked ? record!.RatePerSessionPiastresSnapshot : snapshot.RatePerSessionPiastres;
+        var baseSalaryPiastres = record?.BaseSalaryPiastres ?? 0L;
+        var bonusPiastres = record?.BonusPiastres ?? 0L;
+        var deductionPiastres = record?.DeductionPiastres ?? 0L;
+        var netPiastres = isLocked
+            ? record!.NetPayablePiastres
+            : Math.Max(0, (completedCount * ratePiastres) + baseSalaryPiastres + bonusPiastres - deductionPiastres);
+
+        var stableId = record?.Id.ToString() ?? $"PAY-{monthKey}-{snapshot.InstructorId:N}"[..18];
+        return new InstructorPayrollDto(
+            stableId,
+            snapshot.InstructorId,
+            snapshot.InstructorName,
+            snapshot.BranchId,
+            snapshot.BranchName,
+            monthKey,
+            completedCount,
+            subCount,
+            (int)(ratePiastres / 100),
+            ratePiastres,
+            (int)(baseSalaryPiastres / 100),
+            baseSalaryPiastres,
+            (int)(bonusPiastres / 100),
+            bonusPiastres,
+            record?.BonusReason,
+            (int)(deductionPiastres / 100),
+            deductionPiastres,
+            record?.DeductionReason,
+            (int)(netPiastres / 100),
+            netPiastres,
+            netPiastres,
+            ratePiastres,
+            record?.Status ?? "SUBMITTED",
+            record?.ApprovedAt,
+            record?.PaidAt,
+            record?.PaymentMethod,
+            record?.PaymentReference,
+            record?.LinkedExpenseId);
+    }
+
+    private sealed record ResolvedInstructorPayrollSnapshot(
+        Guid InstructorId,
+        string InstructorName,
+        Guid BranchId,
+        string BranchName,
+        int CompletedSessionsCount,
+        int SubstituteSessionsCount,
+        long RatePerSessionPiastres);
+
+    private sealed record InstructorPayrollDto(
+        string Id,
+        Guid InstructorId,
+        string InstructorName,
+        Guid BranchId,
+        string BranchName,
+        string Month,
+        int CompletedSessionsCount,
+        int SubstituteSessionsCount,
+        int RatePerSession,
+        long RatePerSessionPiastres,
+        int BaseSalary,
+        long BaseSalaryPiastres,
+        int BonusAmount,
+        long BonusPiastres,
+        string? BonusReason,
+        int DeductionAmount,
+        long DeductionPiastres,
+        string? DeductionReason,
+        int NetPayable,
+        long NetPayablePiastres,
+        long TotalCompensationPiastres,
+        long SessionRatePiastres,
+        string Status,
+        DateTimeOffset? ApprovedAt,
+        DateTimeOffset? PaidAt,
+        string? PaymentMethod,
+        string? PaymentReference,
+        Guid? LinkedExpenseId);
 
     private static async Task<IResult> DepositCashierSafeAsync(
         DepositCashierSafeRequest request, HttpContext context, MadaDbContext db, CancellationToken cancellationToken)
@@ -743,3 +1068,6 @@ public sealed record CreatePaymentRequest(int AmountPiastres, string Method, Dat
 public sealed record CloseoutCashierRequest(long CountedCashPiastres, string? Notes = null, string? ShiftName = null, long? ElectronicPiastres = null, int? TotalReceiptsCount = null, DateOnly? ShiftDate = null);
 public sealed record DepositCashierSafeRequest(long AmountPiastres, string? Notes = null);
 public sealed record ConfirmShiftCloseoutRequest(DateOnly Date, Guid? BranchId = null, string? Notes = null);
+public sealed record AdjustInstructorPayrollRequest(string? Month, Guid? BranchId, long BonusPiastres, string? BonusReason, long DeductionPiastres, string? DeductionReason, long? BaseSalaryPiastres = null);
+public sealed record ApproveInstructorPayrollRequest(string? Month, Guid? BranchId = null, long? BonusPiastres = null, string? BonusReason = null, long? DeductionPiastres = null, string? DeductionReason = null);
+public sealed record PayInstructorPayrollRequest(string? Month, Guid? BranchId = null, string PaymentMethod = "INSTAPAY", string? PaymentReference = null, string? Notes = null);

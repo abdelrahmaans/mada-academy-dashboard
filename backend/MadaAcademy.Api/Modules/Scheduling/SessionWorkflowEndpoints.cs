@@ -36,6 +36,11 @@ public static class SessionWorkflowEndpoints
         scheduling.MapPost("/evaluation-reviews/{evaluationId:guid}/decision", DecideEvaluationReviewAsync);
         scheduling.MapGet("/notifications", ListNotificationsAsync);
         scheduling.MapPost("/notifications/{notificationId:guid}/read", MarkNotificationReadAsync);
+        scheduling.MapGet("/rubrics", ListRubricsAsync);
+        scheduling.MapPost("/rubrics", CreateRubricAsync);
+        scheduling.MapPut("/rubrics/{rubricId:guid}", UpdateRubricAsync);
+        scheduling.MapPost("/rubrics/{rubricId:guid}/default", SetDefaultRubricAsync);
+        scheduling.MapDelete("/rubrics/{rubricId:guid}", DeleteRubricAsync);
         return endpoints;
     }
 
@@ -742,8 +747,199 @@ public static class SessionWorkflowEndpoints
         return Results.Ok(new { data = new { groupId, groupName = offering.GroupName, items } });
     }
 
+    private static bool CanManageRubrics(ClaimsPrincipal user)
+        => user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R03_HEAD_INSTRUCTORS");
+
+    private static async Task<IResult> ListRubricsAsync(string? track, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!Scope(user, out var tenantId, out _)) return Forbidden("RUBRICS_READ_FORBIDDEN");
+        var normalizedTrack = string.IsNullOrWhiteSpace(track) ? null : track.Trim().ToLowerInvariant();
+
+        var items = await db.EvaluationRubrics.AsNoTracking()
+            .Where(r => r.TenantId == tenantId && r.IsActive && (normalizedTrack == null || r.TrackKey == normalizedTrack))
+            .OrderBy(r => r.TrackKey)
+            .ThenByDescending(r => r.IsDefault)
+            .ThenByDescending(r => r.UpdatedAt)
+            .ToListAsync(cancellationToken);
+
+        return Results.Ok(new { data = new { items = items.Select(ToRubricDto).ToArray(), total = items.Count } });
+    }
+
+    private static async Task<IResult> CreateRubricAsync(UpsertRubricRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!CanManageRubrics(user) || !Scope(user, out var tenantId, out _)) return Forbidden("RUBRICS_WRITE_FORBIDDEN");
+        if (string.IsNullOrWhiteSpace(request.Title) || string.IsNullOrWhiteSpace(request.TrackKey) || request.ScaleMax is < 3 or > 100)
+            return Validation("rubric", "Title, trackKey, and scaleMax (3..100) are required.");
+        if (request.Criteria is null || request.Criteria.Count < 2 || request.Criteria.Any(c => string.IsNullOrWhiteSpace(c.Label)))
+            return Validation("criteria", "At least 2 named criteria are required.");
+
+        var trackKey = request.TrackKey.Trim().ToLowerInvariant();
+        if (request.IsDefault)
+        {
+            var existingDefaults = await db.EvaluationRubrics
+                .Where(r => r.TenantId == tenantId && r.TrackKey == trackKey && r.IsDefault)
+                .ToListAsync(cancellationToken);
+            foreach (var item in existingDefaults)
+            {
+                item.IsDefault = false;
+                item.UpdatedAt = DateTimeOffset.UtcNow;
+            }
+        }
+
+        var actorId = Actor(user);
+        var authorName = request.AuthorName;
+        if (string.IsNullOrWhiteSpace(authorName) && actorId.HasValue)
+        {
+            authorName = await db.UserAccounts.Where(u => u.Id == actorId.Value).Select(u => u.DisplayName).FirstOrDefaultAsync(cancellationToken);
+        }
+
+        var normalizedCriteria = request.Criteria.Select((c, idx) => new RubricCriterionDto(
+            string.IsNullOrWhiteSpace(c.Id) ? $"crt-{Guid.NewGuid().ToString("N")[..6]}" : c.Id.Trim(),
+            string.IsNullOrWhiteSpace(c.Key) ? $"criterion_{idx + 1}" : c.Key.Trim(),
+            c.Label.Trim(),
+            string.IsNullOrWhiteSpace(c.Category) ? "PRACTICAL" : c.Category.Trim().ToUpperInvariant(),
+            string.IsNullOrWhiteSpace(c.CategoryLabel) ? "تطبيق وممارسة" : c.CategoryLabel.Trim(),
+            c.MaxScore > 0 ? c.MaxScore : request.ScaleMax,
+            c.WeightPercent,
+            c.Hint?.Trim() ?? ""
+        )).ToArray();
+
+        var rubric = new EvaluationRubric
+        {
+            TenantId = tenantId,
+            TrackKey = trackKey,
+            TrackLabel = string.IsNullOrWhiteSpace(request.TrackLabel) ? trackKey : request.TrackLabel.Trim(),
+            Title = request.Title.Trim(),
+            Description = string.IsNullOrWhiteSpace(request.Description) ? $"معايير تقييم مسار {trackKey}" : request.Description.Trim(),
+            ScaleMax = request.ScaleMax,
+            IsActive = request.IsActive ?? true,
+            IsDefault = request.IsDefault,
+            CriteriaJson = System.Text.Json.JsonSerializer.Serialize(normalizedCriteria),
+            AuthorName = string.IsNullOrWhiteSpace(authorName) ? "إدارة الجودة الأكاديمية" : authorName.Trim(),
+            UpdatedByUserId = actorId
+        };
+
+        db.EvaluationRubrics.Add(rubric);
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.Created($"/api/v1/scheduling/rubrics/{rubric.Id}", new { data = ToRubricDto(rubric) });
+    }
+
+    private static async Task<IResult> UpdateRubricAsync(Guid rubricId, UpsertRubricRequest request, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!CanManageRubrics(user) || !Scope(user, out var tenantId, out _)) return Forbidden("RUBRICS_WRITE_FORBIDDEN");
+        if (string.IsNullOrWhiteSpace(request.Title) || string.IsNullOrWhiteSpace(request.TrackKey) || request.ScaleMax is < 3 or > 100)
+            return Validation("rubric", "Title, trackKey, and scaleMax (3..100) are required.");
+        if (request.Criteria is null || request.Criteria.Count < 2 || request.Criteria.Any(c => string.IsNullOrWhiteSpace(c.Label)))
+            return Validation("criteria", "At least 2 named criteria are required.");
+
+        var rubric = await db.EvaluationRubrics.FirstOrDefaultAsync(r => r.Id == rubricId && r.TenantId == tenantId, cancellationToken);
+        if (rubric is null) return NotFound("RUBRIC_NOT_FOUND");
+
+        var trackKey = request.TrackKey.Trim().ToLowerInvariant();
+        if (request.IsDefault)
+        {
+            var siblingDefaults = await db.EvaluationRubrics
+                .Where(r => r.TenantId == tenantId && r.TrackKey == trackKey && r.Id != rubricId && r.IsDefault)
+                .ToListAsync(cancellationToken);
+            foreach (var item in siblingDefaults)
+            {
+                item.IsDefault = false;
+                item.UpdatedAt = DateTimeOffset.UtcNow;
+            }
+        }
+
+        var normalizedCriteria = request.Criteria.Select((c, idx) => new RubricCriterionDto(
+            string.IsNullOrWhiteSpace(c.Id) ? $"crt-{Guid.NewGuid().ToString("N")[..6]}" : c.Id.Trim(),
+            string.IsNullOrWhiteSpace(c.Key) ? $"criterion_{idx + 1}" : c.Key.Trim(),
+            c.Label.Trim(),
+            string.IsNullOrWhiteSpace(c.Category) ? "PRACTICAL" : c.Category.Trim().ToUpperInvariant(),
+            string.IsNullOrWhiteSpace(c.CategoryLabel) ? "تطبيق وممارسة" : c.CategoryLabel.Trim(),
+            c.MaxScore > 0 ? c.MaxScore : request.ScaleMax,
+            c.WeightPercent,
+            c.Hint?.Trim() ?? ""
+        )).ToArray();
+
+        rubric.TrackKey = trackKey;
+        rubric.TrackLabel = string.IsNullOrWhiteSpace(request.TrackLabel) ? rubric.TrackLabel : request.TrackLabel.Trim();
+        rubric.Title = request.Title.Trim();
+        rubric.Description = string.IsNullOrWhiteSpace(request.Description) ? rubric.Description : request.Description.Trim();
+        rubric.ScaleMax = request.ScaleMax;
+        if (request.IsActive.HasValue) rubric.IsActive = request.IsActive.Value;
+        rubric.IsDefault = request.IsDefault;
+        rubric.CriteriaJson = System.Text.Json.JsonSerializer.Serialize(normalizedCriteria);
+        rubric.UpdatedByUserId = Actor(user);
+        rubric.UpdatedAt = DateTimeOffset.UtcNow;
+
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.Ok(new { data = ToRubricDto(rubric) });
+    }
+
+    private static async Task<IResult> SetDefaultRubricAsync(Guid rubricId, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!CanManageRubrics(user) || !Scope(user, out var tenantId, out _)) return Forbidden("RUBRICS_WRITE_FORBIDDEN");
+        var rubric = await db.EvaluationRubrics.FirstOrDefaultAsync(r => r.Id == rubricId && r.TenantId == tenantId, cancellationToken);
+        if (rubric is null) return NotFound("RUBRIC_NOT_FOUND");
+
+        var siblings = await db.EvaluationRubrics
+            .Where(r => r.TenantId == tenantId && r.TrackKey == rubric.TrackKey)
+            .ToListAsync(cancellationToken);
+
+        foreach (var item in siblings)
+        {
+            item.IsDefault = item.Id == rubricId;
+            item.UpdatedAt = DateTimeOffset.UtcNow;
+        }
+        rubric.UpdatedByUserId = Actor(user);
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.Ok(new { data = ToRubricDto(rubric) });
+    }
+
+    private static async Task<IResult> DeleteRubricAsync(Guid rubricId, ClaimsPrincipal user, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!CanManageRubrics(user) || !Scope(user, out var tenantId, out _)) return Forbidden("RUBRICS_WRITE_FORBIDDEN");
+        var rubric = await db.EvaluationRubrics.FirstOrDefaultAsync(r => r.Id == rubricId && r.TenantId == tenantId, cancellationToken);
+        if (rubric is null) return NotFound("RUBRIC_NOT_FOUND");
+
+        var siblingCount = await db.EvaluationRubrics.CountAsync(r => r.TenantId == tenantId && r.TrackKey == rubric.TrackKey && r.Id != rubricId && r.IsActive, cancellationToken);
+        if (rubric.IsDefault && siblingCount > 0)
+            return Conflict("CANNOT_DELETE_DEFAULT_RUBRIC", "Assign another default rubric for this track before deleting the current default.");
+
+        db.EvaluationRubrics.Remove(rubric);
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.NoContent();
+    }
+
+    private static EvaluationRubricDto ToRubricDto(EvaluationRubric rubric)
+    {
+        RubricCriterionDto[] criteria = [];
+        try
+        {
+            criteria = System.Text.Json.JsonSerializer.Deserialize<RubricCriterionDto[]>(rubric.CriteriaJson) ?? [];
+        }
+        catch
+        {
+            criteria = [];
+        }
+        return new EvaluationRubricDto(
+            rubric.Id,
+            rubric.TrackKey,
+            rubric.TrackLabel,
+            rubric.Title,
+            rubric.Description,
+            rubric.ScaleMax,
+            criteria,
+            rubric.IsActive,
+            rubric.IsDefault,
+            rubric.UpdatedAt,
+            rubric.AuthorName);
+    }
+
     private sealed record SessionDraft(int Number, DateTimeOffset StartAt, DateTimeOffset EndAt);
 }
+
+public sealed record RubricCriterionDto(string Id, string Key, string Label, string Category, string CategoryLabel, int MaxScore, int? WeightPercent, string Hint);
+public sealed record EvaluationRubricDto(Guid Id, string TrackKey, string TrackLabel, string Title, string Description, int ScaleMax, IReadOnlyList<RubricCriterionDto> Criteria, bool IsActive, bool IsDefault, DateTimeOffset UpdatedAt, string? AuthorName);
+public sealed record UpsertRubricRequest(string TrackKey, string TrackLabel, string Title, string? Description, int ScaleMax, IReadOnlyList<RubricCriterionDto> Criteria, bool IsDefault = false, bool? IsActive = true, string? AuthorName = null);
 
 public sealed record CreateGroupRequest(Guid BranchId, Guid CourseTemplateId, Guid InstructorId, Guid ClassroomId, DateOnly StartDate, DateOnly EndDate, IReadOnlyList<int> DaysOfWeek, TimeOnly StartTime, int DurationMinutes, int MaxStudents, IReadOnlyList<Guid>? StudentIds = null, int FinalPricePiastres = 0, string? Notes = null);
 public sealed record CreateCourseTemplateRequest(string Name, string Track, string Type, string AgeGroup, string Level, int TotalSessions, decimal SessionDurationHours, int BasePricePiastres);

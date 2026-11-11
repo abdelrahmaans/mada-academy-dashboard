@@ -39,3 +39,18 @@ public sealed class InAppNotification : EntityBase
     public string? TargetId { get; set; }
     public bool IsRead { get; set; }
 }
+
+public sealed class EvaluationRubric : EntityBase
+{
+    public Guid TenantId { get; set; }
+    public required string TrackKey { get; set; }
+    public required string TrackLabel { get; set; }
+    public required string Title { get; set; }
+    public required string Description { get; set; }
+    public int ScaleMax { get; set; } = 5;
+    public bool IsActive { get; set; } = true;
+    public bool IsDefault { get; set; }
+    public required string CriteriaJson { get; set; }
+    public string? AuthorName { get; set; }
+    public Guid? UpdatedByUserId { get; set; }
+}

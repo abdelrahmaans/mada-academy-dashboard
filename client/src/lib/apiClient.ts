@@ -1161,6 +1161,7 @@ export const apiClient = {
   listLeads: () => request<LeadsResponse>("/leads"),
   createLead: (input: CreateLeadInput) => request<LeadRecord>("/leads", { method: "POST", body: JSON.stringify(input) }),
   updateLeadStatus: (id: string, status: string) => request<LeadRecord>(`/leads/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  deleteLead: (id: string) => request<void>(`/leads/${id}`, { method: "DELETE" }),
   listMarketingCampaigns: () => request<MarketingCampaignRecord[]>("/marketing/campaigns"),
   createMarketingCampaign: (input: CreateMarketingCampaignInput) => request<MarketingCampaignRecord>("/marketing/campaigns", { method: "POST", body: JSON.stringify(input) }),
   updateMarketingCampaignStatus: (id: string, status: string) => request<MarketingCampaignRecord>(`/marketing/campaigns/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
@@ -1206,13 +1207,38 @@ export const apiClient = {
   consumerFreezeRequests: () => request<SubscriptionFreezeRequest[]>("/consumer/freeze-requests"),
   createConsumerFreezeRequest: (input: { studentId: string; courseOfferingId?: string; startDate: string; endDate: string; reason?: string; reasonText?: string; notes?: string }) =>
     request<SubscriptionFreezeRequest>("/consumer/freeze-requests", { method: "POST", body: JSON.stringify(input) }),
-  instructorPayroll: (params?: { month?: string; branchId?: string }) => {
+  instructorPayroll: async (params?: { month?: string; branchId?: string }): Promise<InstructorPayrollItem[]> => {
     const query = new URLSearchParams();
     if (params?.month) query.set("month", params.month);
     if (params?.branchId) query.set("branchId", params.branchId);
     const suffix = query.toString() ? `?${query.toString()}` : "";
-    return request<InstructorPayrollItem[]>(`/finance/payroll/instructors${suffix}`);
+    const response = await request<InstructorPayrollItem[] | { items: InstructorPayrollItem[]; total: number; month: string }>(`/finance/instructor-payroll${suffix}`);
+    return Array.isArray(response) ? response : (response?.items ?? []);
   },
+  adjustInstructorPayroll: (
+    instructorId: string,
+    input: { month?: string; branchId?: string; bonusPiastres: number; bonusReason?: string; deductionPiastres: number; deductionReason?: string; baseSalaryPiastres?: number }
+  ) => request<InstructorPayrollItem>(`/finance/instructor-payroll/${instructorId}/adjustments`, { method: "PUT", body: JSON.stringify(input) }),
+  approveInstructorPayroll: (
+    instructorId: string,
+    input?: { month?: string; branchId?: string; bonusPiastres?: number; bonusReason?: string; deductionPiastres?: number; deductionReason?: string }
+  ) => request<InstructorPayrollItem>(`/finance/instructor-payroll/${instructorId}/approve`, { method: "POST", body: JSON.stringify(input ?? {}) }),
+  payInstructorPayroll: (
+    instructorId: string,
+    input: { month?: string; branchId?: string; paymentMethod: string; paymentReference?: string; notes?: string }
+  ) => request<InstructorPayrollItem>(`/finance/instructor-payroll/${instructorId}/pay`, { method: "POST", body: JSON.stringify(input) }),
+  listRubrics: (track?: string) => {
+    const suffix = track ? `?track=${encodeURIComponent(track)}` : "";
+    return request<{ items: DisciplineRubric[]; total: number }>(`/scheduling/rubrics${suffix}`);
+  },
+  createRubric: (input: UpsertRubricInput) =>
+    request<DisciplineRubric>("/scheduling/rubrics", { method: "POST", body: JSON.stringify(input) }),
+  updateRubric: (id: string, input: UpsertRubricInput) =>
+    request<DisciplineRubric>(`/scheduling/rubrics/${id}`, { method: "PUT", body: JSON.stringify(input) }),
+  setDefaultRubric: (id: string) =>
+    request<DisciplineRubric>(`/scheduling/rubrics/${id}/default`, { method: "POST" }),
+  deleteRubric: (id: string) =>
+    request<void>(`/scheduling/rubrics/${id}`, { method: "DELETE" }),
   depositCashierSafe: (input: { amountPiastres: number; notes?: string }) =>
     request<{ success: boolean; depositedPiastres: number; timestamp: string }>("/finance/cashier/deposit-to-safe", { method: "POST", body: JSON.stringify(input) }),
   resetAndSeedDemoData: () =>
@@ -1252,11 +1278,12 @@ export type LeadRecord = {
   channel: string;
   campaignId: string | null;
   notes: string | null;
-  status: "NEW" | "CONTACTED" | "INTERESTED" | "REGISTERED" | "WAITLISTED" | "ARCHIVED";
+  status: "NEW" | "CONTACTED" | "INTERESTED" | "REGISTERED" | "WAITLISTED" | "NOTIFIED" | "CANCELLED" | "ARCHIVED";
   courseOfferingId: string | null;
   courseName: string | null;
   convertedStudentId: string | null;
   createdAt: string;
+  branchName?: string | null;
 };
 
 export type LeadsResponse = {
@@ -1275,6 +1302,7 @@ export type CreateLeadInput = {
   courseOfferingId?: string;
   branchId?: string;
   campaignId?: string;
+  status?: "NEW" | "WAITLISTED";
 };
 
 export type MarketingCampaignStatus = "DRAFT" | "IN_REVIEW" | "ACTIVE" | "PAUSED" | "COMPLETED";
@@ -1306,13 +1334,49 @@ export type DirectStudentInput = {
 };
 
 export type InstructorPayrollItem = {
+  id: string;
   instructorId: string;
   instructorName: string;
-  totalSessions: number;
-  completedSessions: number;
+  branchId: string;
+  branchName: string;
+  month: string;
+  completedSessionsCount: number;
   substituteSessionsCount: number;
+  ratePerSession: number;
+  ratePerSessionPiastres: number;
+  baseSalary: number;
+  baseSalaryPiastres: number;
+  bonusAmount: number;
+  bonusPiastres: number;
+  bonusReason?: string | null;
+  deductionAmount: number;
+  deductionPiastres: number;
+  deductionReason?: string | null;
+  netPayable: number;
+  netPayablePiastres: number;
   totalCompensationPiastres: number;
   sessionRatePiastres: number;
+  status: "SUBMITTED" | "APPROVED" | "PAID";
+  approvedAt?: string | null;
+  paidAt?: string | null;
+  paymentMethod?: string | null;
+  paymentReference?: string | null;
+  linkedExpenseId?: string | null;
+  // optional legacy aliases
+  totalSessions?: number;
+  completedSessions?: number;
+};
+
+export type UpsertRubricInput = {
+  trackKey: DisciplineRubric["trackKey"];
+  trackLabel: string;
+  title: string;
+  description?: string;
+  scaleMax: number;
+  criteria: RubricCriterion[];
+  isDefault?: boolean;
+  isActive?: boolean;
+  authorName?: string;
 };
 
 export type ConvertLeadResult = {
@@ -1577,6 +1641,8 @@ export type TrainerPayrollRecord = {
   id: string;
   instructorId: string;
   instructorName: string;
+  branchId?: string;
+  branchName?: string;
   month: string; // e.g. "2026-10"
   completedSessionsCount: number;
   ratePerSession: number;

@@ -44,6 +44,7 @@ import {
   generateTrainerSessions,
   type AuthMe,
   type FinanceReport,
+  type InstructorPayrollItem,
   type ShiftCashHandover,
   type StudentRecord,
   type TrainerPayrollRecord,
@@ -149,8 +150,47 @@ export default function FinanceDesk() {
   const [loadAttempt, setLoadAttempt] = useState(0);
 
   const [handovers, setHandovers] = useState<ShiftCashHandover[]>(() => (liveMode ? [] : shiftStorage.getHandovers()));
-  const [payrolls, setPayrolls] = useState<TrainerPayrollRecord[]>(() => payrollStorage.getPayrolls());
+  const [payrolls, setPayrolls] = useState<TrainerPayrollRecord[]>(() => (liveMode ? [] : payrollStorage.getPayrolls()));
   const [showScopeInfo, setShowScopeInfo] = useState(false);
+
+  const mapServerPayrollItem = (item: InstructorPayrollItem): TrainerPayrollRecord => {
+    const ratePerSession = item.ratePerSession ?? Math.round((item.ratePerSessionPiastres ?? item.sessionRatePiastres ?? 0) / 100);
+    const baseSalary = item.baseSalary ?? Math.round((item.baseSalaryPiastres ?? 0) / 100);
+    const bonusAmount = item.bonusAmount ?? Math.round((item.bonusPiastres ?? 0) / 100);
+    const deductionAmount = item.deductionAmount ?? Math.round((item.deductionPiastres ?? 0) / 100);
+    const netPayable = item.netPayable ?? Math.round((item.netPayablePiastres ?? item.totalCompensationPiastres ?? 0) / 100);
+    const sessionsCount = item.completedSessionsCount ?? item.completedSessions ?? 0;
+    const displayName = item.instructorName + (item.substituteSessionsCount > 0 ? ` (${item.substituteSessionsCount} كبديل)` : "");
+    return {
+      id: item.id || `PAY-LIVE-${item.instructorId}`,
+      instructorId: item.instructorId,
+      instructorName: displayName,
+      branchId: item.branchId,
+      branchName: item.branchName,
+      month: item.month,
+      completedSessionsCount: sessionsCount,
+      ratePerSession,
+      baseSalary,
+      bonusAmount,
+      bonusReason: item.bonusReason ?? undefined,
+      deductionAmount,
+      deductionReason: item.deductionReason ?? undefined,
+      netPayable,
+      status: item.status ?? "SUBMITTED",
+      paidAt: item.paidAt ?? undefined,
+      paymentMethod: item.paymentMethod ?? undefined,
+      paymentReference: item.paymentReference ?? undefined,
+      sessions: generateTrainerSessions(item.instructorId, item.instructorName, sessionsCount, ratePerSession),
+    };
+  };
+
+  const refreshPayrolls = async () => {
+    if (!liveMode) return;
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const items = await apiClient.instructorPayroll({ month: currentMonth });
+    setPayrolls((items ?? []).map(mapServerPayrollItem));
+  };
 
   const refreshFinanceSummary = () => {
     if (!liveMode) return;
@@ -159,35 +199,7 @@ export default function FinanceDesk() {
 
   useEffect(() => {
     if (liveMode) {
-      const now = new Date();
-      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-      apiClient.instructorPayroll({ month: currentMonth })
-        .then(items => {
-          if (items && items.length > 0) {
-            const livePayrolls: TrainerPayrollRecord[] = items.map((item, idx) => {
-              const netPayable = Math.round(item.totalCompensationPiastres / 100);
-              const ratePerSession = Math.round(item.sessionRatePiastres / 100);
-              return {
-                id: `PAY-LIVE-${idx + 1}`,
-                instructorId: item.instructorId,
-                instructorName: item.instructorName + (item.substituteSessionsCount > 0 ? ` (${item.substituteSessionsCount} كبديل)` : ""),
-                month: currentMonth,
-                completedSessionsCount: item.completedSessions,
-                ratePerSession: ratePerSession,
-                baseSalary: 0,
-                bonusAmount: 0,
-                deductionAmount: 0,
-                netPayable: netPayable,
-                status: "SUBMITTED" as const,
-                sessions: generateTrainerSessions(item.instructorId, item.instructorName, item.completedSessions, ratePerSession),
-              };
-            });
-            const localPayrolls = payrollStorage.getPayrolls();
-            const merged = [...livePayrolls, ...localPayrolls.filter(lp => lp.status === "PAID")];
-            setPayrolls(merged);
-          }
-        })
-        .catch(() => undefined);
+      refreshPayrolls().catch(() => undefined);
 
       apiClient.listCashierShiftsHistory()
         .then(res => {
@@ -228,25 +240,81 @@ export default function FinanceDesk() {
     toast.success(`تم استلام وتوريد عهدة الوردية ${updated.id} للخزينة بنجاح!`);
   };
 
-  const approveTrainerPayroll = (id: string) => {
+  const approveTrainerPayroll = async (id: string) => {
+    if (liveMode) {
+      const target = payrolls.find(p => p.id === id);
+      if (!target) return;
+      try {
+        await apiClient.approveInstructorPayroll(target.instructorId, {
+          month: target.month,
+          branchId: target.branchId,
+        });
+        await refreshPayrolls();
+        toast.success("تم اعتماد مسير الراتب وحفظه في الخادم، وجاهز للصرف للمدرب");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "تعذر اعتماد مسير الراتب على الخادم");
+      }
+      return;
+    }
     payrollStorage.approvePayroll(id);
     setPayrolls(payrollStorage.getPayrolls());
     toast.success("تم اعتماد مسير الراتب، وجاهز للصرف للمدرب");
   };
 
-  const payTrainerPayroll = (id: string, method: string, reference?: string) => {
+  const payTrainerPayroll = async (id: string, method: string, reference?: string) => {
+    if (liveMode) {
+      const target = payrolls.find(p => p.id === id);
+      if (!target) return;
+      try {
+        await apiClient.payInstructorPayroll(target.instructorId, {
+          month: target.month,
+          branchId: target.branchId,
+          paymentMethod: method,
+          paymentReference: reference,
+        });
+        await refreshPayrolls();
+        if (activeAccess.canReadExpenses) {
+          const expRes = await apiClient.financeExpenses();
+          setExpenses(expRes.items.map(mapFinanceExpense));
+        }
+        refreshFinanceSummary();
+        toast.success(`تم تسجيل صرف الراتب عبر ${method} وترحيله للمصروفات بنجاح!`);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "تعذر تسجيل صرف الراتب على الخادم");
+      }
+      return;
+    }
     payrollStorage.markPaid(id, method, reference);
     setPayrolls(payrollStorage.getPayrolls());
     toast.success(`تم تسجيل صرف الراتب عبر ${method} بنجاح!`);
   };
 
-  const updateTrainerPayrollAdjustments = (
+  const updateTrainerPayrollAdjustments = async (
     id: string,
     bonus: number,
     bonusReason: string,
     deduction: number,
     deductionReason: string
   ) => {
+    if (liveMode) {
+      const target = payrolls.find(p => p.id === id);
+      if (!target) return;
+      try {
+        await apiClient.adjustInstructorPayroll(target.instructorId, {
+          month: target.month,
+          branchId: target.branchId,
+          bonusPiastres: Math.round((Number(bonus) || 0) * 100),
+          bonusReason,
+          deductionPiastres: Math.round((Number(deduction) || 0) * 100),
+          deductionReason,
+        });
+        await refreshPayrolls();
+        toast.success("تم حفظ المكافآت والخصومات للمدرب وتحديث الصافي في قاعدة البيانات");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "تعذر حفظ تعديلات الراتب على الخادم");
+      }
+      return;
+    }
     payrollStorage.updateAdjustments(id, bonus, bonusReason, deduction, deductionReason);
     setPayrolls(payrollStorage.getPayrolls());
     toast.success("تم تحديث المكافآت والخصومات للمدرب وتعديل الصافي المستحق");

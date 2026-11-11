@@ -9,6 +9,7 @@ import {
   waitlistStorage,
   type CourseTemplateRecord,
   type GroupRecord,
+  type LeadRecord,
   type SchedulingClassroom,
   type SchedulingInstructor,
   type StudentRecord,
@@ -127,22 +128,118 @@ function ClassesPage() {
   const [liveStudents, setLiveStudents] = useState<StudentRecord[]>([]);
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [waitlistEntries, setWaitlistEntries] = useState<WaitlistEntry[]>(() =>
-    waitlistStorage.getEntries()
+    apiClient.hasSession() ? [] : waitlistStorage.getEntries()
   );
 
-  const reloadWaitlist = () => {
-    setWaitlistEntries(waitlistStorage.getEntries());
+  const mapServerWaitlists = (leads: LeadRecord[], currentOfferings: Offering[]): WaitlistEntry[] => {
+    const relevant = leads.filter(
+      l =>
+        l.status === "WAITLISTED" ||
+        l.status === "NOTIFIED" ||
+        l.status === "CANCELLED" ||
+        l.channel === "WAITLIST" ||
+        l.channel === "DIRECT_WAITLIST"
+    );
+    const rankByGroup: Record<string, number> = {};
+    return relevant.map(lead => {
+      const grp = currentOfferings.find(o => o.id === (lead.courseOfferingId ?? ""));
+      const mappedStatus: WaitlistEntry["status"] =
+        lead.status === "NOTIFIED"
+          ? "NOTIFIED"
+          : lead.status === "REGISTERED"
+          ? "ENROLLED"
+          : lead.status === "CANCELLED" || lead.status === "ARCHIVED"
+          ? "CANCELLED"
+          : "WAITING";
+      const gKey = lead.courseOfferingId ?? "general";
+      if (mappedStatus === "WAITING") {
+        rankByGroup[gKey] = (rankByGroup[gKey] ?? 0) + 1;
+      }
+      return {
+        id: lead.id,
+        studentId: lead.convertedStudentId ?? undefined,
+        studentName: lead.childName,
+        parentName: lead.parentName,
+        phone: lead.phone,
+        groupId: lead.courseOfferingId ?? "",
+        courseName: lead.courseName ?? grp?.courseName ?? "كورس الأكاديمية",
+        branchName: lead.branchName ?? grp?.branch ?? "فرع الأكاديمية",
+        status: mappedStatus,
+        priorityRank: rankByGroup[gKey] ?? 1,
+        addedAt: lead.createdAt,
+        notes: lead.notes ?? undefined,
+      };
+    });
   };
 
-  const handleNotifyWaitlist = (id: string) => {
+  const reloadWaitlist = async (currentOfferings?: Offering[]) => {
+    if (!apiClient.hasSession()) {
+      setWaitlistEntries(waitlistStorage.getEntries());
+      return;
+    }
+    try {
+      const [leadsRes, groupsRes] = await Promise.all([
+        apiClient.listLeads(),
+        currentOfferings ? Promise.resolve(null) : apiClient.listGroups().catch(() => null),
+      ]);
+      const nextOfferings = groupsRes ? groupsRes.items.map(offeringFromApi) : (currentOfferings ?? offerings);
+      if (groupsRes) setOfferings(nextOfferings);
+      setWaitlistEntries(mapServerWaitlists(leadsRes.items, nextOfferings));
+    } catch {
+      // Keep current state if transient network error occurs on background refresh
+    }
+  };
+
+  const handleNotifyWaitlist = async (id: string) => {
+    if (liveMode) {
+      const entry = waitlistEntries.find(e => e.id === id);
+      try {
+        await apiClient.updateLeadStatus(id, "NOTIFIED");
+        await reloadWaitlist();
+        toast.success(
+          `تم إشعار ولي أمر الطالب ${entry?.studentName ?? ""} بتوفر المقعد وتسجيل الحالة في قاعدة البيانات.`
+        );
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "تعذر تحديث حالة قائمة الانتظار");
+      }
+      return;
+    }
     const updated = waitlistStorage.notifyEntry(id);
-    reloadWaitlist();
+    setWaitlistEntries(waitlistStorage.getEntries());
     toast.success(
       `تم إرسال إشعار توفر مقعد شاغر للطالب ${updated.studentName} بنجاح عبر واتساب!`
     );
   };
 
-  const handleEnrollWaitlist = (id: string, withInvoice = true) => {
+  const handleEnrollWaitlist = async (id: string, withInvoice = true) => {
+    if (liveMode) {
+      const entry = waitlistEntries.find(e => e.id === id);
+      if (!entry) return;
+      try {
+        const result = await apiClient.convertLead(id, {
+          courseOfferingId: entry.groupId || undefined,
+          createInvoice: withInvoice,
+          joinWaitlistIfFull: false,
+        });
+        await reloadWaitlist();
+        if (result.invoiceNumber) {
+          toast.success(
+            `تم تسكين الطالب ${result.studentName} وتفعيل اشتراكه وإصدار الفاتورة ${result.invoiceNumber} بنجاح!`
+          );
+        } else {
+          toast.success(
+            `تم تسكين الطالب ${result.studentName} وتفعيل اشتراكه في المجموعة بنجاح!`
+          );
+        }
+      } catch (err) {
+        toast.error(
+          err instanceof Error
+            ? err.message
+            : "تعذر تسكين الطالب (تأكد من وجود مقعد شاغر في المجموعة)."
+        );
+      }
+      return;
+    }
     const updated = waitlistStorage.enrollEntry(id);
     setOfferings(current =>
       current.map(o =>
@@ -151,7 +248,7 @@ function ClassesPage() {
           : o
       )
     );
-    reloadWaitlist();
+    setWaitlistEntries(waitlistStorage.getEntries());
     if (withInvoice) {
       toast.success(
         `تم تسكين الطالب ${updated.studentName} وتفعيل اشتراكه مع إصدار فاتورة المصاريف بنجاح!`
@@ -163,21 +260,59 @@ function ClassesPage() {
     }
   };
 
-  const handleAddWaitlistEntry = (
+  const handleAddWaitlistEntry = async (
     input: Omit<WaitlistEntry, "id" | "status" | "priorityRank" | "addedAt">
   ) => {
+    if (liveMode) {
+      try {
+        await apiClient.createLead({
+          childName: input.studentName,
+          parentName: input.parentName || "ولي الأمر",
+          phone: input.phone || "+201000000000",
+          courseOfferingId: input.groupId || undefined,
+          notes: input.notes,
+          channel: "WAITLIST",
+          status: "WAITLISTED",
+        });
+        await reloadWaitlist();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "تعذر إضافة الطالب لقائمة الانتظار");
+        throw err;
+      }
+      return;
+    }
     waitlistStorage.addEntry(input);
-    reloadWaitlist();
+    setWaitlistEntries(waitlistStorage.getEntries());
   };
 
-  const handleCancelWaitlistEntry = (id: string) => {
+  const handleCancelWaitlistEntry = async (id: string) => {
+    if (liveMode) {
+      try {
+        await apiClient.updateLeadStatus(id, "CANCELLED");
+        await reloadWaitlist();
+        toast.info("تم إلغاء الطلب من قائمة الانتظار.");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "تعذر إلغاء الطلب");
+      }
+      return;
+    }
     waitlistStorage.cancelEntry(id);
-    reloadWaitlist();
+    setWaitlistEntries(waitlistStorage.getEntries());
   };
 
-  const handleDeleteWaitlistEntry = (id: string) => {
+  const handleDeleteWaitlistEntry = async (id: string) => {
+    if (liveMode) {
+      try {
+        await apiClient.deleteLead(id);
+        await reloadWaitlist();
+        toast.info("تم حذف السجل من قائمة الانتظار.");
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "تعذر حذف السجل");
+      }
+      return;
+    }
     waitlistStorage.deleteEntry(id);
-    reloadWaitlist();
+    setWaitlistEntries(waitlistStorage.getEntries());
   };
 
   useEffect(() => {
@@ -197,6 +332,7 @@ function ClassesPage() {
       apiClient.schedulingClassrooms(),
       apiClient.schedulingInstructors(),
       apiClient.listStudents(),
+      apiClient.listLeads(),
     ]).then(
       ([
         courseResult,
@@ -204,6 +340,7 @@ function ClassesPage() {
         roomResult,
         instructorResult,
         studentResult,
+        leadsResult,
       ]) => {
         if (
           courseResult.status === "rejected" ||
@@ -229,8 +366,12 @@ function ClassesPage() {
         }
 
         const mappedCourses = courseResult.value.items.map(courseFromApi);
+        const mappedOfferings = groupResult.value.items.map(offeringFromApi);
         setCourses(mappedCourses);
-        setOfferings(groupResult.value.items.map(offeringFromApi));
+        setOfferings(mappedOfferings);
+        if (leadsResult.status === "fulfilled") {
+          setWaitlistEntries(mapServerWaitlists(leadsResult.value.items, mappedOfferings));
+        }
 
         const rooms =
           roomResult.status === "fulfilled" ? roomResult.value.items : [];

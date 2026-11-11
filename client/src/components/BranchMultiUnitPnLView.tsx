@@ -98,7 +98,7 @@ export default function BranchMultiUnitPnLView({
         setCourseProf(prof);
         setLiveExpenses(exp.items);
         setLivePayrollTotalEgp(
-          (pay ?? []).reduce((sum, item) => sum + Math.round(item.totalCompensationPiastres / 100), 0)
+          (pay ?? []).reduce((sum, item) => sum + Math.round((item.netPayablePiastres ?? item.totalCompensationPiastres ?? 0) / 100), 0)
         );
 
         const mappedRisk: AtRiskStudent[] = ret.items.map(item => ({

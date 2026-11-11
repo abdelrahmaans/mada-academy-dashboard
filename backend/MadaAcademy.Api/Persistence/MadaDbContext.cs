@@ -48,10 +48,34 @@ public sealed class MadaDbContext(DbContextOptions<MadaDbContext> options) : DbC
     public DbSet<CompetitionAward> CompetitionAwards => Set<CompetitionAward>();
     public DbSet<SubscriptionFreezeRequest> SubscriptionFreezeRequests => Set<SubscriptionFreezeRequest>();
     public DbSet<PlatformSupportTicket> PlatformSupportTickets => Set<PlatformSupportTicket>();
+    public DbSet<InstructorPayrollRecord> InstructorPayrollRecords => Set<InstructorPayrollRecord>();
+    public DbSet<EvaluationRubric> EvaluationRubrics => Set<EvaluationRubric>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<InstructorPayrollRecord>(entity =>
+        {
+            entity.HasIndex(x => new { x.TenantId, x.BranchId, x.InstructorId, x.Month }).IsUnique();
+            entity.Property(x => x.Month).HasMaxLength(7).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(24).IsRequired();
+            entity.Property(x => x.BonusReason).HasMaxLength(300);
+            entity.Property(x => x.DeductionReason).HasMaxLength(300);
+            entity.Property(x => x.PaymentMethod).HasMaxLength(40);
+            entity.Property(x => x.PaymentReference).HasMaxLength(120);
+        });
+
+        modelBuilder.Entity<EvaluationRubric>(entity =>
+        {
+            entity.HasIndex(x => new { x.TenantId, x.TrackKey });
+            entity.Property(x => x.TrackKey).HasMaxLength(48).IsRequired();
+            entity.Property(x => x.TrackLabel).HasMaxLength(160).IsRequired();
+            entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(1000).IsRequired();
+            entity.Property(x => x.CriteriaJson).IsRequired();
+            entity.Property(x => x.AuthorName).HasMaxLength(160);
+        });
 
         modelBuilder.Entity<PlatformSupportTicket>(entity =>
         {

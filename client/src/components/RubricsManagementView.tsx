@@ -1,4 +1,4 @@
-import { useState, useMemo, type FormEvent } from "react";
+import { useEffect, useState, useMemo, type FormEvent } from "react";
 import {
   Award,
   BookOpen,
@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
+  apiClient,
   rubricStorage,
   type DisciplineRubric,
   type RubricCriterion,
@@ -42,7 +43,8 @@ const CATEGORY_OPTIONS: Array<{ key: RubricCriterion["category"]; label: string 
 ];
 
 export default function RubricsManagementView() {
-  const [rubrics, setRubrics] = useState<DisciplineRubric[]>(() => rubricStorage.getRubrics());
+  const liveMode = apiClient.hasSession();
+  const [rubrics, setRubrics] = useState<DisciplineRubric[]>(() => (liveMode ? [] : rubricStorage.getRubrics()));
   const [selectedTrack, setSelectedTrack] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [editorModalOpen, setEditorModalOpen] = useState(false);
@@ -99,9 +101,31 @@ export default function RubricsManagementView() {
     ],
   });
 
-  const reload = () => {
+  const reload = async () => {
+    if (liveMode) {
+      const response = await apiClient.listRubrics();
+      setRubrics(response.items);
+      return;
+    }
     setRubrics(rubricStorage.getRubrics());
   };
+
+  useEffect(() => {
+    if (!liveMode) return;
+    let active = true;
+    apiClient.listRubrics()
+      .then(res => {
+        if (active) setRubrics(res.items);
+      })
+      .catch(err => {
+        if (active) {
+          toast.error(err instanceof Error ? err.message : "تعذر تحميل نماذج التقييم من الخادم");
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [liveMode]);
 
   const totalCriteriaCount = useMemo(
     () => rubrics.reduce((acc, r) => acc + r.criteria.length, 0),
@@ -186,36 +210,76 @@ export default function RubricsManagementView() {
     setEditorModalOpen(true);
   };
 
-  const handleCloneRubric = (rubric: DisciplineRubric) => {
+  const handleCloneRubric = async (rubric: DisciplineRubric) => {
+    const clonedCriteria = rubric.criteria.map(c => ({ ...c, id: `crt-${Date.now().toString().slice(-4)}-${Math.random().toString().slice(2, 5)}` }));
+    if (liveMode) {
+      try {
+        await apiClient.createRubric({
+          trackKey: rubric.trackKey,
+          trackLabel: rubric.trackLabel,
+          title: `${rubric.title} (نسخة معدلة)`,
+          description: rubric.description,
+          scaleMax: rubric.scaleMax,
+          criteria: clonedCriteria,
+          isActive: true,
+          isDefault: false,
+        });
+        await reload();
+        toast.success(`تم نسخ نموذج "${rubric.title}" وحفظه في قاعدة البيانات بنجاح!`);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "تعذر نسخ نموذج التقييم");
+      }
+      return;
+    }
     rubricStorage.createRubric({
       trackKey: rubric.trackKey,
       trackLabel: rubric.trackLabel,
       title: `${rubric.title} (نسخة معدلة)`,
       description: rubric.description,
       scaleMax: rubric.scaleMax,
-      criteria: rubric.criteria.map(c => ({ ...c, id: `crt-${Date.now().toString().slice(-4)}-${Math.random().toString().slice(2, 5)}` })),
+      criteria: clonedCriteria,
       isActive: true,
       isDefault: false,
       authorName: "مريم حسن (رئيس المدربين)",
     });
-    reload();
+    void reload();
     toast.success(`تم نسخ نموذج "${rubric.title}" بنجاح! يمكنك الآن تعديل معاييره.`);
   };
 
-  const handleSetDefault = (id: string, title: string) => {
+  const handleSetDefault = async (id: string, title: string) => {
+    if (liveMode) {
+      try {
+        await apiClient.setDefaultRubric(id);
+        await reload();
+        toast.success(`تم اعتماد نموذج "${title}" كنموذج افتراضي لهذا التخصص في قاعدة البيانات.`);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "تعذر تعيين النموذج الافتراضي");
+      }
+      return;
+    }
     rubricStorage.setDefault(id);
-    reload();
+    void reload();
     toast.success(`تم اعتماد نموذج "${title}" كنموذج افتراضي لهذا التخصص بنجاح.`);
   };
 
-  const handleDeleteRubric = (rubric: DisciplineRubric) => {
+  const handleDeleteRubric = async (rubric: DisciplineRubric) => {
     if (rubric.isDefault && rubrics.filter(r => r.trackKey === rubric.trackKey).length > 1) {
       toast.error("لا يمكن حذف النموذج الافتراضي، يرجى اعتماد نموذج آخر كافتراضي أولاً.");
       return;
     }
     if (confirm(`هل أنت متأكد من حذف نموذج التقييم "${rubric.title}"؟`)) {
+      if (liveMode) {
+        try {
+          await apiClient.deleteRubric(rubric.id);
+          await reload();
+          toast.info("تم حذف نموذج التقييم من قاعدة البيانات.");
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "تعذر حذف نموذج التقييم");
+        }
+        return;
+      }
       rubricStorage.deleteRubric(rubric.id);
-      reload();
+      void reload();
       toast.info("تم حذف نموذج التقييم بنجاح.");
     }
   };
@@ -250,7 +314,7 @@ export default function RubricsManagementView() {
     }));
   };
 
-  const handleFormSubmit = (e: FormEvent) => {
+  const handleFormSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim()) {
       toast.error("يرجى كتابة عنوان نموذج التقييم");
@@ -265,6 +329,47 @@ export default function RubricsManagementView() {
 
     const trackOpt = TRACK_OPTIONS.find(t => t.key === formData.trackKey);
     const trackLabel = trackOpt ? trackOpt.label : "تخصص عام";
+    const normalizedCriteria = formData.criteria.map(c => ({
+      ...c,
+      maxScore: formData.scaleMax,
+      key: c.key || c.label.trim().toLowerCase().replace(/\s+/g, "_"),
+    }));
+
+    if (liveMode) {
+      try {
+        if (editingRubricId) {
+          const existing = rubrics.find(r => r.id === editingRubricId);
+          await apiClient.updateRubric(editingRubricId, {
+            trackKey: formData.trackKey,
+            trackLabel,
+            title: formData.title.trim(),
+            description: formData.description.trim() || existing?.description,
+            scaleMax: formData.scaleMax,
+            criteria: normalizedCriteria,
+            isDefault: formData.isDefault,
+            isActive: true,
+          });
+          toast.success(`تم تحديث نموذج التقييم "${formData.title}" في قاعدة البيانات بنجاح!`);
+        } else {
+          await apiClient.createRubric({
+            trackKey: formData.trackKey,
+            trackLabel,
+            title: formData.title.trim(),
+            description: formData.description.trim() || `معايير تقييم تخصصية لمسار ${trackLabel}.`,
+            scaleMax: formData.scaleMax,
+            criteria: normalizedCriteria,
+            isActive: true,
+            isDefault: formData.isDefault,
+          });
+          toast.success(`تم إنشاء واعتماد نموذج التقييم الجديد في قاعدة البيانات بنجاح!`);
+        }
+        await reload();
+        setEditorModalOpen(false);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "تعذر حفظ نموذج التقييم على الخادم");
+      }
+      return;
+    }
 
     if (editingRubricId) {
       const existing = rubrics.find(r => r.id === editingRubricId);
@@ -276,11 +381,7 @@ export default function RubricsManagementView() {
           trackKey: formData.trackKey,
           trackLabel,
           scaleMax: formData.scaleMax,
-          criteria: formData.criteria.map(c => ({
-            ...c,
-            maxScore: formData.scaleMax,
-            key: c.key || c.label.trim().toLowerCase().replace(/\s+/g, "_"),
-          })),
+          criteria: normalizedCriteria,
           isDefault: formData.isDefault,
         });
         toast.success(`تم تحديث نموذج التقييم "${formData.title}" بنجاح!`);
@@ -292,11 +393,7 @@ export default function RubricsManagementView() {
         title: formData.title.trim(),
         description: formData.description.trim() || `معايير تقييم تخصصية لمسار ${trackLabel}.`,
         scaleMax: formData.scaleMax,
-        criteria: formData.criteria.map(c => ({
-          ...c,
-          maxScore: formData.scaleMax,
-          key: c.key || c.label.trim().toLowerCase().replace(/\s+/g, "_"),
-        })),
+        criteria: normalizedCriteria,
         isActive: true,
         isDefault: formData.isDefault,
         authorName: "مريم حسن (رئيس المدربين)",
@@ -304,7 +401,7 @@ export default function RubricsManagementView() {
       toast.success(`تم إنشاء واعتماد نموذج التقييم الجديد بنجاح!`);
     }
 
-    reload();
+    void reload();
     setEditorModalOpen(false);
   };
 

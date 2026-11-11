@@ -92,7 +92,8 @@ public static class LeadEndpoints
                     lead.CourseOfferingId,
                     lead.CourseOfferingId == null ? null : db.CourseOfferings.Where(o => o.Id == lead.CourseOfferingId).Join(db.CourseTemplates, o => o.CourseTemplateId, t => t.Id, (_, t) => t.Name).FirstOrDefault(),
                     lead.ConvertedStudentId,
-                    lead.CreatedAt))
+                    lead.CreatedAt,
+                    db.Branches.Where(b => b.Id == lead.BranchId).Select(b => b.Name).FirstOrDefault()))
                 .ToListAsync(cancellationToken);
 
             var total = items.Count;
@@ -114,6 +115,10 @@ public static class LeadEndpoints
             if (string.IsNullOrWhiteSpace(request.Phone)) return Problem(400, "INVALID_PHONE", "Parent phone is required.");
 
             var branchId = request.BranchId ?? scope.BranchId;
+            if (branchId == null && request.CourseOfferingId.HasValue)
+            {
+                branchId = await db.CourseOfferings.Where(o => o.Id == request.CourseOfferingId.Value && o.TenantId == scope.TenantId).Select(o => (Guid?)o.BranchId).FirstOrDefaultAsync(cancellationToken);
+            }
             if (branchId == null)
             {
                 var defaultBranch = await db.Branches.Where(b => b.TenantId == scope.TenantId).Select(b => b.Id).FirstOrDefaultAsync(cancellationToken);
@@ -122,6 +127,10 @@ public static class LeadEndpoints
             if (branchId == null) return Problem(400, "BRANCH_REQUIRED", "A valid branch is required.");
             if (request.CampaignId.HasValue && !await db.MarketingCampaigns.AnyAsync(x => x.Id == request.CampaignId.Value && x.TenantId == scope.TenantId && x.BranchId == branchId.Value, cancellationToken))
                 return Problem(400, "CAMPAIGN_NOT_FOUND", "Campaign not found in the selected branch.");
+
+            var requestedStatus = string.IsNullOrWhiteSpace(request.Status) ? "NEW" : request.Status.Trim().ToUpperInvariant();
+            if (requestedStatus is not ("NEW" or "WAITLISTED"))
+                return Problem(400, "INVALID_STATUS", "Initial lead status must be NEW or WAITLISTED.");
 
             Guid.TryParse(user.FindFirstValue("sub"), out var actorId);
 
@@ -132,10 +141,10 @@ public static class LeadEndpoints
                 ChildName = request.ChildName.Trim(),
                 ParentName = request.ParentName.Trim(),
                 Phone = request.Phone.Trim(),
-                Channel = request.Channel?.Trim() ?? "WALK_IN",
+                Channel = request.Channel?.Trim() ?? (requestedStatus == "WAITLISTED" ? "WAITLIST" : "WALK_IN"),
                 CampaignId = request.CampaignId,
                 Notes = request.Notes?.Trim(),
-                Status = "NEW",
+                Status = requestedStatus,
                 CourseOfferingId = request.CourseOfferingId,
                 CreatedByUserId = actorId
             };
@@ -150,6 +159,7 @@ public static class LeadEndpoints
                     .Join(db.CourseTemplates, o => o.CourseTemplateId, t => t.Id, (_, t) => t.Name)
                     .FirstOrDefaultAsync(cancellationToken);
             }
+            var branchName = await db.Branches.Where(b => b.Id == lead.BranchId).Select(b => b.Name).FirstOrDefaultAsync(cancellationToken);
 
             var item = new LeadItem(
                 lead.Id,
@@ -164,7 +174,8 @@ public static class LeadEndpoints
                 lead.CourseOfferingId,
                 courseName,
                 lead.ConvertedStudentId,
-                lead.CreatedAt);
+                lead.CreatedAt,
+                branchName);
 
             return TypedResults.Ok(new ApiEnvelope<LeadItem>(item));
         });
@@ -180,10 +191,10 @@ public static class LeadEndpoints
             var lead = await db.Leads.FirstOrDefaultAsync(l => l.Id == id && l.TenantId == scope.TenantId && (scope.BranchId == null || l.BranchId == scope.BranchId.Value), cancellationToken);
             if (lead is null) return Problem(404, "LEAD_NOT_FOUND", "Lead not found in current scope.");
 
-            var allowedStatuses = new[] { "NEW", "CONTACTED", "INTERESTED", "REGISTERED", "WAITLISTED", "ARCHIVED" };
+            var allowedStatuses = new[] { "NEW", "CONTACTED", "INTERESTED", "REGISTERED", "WAITLISTED", "NOTIFIED", "CANCELLED", "ARCHIVED" };
             var newStatus = request.Status?.ToUpperInvariant();
             if (newStatus == null || !allowedStatuses.Contains(newStatus))
-                return Problem(400, "INVALID_STATUS", "Status must be NEW, CONTACTED, INTERESTED, WAITLISTED, REGISTERED, or ARCHIVED.");
+                return Problem(400, "INVALID_STATUS", "Status must be NEW, CONTACTED, INTERESTED, WAITLISTED, NOTIFIED, REGISTERED, CANCELLED, or ARCHIVED.");
             if (newStatus == "REGISTERED" && string.Equals(lead.Channel, "LANDING_DEMO", StringComparison.OrdinalIgnoreCase))
                 return Problem(400, "DEMO_REQUEST_NOT_STUDENT", "A SaaS demo request cannot be marked as student registration.");
 
@@ -197,6 +208,7 @@ public static class LeadEndpoints
                     .Join(db.CourseTemplates, o => o.CourseTemplateId, t => t.Id, (_, t) => t.Name)
                     .FirstOrDefaultAsync(cancellationToken);
             }
+            var branchName = await db.Branches.Where(b => b.Id == lead.BranchId).Select(b => b.Name).FirstOrDefaultAsync(cancellationToken);
 
             return TypedResults.Ok(new ApiEnvelope<LeadItem>(new LeadItem(
                 lead.Id,
@@ -211,7 +223,25 @@ public static class LeadEndpoints
                 lead.CourseOfferingId,
                 courseName,
                 lead.ConvertedStudentId,
-                lead.CreatedAt)));
+                lead.CreatedAt,
+                branchName)));
+        });
+
+        group.MapDelete("/leads/{id:guid}", async Task<Results<NoContent, ProblemHttpResult>> (
+            Guid id,
+            ClaimsPrincipal user,
+            MadaDbContext db,
+            CancellationToken cancellationToken) =>
+        {
+            if (!TryGetScope(user, out var scope, out var scopeError)) return scopeError;
+            var lead = await db.Leads.FirstOrDefaultAsync(l => l.Id == id && l.TenantId == scope.TenantId && (scope.BranchId == null || l.BranchId == scope.BranchId.Value), cancellationToken);
+            if (lead is null) return Problem(404, "LEAD_NOT_FOUND", "Lead not found in current scope.");
+            if (string.Equals(lead.Status, "REGISTERED", StringComparison.OrdinalIgnoreCase))
+                return Problem(409, "LEAD_ALREADY_REGISTERED", "Registered student leads cannot be deleted from the waitlist.");
+
+            db.Leads.Remove(lead);
+            await db.SaveChangesAsync(cancellationToken);
+            return TypedResults.NoContent();
         });
 
         group.MapPost("/leads/{id:guid}/convert", async Task<Results<Ok<ApiEnvelope<ConvertLeadResponse>>, ProblemHttpResult>> (
@@ -244,63 +274,87 @@ public static class LeadEndpoints
                     return Problem(400, "GROUP_FULL", "Selected course group has reached maximum capacity.");
             }
 
-            var student = new Student
+            Student? student = null;
+            if (lead.ConvertedStudentId.HasValue)
             {
-                TenantId = scope.TenantId,
-                BranchId = lead.BranchId,
-                FullName = lead.ChildName.Trim(),
-                DateOfBirth = request.DateOfBirth,
-                Status = "ACTIVE",
-                ReferredByStudentId = request.ReferredByStudentId
-            };
-            db.Students.Add(student);
+                student = await db.Students.FirstOrDefaultAsync(s => s.Id == lead.ConvertedStudentId.Value && s.TenantId == scope.TenantId, cancellationToken);
+            }
+            if (student is null)
+            {
+                student = new Student
+                {
+                    TenantId = scope.TenantId,
+                    BranchId = lead.BranchId,
+                    FullName = lead.ChildName.Trim(),
+                    DateOfBirth = request.DateOfBirth,
+                    Status = "ACTIVE",
+                    ReferredByStudentId = request.ReferredByStudentId
+                };
+                db.Students.Add(student);
+            }
 
             StudentEnrollment? enrollment = null;
             Invoice? invoice = null;
 
             if (offering != null && template != null)
             {
+                enrollment = await db.StudentEnrollments.FirstOrDefaultAsync(
+                    e => e.StudentId == student.Id && e.CourseOfferingId == offering.Id && (e.Status == "WAITLISTED" || e.Status == "ACTIVE"),
+                    cancellationToken);
+
                 var basePrice = template.BasePricePiastres;
                 var discountPercent = request.DiscountPercent ?? 0;
                 var finalPrice = Math.Max(0, basePrice - (basePrice * discountPercent / 100));
 
-                enrollment = new StudentEnrollment
+                if (enrollment is null)
                 {
-                    StudentId = student.Id,
-                    CourseOfferingId = offering.Id,
-                    FinalPricePiastres = finalPrice,
-                    Status = waitlisted ? "WAITLISTED" : "ACTIVE"
-                };
-                db.StudentEnrollments.Add(enrollment);
+                    enrollment = new StudentEnrollment
+                    {
+                        StudentId = student.Id,
+                        CourseOfferingId = offering.Id,
+                        FinalPricePiastres = finalPrice,
+                        Status = waitlisted ? "WAITLISTED" : "ACTIVE"
+                    };
+                    db.StudentEnrollments.Add(enrollment);
+                }
+                else if (enrollment.Status == "WAITLISTED" && !waitlisted)
+                {
+                    enrollment.Status = "ACTIVE";
+                    enrollment.UpdatedAt = DateTimeOffset.UtcNow;
+                }
 
                 if (request.CreateInvoice && !waitlisted)
                 {
-                    var count = await db.Invoices.CountAsync(i => i.TenantId == scope.TenantId, cancellationToken);
-                    var branch = await db.Branches.FindAsync([lead.BranchId], cancellationToken);
-                    var branchCode = branch?.Code ?? "MAIN";
-                    var invoiceNumber = $"MAD-{branchCode}-{DateTime.UtcNow.Year}-{(count + 1):D4}";
+                    var hasInvoice = await db.Invoices.AnyAsync(i => i.EnrollmentId == enrollment.Id, cancellationToken);
+                    if (!hasInvoice)
+                    {
+                        var count = await db.Invoices.CountAsync(i => i.TenantId == scope.TenantId, cancellationToken);
+                        var branch = await db.Branches.FindAsync([lead.BranchId], cancellationToken);
+                        var branchCode = branch?.Code ?? "MAIN";
+                        var invoiceNumber = $"MAD-{branchCode}-{DateTime.UtcNow.Year}-{(count + 1):D4}";
 
-                    Guid.TryParse(user.FindFirstValue("sub"), out var actorId);
-                    invoice = new Invoice
-                    {
-                        TenantId = scope.TenantId,
-                        BranchId = lead.BranchId,
-                        StudentId = student.Id,
-                        EnrollmentId = enrollment.Id,
-                        InvoiceNumber = invoiceNumber,
-                        IssueDate = DateOnly.FromDateTime(DateTime.UtcNow),
-                        DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(14)),
-                        TotalPiastres = finalPrice,
-                        Status = "UNPAID",
-                        CreatedByUserId = actorId
-                    };
-                    invoice.Lines.Add(new InvoiceLine
-                    {
-                        LineNumber = 1,
-                        Description = $"{template.Name} {(discountPercent > 0 ? $"(خصم {discountPercent}%)" : "")}".Trim(),
-                        AmountPiastres = finalPrice
-                    });
-                    db.Invoices.Add(invoice);
+                        Guid.TryParse(user.FindFirstValue("sub"), out var actorId);
+                        invoice = new Invoice
+                        {
+                            TenantId = scope.TenantId,
+                            BranchId = lead.BranchId,
+                            StudentId = student.Id,
+                            EnrollmentId = enrollment.Id,
+                            InvoiceNumber = invoiceNumber,
+                            IssueDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                            DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(14)),
+                            TotalPiastres = enrollment.FinalPricePiastres,
+                            Status = "UNPAID",
+                            CreatedByUserId = actorId
+                        };
+                        invoice.Lines.Add(new InvoiceLine
+                        {
+                            LineNumber = 1,
+                            Description = $"{template.Name} {(discountPercent > 0 ? $"(خصم {discountPercent}%)" : "")}".Trim(),
+                            AmountPiastres = enrollment.FinalPricePiastres
+                        });
+                        db.Invoices.Add(invoice);
+                    }
                 }
             }
 
@@ -410,6 +464,26 @@ public static class LeadEndpoints
                     });
                     db.Invoices.Add(invoice);
                 }
+
+                if (waitlisted)
+                {
+                    Guid.TryParse(user.FindFirstValue("sub"), out var waitlistActorId);
+                    var parentParts = student.FullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    db.Leads.Add(new Lead
+                    {
+                        TenantId = scope.TenantId,
+                        BranchId = branchId.Value,
+                        ChildName = student.FullName,
+                        ParentName = parentParts.Length > 1 ? string.Join(' ', parentParts.Skip(1)) : "ولي الأمر",
+                        Phone = request.Phone?.Trim() ?? "",
+                        Channel = "DIRECT_WAITLIST",
+                        Notes = "تسجيل مكتبي فوري - أدرج في قائمة الانتظار لاكتمال مقاعد المجموعة.",
+                        Status = "WAITLISTED",
+                        CourseOfferingId = offering.Id,
+                        ConvertedStudentId = student.Id,
+                        CreatedByUserId = waitlistActorId == Guid.Empty ? null : waitlistActorId
+                    });
+                }
             }
 
             await db.SaveChangesAsync(cancellationToken);
@@ -449,8 +523,8 @@ public static class LeadEndpoints
 }
 
 public sealed record LeadListResponse(IReadOnlyList<LeadItem> Items, int Total, int Overdue, int Active);
-public sealed record LeadItem(Guid Id, Guid BranchId, string ChildName, string ParentName, string Phone, string Channel, Guid? CampaignId, string? Notes, string Status, Guid? CourseOfferingId, string? CourseName, Guid? ConvertedStudentId, DateTimeOffset CreatedAt);
-public sealed record CreateLeadRequest(string ChildName, string ParentName, string Phone, string? Channel, string? Notes, Guid? CourseOfferingId, Guid? BranchId, Guid? CampaignId);
+public sealed record LeadItem(Guid Id, Guid BranchId, string ChildName, string ParentName, string Phone, string Channel, Guid? CampaignId, string? Notes, string Status, Guid? CourseOfferingId, string? CourseName, Guid? ConvertedStudentId, DateTimeOffset CreatedAt, string? BranchName = null);
+public sealed record CreateLeadRequest(string ChildName, string ParentName, string Phone, string? Channel, string? Notes, Guid? CourseOfferingId, Guid? BranchId, Guid? CampaignId, string? Status = null);
 public sealed record UpdateLeadStatusRequest(string Status);
 public sealed record ConvertLeadRequest(Guid? CourseOfferingId, DateOnly? DateOfBirth, int? DiscountPercent, bool CreateInvoice = true, bool JoinWaitlistIfFull = true, Guid? ReferredByStudentId = null);
 public sealed record DirectStudentRegistrationRequest(string FullName, string? Phone, Guid? BranchId, Guid? CourseOfferingId, DateOnly? DateOfBirth, int? DiscountPercent, bool CreateInvoice = true, bool JoinWaitlistIfFull = true, Guid? ReferredByStudentId = null);
