@@ -1,6 +1,3 @@
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.RateLimiting;
 using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Modules.Competitions;
@@ -89,7 +86,6 @@ builder.Services.AddSingleton(rateLimitTopology);
 if (builder.Environment.IsDevelopment()) builder.Services.AddSingleton<ISmsMessageSender, DevelopmentSmsMessageSender>();
 else builder.Services.AddSingleton<ISmsMessageSender, UnconfiguredSmsMessageSender>();
 builder.Services.AddScoped<ConflictService>();
-builder.Services.AddSingleton<IAuditSink, DevelopmentAuditSink>();
 builder.Services.AddCors(options =>
 {
     void ConfigureCors(Microsoft.AspNetCore.Cors.Infrastructure.CorsPolicyBuilder policy)
@@ -156,6 +152,9 @@ app.MapMadaPlatformAdminEndpoints();
 app.MapMadaOperationalReportEndpoints();
 app.MapMadaAnalyticsEndpoints();
 app.MapMadaCompetitionEndpoints();
+app.MapMadaTenantScopeEndpoints();
+app.MapMadaDashboardSummaryEndpoints();
+app.MapMadaSchedulingConflictEndpoints();
 
 app.MapMadaAuthEndpoints();
 if (developmentEndpointsEnabled)
@@ -187,44 +186,6 @@ if (developmentEndpointsEnabled)
     }).AllowAnonymous();
 }
 
-app.MapGet("/api/v1/tenants/{tenantId:guid}/scope-check", (Guid tenantId, HttpContext context) =>
-{
-    var isPlatformAdmin = context.User.IsInRole("R00_PLATFORM_ADMIN");
-    var tokenTenantId = context.User.FindFirstValue("tenantId");
-    if (!isPlatformAdmin && !string.Equals(tokenTenantId, tenantId.ToString(), StringComparison.OrdinalIgnoreCase))
-        return Results.Problem(statusCode: 403, title: "Tenant scope denied", extensions: new Dictionary<string, object?> { ["code"] = "TENANT_SCOPE_DENIED" });
-    return Results.Ok(new { data = new { tenantId, access = "allowed", role = context.User.FindFirstValue("role") } });
-}).RequireAuthorization("staff");
-
-app.MapGet("/api/v1/dashboard/summary", async (HttpContext context, MadaDbContext db, CancellationToken cancellationToken) =>
-{
-    if (!context.User.IsInRole("R01_ACADEMY_OWNER") && !context.User.IsInRole("R02_BRANCH_MANAGER")) return Results.Forbid();
-    if (!Guid.TryParse(context.User.FindFirstValue("tenantId"), out var tenantId)) return Results.Problem(statusCode: 403, title: "Missing tenant scope");
-    var hasBranchScope = context.User.IsInRole("R02_BRANCH_MANAGER");
-    var branchId = Guid.TryParse(context.User.FindFirstValue("branchId"), out var parsedBranchId) ? parsedBranchId : (Guid?)null;
-    if (hasBranchScope && !branchId.HasValue) return Results.Forbid();
-    var scopedBranchId = branchId.GetValueOrDefault();
-    var students = db.Students.Where(x => x.TenantId == tenantId && (!hasBranchScope || x.BranchId == scopedBranchId));
-    var enrollments = db.StudentEnrollments.Where(x => x.StudentId != Guid.Empty).Join(students, x => x.StudentId, x => x.Id, (enrollment, _) => enrollment);
-    var sessions = db.AcademySessions.Where(x => x.TenantId == tenantId && (!hasBranchScope || x.BranchId == scopedBranchId));
-    var upcoming = await sessions.Where(x => x.StartAt > DateTimeOffset.UtcNow && x.Status != "CANCELLED").OrderBy(x => x.StartAt).Take(5).Select(x => new { x.Id, x.SessionNumber, x.StartAt, x.Status }).ToListAsync(cancellationToken);
-    return Results.Ok(new { data = new { students = await students.CountAsync(cancellationToken), activeEnrollments = await enrollments.CountAsync(x => x.Status == "ACTIVE", cancellationToken), upcomingSessions = await sessions.CountAsync(x => x.StartAt > DateTimeOffset.UtcNow && x.Status != "CANCELLED", cancellationToken), completedSessions = await sessions.CountAsync(x => x.Status == "COMPLETED", cancellationToken), branchCount = hasBranchScope ? 1 : await db.Branches.CountAsync(x => x.TenantId == tenantId && x.Status == "ACTIVE", cancellationToken), upcoming } });
-}).RequireAuthorization("staff");
-
-app.MapPost("/api/v1/scheduling/check-conflict", async (ConflictCheckRequest request, ConflictService conflicts, HttpContext context, MadaDbContext db, CancellationToken cancellationToken) =>
-{
-    var isTenantScoped = context.User.IsInRole("R01_ACADEMY_OWNER");
-    var isBranchScoped = context.User.IsInRole("R02_BRANCH_MANAGER") || context.User.IsInRole("R03_HEAD_INSTRUCTORS");
-    if (!isTenantScoped && !isBranchScoped) return Results.Forbid();
-    if (!Guid.TryParse(context.User.FindFirstValue("tenantId"), out var tenantId)) return Results.Forbid();
-    if (isBranchScoped && (!Guid.TryParse(context.User.FindFirstValue("branchId"), out var claimedBranchId) || claimedBranchId != request.BranchId))
-        return Results.Problem(statusCode: 403, title: "Branch scope denied", extensions: new Dictionary<string, object?> { ["code"] = "BRANCH_SCOPE_DENIED" });
-    if (!await db.Branches.AnyAsync(branch => branch.Id == request.BranchId && branch.TenantId == tenantId && branch.Status == "ACTIVE", cancellationToken))
-        return Results.NotFound(new { error = new { code = "BRANCH_NOT_FOUND", message = "الفرع غير موجود داخل الأكاديمية." } });
-    var result = await conflicts.CheckAsync(request, cancellationToken);
-    return result.HasConflict ? Results.Conflict(new { error = new { code = "SCHEDULING_CONFLICT", details = result.Conflicts } }) : Results.Ok(new { data = result });
-}).RequireAuthorization("staff");
-
 app.Run();
 
 static bool IsEnabled(string name) => string.Equals(Environment.GetEnvironmentVariable(name), "true", StringComparison.OrdinalIgnoreCase);
@@ -243,16 +204,5 @@ static IReadOnlyList<System.Net.IPAddress> LoadTrustedProxyAddresses(IConfigurat
     return addresses;
 }
 static string GetClientAddress(HttpContext context) => context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-public sealed record AuditInput(string Action, string TargetType, string TargetId, string? TenantId, string? BranchId, string? Reason);
-public interface IAuditSink { Task AppendAsync(AuditInput input); }
-public sealed class DevelopmentAuditSink : IAuditSink { private readonly List<AuditInput> _events = []; public Task AppendAsync(AuditInput input) { _events.Add(input); return Task.CompletedTask; } }
-public static class StateTransitions
-{
-    public static bool IsAllowed(string from, string to) => (from, to) switch
-    {
-        ("DRAFT", "PENDING") => true, ("PENDING", "APPROVED") => true, ("PENDING", "REJECTED") => true, ("PENDING", "ESCALATED") => true, ("LOCKED", "CORRECTION_PENDING") => true, ("CORRECTION_PENDING", "APPROVED") => true, ("CORRECTION_PENDING", "REJECTED") => true, _ => false
-    };
-}
-public static class DevTokenFingerprint { public static string Sha256(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant(); }
 
 public partial class Program { }

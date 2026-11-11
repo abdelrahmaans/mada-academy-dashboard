@@ -118,23 +118,23 @@ public static class FinanceEndpoints
             }
         }
 
-        await InMemoryPaymentGate.WaitAsync(cancellationToken);
-        try
+        if (db.Database.IsRelational())
         {
-            if (db.Database.IsRelational())
-            {
-                await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
-                var result = await SavePaymentAsync(invoiceId, request, scope, actorId, idempotencyKey, db, cancellationToken);
-                if (result is not null) return result;
-                await transaction.CommitAsync(cancellationToken);
-            }
-            else
-            {
-                var result = await SavePaymentAsync(invoiceId, request, scope, actorId, idempotencyKey, db, cancellationToken);
-                if (result is not null) return result;
-            }
+            await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+            var result = await SavePaymentAsync(invoiceId, request, scope, actorId, idempotencyKey, db, cancellationToken);
+            if (result is not null) return result;
+            await transaction.CommitAsync(cancellationToken);
         }
-        finally { InMemoryPaymentGate.Release(); }
+        else
+        {
+            await InMemoryPaymentGate.WaitAsync(cancellationToken);
+            try
+            {
+                var result = await SavePaymentAsync(invoiceId, request, scope, actorId, idempotencyKey, db, cancellationToken);
+                if (result is not null) return result;
+            }
+            finally { InMemoryPaymentGate.Release(); }
+        }
         var payment = await db.PaymentTransactions.AsNoTracking().Include(x => x.Evidence).Where(x => x.RecordedByUserId == actorId && x.InvoiceId == invoiceId).OrderByDescending(x => x.CreatedAt).FirstAsync(cancellationToken);
         return Results.Created($"/api/v1/finance/payments/{payment.Id}", new { data = new { payment = ToPaymentResponse(payment), invoiceId } });
     }

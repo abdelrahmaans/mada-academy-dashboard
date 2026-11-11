@@ -47,7 +47,6 @@ import { ContactSupportModal } from "./ContactSupportModal";
 const ICON_BY_PATH: Record<string, ComponentType<LucideProps>> = {
   "/": LayoutDashboard,
   "/executive-dashboard": LayoutDashboard,
-  "/branch-operations": Building2,
   "/students": Users,
   "/classes": BookOpen,
   "/schedule": CalendarDays,
