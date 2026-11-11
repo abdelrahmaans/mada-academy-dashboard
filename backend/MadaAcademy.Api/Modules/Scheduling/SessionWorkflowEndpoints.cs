@@ -19,6 +19,8 @@ public static class SessionWorkflowEndpoints
         scheduling.MapGet("/groups", ListGroupsAsync);
         scheduling.MapGet("/instructors", ListInstructorsAsync);
         scheduling.MapPost("/sessions", CreateSessionAsync);
+        scheduling.MapPatch("/sessions/{sessionId:guid}", UpdateSessionAsync);
+        scheduling.MapPost("/sessions/{sessionId:guid}/cancel", CancelSessionAsync);
         scheduling.MapPost("/groups", CreateGroupAsync);
         scheduling.MapPost("/session-requests", RequestSessionAsync);
         scheduling.MapPost("/sessions/{sessionId:guid}/substitution-requests", RequestSubstitutionAsync);
@@ -139,6 +141,117 @@ public static class SessionWorkflowEndpoints
         await NotifyStaffAsync(db, tenantId, request.BranchId, request.InstructorId, "SESSION_CREATED", "تم إنشاء جلسة", "تم حفظ جلسة جديدة في الجدول.", "SESSION", session.Id.ToString(), cancellationToken);
         await db.SaveChangesAsync(cancellationToken); await CommitAsync(transaction, cancellationToken);
         return Results.Created($"/api/v1/scheduling/sessions/{session.Id}", new { data = new { sessionId = session.Id, status = session.Status, sessionNumber = session.SessionNumber, startAt = session.StartAt, endAt = session.EndAt, classroomId = session.ClassroomId, instructorId = session.InstructorId } });
+    }
+
+    private static async Task<IResult> UpdateSessionAsync(
+        Guid sessionId,
+        UpdateSessionRequest request,
+        ClaimsPrincipal user,
+        MadaDbContext db,
+        ConflictService conflicts,
+        CancellationToken cancellationToken)
+    {
+        if (!CanManageScheduling(user)) return Results.Forbid();
+        if (!Scope(user, out var tenantId, out var branchScope)) return Forbidden("TENANT_SCOPE_REQUIRED");
+
+        var session = await db.AcademySessions
+            .SingleOrDefaultAsync(s => s.Id == sessionId && s.TenantId == tenantId && (!branchScope.HasValue || s.BranchId == branchScope.Value), cancellationToken);
+        if (session is null) return NotFound("SESSION_NOT_FOUND");
+        if (session.Status is "COMPLETED" or "CANCELLED")
+            return Conflict("SESSION_NOT_EDITABLE", "Completed or cancelled sessions cannot be modified.");
+
+        var nextStart = request.StartAt ?? session.StartAt;
+        var nextEnd = request.EndAt ?? session.EndAt;
+        if (nextEnd <= nextStart) return Validation("time", "EndAt must be after StartAt.");
+
+        var nextClassroomId = request.ClassroomId ?? session.ClassroomId;
+        var nextInstructorId = request.InstructorId ?? session.InstructorId;
+
+        var classroom = await db.Classrooms.SingleOrDefaultAsync(
+            c => c.Id == nextClassroomId && c.BranchId == session.BranchId && c.Status == "AVAILABLE", cancellationToken);
+        if (classroom is null) return Conflict("CLASSROOM_UNAVAILABLE", "The selected classroom is not available.");
+        if (!await IsActiveStaffMember(db, nextInstructorId, tenantId, session.BranchId, cancellationToken))
+            return Validation("instructorId", "The instructor is not active in this branch.");
+
+        var conflict = await conflicts.CheckAsync(
+            new ConflictCheckRequest(session.BranchId, nextInstructorId, nextClassroomId, [], [], nextStart, nextEnd, ExcludeSessionId: session.Id),
+            cancellationToken);
+        if (conflict.HasConflict)
+            return Results.Conflict(new { error = new { code = "SCHEDULING_CONFLICT", details = conflict.Conflicts } });
+
+        session.StartAt = nextStart;
+        session.EndAt = nextEnd;
+        session.ClassroomId = nextClassroomId;
+        session.InstructorId = nextInstructorId;
+        if (!string.IsNullOrWhiteSpace(request.Type)) session.Type = request.Type.Trim().ToUpperInvariant();
+        if (request.Notes is not null) session.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
+        session.UpdatedAt = DateTimeOffset.UtcNow;
+
+        db.AuditEvents.Add(new AuditEvent
+        {
+            ActorUserId = Actor(user),
+            TenantId = tenantId,
+            BranchId = session.BranchId,
+            Action = "SESSION_UPDATED",
+            TargetType = "SESSION",
+            TargetId = session.Id.ToString(),
+            Reason = "Updated session timing or resource assignment"
+        });
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Results.Ok(new
+        {
+            data = new
+            {
+                sessionId = session.Id,
+                status = session.Status,
+                sessionNumber = session.SessionNumber,
+                startAt = session.StartAt,
+                endAt = session.EndAt,
+                classroomId = session.ClassroomId,
+                instructorId = session.InstructorId,
+                type = session.Type,
+                notes = session.Notes
+            }
+        });
+    }
+
+    private static async Task<IResult> CancelSessionAsync(
+        Guid sessionId,
+        CancelSessionRequest? request,
+        ClaimsPrincipal user,
+        MadaDbContext db,
+        CancellationToken cancellationToken)
+    {
+        if (!CanManageScheduling(user)) return Results.Forbid();
+        if (!Scope(user, out var tenantId, out var branchScope)) return Forbidden("TENANT_SCOPE_REQUIRED");
+
+        var session = await db.AcademySessions
+            .SingleOrDefaultAsync(s => s.Id == sessionId && s.TenantId == tenantId && (!branchScope.HasValue || s.BranchId == branchScope.Value), cancellationToken);
+        if (session is null) return NotFound("SESSION_NOT_FOUND");
+        if (session.Status == "COMPLETED")
+            return Conflict("SESSION_ALREADY_COMPLETED", "Completed sessions cannot be cancelled.");
+        if (session.Status == "CANCELLED")
+            return Results.Ok(new { data = new { sessionId = session.Id, status = session.Status } });
+
+        session.Status = "CANCELLED";
+        session.UpdatedAt = DateTimeOffset.UtcNow;
+        var reason = string.IsNullOrWhiteSpace(request?.Reason) ? "إلغاء الجلسة من الجدول التشغيلي" : request!.Reason!.Trim();
+
+        db.AuditEvents.Add(new AuditEvent
+        {
+            ActorUserId = Actor(user),
+            TenantId = tenantId,
+            BranchId = session.BranchId,
+            Action = "SESSION_CANCELLED",
+            TargetType = "SESSION",
+            TargetId = session.Id.ToString(),
+            Reason = reason
+        });
+        await NotifyStaffAsync(db, tenantId, session.BranchId, session.InstructorId, "SESSION_CANCELLED", "تم إلغاء جلسة", $"تم إلغاء الجلسة رقم {session.SessionNumber}: {reason}", "SESSION", session.Id.ToString(), cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Results.Ok(new { data = new { sessionId = session.Id, status = session.Status } });
     }
 
     private static async Task<IResult> CreateGroupAsync(CreateGroupRequest request, ClaimsPrincipal user, MadaDbContext db, ConflictService conflicts, CancellationToken cancellationToken)
@@ -944,6 +1057,8 @@ public sealed record UpsertRubricRequest(string TrackKey, string TrackLabel, str
 public sealed record CreateGroupRequest(Guid BranchId, Guid CourseTemplateId, Guid InstructorId, Guid ClassroomId, DateOnly StartDate, DateOnly EndDate, IReadOnlyList<int> DaysOfWeek, TimeOnly StartTime, int DurationMinutes, int MaxStudents, IReadOnlyList<Guid>? StudentIds = null, int FinalPricePiastres = 0, string? Notes = null);
 public sealed record CreateCourseTemplateRequest(string Name, string Track, string Type, string AgeGroup, string Level, int TotalSessions, decimal SessionDurationHours, int BasePricePiastres);
 public sealed record CreateSessionRequest(Guid BranchId, Guid ClassroomId, Guid InstructorId, DateTimeOffset StartAt, DateTimeOffset EndAt, int SessionNumber, Guid? CourseOfferingId = null, string? Type = "REGULAR", string? Notes = null, IReadOnlyList<Guid>? StudentIds = null, IReadOnlyList<KitRequest>? Kits = null);
+public sealed record UpdateSessionRequest(DateTimeOffset? StartAt = null, DateTimeOffset? EndAt = null, Guid? ClassroomId = null, Guid? InstructorId = null, string? Type = null, string? Notes = null);
+public sealed record CancelSessionRequest(string? Reason = null);
 public sealed record RequestSessionRequest(string Type, Guid BranchId, Guid ClassroomId, DateTimeOffset StartAt, DateTimeOffset EndAt, int SessionNumber, IReadOnlyList<Guid>? StudentIds = null, Guid? CourseOfferingId = null, Guid? InstructorId = null, string? Reason = null, string? Notes = null);
 public sealed record SubstitutionRequest(string Reason);
 public sealed record SubstituteProposalRequest(string? Message);

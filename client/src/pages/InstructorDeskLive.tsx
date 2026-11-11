@@ -19,6 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   apiClient,
   type AttendanceItem,
+  type DisciplineRubric,
   type MySupervisionGroup,
   type SessionEvaluationRecord,
   type SessionRecord,
@@ -83,6 +84,7 @@ export default function InstructorDeskLive() {
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [earnings, setEarnings] = useState<MyInstructorEarnings | null>(null);
   const [earningsLoading, setEarningsLoading] = useState(true);
+  const [rubrics, setRubrics] = useState<DisciplineRubric[]>([]);
   const [completionModalOpen, setCompletionModalOpen] = useState(false);
   const [substituteModalOpen, setSubstituteModalOpen] = useState(false);
 
@@ -249,6 +251,22 @@ export default function InstructorDeskLive() {
     selectedEvaluation?.notes,
     selectedSessionId,
   ]);
+
+  useEffect(() => {
+    if (authLoading || !me || me.role !== "R04_INSTRUCTOR") return;
+    let cancelled = false;
+    apiClient
+      .listRubrics()
+      .then(res => {
+        if (!cancelled) setRubrics(res.items);
+      })
+      .catch(() => {
+        // Optional rubric guide; manual 0-100 scoring remains available
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, me]);
 
   const counts = useMemo(() => {
     const statuses = attendanceRows.map(
@@ -621,6 +639,25 @@ export default function InstructorDeskLive() {
                     onScoreChange={setScore}
                     onNotesChange={setNotes}
                     onSaveEvaluation={(submit) => void saveEvaluation(submit)}
+                    activeRubric={
+                      rubrics.find(r => {
+                        const title = `${selectedSession?.courseName ?? ""} ${selectedSession?.notes ?? ""}`.toLowerCase();
+                        const expectedTrack =
+                          title.includes("سباح") || title.includes("رياض")
+                            ? "sports_swimming"
+                            : title.includes("برمج") || title.includes("كود") || title.includes("coding")
+                            ? "coding"
+                            : title.includes("دوائر") || title.includes("إلكترون") || title.includes("circuit")
+                            ? "circuits"
+                            : title.includes("مهار") || title.includes("قياد") || title.includes("soft")
+                            ? "soft_skills"
+                            : "robotics";
+                        return r.trackKey === expectedTrack && r.isDefault;
+                      }) ??
+                      rubrics.find(r => r.trackKey === "robotics" && r.isDefault) ??
+                      rubrics[0] ??
+                      null
+                    }
                   />
                 )}
             </section>

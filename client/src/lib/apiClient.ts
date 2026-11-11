@@ -278,6 +278,9 @@ export type StudentRecord = {
   activeEnrollmentCount: number;
   code?: string;
   studentCode?: string;
+  parentName?: string | null;
+  parentPhone?: string | null;
+  relationship?: string | null;
 };
 
 export type StudentListResponse = {
@@ -1039,6 +1042,10 @@ export const apiClient = {
   createGroup: (input: CreateGroupInput) => request<CreateGroupResponse>("/scheduling/groups", { method: "POST", body: JSON.stringify(input) }),
   createSession: (input: { branchId: string; classroomId: string; instructorId: string; startAt: string; endAt: string; sessionNumber: number; courseOfferingId?: string; type?: string; notes?: string; studentIds?: string[]; kits?: Array<{ kitId: string; quantity: number }> }) =>
     request<{ sessionId: string; status: string; sessionNumber: number; startAt: string; endAt: string; classroomId: string; instructorId: string }>("/scheduling/sessions", { method: "POST", body: JSON.stringify(input) }),
+  updateSession: (sessionId: string, input: { classroomId?: string; instructorId?: string; startAt?: string; endAt?: string; type?: string; notes?: string }) =>
+    request<{ sessionId: string; status: string; sessionNumber: number; startAt: string; endAt: string; classroomId: string; instructorId: string; type: string; notes: string | null }>(`/scheduling/sessions/${sessionId}`, { method: "PATCH", body: JSON.stringify(input) }),
+  cancelSession: (sessionId: string, reason?: string) =>
+    request<{ sessionId: string; status: string }>(`/scheduling/sessions/${sessionId}/cancel`, { method: "POST", body: JSON.stringify({ reason }) }),
   requestSession: (input: { type: "EXTRA" | "MAKEUP"; branchId: string; classroomId: string; startAt: string; endAt: string; sessionNumber: number; studentIds?: string[]; courseOfferingId?: string; instructorId?: string; reason?: string; notes?: string }) =>
     request<{ approvalId: string; sessionId: string; state: string; type?: string }>("/scheduling/session-requests", { method: "POST", body: JSON.stringify(input) }),
   requestSubstitution: (sessionId: string, reason: string) => request<{ approvalId: string; sessionId: string; state: string }>(`/scheduling/sessions/${sessionId}/substitution-requests`, { method: "POST", body: JSON.stringify({ reason }) }),

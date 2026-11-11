@@ -77,15 +77,15 @@ public sealed class P1CoreJourneyApiTests
         Assert.DoesNotContain("Lina Omar", parentStudents, StringComparison.Ordinal);
         var parentSessions = await parentClient.GetStringAsync("/api/v1/consumer/me/sessions");
         Assert.Contains("Youssef Ahmed", parentSessions, StringComparison.Ordinal);
-        Assert.Contains("88", parentSessions, StringComparison.Ordinal);
-        Assert.DoesNotContain("91", parentSessions, StringComparison.Ordinal);
+        Assert.Contains("\"score\":88", parentSessions, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"score\":91", parentSessions, StringComparison.Ordinal);
 
         var studentStudents = await studentClient.GetStringAsync("/api/v1/consumer/me/students");
         Assert.Contains("Lina Omar", studentStudents, StringComparison.Ordinal);
         Assert.DoesNotContain("Youssef Ahmed", studentStudents, StringComparison.Ordinal);
         var studentSessions = await studentClient.GetStringAsync("/api/v1/consumer/me/sessions");
         Assert.Contains("Lina Omar", studentSessions, StringComparison.Ordinal);
-        Assert.Contains("91", studentSessions, StringComparison.Ordinal);
+        Assert.Contains("\"score\":91", studentSessions, StringComparison.Ordinal);
         Assert.DoesNotContain("Youssef Ahmed", studentSessions, StringComparison.Ordinal);
     }
 

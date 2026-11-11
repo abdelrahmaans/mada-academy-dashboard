@@ -310,12 +310,6 @@ function SchedulePage() {
   };
 
   const openEditDialog = (session: Session) => {
-    if (liveMode) {
-      toast.info("تعديل الجلسة من الجدول غير متاح عبر الـAPI الحالي", {
-        description: "لن يتم حفظ أي تعديل محلي على جلسة خادمية.",
-      });
-      return;
-    }
     setEditingId(session.id);
     setForm({
       date: session.date,
@@ -324,8 +318,17 @@ function SchedulePage() {
       title: session.title,
       level: session.level,
       instructor: session.instructor,
+      instructorId:
+        session.instructorId ??
+        liveInstructors.find(i => i.name === session.instructor)?.id,
       room: session.room,
+      classroomId:
+        session.classroomId ??
+        liveClassrooms.find(r => r.name === session.room)?.id,
       branch: session.branch,
+      branchId:
+        session.branchId ??
+        liveClassrooms.find(r => r.name === session.room)?.branchId,
       type: session.type,
     });
     setDetailsSession(null);
@@ -340,10 +343,6 @@ function SchedulePage() {
   const handleSessionSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (liveMode) {
-      if (dialogMode === "edit") {
-        toast.error("لا يتوفر endpoint لتعديل الجلسة بعد.");
-        return;
-      }
       const liveRoom = liveClassrooms.find(
         room => room.id === form.classroomId
       );
@@ -357,6 +356,46 @@ function SchedulePage() {
       const startsAt = new Date(`${form.date}T${form.startTime}:00`);
       const endsAt = new Date(startsAt);
       endsAt.setMinutes(endsAt.getMinutes() + Number(form.duration));
+      if (dialogMode === "edit" && editingId) {
+        try {
+          const updated = await apiClient.updateSession(editingId, {
+            classroomId: liveRoom.id,
+            instructorId: liveInstructor.id,
+            startAt: startsAt.toISOString(),
+            endAt: endsAt.toISOString(),
+            type: form.type.toUpperCase(),
+            notes: form.title.trim(),
+          });
+          setSessions(current =>
+            current.map(item =>
+              item.id === editingId
+                ? {
+                    ...item,
+                    date: form.date,
+                    startTime: form.startTime,
+                    duration: Number(form.duration),
+                    title: form.title.trim(),
+                    instructor: liveInstructor.name ?? liveInstructor.id,
+                    room: liveRoom.name,
+                    branch: liveRoom.branchName,
+                    branchId: liveRoom.branchId,
+                    classroomId: updated.classroomId,
+                    instructorId: updated.instructorId,
+                    type: form.type,
+                  }
+                : item
+            )
+          );
+          toast.success("تم حفظ تعديلات الجلسة على الخادم بنجاح");
+          closeDialog();
+        } catch (cause) {
+          toast.error("تعذر تعديل الجلسة", {
+            description:
+              cause instanceof Error ? cause.message : "فشل الاتصال بالخادم.",
+          });
+        }
+        return;
+      }
       try {
         const response = await apiClient.createSession({
           branchId: liveRoom.branchId,
@@ -469,12 +508,23 @@ function SchedulePage() {
     closeDialog();
   };
 
-  const cancelSession = (session: Session) => {
+  const cancelSession = async (session: Session) => {
     if (liveMode) {
-      toast.info("إلغاء الجلسة غير متاح من هذه الشاشة", {
-        description:
-          "لا يوجد endpoint إلغاء في الـAPI الحالي؛ لم يتغير سجل الخادم.",
-      });
+      try {
+        await apiClient.cancelSession(session.id, "إلغاء من جدول الحصص التشغيلي");
+        setSessions(current =>
+          current.map(item =>
+            item.id === session.id ? { ...item, status: "cancelled" } : item
+          )
+        );
+        setDetailsSession(null);
+        toast.success("تم إلغاء الجلسة وحفظ الحالة على الخادم");
+      } catch (cause) {
+        toast.error("تعذر إلغاء الجلسة", {
+          description:
+            cause instanceof Error ? cause.message : "فشل الاتصال بالخادم.",
+        });
+      }
       return;
     }
     setSessions(current =>
@@ -618,7 +668,7 @@ function SchedulePage() {
                 </strong>
                 <span>
                   {liveMode
-                    ? "الحفظ ينشئ جلسة جديدة على الـAPI؛ التعديل والإلغاء غير متاحين من هذه الشاشة."
+                    ? "إنشاء وتعديل وإلغاء الجلسات مربوط مباشرة بالـAPI مع فحص التعارضات."
                     : "الإضافات والتعديلات محلية للعرض التجريبي فقط."}
                 </span>
               </div>
@@ -718,13 +768,15 @@ function SchedulePage() {
             lastHour={LAST_HOUR}
             hourHeight={HOUR_HEIGHT}
           />
-          <div className="students-demo-note">
-            <AlertCircle size={14} />
-            <span>
-              بيانات الحصص والكوتشيز والقاعات المعروضة توضيحية ومولّدة للعرض
-              فقط؛ لا تتصل بقاعدة بيانات. فحص التعارض داخل النموذج محلي ومبدئي.
-            </span>
-          </div>
+          {!liveMode && (
+            <div className="students-demo-note">
+              <AlertCircle size={14} />
+              <span>
+                بيانات الحصص والكوتشيز والقاعات المعروضة توضيحية ومولّدة للعرض
+                فقط؛ لا تتصل بقاعدة بيانات. فحص التعارض داخل النموذج محلي ومبدئي.
+              </span>
+            </div>
+          )}
           <footer className="workspace-footer">
             <span>© مدى 2026</span>
             <span>واجهة تجريبية — إصدار 0.1</span>

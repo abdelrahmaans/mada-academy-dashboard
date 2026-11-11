@@ -200,5 +200,186 @@ public sealed class Phase3PersistenceTests
         });
         Assert.Equal(HttpStatusCode.OK, loginWithTemp.StatusCode);
     }
+
+    [Fact]
+    public async Task SessionWorkflow_UpdateAndCancelSession_PersistsAndChecksConflicts()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        var manager = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
+        var instructor = await TestData.CreateAccountAsync(factory, "R04_INSTRUCTOR", manager.TenantId, manager.BranchId);
+
+        Guid classroomId;
+        Guid firstSessionId;
+        Guid secondSessionId;
+        var baseStart = DateTimeOffset.UtcNow.AddDays(2);
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            var template = new CourseTemplate { TenantId = manager.TenantId, Name = "Robotics Edit Track", Track = "robotics", BasePricePiastres = 250_000, Status = "PUBLISHED" };
+            var classroom = new Classroom { BranchId = manager.BranchId, Name = "Lab Alpha", Capacity = 12 };
+            var offering = new CourseOffering
+            {
+                TenantId = manager.TenantId,
+                BranchId = manager.BranchId,
+                CourseTemplateId = template.Id,
+                InstructorId = instructor.UserId,
+                ClassroomId = classroom.Id,
+                MaxStudents = 12,
+                Status = "ACTIVE"
+            };
+            var session1 = new AcademySession
+            {
+                TenantId = manager.TenantId,
+                BranchId = manager.BranchId,
+                CourseOfferingId = offering.Id,
+                SessionNumber = 1,
+                StartAt = baseStart,
+                EndAt = baseStart.AddHours(2),
+                InstructorId = instructor.UserId,
+                ClassroomId = classroom.Id,
+                Type = "REGULAR",
+                Status = "SCHEDULED",
+                Notes = "جلسة أولية"
+            };
+            var session2 = new AcademySession
+            {
+                TenantId = manager.TenantId,
+                BranchId = manager.BranchId,
+                CourseOfferingId = offering.Id,
+                SessionNumber = 2,
+                StartAt = baseStart.AddHours(4),
+                EndAt = baseStart.AddHours(6),
+                InstructorId = instructor.UserId,
+                ClassroomId = classroom.Id,
+                Type = "REGULAR",
+                Status = "SCHEDULED",
+                Notes = "جلسة ثانية"
+            };
+
+            db.CourseTemplates.Add(template);
+            db.Classrooms.Add(classroom);
+            db.CourseOfferings.Add(offering);
+            db.AcademySessions.AddRange(session1, session2);
+            await db.SaveChangesAsync();
+            classroomId = classroom.Id;
+            firstSessionId = session1.Id;
+            secondSessionId = session2.Id;
+        }
+
+        using var client = factory.CreateClient();
+        TestData.Authenticate(client, await TestData.LoginAsync(client, manager));
+
+        // 1. Overlapping another session's slot returns 409 Conflict
+        var conflictRes = await client.PatchAsJsonAsync($"/api/v1/scheduling/sessions/{firstSessionId}", new
+        {
+            classroomId,
+            instructorId = instructor.UserId,
+            startAt = baseStart.AddHours(4).AddMinutes(30),
+            endAt = baseStart.AddHours(6).AddMinutes(30),
+            type = "REGULAR",
+            notes = "تعارض متوقع"
+        });
+        Assert.Equal(HttpStatusCode.Conflict, conflictRes.StatusCode);
+
+        // 2. Updating within its own overlapping time (self excluded) succeeds and updates notes/type
+        var updateRes = await client.PatchAsJsonAsync($"/api/v1/scheduling/sessions/{firstSessionId}", new
+        {
+            classroomId,
+            instructorId = instructor.UserId,
+            startAt = baseStart.AddMinutes(15),
+            endAt = baseStart.AddHours(2).AddMinutes(15),
+            type = "MAKEUP",
+            notes = "تم تعديل موعد الجلسة بنجاح"
+        });
+        Assert.Equal(HttpStatusCode.OK, updateRes.StatusCode);
+
+        // 3. Cancel the second session
+        var cancelRes = await client.PostAsJsonAsync($"/api/v1/scheduling/sessions/{secondSessionId}/cancel", new
+        {
+            reason = "تأجيل لظروف صيانة المعمل"
+        });
+        Assert.Equal(HttpStatusCode.OK, cancelRes.StatusCode);
+        using (var cancelDoc = await JsonDocument.ParseAsync(await cancelRes.Content.ReadAsStreamAsync()))
+        {
+            Assert.Equal("CANCELLED", cancelDoc.RootElement.GetProperty("data").GetProperty("status").GetString());
+        }
+
+        // 4. Verify GET /api/v1/sessions reflects both updates
+        var listRes = await client.GetAsync("/api/v1/sessions");
+        Assert.Equal(HttpStatusCode.OK, listRes.StatusCode);
+        using var listDoc = await JsonDocument.ParseAsync(await listRes.Content.ReadAsStreamAsync());
+        var sessions = listDoc.RootElement.GetProperty("data").GetProperty("items").EnumerateArray().ToList();
+        var updatedFirst = Assert.Single(sessions, s => s.GetProperty("id").GetGuid() == firstSessionId);
+        Assert.Equal("MAKEUP", updatedFirst.GetProperty("type").GetString());
+        Assert.Equal("تم تعديل موعد الجلسة بنجاح", updatedFirst.GetProperty("notes").GetString());
+
+        var cancelledSecond = Assert.Single(sessions, s => s.GetProperty("id").GetGuid() == secondSessionId);
+        Assert.Equal("CANCELLED", cancelledSecond.GetProperty("status").GetString());
+    }
+
+    [Fact]
+    public async Task StudentsList_IncludesLinkedGuardianInfo_WhenGuardianLinkExists()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        var secretary = await TestData.CreateAccountAsync(factory, "R05_SECRETARY");
+        var parent = await TestData.CreateConsumerAccountAsync(factory, secretary.TenantId, "parent", "R08_PARENT", "+201099887766");
+
+        Guid linkedStudentId;
+        Guid unlinkedStudentId;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            var parentAccount = await db.UserAccounts.FindAsync(parent.UserId);
+            if (parentAccount is not null)
+                parentAccount.DisplayName = "م. خالد المنصور";
+
+            var linkedStudent = new Student
+            {
+                TenantId = secretary.TenantId,
+                BranchId = secretary.BranchId,
+                FullName = "سلمى خالد المنصور",
+                Status = "ACTIVE"
+            };
+            var unlinkedStudent = new Student
+            {
+                TenantId = secretary.TenantId,
+                BranchId = secretary.BranchId,
+                FullName = "آدم بدون ولي أمر",
+                Status = "ACTIVE"
+            };
+            db.Students.AddRange(linkedStudent, unlinkedStudent);
+            db.GuardianStudentLinks.Add(new GuardianStudentLink
+            {
+                TenantId = secretary.TenantId,
+                StudentId = linkedStudent.Id,
+                UserAccountId = parent.UserId,
+                CreatedByUserId = secretary.UserId,
+                Relationship = "الأب",
+                Status = "ACTIVE"
+            });
+            await db.SaveChangesAsync();
+            linkedStudentId = linkedStudent.Id;
+            unlinkedStudentId = unlinkedStudent.Id;
+        }
+
+        using var client = factory.CreateClient();
+        TestData.Authenticate(client, await TestData.LoginAsync(client, secretary));
+
+        var res = await client.GetAsync("/api/v1/students");
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        using var doc = await JsonDocument.ParseAsync(await res.Content.ReadAsStreamAsync());
+        var items = doc.RootElement.GetProperty("data").GetProperty("items").EnumerateArray().ToList();
+
+        var linked = Assert.Single(items, s => s.GetProperty("id").GetGuid() == linkedStudentId);
+        Assert.Equal("م. خالد المنصور", linked.GetProperty("parentName").GetString());
+        Assert.Equal("+201099887766", linked.GetProperty("parentPhone").GetString());
+        Assert.Equal("الأب", linked.GetProperty("relationship").GetString());
+
+        var unlinked = Assert.Single(items, s => s.GetProperty("id").GetGuid() == unlinkedStudentId);
+        Assert.Equal(JsonValueKind.Null, unlinked.GetProperty("parentName").ValueKind);
+        Assert.Equal(JsonValueKind.Null, unlinked.GetProperty("parentPhone").ValueKind);
+        Assert.Equal(JsonValueKind.Null, unlinked.GetProperty("relationship").ValueKind);
+    }
 }
 

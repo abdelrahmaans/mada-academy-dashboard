@@ -73,14 +73,21 @@ export function mapLiveStudent(record: StudentRecord): Student {
     .slice(0, 2)
     .map((part) => part[0])
     .join("");
+  const rawRel = (record.relationship ?? "").trim();
+  const relation: Student["relation"] =
+    rawRel === "الأب" || rawRel.toUpperCase() === "FATHER"
+      ? "الأب"
+      : rawRel === "الأم" || rawRel.toUpperCase() === "MOTHER"
+      ? "الأم"
+      : "ولي أمر";
   return {
     id: record.id,
     name: record.fullName,
     birthDate: record.dateOfBirth ?? "—",
     gender: "male",
-    parentName: "غير متاح من عقد الطلاب الحالي",
-    parentPhone: "—",
-    relation: "ولي أمر",
+    parentName: record.parentName?.trim() || "غير مرتبط بولي أمر بعد",
+    parentPhone: record.parentPhone?.trim() || "—",
+    relation,
     branch:
       LIVE_BRANCH_LABELS[record.branchId] ?? `فرع ${record.branchId.slice(0, 8)}`,
     course:

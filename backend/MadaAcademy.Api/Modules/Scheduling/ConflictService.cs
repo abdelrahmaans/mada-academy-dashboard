@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace MadaAcademy.Api.Modules.Scheduling;
 
 public sealed record KitRequest(Guid KitId, int Quantity);
-public sealed record ConflictCheckRequest(Guid BranchId, Guid InstructorId, Guid ClassroomId, IReadOnlyList<KitRequest> Kits, IReadOnlyList<Guid> StudentIds, DateTimeOffset StartAt, DateTimeOffset EndAt);
+public sealed record ConflictCheckRequest(Guid BranchId, Guid InstructorId, Guid ClassroomId, IReadOnlyList<KitRequest> Kits, IReadOnlyList<Guid> StudentIds, DateTimeOffset StartAt, DateTimeOffset EndAt, Guid? ExcludeSessionId = null);
 public sealed record ConflictDetails(
     IReadOnlyList<Guid> InstructorSessions, 
     IReadOnlyList<Guid> ClassroomSessions, 
@@ -21,7 +21,12 @@ public sealed class ConflictService(MadaDbContext db)
 {
     public async Task<ConflictCheckResult> CheckAsync(ConflictCheckRequest input, CancellationToken cancellationToken)
     {
-        var overlapping = db.AcademySessions.Where(x => x.BranchId == input.BranchId && x.Status != "CANCELLED" && x.StartAt < input.EndAt && x.EndAt > input.StartAt);
+        var overlapping = db.AcademySessions.Where(x =>
+            x.BranchId == input.BranchId &&
+            x.Status != "CANCELLED" &&
+            (!input.ExcludeSessionId.HasValue || x.Id != input.ExcludeSessionId.Value) &&
+            x.StartAt < input.EndAt &&
+            x.EndAt > input.StartAt);
         var instructorSessions = await overlapping.Where(x => x.InstructorId == input.InstructorId || x.SubstituteInstructorId == input.InstructorId).Select(x => x.Id).ToListAsync(cancellationToken);
         var classroomSessions = await overlapping.Where(x => x.ClassroomId == input.ClassroomId).Select(x => x.Id).ToListAsync(cancellationToken);
         

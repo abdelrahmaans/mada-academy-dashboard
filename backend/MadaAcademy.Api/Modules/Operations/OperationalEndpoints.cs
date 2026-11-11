@@ -40,6 +40,28 @@ public static class OperationalEndpoints
                     student.ReferredByStudentId))
                 .ToListAsync(cancellationToken);
 
+            var studentIds = students.Select(s => s.Id).ToList();
+            if (studentIds.Count > 0)
+            {
+                var guardianRows = await (
+                    from link in db.GuardianStudentLinks.AsNoTracking()
+                    join userAcc in db.UserAccounts.AsNoTracking() on link.UserAccountId equals userAcc.Id
+                    where link.TenantId == scope.TenantId && studentIds.Contains(link.StudentId)
+                    orderby link.CreatedAt
+                    select new { link.StudentId, userAcc.DisplayName, userAcc.Phone, link.Relationship }
+                ).ToListAsync(cancellationToken);
+
+                var guardiansByStudent = guardianRows
+                    .GroupBy(g => g.StudentId)
+                    .ToDictionary(g => g.Key, g => g.First());
+
+                students = students.Select(s =>
+                    guardiansByStudent.TryGetValue(s.Id, out var g)
+                        ? s with { ParentName = g.DisplayName, ParentPhone = g.Phone, Relationship = g.Relationship }
+                        : s
+                ).ToList();
+            }
+
             return TypedResults.Ok(new ApiEnvelope<StudentListResponse>(
                 new StudentListResponse(students, students.Count, scope.ScopeLevel, scope.BranchId)));
         }).RequirePermission("students.read");
@@ -574,7 +596,7 @@ public static class OperationalEndpoints
 
 public sealed record ApiEnvelope<T>(T Data);
 public sealed record StudentListResponse(IReadOnlyList<StudentListItem> Items, int Total, string ScopeLevel, Guid? BranchId);
-public sealed record StudentListItem(Guid Id, Guid BranchId, string FullName, DateOnly? DateOfBirth, string Status, int ActiveEnrollmentCount, Guid? ReferredByStudentId = null);
+public sealed record StudentListItem(Guid Id, Guid BranchId, string FullName, DateOnly? DateOfBirth, string Status, int ActiveEnrollmentCount, Guid? ReferredByStudentId = null, string? ParentName = null, string? ParentPhone = null, string? Relationship = null);
 public sealed record CreateStudentRequest(string? FullName, DateOnly? DateOfBirth, Guid? ReferredByStudentId = null);
 public sealed record UpdateStudentRequest(string? FullName, DateOnly? DateOfBirth);
 public sealed record StudentEnrollmentItem(Guid Id, Guid CourseOfferingId, string? CourseName, DateOnly StartDate, DateOnly EndDate, int FinalPricePiastres, string Status, int MaxStudents, int ActiveEnrollmentCount);

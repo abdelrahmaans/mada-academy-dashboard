@@ -1,7 +1,11 @@
-import React from "react";
-import { Check, Save } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Check, Save, Sparkles } from "lucide-react";
 import { LoadingState } from "@/components/FeedbackStates";
-import type { AttendanceItem, SessionEvaluationRecord } from "@/lib/apiClient";
+import type {
+  AttendanceItem,
+  DisciplineRubric,
+  SessionEvaluationRecord,
+} from "@/lib/apiClient";
 import { evaluationLabel } from "@/pages/InstructorDeskTypes";
 
 export interface InstructorEvaluationsViewProps {
@@ -18,6 +22,7 @@ export interface InstructorEvaluationsViewProps {
   onScoreChange: (score: number | "") => void;
   onNotesChange: (notes: string) => void;
   onSaveEvaluation: (submitForReview: boolean) => void;
+  activeRubric?: DisciplineRubric | null;
 }
 
 export function InstructorEvaluationsView({
@@ -34,7 +39,29 @@ export function InstructorEvaluationsView({
   onScoreChange,
   onNotesChange,
   onSaveEvaluation,
+  activeRubric,
 }: InstructorEvaluationsViewProps) {
+  const [criterionScores, setCriterionScores] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (!activeRubric?.criteria?.length) return;
+    setCriterionScores(
+      Object.fromEntries(activeRubric.criteria.map(c => [c.id || c.key, 4]))
+    );
+  }, [activeRubric?.id, selectedStudentId]);
+
+  const applyRubricScore = () => {
+    if (!activeRubric?.criteria?.length) return;
+    const totalWeight = activeRubric.criteria.reduce((sum, c) => sum + (c.weightPercent || 0), 0);
+    const weighted = activeRubric.criteria.reduce((acc, c) => {
+      const val = criterionScores[c.id || c.key] ?? 4;
+      const max = c.maxScore || activeRubric.scaleMax || 5;
+      const ratio = Math.min(1, Math.max(0, val / max));
+      const weight = totalWeight > 0 ? (c.weightPercent ?? 0) / totalWeight : 1 / activeRubric.criteria.length;
+      return acc + ratio * weight * 100;
+    }, 0);
+    onScoreChange(Math.round(weighted));
+  };
   if (evaluationLoading) {
     return <LoadingState label="جارٍ تحميل تقييمات الطلاب…" compact />;
   }
@@ -81,6 +108,93 @@ export function InstructorEvaluationsView({
         {selectedEvaluation?.reviewNote && (
           <div className="r04-live-review-note">
             <strong>ملاحظة المراجع:</strong> {selectedEvaluation.reviewNote}
+          </div>
+        )}
+        {activeRubric && activeRubric.criteria.length > 0 && (
+          <div
+            style={{
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: "10px",
+              padding: "12px",
+              display: "grid",
+              gap: "8px",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+              <div>
+                <strong style={{ fontSize: "12.5px", color: "#0f172a" }}>
+                  معايير التقييم المعتمدة: {activeRubric.title}
+                </strong>
+                <small style={{ display: "block", color: "#64748b", fontSize: "11px" }}>
+                  المسار: {activeRubric.trackLabel}
+                </small>
+              </div>
+              <button
+                type="button"
+                className="r04-live-primary"
+                style={{ padding: "5px 10px", fontSize: "11px", height: "auto" }}
+                disabled={
+                  selectedEvaluation?.status === "SUBMITTED" ||
+                  selectedEvaluation?.status === "PUBLISHED"
+                }
+                onClick={applyRubricScore}
+              >
+                <Sparkles size={12} /> احتساب النتيجة تلقائيًا
+              </button>
+            </div>
+            <div style={{ display: "grid", gap: "6px" }}>
+              {activeRubric.criteria.map(c => {
+                const key = c.id || c.key;
+                const val = criterionScores[key] ?? 4;
+                const max = c.maxScore || activeRubric.scaleMax || 5;
+                return (
+                  <label
+                    key={key}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: "10px",
+                      fontSize: "12px",
+                      background: "#ffffff",
+                      padding: "6px 10px",
+                      borderRadius: "8px",
+                      border: "1px solid #e2e8f0",
+                    }}
+                  >
+                    <span>
+                      <strong>{c.label}</strong> ({c.weightPercent}%)
+                      {c.hint && (
+                        <small style={{ display: "block", color: "#64748b", fontSize: "10.5px" }}>
+                          {c.hint}
+                        </small>
+                      )}
+                    </span>
+                    <select
+                      style={{ width: "92px", padding: "4px 6px", fontSize: "12px" }}
+                      value={val}
+                      disabled={
+                        selectedEvaluation?.status === "SUBMITTED" ||
+                        selectedEvaluation?.status === "PUBLISHED"
+                      }
+                      onChange={e =>
+                        setCriterionScores(prev => ({
+                          ...prev,
+                          [key]: Number(e.target.value),
+                        }))
+                      }
+                    >
+                      {Array.from({ length: max }, (_, idx) => idx + 1).map(n => (
+                        <option key={n} value={n}>
+                          {n} / {max}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                );
+              })}
+            </div>
           </div>
         )}
         <label>
