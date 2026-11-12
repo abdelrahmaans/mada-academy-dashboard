@@ -885,6 +885,68 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
   return (payload.data ?? payload) as T;
 }
 
+export interface ConsumerCheckoutSession {
+  checkoutSessionId: string;
+  invoiceId: string;
+  invoiceNumber: string;
+  studentName?: string | null;
+  branchName?: string | null;
+  amountPiastres: number;
+  remainingPiastres: number;
+  currency: string;
+  method: string;
+  gatewayMode: string;
+  referenceCode: string;
+  expiresAt: string;
+}
+
+export interface ConsumerCheckoutConfirmResult {
+  payment: FinancePayment;
+  invoice: FinanceInvoice;
+  isDuplicate: boolean;
+}
+
+export interface StudentCertificate {
+  certificateCode: string;
+  enrollmentId: string;
+  studentId: string;
+  studentName: string;
+  courseName: string;
+  branchName: string;
+  academyName: string;
+  enrollmentStatus: string;
+  eligible: boolean;
+  status: "ISSUED" | "IN_PROGRESS";
+  attendanceRate: number;
+  attendedSessions: number;
+  completedSessions: number;
+  totalSessions: number;
+  averageScore: number;
+  bonusPoints: number;
+  issuedAt: string;
+}
+
+export interface StudentCertificatesResponse {
+  items: StudentCertificate[];
+  total: number;
+}
+
+export interface CertificateVerification {
+  valid: boolean;
+  certificateCode: string;
+  studentName: string;
+  academyName: string;
+  branchName: string;
+  courseName: string;
+  enrollmentStatus: string;
+  attendanceRate: number;
+  attendedSessions: number;
+  completedSessions: number;
+  totalSessions: number;
+  averageScore: number;
+  issuedAt: string;
+}
+
 export const apiClient = {
   baseUrl: API_BASE,
   hasSession: () => Boolean(accessToken),
@@ -1190,6 +1252,20 @@ export const apiClient = {
   approveFinanceExpense: (expenseId: string, reason: string) => request<FinanceExpense>(`/finance/expenses/${expenseId}/approve`, { method: "POST", body: JSON.stringify({ reason }) }),
   rejectFinanceExpense: (expenseId: string, reason: string) => request<FinanceExpense>(`/finance/expenses/${expenseId}/reject`, { method: "POST", body: JSON.stringify({ reason }) }),
   consumerInvoices: () => request<FinanceInvoicesResponse>("/consumer/invoices"),
+  createConsumerCheckout: (invoiceId: string, input: { method?: "CARD" | "WALLET" | "INSTAPAY"; amountPiastres?: number } = {}) =>
+    request<ConsumerCheckoutSession>(`/consumer/invoices/${invoiceId}/checkout`, { method: "POST", body: JSON.stringify(input) }),
+  confirmConsumerCheckout: (
+    invoiceId: string,
+    input: { checkoutSessionId?: string; method?: "CARD" | "WALLET" | "INSTAPAY"; amountPiastres?: number; gatewayReference?: string; note?: string; idempotencyKey?: string }
+  ) =>
+    request<ConsumerCheckoutConfirmResult>(`/consumer/invoices/${invoiceId}/checkout/confirm`, {
+      method: "POST",
+      headers: input.idempotencyKey ? { "Idempotency-Key": input.idempotencyKey } : undefined,
+      body: JSON.stringify(input),
+    }),
+  consumerCertificates: () => request<StudentCertificatesResponse>("/consumer/me/certificates"),
+  verifyCertificate: (code: string) =>
+    request<CertificateVerification>(`/certificates/verify/${encodeURIComponent(code.trim())}`),
   invoiceCorrections: (state: "ALL" | "PENDING" | "APPROVED" | "REJECTED" = "ALL") => request<InvoiceCorrectionsResponse>(`/finance/invoice-corrections?state=${state}`),
   createInvoiceCorrection: (invoiceId: string, input: { proposedDueDate: string; lines: Array<{ description: string; amountPiastres: number }>; reason: string }) => request<InvoiceCorrection>(`/finance/invoices/${invoiceId}/correction-requests`, { method: "POST", body: JSON.stringify(input) }),
   decideInvoiceCorrection: (correctionId: string, input: { decision: "APPROVED" | "REJECTED"; reason: string }) => request<InvoiceCorrection>(`/finance/invoice-corrections/${correctionId}/decision`, { method: "POST", body: JSON.stringify(input) }),

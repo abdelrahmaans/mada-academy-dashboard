@@ -41,6 +41,9 @@ public static class FinanceEndpoints
         api.MapGet("/cashier/shifts-history", ListCashierShiftsHistoryAsync);
 
         endpoints.MapGet("/api/v1/consumer/invoices", ListConsumerInvoicesAsync).RequireAuthorization("consumer");
+        endpoints.MapPost("/api/v1/consumer/invoices/{invoiceId:guid}/checkout", CreateConsumerCheckoutAsync).RequireAuthorization("consumer");
+        endpoints.MapPost("/api/v1/consumer/invoices/{invoiceId:guid}/checkout/confirm", ConfirmConsumerCheckoutAsync).RequireAuthorization("consumer");
+        endpoints.MapPost("/api/v1/finance/webhooks/payment-gateway", HandlePaymentGatewayWebhookAsync).AllowAnonymous();
         return endpoints;
     }
 
@@ -228,6 +231,233 @@ public static class FinanceEndpoints
         var invoices = await db.Invoices.AsNoTracking().Include(x => x.Student).Include(x => x.Lines).Include(x => x.Payments).ThenInclude(x => x.Evidence)
             .Where(x => x.TenantId == tenantId && studentIds.Contains(x.StudentId)).OrderByDescending(x => x.IssueDate).ToListAsync(cancellationToken);
         return Results.Ok(new { data = new { items = invoices.Select(ToResponse), total = invoices.Count } });
+    }
+
+    private static async Task<IResult> CreateConsumerCheckoutAsync(Guid invoiceId, ConsumerCheckoutRequest request, HttpContext context, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(context.User.FindFirstValue("sub"), out var userId) || !Guid.TryParse(context.User.FindFirstValue("tenantId"), out var tenantId))
+            return Forbidden("CONSUMER_SCOPE_REQUIRED");
+        var accountType = context.User.FindFirstValue("accountType");
+        var studentIds = accountType == "parent"
+            ? db.GuardianStudentLinks.Where(x => x.TenantId == tenantId && x.UserAccountId == userId && x.Status == "ACTIVE").Select(x => x.StudentId)
+            : db.StudentAccountLinks.Where(x => x.TenantId == tenantId && x.UserAccountId == userId).Select(x => x.StudentId);
+
+        var invoice = await db.Invoices.AsNoTracking()
+            .Include(x => x.Student)
+            .Include(x => x.Branch)
+            .Include(x => x.Payments)
+            .SingleOrDefaultAsync(x => x.Id == invoiceId && x.TenantId == tenantId && studentIds.Contains(x.StudentId), cancellationToken);
+        if (invoice is null) return NotFound("INVOICE_NOT_FOUND");
+
+        var paid = invoice.Payments.Sum(x => (long)x.AmountPiastres);
+        var remaining = Math.Max(0, invoice.TotalPiastres - paid);
+        if (remaining <= 0) return Conflict("INVOICE_ALREADY_PAID");
+
+        var amountPiastres = request.AmountPiastres ?? (int)remaining;
+        if (amountPiastres <= 0 || amountPiastres > remaining)
+            return Validation("amountPiastres", "Payment amount must be positive and cannot exceed remaining balance.");
+
+        var method = NormalizeOnlineMethod(request.Method);
+        if (method is null)
+            return Validation("method", "Online checkout method must be CARD, WALLET, or INSTAPAY.");
+
+        var checkoutSessionId = $"chk_{Guid.NewGuid():N}"[..20];
+        var referenceCode = $"ONL-{invoice.InvoiceNumber[^Math.Min(8, invoice.InvoiceNumber.Length)..]}-{DateTime.UtcNow:HHmmss}";
+        var expiresAt = DateTime.UtcNow.AddMinutes(30);
+
+        db.AuditEvents.Add(new AuditEvent
+        {
+            ActorUserId = userId,
+            TenantId = tenantId,
+            BranchId = invoice.BranchId,
+            Action = "CONSUMER_CHECKOUT_INITIATED",
+            TargetType = "INVOICE",
+            TargetId = invoice.Id.ToString(),
+            MetadataJson = JsonSerializer.Serialize(new { checkoutSessionId, amountPiastres, method, referenceCode })
+        });
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Results.Ok(new
+        {
+            data = new
+            {
+                checkoutSessionId,
+                invoiceId = invoice.Id,
+                invoiceNumber = invoice.InvoiceNumber,
+                studentName = invoice.Student?.FullName,
+                branchName = invoice.Branch?.Name,
+                amountPiastres,
+                remainingPiastres = remaining,
+                currency = "EGP",
+                method,
+                gatewayMode = "SANDBOX",
+                referenceCode,
+                expiresAt
+            }
+        });
+    }
+
+    private static async Task<IResult> ConfirmConsumerCheckoutAsync(Guid invoiceId, ConfirmConsumerCheckoutRequest request, HttpContext context, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(context.User.FindFirstValue("sub"), out var userId) || !Guid.TryParse(context.User.FindFirstValue("tenantId"), out var tenantId))
+            return Forbidden("CONSUMER_SCOPE_REQUIRED");
+        var accountType = context.User.FindFirstValue("accountType");
+        var studentIds = accountType == "parent"
+            ? db.GuardianStudentLinks.Where(x => x.TenantId == tenantId && x.UserAccountId == userId && x.Status == "ACTIVE").Select(x => x.StudentId)
+            : db.StudentAccountLinks.Where(x => x.TenantId == tenantId && x.UserAccountId == userId).Select(x => x.StudentId);
+
+        var invoiceExists = await db.Invoices.AsNoTracking()
+            .Include(x => x.Payments)
+            .SingleOrDefaultAsync(x => x.Id == invoiceId && x.TenantId == tenantId && studentIds.Contains(x.StudentId), cancellationToken);
+        if (invoiceExists is null) return NotFound("INVOICE_NOT_FOUND");
+
+        var method = NormalizeOnlineMethod(request.Method);
+        if (method is null)
+            return Validation("method", "Online checkout method must be CARD, WALLET, or INSTAPAY.");
+
+        var idempotencyKey = context.Request.Headers["Idempotency-Key"].FirstOrDefault()
+            ?? context.Request.Headers["X-Idempotency-Key"].FirstOrDefault()
+            ?? request.IdempotencyKey?.Trim()
+            ?? request.CheckoutSessionId?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            var existingPayment = await db.PaymentTransactions.AsNoTracking().Include(x => x.Evidence)
+                .FirstOrDefaultAsync(x => x.TenantId == tenantId && x.IdempotencyKey == idempotencyKey, cancellationToken);
+            if (existingPayment is not null)
+            {
+                var existingInv = await db.Invoices.AsNoTracking().Include(x => x.Student).Include(x => x.Branch).Include(x => x.Lines).Include(x => x.Payments).ThenInclude(x => x.Evidence)
+                    .SingleAsync(x => x.Id == existingPayment.InvoiceId, cancellationToken);
+                return Results.Ok(new { data = new { payment = ToPaymentResponse(existingPayment), invoice = ToResponse(existingInv), isDuplicate = true } });
+            }
+        }
+
+        var paid = invoiceExists.Payments.Sum(x => (long)x.AmountPiastres);
+        var remaining = Math.Max(0, invoiceExists.TotalPiastres - paid);
+        if (remaining <= 0) return Conflict("INVOICE_ALREADY_PAID");
+
+        var amountPiastres = request.AmountPiastres ?? (int)remaining;
+        if (amountPiastres <= 0 || amountPiastres > remaining)
+            return Validation("amountPiastres", "Payment amount must be positive and cannot exceed remaining balance.");
+
+        var reference = string.IsNullOrWhiteSpace(request.GatewayReference)
+            ? $"ONL-{DateTime.UtcNow:yyyyMMddHHmmss}"
+            : request.GatewayReference.Trim();
+
+        var paymentRequest = new CreatePaymentRequest(
+            amountPiastres,
+            method,
+            DateOnly.FromDateTime(DateTime.UtcNow),
+            reference,
+            string.IsNullOrWhiteSpace(request.Note) ? "سداد إلكتروني أونلاين" : request.Note.Trim(),
+            idempotencyKey);
+
+        var scope = new StaffScope(tenantId, null);
+        if (db.Database.IsRelational())
+        {
+            await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+            var err = await SavePaymentAsync(invoiceId, paymentRequest, scope, userId, idempotencyKey, db, cancellationToken);
+            if (err is not null) return err;
+            await transaction.CommitAsync(cancellationToken);
+        }
+        else
+        {
+            await InMemoryPaymentGate.WaitAsync(cancellationToken);
+            try
+            {
+                var err = await SavePaymentAsync(invoiceId, paymentRequest, scope, userId, idempotencyKey, db, cancellationToken);
+                if (err is not null) return err;
+            }
+            finally { InMemoryPaymentGate.Release(); }
+        }
+
+        var reloadedInvoice = await db.Invoices.AsNoTracking()
+            .Include(x => x.Student)
+            .Include(x => x.Branch)
+            .Include(x => x.Lines)
+            .Include(x => x.Payments).ThenInclude(x => x.Evidence)
+            .SingleAsync(x => x.Id == invoiceId, cancellationToken);
+        var latestPayment = reloadedInvoice.Payments.OrderByDescending(x => x.CreatedAt).First();
+
+        return Results.Ok(new { data = new { payment = ToPaymentResponse(latestPayment), invoice = ToResponse(reloadedInvoice), isDuplicate = false } });
+    }
+
+    private static async Task<IResult> HandlePaymentGatewayWebhookAsync(PaymentGatewayWebhookRequest request, HttpContext context, MadaDbContext db, IConfiguration configuration, CancellationToken cancellationToken)
+    {
+        var configuredSecret = configuration["PaymentGateway:WebhookSecret"];
+        if (!string.IsNullOrWhiteSpace(configuredSecret))
+        {
+            var providedSecret = context.Request.Headers["X-Webhook-Secret"].FirstOrDefault();
+            if (!string.Equals(configuredSecret, providedSecret, StringComparison.Ordinal))
+                return Forbidden("WEBHOOK_SIGNATURE_INVALID");
+        }
+
+        if (request.InvoiceId == Guid.Empty || string.IsNullOrWhiteSpace(request.TransactionReference))
+            return Validation("webhook", "invoiceId and transactionReference are required.");
+
+        var eventType = request.EventType?.Trim().ToLowerInvariant() ?? "payment.succeeded";
+        if (eventType != "payment.succeeded")
+        {
+            return Results.Ok(new { data = new { received = true, status = "IGNORED", eventType } });
+        }
+
+        if (request.AmountPiastres <= 0)
+            return Validation("amountPiastres", "amountPiastres must be positive.");
+
+        var idempotencyKey = $"gw:{request.TransactionReference.Trim()}";
+        var existingPayment = await db.PaymentTransactions.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.IdempotencyKey == idempotencyKey, cancellationToken);
+        if (existingPayment is not null)
+        {
+            return Results.Ok(new { data = new { received = true, isDuplicate = true, invoiceId = existingPayment.InvoiceId, paymentId = existingPayment.Id } });
+        }
+
+        var invoice = await db.Invoices.AsNoTracking().SingleOrDefaultAsync(x => x.Id == request.InvoiceId, cancellationToken);
+        if (invoice is null) return NotFound("INVOICE_NOT_FOUND");
+
+        var method = NormalizeOnlineMethod(request.Method) ?? "VISA";
+        var paymentRequest = new CreatePaymentRequest(
+            request.AmountPiastres,
+            method,
+            DateOnly.FromDateTime(DateTime.UtcNow),
+            request.TransactionReference.Trim(),
+            request.Note?.Trim() ?? "بوابة الدفع الإلكتروني (Webhook)",
+            idempotencyKey);
+
+        var scope = new StaffScope(invoice.TenantId, null);
+        if (db.Database.IsRelational())
+        {
+            await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+            var err = await SavePaymentAsync(invoice.Id, paymentRequest, scope, invoice.CreatedByUserId, idempotencyKey, db, cancellationToken);
+            if (err is not null) return err;
+            await transaction.CommitAsync(cancellationToken);
+        }
+        else
+        {
+            await InMemoryPaymentGate.WaitAsync(cancellationToken);
+            try
+            {
+                var err = await SavePaymentAsync(invoice.Id, paymentRequest, scope, invoice.CreatedByUserId, idempotencyKey, db, cancellationToken);
+                if (err is not null) return err;
+            }
+            finally { InMemoryPaymentGate.Release(); }
+        }
+
+        var recorded = await db.PaymentTransactions.AsNoTracking().FirstAsync(x => x.IdempotencyKey == idempotencyKey, cancellationToken);
+        return Results.Ok(new { data = new { received = true, isDuplicate = false, invoiceId = invoice.Id, paymentId = recorded.Id } });
+    }
+
+    private static string? NormalizeOnlineMethod(string? raw)
+    {
+        var value = string.IsNullOrWhiteSpace(raw) ? "CARD" : raw.Trim().ToUpperInvariant();
+        return value switch
+        {
+            "CARD" or "VISA" => "VISA",
+            "WALLET" or "VODAFONE_CASH" => "VODAFONE_CASH",
+            "INSTAPAY" => "INSTAPAY",
+            "ONLINE" => "VISA",
+            _ => null
+        };
     }
 
     private static async Task<IResult> ReportsSummaryAsync(HttpContext context, MadaDbContext db, DateOnly? from, DateOnly? to, Guid? branchId, CancellationToken cancellationToken)
@@ -1071,3 +1301,6 @@ public sealed record ConfirmShiftCloseoutRequest(DateOnly Date, Guid? BranchId =
 public sealed record AdjustInstructorPayrollRequest(string? Month, Guid? BranchId, long BonusPiastres, string? BonusReason, long DeductionPiastres, string? DeductionReason, long? BaseSalaryPiastres = null);
 public sealed record ApproveInstructorPayrollRequest(string? Month, Guid? BranchId = null, long? BonusPiastres = null, string? BonusReason = null, long? DeductionPiastres = null, string? DeductionReason = null);
 public sealed record PayInstructorPayrollRequest(string? Month, Guid? BranchId = null, string PaymentMethod = "INSTAPAY", string? PaymentReference = null, string? Notes = null);
+public sealed record ConsumerCheckoutRequest(string? Method = "CARD", int? AmountPiastres = null);
+public sealed record ConfirmConsumerCheckoutRequest(string? CheckoutSessionId = null, string? Method = "CARD", int? AmountPiastres = null, string? GatewayReference = null, string? Note = null, string? IdempotencyKey = null);
+public sealed record PaymentGatewayWebhookRequest(Guid InvoiceId, int AmountPiastres, string TransactionReference, string? Method = "CARD", string? EventType = "payment.succeeded", string? Note = null);

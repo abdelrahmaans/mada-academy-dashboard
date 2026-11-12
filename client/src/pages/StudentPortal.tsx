@@ -20,6 +20,7 @@ import StudentProgressCard, {
   type StudentAchievement,
 } from "@/components/StudentProgressCard";
 import GroupLeaderboardCard from "@/components/GroupLeaderboardCard";
+import StudentCertificatesCard from "@/components/StudentCertificatesCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient, type ConsumerSessionRecord } from "@/lib/apiClient";
 import { firstLinkedStudent, sessionsForStudent } from "@/lib/consumerScope";
@@ -664,6 +665,7 @@ export default function StudentPortal() {
         {tab === "progress" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             <GroupLeaderboardCard currentStudentId={linkedStudentId} />
+            <StudentCertificatesCard liveMode={liveMode} />
 
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "20px" }}>

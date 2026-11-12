@@ -381,5 +381,174 @@ public sealed class Phase3PersistenceTests
         Assert.Equal(JsonValueKind.Null, unlinked.GetProperty("parentPhone").ValueKind);
         Assert.Equal(JsonValueKind.Null, unlinked.GetProperty("relationship").ValueKind);
     }
+
+    [Fact]
+    public async Task Consumer_Invoice_Online_Checkout_And_Confirm_Is_Idempotent_And_Updates_Status()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        var secretary = await TestData.CreateAccountAsync(factory, "R05_SECRETARY");
+        var parent = await TestData.CreateConsumerAccountAsync(factory, secretary.TenantId, "parent", "R08_PARENT", "+201011223344");
+
+        Guid invoiceId;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            var student = new Student
+            {
+                TenantId = secretary.TenantId,
+                BranchId = secretary.BranchId,
+                FullName = "عمر أحمد",
+                Status = "ACTIVE"
+            };
+            db.Students.Add(student);
+            db.GuardianStudentLinks.Add(new GuardianStudentLink
+            {
+                TenantId = secretary.TenantId,
+                StudentId = student.Id,
+                UserAccountId = parent.UserId,
+                CreatedByUserId = secretary.UserId,
+                Relationship = "الأب",
+                Status = "ACTIVE"
+            });
+            db.Memberships.Add(new Membership
+            {
+                UserAccountId = parent.UserId,
+                TenantId = secretary.TenantId,
+                RoleCode = "R08_PARENT",
+                ScopeLevel = "TENANT",
+                Status = "ACTIVE"
+            });
+            var invoice = new Invoice
+            {
+                TenantId = secretary.TenantId,
+                BranchId = secretary.BranchId,
+                StudentId = student.Id,
+                InvoiceNumber = "MAD-TEST-ONLINE-001",
+                TotalPiastres = 100000,
+                IssueDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(7)),
+                CreatedByUserId = secretary.UserId,
+                Lines = [new InvoiceLine { LineNumber = 1, Description = "رسوم الدورة", AmountPiastres = 100000 }]
+            };
+            db.Invoices.Add(invoice);
+            await db.SaveChangesAsync();
+            invoiceId = invoice.Id;
+        }
+
+        using var client = factory.CreateClient();
+        TestData.Authenticate(client, await TestData.LoginAsync(client, parent));
+
+        var checkoutRes = await client.PostAsJsonAsync($"/api/v1/consumer/invoices/{invoiceId}/checkout", new { method = "CARD" });
+        Assert.Equal(HttpStatusCode.OK, checkoutRes.StatusCode);
+        using var checkoutDoc = await JsonDocument.ParseAsync(await checkoutRes.Content.ReadAsStreamAsync());
+        var checkoutData = checkoutDoc.RootElement.GetProperty("data");
+        var sessionId = checkoutData.GetProperty("checkoutSessionId").GetString()!;
+        Assert.Equal(100000, checkoutData.GetProperty("amountPiastres").GetInt32());
+
+        var confirmRes = await client.PostAsJsonAsync($"/api/v1/consumer/invoices/{invoiceId}/checkout/confirm", new
+        {
+            checkoutSessionId = sessionId,
+            method = "CARD",
+            gatewayReference = "GW-SANDBOX-001"
+        });
+        Assert.Equal(HttpStatusCode.OK, confirmRes.StatusCode);
+        using var confirmDoc = await JsonDocument.ParseAsync(await confirmRes.Content.ReadAsStreamAsync());
+        var confirmData = confirmDoc.RootElement.GetProperty("data");
+        Assert.False(confirmData.GetProperty("isDuplicate").GetBoolean());
+        Assert.Equal("PAID", confirmData.GetProperty("invoice").GetProperty("status").GetString());
+        Assert.Equal(0, confirmData.GetProperty("invoice").GetProperty("remainingPiastres").GetInt64());
+
+        var duplicateRes = await client.PostAsJsonAsync($"/api/v1/consumer/invoices/{invoiceId}/checkout/confirm", new
+        {
+            checkoutSessionId = sessionId,
+            method = "CARD"
+        });
+        Assert.Equal(HttpStatusCode.OK, duplicateRes.StatusCode);
+        using var dupDoc = await JsonDocument.ParseAsync(await duplicateRes.Content.ReadAsStreamAsync());
+        Assert.True(dupDoc.RootElement.GetProperty("data").GetProperty("isDuplicate").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Student_Certificates_And_Public_Verification_Return_Valid_Certificate()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        var secretary = await TestData.CreateAccountAsync(factory, "R05_SECRETARY");
+        var studentAccount = await TestData.CreateConsumerAccountAsync(factory, secretary.TenantId, "student", "R09_STUDENT", "+201055667788");
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            var student = new Student
+            {
+                TenantId = secretary.TenantId,
+                BranchId = secretary.BranchId,
+                FullName = "نور الهدى محمد",
+                Status = "ACTIVE"
+            };
+            db.Students.Add(student);
+            db.StudentAccountLinks.Add(new StudentAccountLink
+            {
+                TenantId = secretary.TenantId,
+                StudentId = student.Id,
+                UserAccountId = studentAccount.UserId,
+                CreatedByUserId = secretary.UserId
+            });
+            db.Memberships.Add(new Membership
+            {
+                UserAccountId = studentAccount.UserId,
+                TenantId = secretary.TenantId,
+                RoleCode = "R09_STUDENT",
+                ScopeLevel = "TENANT",
+                Status = "ACTIVE"
+            });
+            var template = new CourseTemplate
+            {
+                TenantId = secretary.TenantId,
+                Name = "تطوير تطبيقات الويب الحديثة",
+                BasePricePiastres = 150000
+            };
+            db.CourseTemplates.Add(template);
+            var offering = new CourseOffering
+            {
+                TenantId = secretary.TenantId,
+                BranchId = secretary.BranchId,
+                CourseTemplateId = template.Id,
+                Status = "ACTIVE"
+            };
+            db.CourseOfferings.Add(offering);
+            db.StudentEnrollments.Add(new StudentEnrollment
+            {
+                StudentId = student.Id,
+                CourseOfferingId = offering.Id,
+                FinalPricePiastres = 150000,
+                Status = "COMPLETED"
+            });
+            await db.SaveChangesAsync();
+        }
+
+        using var authClient = factory.CreateClient();
+        TestData.Authenticate(authClient, await TestData.LoginAsync(authClient, studentAccount));
+
+        var certRes = await authClient.GetAsync("/api/v1/consumer/me/certificates");
+        Assert.Equal(HttpStatusCode.OK, certRes.StatusCode);
+        using var certDoc = await JsonDocument.ParseAsync(await certRes.Content.ReadAsStreamAsync());
+        var certItem = Assert.Single(certDoc.RootElement.GetProperty("data").GetProperty("items").EnumerateArray());
+        var code = certItem.GetProperty("certificateCode").GetString()!;
+        Assert.StartsWith("MADA-", code);
+        Assert.True(certItem.GetProperty("eligible").GetBoolean());
+        Assert.Equal("ISSUED", certItem.GetProperty("status").GetString());
+
+        using var anonClient = factory.CreateClient();
+        var verifyRes = await anonClient.GetAsync($"/api/v1/certificates/verify/{code}");
+        Assert.Equal(HttpStatusCode.OK, verifyRes.StatusCode);
+        using var verifyDoc = await JsonDocument.ParseAsync(await verifyRes.Content.ReadAsStreamAsync());
+        var verifyData = verifyDoc.RootElement.GetProperty("data");
+        Assert.True(verifyData.GetProperty("valid").GetBoolean());
+        Assert.Equal("نور الهدى محمد", verifyData.GetProperty("studentName").GetString());
+        Assert.Equal("تطوير تطبيقات الويب الحديثة", verifyData.GetProperty("courseName").GetString());
+
+        var notFoundRes = await anonClient.GetAsync("/api/v1/certificates/verify/MADA-00000000-0000");
+        Assert.Equal(HttpStatusCode.NotFound, notFoundRes.StatusCode);
+    }
 }
 

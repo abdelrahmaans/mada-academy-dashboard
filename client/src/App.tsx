@@ -30,6 +30,7 @@ const ExecutiveDashboard = lazy(() => import("./pages/ExecutiveDashboard"));
 const PlatformConsole = lazy(() => import("./pages/PlatformConsole"));
 const FamilyPortal = lazy(() => import("./pages/FamilyPortal"));
 const StudentPortal = lazy(() => import("./pages/StudentPortal"));
+const CertificateVerify = lazy(() => import("./pages/CertificateVerify"));
 const WorkspaceHub = lazy(() => import("./pages/WorkspaceHub"));
 const AcademyBootstrap = lazy(() => import("./pages/AcademyBootstrap"));
 const Login = lazy(() => import("./pages/Login"));
@@ -142,6 +143,8 @@ function Router() {
       <WouterRouter base={basePath}>
         <Switch>
           {APP_ROUTES.map(([path, component]) => <Route key={path} path={path} component={component} />)}
+          <Route path="/verify-certificate/:code" component={CertificateVerify} />
+          <Route path="/verify-certificate" component={CertificateVerify} />
           <Route path="/404" component={NotFound} />
           <Route component={NotFound} />
         </Switch>

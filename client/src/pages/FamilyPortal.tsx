@@ -330,7 +330,7 @@ export default function FamilyPortal() {
         {child && tab === "attendance" && <ChildAttendance child={child} />}
         {child && tab === "evaluations" && <ChildEvaluations child={child} />}
         {child && tab === "invoices" && (
-          <ChildInvoices invoices={child.invoices ?? []} loading={invoiceLoading} error={invoiceError} onRetry={retry} />
+          <ChildInvoices invoices={child.invoices ?? []} loading={invoiceLoading} error={invoiceError} onRetry={retry} onPaymentSuccess={retry} />
         )}
         {child && tab === "freeze" && <ChildFreezeSection child={child} liveMode={liveMode} />}
 

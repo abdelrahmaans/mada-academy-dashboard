@@ -23,7 +23,9 @@ public static class ConsumerIdentityEndpoints
         var consumers = endpoints.MapGroup("/api/v1/consumer").RequireAuthorization("consumer");
         consumers.MapGet("/me/students", ListMyStudentsAsync);
         consumers.MapGet("/me/sessions", ListMySessionsAsync);
+        consumers.MapGet("/me/certificates", ListMyCertificatesAsync);
         consumers.MapGet("/groups/{groupId:guid}/leaderboard", GetConsumerGroupLeaderboardAsync);
+        endpoints.MapGet("/api/v1/certificates/verify/{code}", VerifyCertificateAsync).AllowAnonymous();
         return endpoints;
     }
 
@@ -329,6 +331,202 @@ public static class ConsumerIdentityEndpoints
 
         return Results.Ok(new { data = new { groupId, groupName = offering.GroupName, items } });
     }
+
+    private static async Task<IResult> ListMyCertificatesAsync(HttpContext context, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (!TryConsumer(context.User, out var accountId, out var tenantId, out var accountType))
+            return Forbidden("CONSUMER_SCOPE_REQUIRED");
+
+        var studentIds = accountType == "parent"
+            ? await db.GuardianStudentLinks.AsNoTracking()
+                .Where(x => x.TenantId == tenantId && x.UserAccountId == accountId && x.Status == "ACTIVE")
+                .Select(x => x.StudentId)
+                .ToListAsync(cancellationToken)
+            : await db.StudentAccountLinks.AsNoTracking()
+                .Where(x => x.TenantId == tenantId && x.UserAccountId == accountId)
+                .Select(x => x.StudentId)
+                .ToListAsync(cancellationToken);
+
+        if (studentIds.Count == 0)
+        {
+            return Results.Ok(new { data = new { items = Array.Empty<object>(), total = 0 } });
+        }
+
+        var enrollments = await (from enrollment in db.StudentEnrollments.AsNoTracking()
+                                 join student in db.Students.AsNoTracking() on enrollment.StudentId equals student.Id
+                                 join offering in db.CourseOfferings.AsNoTracking() on enrollment.CourseOfferingId equals offering.Id
+                                 join tmpl in db.CourseTemplates.AsNoTracking() on offering.CourseTemplateId equals tmpl.Id
+                                 join branch in db.Branches.AsNoTracking() on offering.BranchId equals branch.Id
+                                 join tenant in db.Tenants.AsNoTracking() on student.TenantId equals tenant.Id
+                                 where studentIds.Contains(student.Id)
+                                       && student.TenantId == tenantId
+                                       && (enrollment.Status == "ACTIVE" || enrollment.Status == "COMPLETED")
+                                 select new
+                                 {
+                                     enrollment.Id,
+                                     enrollment.StudentId,
+                                     StudentName = student.FullName,
+                                     OfferingId = offering.Id,
+                                     CourseName = tmpl.Name,
+                                     BranchName = branch.Name,
+                                     AcademyName = tenant.Name,
+                                     enrollment.Status,
+                                     enrollment.CreatedAt
+                                 })
+            .ToListAsync(cancellationToken);
+
+        if (enrollments.Count == 0)
+        {
+            return Results.Ok(new { data = new { items = Array.Empty<object>(), total = 0 } });
+        }
+
+        var offeringIds = enrollments.Select(e => e.OfferingId).Distinct().ToArray();
+        var sessions = await db.AcademySessions.AsNoTracking()
+            .Where(s => s.CourseOfferingId.HasValue && offeringIds.Contains(s.CourseOfferingId.Value) && s.TenantId == tenantId && s.Status != "CANCELLED")
+            .Select(s => new { s.Id, CourseOfferingId = s.CourseOfferingId!.Value, s.Status })
+            .ToListAsync(cancellationToken);
+
+        var sessionIds = sessions.Select(s => s.Id).ToArray();
+        var attendances = await db.SessionAttendances.AsNoTracking()
+            .Where(a => sessionIds.Contains(a.SessionId) && studentIds.Contains(a.StudentId) && (a.Status == "PRESENT" || a.Status == "LATE"))
+            .Select(a => new { a.SessionId, a.StudentId })
+            .ToListAsync(cancellationToken);
+
+        var evaluations = await db.SessionEvaluations.AsNoTracking()
+            .Where(e => sessionIds.Contains(e.SessionId) && studentIds.Contains(e.StudentId) && e.Status == "PUBLISHED")
+            .Select(e => new { e.SessionId, e.StudentId, e.Score, e.BonusPoints })
+            .ToListAsync(cancellationToken);
+
+        var items = enrollments.Select(e =>
+        {
+            var offeringSessions = sessions.Where(s => s.CourseOfferingId == e.OfferingId).ToList();
+            var offeringSessionIds = offeringSessions.Select(s => s.Id).ToHashSet();
+            var totalSessions = offeringSessions.Count;
+            var completedSessions = offeringSessions.Count(s => s.Status == "COMPLETED");
+            var attendedCount = attendances.Count(a => a.StudentId == e.StudentId && offeringSessionIds.Contains(a.SessionId));
+            var studentEvals = evaluations.Where(ev => ev.StudentId == e.StudentId && offeringSessionIds.Contains(ev.SessionId)).ToList();
+
+            var avgScore = studentEvals.Count > 0 ? (int)Math.Round(studentEvals.Average(ev => ev.Score ?? 0)) : 0;
+            var bonusPoints = studentEvals.Sum(ev => ev.BonusPoints);
+            var denominator = completedSessions > 0 ? completedSessions : totalSessions;
+            var attendanceRate = denominator > 0 ? Math.Min(100.0, Math.Round((double)attendedCount / denominator * 100, 1)) : 0.0;
+            var eligible = e.Status == "COMPLETED" || (completedSessions > 0 && attendanceRate >= 60.0) || avgScore >= 60;
+            var certificateCode = FormatCertificateCode(e.Id, e.StudentId);
+
+            return new
+            {
+                certificateCode,
+                enrollmentId = e.Id,
+                studentId = e.StudentId,
+                studentName = e.StudentName,
+                courseName = e.CourseName,
+                branchName = e.BranchName,
+                academyName = e.AcademyName,
+                enrollmentStatus = e.Status,
+                eligible,
+                status = eligible ? "ISSUED" : "IN_PROGRESS",
+                attendanceRate,
+                attendedSessions = attendedCount,
+                completedSessions,
+                totalSessions,
+                averageScore = avgScore,
+                bonusPoints,
+                issuedAt = e.CreatedAt
+            };
+        }).ToList();
+
+        return Results.Ok(new { data = new { items, total = items.Count } });
+    }
+
+    private static async Task<IResult> VerifyCertificateAsync(string code, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        var normalized = code?.Trim().ToUpperInvariant() ?? string.Empty;
+        var parts = normalized.Split('-');
+        if (parts.Length != 3 || parts[0] != "MADA" || parts[1].Length != 8 || parts[2].Length != 4)
+        {
+            return NotFound("CERTIFICATE_NOT_FOUND");
+        }
+
+        var enrollPrefix = parts[1].ToLowerInvariant();
+        var studentPrefix = parts[2].ToLowerInvariant();
+
+        var candidates = await db.StudentEnrollments.AsNoTracking()
+            .Where(e => e.Status == "ACTIVE" || e.Status == "COMPLETED")
+            .Select(e => new { e.Id, e.StudentId, e.CourseOfferingId, e.Status, e.CreatedAt })
+            .ToListAsync(cancellationToken);
+
+        var match = candidates.FirstOrDefault(e =>
+            e.Id.ToString("N").StartsWith(enrollPrefix, StringComparison.OrdinalIgnoreCase) &&
+            e.StudentId.ToString("N").StartsWith(studentPrefix, StringComparison.OrdinalIgnoreCase));
+
+        if (match is null)
+        {
+            return NotFound("CERTIFICATE_NOT_FOUND");
+        }
+
+        var details = await (from student in db.Students.AsNoTracking()
+                             join offering in db.CourseOfferings.AsNoTracking() on match.CourseOfferingId equals offering.Id
+                             join tmpl in db.CourseTemplates.AsNoTracking() on offering.CourseTemplateId equals tmpl.Id
+                             join branch in db.Branches.AsNoTracking() on offering.BranchId equals branch.Id
+                             join tenant in db.Tenants.AsNoTracking() on student.TenantId equals tenant.Id
+                             where student.Id == match.StudentId
+                             select new
+                             {
+                                 StudentName = student.FullName,
+                                 student.TenantId,
+                                 CourseName = tmpl.Name,
+                                 BranchName = branch.Name,
+                                 AcademyName = tenant.Name
+                             })
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (details is null)
+        {
+            return NotFound("CERTIFICATE_NOT_FOUND");
+        }
+
+        var sessions = await db.AcademySessions.AsNoTracking()
+            .Where(s => s.CourseOfferingId == match.CourseOfferingId && s.TenantId == details.TenantId && s.Status != "CANCELLED")
+            .Select(s => new { s.Id, s.Status })
+            .ToListAsync(cancellationToken);
+
+        var sessionIds = sessions.Select(s => s.Id).ToArray();
+        var completedSessions = sessions.Count(s => s.Status == "COMPLETED");
+        var attendedCount = await db.SessionAttendances.AsNoTracking()
+            .CountAsync(a => sessionIds.Contains(a.SessionId) && a.StudentId == match.StudentId && (a.Status == "PRESENT" || a.Status == "LATE"), cancellationToken);
+
+        var evals = await db.SessionEvaluations.AsNoTracking()
+            .Where(e => sessionIds.Contains(e.SessionId) && e.StudentId == match.StudentId && e.Status == "PUBLISHED")
+            .Select(e => new { e.Score, e.BonusPoints })
+            .ToListAsync(cancellationToken);
+
+        var avgScore = evals.Count > 0 ? (int)Math.Round(evals.Average(ev => ev.Score ?? 0)) : 0;
+        var denominator = completedSessions > 0 ? completedSessions : sessions.Count;
+        var attendanceRate = denominator > 0 ? Math.Min(100.0, Math.Round((double)attendedCount / denominator * 100, 1)) : 0.0;
+
+        return Results.Ok(new
+        {
+            data = new
+            {
+                valid = true,
+                certificateCode = FormatCertificateCode(match.Id, match.StudentId),
+                studentName = details.StudentName,
+                academyName = details.AcademyName,
+                branchName = details.BranchName,
+                courseName = details.CourseName,
+                enrollmentStatus = match.Status,
+                attendanceRate,
+                attendedSessions = attendedCount,
+                completedSessions,
+                totalSessions = sessions.Count,
+                averageScore = avgScore,
+                issuedAt = match.CreatedAt
+            }
+        });
+    }
+
+    private static string FormatCertificateCode(Guid enrollmentId, Guid studentId) =>
+        $"MADA-{enrollmentId.ToString("N")[..8].ToUpperInvariant()}-{studentId.ToString("N")[..4].ToUpperInvariant()}";
 
     private static async Task<IResult?> EnsureConsumerMembershipAsync(MadaDbContext db, UserAccount account, Guid tenantId, string roleCode, CancellationToken cancellationToken)
     {

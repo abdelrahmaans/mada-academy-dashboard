@@ -6,10 +6,13 @@ import {
   CheckCircle2,
   ChevronLeft,
   Clock,
+  CreditCard,
+  Loader2,
   Plus,
   Receipt,
   RefreshCw,
   ShieldCheck,
+  Smartphone,
   Snowflake,
   Star,
   Wallet,
@@ -19,6 +22,7 @@ import { toast } from "sonner";
 import {
   apiClient,
   freezeStorage,
+  type ConsumerCheckoutSession,
   type FinanceInvoice,
   type SubscriptionFreezeRequest,
 } from "@/lib/apiClient";
@@ -339,12 +343,70 @@ export function ChildInvoices({
   loading,
   error,
   onRetry,
+  onPaymentSuccess,
 }: {
   invoices: FinanceInvoice[];
   loading: boolean;
   error: string | null;
   onRetry: () => void;
+  onPaymentSuccess?: () => void;
 }) {
+  const [checkoutInvoice, setCheckoutInvoice] = useState<FinanceInvoice | null>(null);
+  const [payMethod, setPayMethod] = useState<"CARD" | "WALLET" | "INSTAPAY">("CARD");
+  const [payAmountEgp, setPayAmountEgp] = useState<string>("");
+  const [session, setSession] = useState<ConsumerCheckoutSession | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const openCheckout = (invoice: FinanceInvoice) => {
+    setCheckoutInvoice(invoice);
+    setPayMethod("CARD");
+    setPayAmountEgp(String(Math.round(invoice.remainingPiastres / 100)));
+    setSession(null);
+  };
+
+  const handleStartCheckout = async () => {
+    if (!checkoutInvoice) return;
+    const parsedEgp = Number(payAmountEgp);
+    const amountPiastres = Math.round(parsedEgp * 100);
+    if (!Number.isFinite(amountPiastres) || amountPiastres <= 0 || amountPiastres > checkoutInvoice.remainingPiastres) {
+      toast.error("يرجى إدخال مبلغ صحيح لا يتجاوز المتبقي في الفاتورة.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const created = await apiClient.createConsumerCheckout(checkoutInvoice.id, {
+        method: payMethod,
+        amountPiastres,
+      });
+      setSession(created);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "تعذر بدء جلسة الدفع الإلكتروني");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleConfirmCheckout = async () => {
+    if (!checkoutInvoice || !session) return;
+    setBusy(true);
+    try {
+      await apiClient.confirmConsumerCheckout(checkoutInvoice.id, {
+        checkoutSessionId: session.checkoutSessionId,
+        method: payMethod,
+        amountPiastres: session.amountPiastres,
+        gatewayReference: session.referenceCode,
+        idempotencyKey: session.checkoutSessionId,
+      });
+      toast.success("تم السداد الإلكتروني بنجاح وتحديث رصيد الفاتورة.");
+      setCheckoutInvoice(null);
+      setSession(null);
+      onPaymentSuccess?.();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "تعذر تأكيد عملية السداد");
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <section className="consumer-panel">
       <div className="consumer-panel-header">
@@ -442,9 +504,148 @@ export function ChildInvoices({
                     ))}
                   </div>
                 )}
+
+                {invoice.remainingPiastres > 0 && (
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
+                    <span className="text-xs text-slate-500">
+                      متاح السداد الفوري عبر البطاقة البنكية أو المحفظة أو إنستاباي
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => openCheckout(invoice)}
+                      className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-teal-700"
+                    >
+                      <CreditCard size={14} />
+                      سداد أونلاين الآن
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
+        </div>
+      )}
+
+      {checkoutInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl" dir="rtl">
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-900">بوابة السداد الإلكتروني</h3>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  فاتورة {checkoutInvoice.invoiceNumber} · المتبقي {(checkoutInvoice.remainingPiastres / 100).toLocaleString("ar-EG")} ج.م
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setCheckoutInvoice(null); setSession(null); }}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {!session ? (
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold text-slate-700">وسيلة الدفع</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: "CARD" as const, label: "بطاقة بنكية", icon: CreditCard },
+                      { id: "WALLET" as const, label: "محفظة إلكترونية", icon: Smartphone },
+                      { id: "INSTAPAY" as const, label: "إنستاباي", icon: Wallet },
+                    ].map((opt) => {
+                      const Icon = opt.icon;
+                      const active = payMethod === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setPayMethod(opt.id)}
+                          className={`flex flex-col items-center gap-1.5 rounded-xl border p-3 text-xs font-bold transition ${
+                            active
+                              ? "border-teal-600 bg-teal-50 text-teal-800"
+                              : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                          }`}
+                        >
+                          <Icon size={16} />
+                          <span>{opt.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold text-slate-700">المبلغ المراد سداده (ج.م)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={Math.round(checkoutInvoice.remainingPiastres / 100)}
+                    value={payAmountEgp}
+                    onChange={(e) => setPayAmountEgp(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-900 focus:border-teal-600 focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setCheckoutInvoice(null)}
+                    className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={handleStartCheckout}
+                    className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-xs font-bold text-white hover:bg-teal-700 disabled:opacity-60"
+                  >
+                    {busy && <Loader2 size={14} className="animate-spin" />}
+                    متابعة للدفع
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-4 space-y-4">
+                <div className="space-y-1.5 rounded-xl border border-teal-200 bg-teal-50/70 p-4 text-xs text-teal-950">
+                  <div className="flex justify-between">
+                    <span className="text-teal-700">مرجع العملية</span>
+                    <span className="font-mono font-bold">{session.referenceCode}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-teal-700">المبلغ المطلوب</span>
+                    <span className="font-extrabold">{(session.amountPiastres / 100).toLocaleString("ar-EG")} ج.م</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-teal-700">وضع البوابة</span>
+                    <span className="font-bold">{session.gatewayMode === "SANDBOX" ? "بيئة اختبار آمنة (Sandbox)" : "بث مباشر"}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => setSession(null)}
+                    className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                  >
+                    رجوع
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={handleConfirmCheckout}
+                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-60"
+                  >
+                    {busy ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                    تأكيد وإتمام السداد
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </section>
