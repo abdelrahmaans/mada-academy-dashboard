@@ -2247,3 +2247,87 @@ button:not(:disabled) {
 @import "./styles/pages/retention.css";
 @import "./styles/pages/sprint-extensions.css";
 @import "./styles/pages/waitlist.css";
+
+/* Shared Role Quick Actions Bar (consistent with FinanceDesk) */
+.mada-quick-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  margin-bottom: 18px;
+}
+
+.mada-quick-actions-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #475569;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-inline-end: 4px;
+}
+
+.mada-quick-actions-list {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mada-quick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #1e293b;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.mada-quick-btn:hover {
+  border-color: #0d9488;
+  color: #0f766e;
+  background: #f0fdfa;
+  transform: translateY(-1px);
+}
+
+.mada-quick-btn-primary {
+  background: #0d9488;
+  border-color: #0d9488;
+  color: #ffffff;
+}
+
+.mada-quick-btn-primary:hover {
+  background: #0f766e;
+  border-color: #0f766e;
+  color: #ffffff;
+}
+
+.mada-quick-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #0d9488;
+  color: #ffffff;
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.mada-quick-btn-primary .mada-quick-badge {
+  background: rgba(255, 255, 255, 0.25);
+}

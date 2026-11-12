@@ -3,7 +3,9 @@ import { CalendarDays, CheckCircle2, CircleHelp, Megaphone, Plus, Search, Shield
 import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
+import QuickActionsBar from "@/components/QuickActionsBar";
 import RoleScopeCard from "@/components/RoleScopeCard";
+import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient, type LeadRecord, type MarketingCampaignRecord, type MarketingContentRecord } from "@/lib/apiClient";
 
@@ -155,6 +157,30 @@ export default function MarketingDesk() {
         <div className="workspace marketing-desk-content">
           <PageHeader className="welcome-row" copyClassName="welcome-copy" actionsClassName="welcome-actions" eyebrow={<span className="eyebrow"><i className="eyebrow-dot" /> مسؤول التسويق · R07</span>} title="سير عمل التسويق والـLeads" description="أنشئ الحملات والمحتوى والـLeads، تابع الحالات، وقِس التحويل من بيانات محفوظة في PostgreSQL ضمن نطاقك." actions={<span className="marketing-date"><CalendarDays size={14} /> اليوم · {branchId ? branchName(branchId) : "كل الفروع"}</span>} />
           <RoleScopeCard className="marketing-scope-card" />
+          <QuickActionsBar
+            actions={[
+              {
+                id: "r07-refresh",
+                label: "تحديث البيانات",
+                icon: <TrendingUp size={14} />,
+                onClick: () => void loadMarketing(),
+                tone: "primary",
+              },
+              {
+                id: "r07-filter-new",
+                label: "الاستفسارات الجديدة",
+                icon: <Users size={14} />,
+                onClick: () => setQuery(""),
+                badge: metrics.active || undefined,
+              },
+              {
+                id: "r07-demo-leads",
+                label: "طلبات الديمو",
+                icon: <Megaphone size={14} />,
+                onClick: () => setQuery("LANDING_DEMO"),
+              },
+            ]}
+          />
           <div className="marketing-banner"><ShieldCheck size={15} /><span><strong>حدود R07:</strong> الـBackend هو مصدر الحقيقة ويفرض tenant/branch scope؛ هذه الشاشة لا تعرض بيانات مالية أو تقييمات، ولا تنشر مباشرة على القنوات الخارجية.</span></div>
           {error && <div className="role-feedback-state role-feedback-error" role="alert"><strong>تعذر الاتصال بالـMarketing API</strong><span>{error}</span><button className="button button-secondary" type="button" onClick={() => void loadMarketing()}>إعادة المحاولة</button></div>}
           <section className="marketing-kpis">

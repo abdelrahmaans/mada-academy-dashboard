@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Award, CheckCircle2, RefreshCw, ShieldCheck, Users } from "lucide-react";
+import { Award, CalendarDays, CheckCircle2, RefreshCw, ShieldCheck, Users } from "lucide-react";
+import { useLocation } from "wouter";
 import EvaluationReviewQueue from "@/components/EvaluationReviewQueue";
 import HeadInstructorsLiveOverview, { type HeadInstructorsOverviewData } from "@/components/HeadInstructorsLiveOverview";
+import QuickActionsBar from "@/components/QuickActionsBar";
 import RubricsManagementView from "@/components/RubricsManagementView";
 import { LoadingState } from "@/components/FeedbackStates";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
@@ -16,6 +18,7 @@ type LiveView = "overview" | "evaluations" | "rubrics";
 
 export default function HeadInstructorsLive() {
   const { me, loading: authLoading } = useAuth();
+  const [, navigate] = useLocation();
   const [view, setView] = useState<LiveView>(() => {
     const hash = window.location.hash;
     if (hash === "#evaluations") return "evaluations";
@@ -114,6 +117,21 @@ export default function HeadInstructorsLive() {
           <button className="r03-live-refresh" type="button" onClick={() => void load()} disabled={loading}><RefreshCw size={15} className={loading ? "spinning" : ""} /> تحديث البيانات</button>
         </header>
         <RoleScopeCard className="r03-live-scope" compact />
+        <QuickActionsBar
+          actions={[
+            {
+              id: "r03-review",
+              label: "مراجعة التقييمات المعلقة",
+              icon: <CheckCircle2 size={14} />,
+              onClick: () => setView("evaluations"),
+              badge: data?.evaluations.counts.SUBMITTED,
+              tone: "primary",
+            },
+            { id: "r03-rubrics", label: "بنك معايير التقييم", icon: <Award size={14} />, onClick: () => setView("rubrics") },
+            { id: "r03-supervision", label: "تعيين الإشراف للمجموعات", icon: <Users size={14} />, onClick: () => navigate("/supervision") },
+            { id: "r03-schedule", label: "جدول الجلسات", icon: <CalendarDays size={14} />, onClick: () => navigate("/schedule") },
+          ]}
+        />
         <nav className="r03-live-tabs" aria-label="أقسام إشراف المدربين">
           <button type="button" className={view === "overview" ? "active" : ""} onClick={() => setView("overview")}><Users size={15} /> ملخص الفرع</button>
           <button type="button" className={view === "evaluations" ? "active" : ""} onClick={() => setView("evaluations")}><CheckCircle2 size={15} /> مراجعة التقييمات <b>{data?.evaluations.counts.SUBMITTED ?? "—"}</b></button>

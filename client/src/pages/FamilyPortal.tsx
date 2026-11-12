@@ -12,7 +12,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import ChildrenSwitcher from "@/components/ChildrenSwitcher";
+import QuickActionsBar from "@/components/QuickActionsBar";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
+import StudentCertificatesCard from "@/components/StudentCertificatesCard";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   apiClient,
@@ -306,6 +308,15 @@ export default function FamilyPortal() {
           </div>
         )}
 
+        <QuickActionsBar
+          actions={[
+            { id: "r08-pay", label: "سداد الفواتير أونلاين", icon: <Wallet size={14} />, onClick: () => selectTab("invoices"), tone: "primary" },
+            { id: "r08-evals", label: "متابعة التقييمات", icon: <Star size={14} />, onClick: () => selectTab("evaluations") },
+            { id: "r08-attendance", label: "سجل الحضور", icon: <CalendarDays size={14} />, onClick: () => selectTab("attendance") },
+            { id: "r08-freeze", label: "طلب تجميد اشتراك", icon: <Snowflake size={14} />, onClick: () => selectTab("freeze") },
+          ]}
+        />
+
         {/* Quick Nav Pills */}
         <nav className="consumer-tab-pills" aria-label="أقسام بوابة الأسرة">
           {tabs.map(item => {
@@ -326,7 +337,12 @@ export default function FamilyPortal() {
         </nav>
 
         {/* Tab Contents */}
-        {child && tab === "overview" && <ChildOverview child={child} onTab={selectTab} />}
+        {child && tab === "overview" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            <ChildOverview child={child} onTab={selectTab} />
+            <StudentCertificatesCard liveMode={liveMode} studentId={child.id} />
+          </div>
+        )}
         {child && tab === "attendance" && <ChildAttendance child={child} />}
         {child && tab === "evaluations" && <ChildEvaluations child={child} />}
         {child && tab === "invoices" && (

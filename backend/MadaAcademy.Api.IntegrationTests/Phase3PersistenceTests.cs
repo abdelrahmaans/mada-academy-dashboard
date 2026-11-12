@@ -550,5 +550,112 @@ public sealed class Phase3PersistenceTests
         var notFoundRes = await anonClient.GetAsync("/api/v1/certificates/verify/MADA-00000000-0000");
         Assert.Equal(HttpStatusCode.NotFound, notFoundRes.StatusCode);
     }
+
+    [Fact]
+    public async Task Full_Academic_And_Finance_Operation_Lifecycle_Propagates_Across_Roles()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        var manager = await TestData.CreateAccountAsync(factory, "R02_BRANCH_MANAGER");
+        var head = await TestData.CreateAccountAsync(factory, "R03_HEAD_INSTRUCTORS", tenantId: manager.TenantId, branchId: manager.BranchId);
+        var instructor = await TestData.CreateAccountAsync(factory, "R04_INSTRUCTOR", tenantId: manager.TenantId, branchId: manager.BranchId);
+        var accountant = await TestData.CreateAccountAsync(factory, "R06_ACCOUNTANT", tenantId: manager.TenantId, branchId: manager.BranchId);
+        var parent = await TestData.CreateConsumerAccountAsync(factory, manager.TenantId, "parent", "R08_PARENT", "+201022334455");
+        var studentAcc = await TestData.CreateConsumerAccountAsync(factory, manager.TenantId, "student", "R09_STUDENT", "+201033445566");
+
+        Guid studentId;
+        Guid offeringId;
+        Guid sessionId;
+        Guid invoiceId;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            var student = new Student { TenantId = manager.TenantId, BranchId = manager.BranchId, FullName = "طارق محمود", Status = "ACTIVE" };
+            db.Students.Add(student);
+            db.GuardianStudentLinks.Add(new GuardianStudentLink { TenantId = manager.TenantId, StudentId = student.Id, UserAccountId = parent.UserId, CreatedByUserId = manager.UserId, Relationship = "الأب", Status = "ACTIVE" });
+            db.StudentAccountLinks.Add(new StudentAccountLink { TenantId = manager.TenantId, StudentId = student.Id, UserAccountId = studentAcc.UserId, CreatedByUserId = manager.UserId });
+            db.Memberships.Add(new Membership { UserAccountId = parent.UserId, TenantId = manager.TenantId, RoleCode = "R08_PARENT", ScopeLevel = "TENANT", Status = "ACTIVE" });
+            db.Memberships.Add(new Membership { UserAccountId = studentAcc.UserId, TenantId = manager.TenantId, RoleCode = "R09_STUDENT", ScopeLevel = "TENANT", Status = "ACTIVE" });
+
+            var classroom = new Classroom { BranchId = manager.BranchId, Name = "قاعة 1", Capacity = 15 };
+            db.Classrooms.Add(classroom);
+            var template = new CourseTemplate { TenantId = manager.TenantId, Name = "برمجة بايثون المتقدمة", BasePricePiastres = 200000 };
+            db.CourseTemplates.Add(template);
+            var offering = new CourseOffering { TenantId = manager.TenantId, BranchId = manager.BranchId, CourseTemplateId = template.Id, InstructorId = instructor.UserId, ClassroomId = classroom.Id, Status = "ACTIVE" };
+            db.CourseOfferings.Add(offering);
+            db.GroupSupervisionAssignments.Add(new GroupSupervisionAssignment { TenantId = manager.TenantId, BranchId = manager.BranchId, CourseOfferingId = offering.Id, SupervisorUserId = head.UserId, CanDecideEvaluations = true, Status = "ACTIVE" });
+            db.StudentEnrollments.Add(new StudentEnrollment { StudentId = student.Id, CourseOfferingId = offering.Id, FinalPricePiastres = 200000, Status = "ACTIVE" });
+            var session = new AcademySession { TenantId = manager.TenantId, BranchId = manager.BranchId, CourseOfferingId = offering.Id, InstructorId = instructor.UserId, ClassroomId = classroom.Id, SessionNumber = 1, StartAt = DateTimeOffset.UtcNow.AddHours(-2), EndAt = DateTimeOffset.UtcNow.AddHours(-1), Status = "SCHEDULED" };
+            db.AcademySessions.Add(session);
+            var invoice = new Invoice { TenantId = manager.TenantId, BranchId = manager.BranchId, StudentId = student.Id, InvoiceNumber = "MAD-E2E-2026-01", TotalPiastres = 200000, IssueDate = DateOnly.FromDateTime(DateTime.UtcNow), DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(5)), CreatedByUserId = accountant.UserId, Lines = [new InvoiceLine { LineNumber = 1, Description = "رسوم بايثون", AmountPiastres = 200000 }] };
+            db.Invoices.Add(invoice);
+            await db.SaveChangesAsync();
+
+            studentId = student.Id;
+            offeringId = offering.Id;
+            sessionId = session.Id;
+            invoiceId = invoice.Id;
+        }
+
+        // 1. Instructor marks attendance & submits evaluation
+        using var instClient = factory.CreateClient();
+        TestData.Authenticate(instClient, await TestData.LoginAsync(instClient, instructor));
+        var attRes = await instClient.PutAsJsonAsync($"/api/v1/sessions/{sessionId}/attendance", new
+        {
+            records = new[] { new { studentId, status = "PRESENT" } }
+        });
+        Assert.Equal(HttpStatusCode.OK, attRes.StatusCode);
+
+        var evalSaveRes = await instClient.PutAsJsonAsync($"/api/v1/scheduling/sessions/{sessionId}/evaluations", new
+        {
+            items = new[] { new { studentId, score = 95, bonusPoints = 10, gamificationBadge = "STAR", notes = "أداء ممتاز" } }
+        });
+        Assert.Equal(HttpStatusCode.OK, evalSaveRes.StatusCode);
+
+        var evalSubmitRes = await instClient.PostAsJsonAsync($"/api/v1/scheduling/sessions/{sessionId}/evaluations/submit", new { studentIds = new[] { studentId } });
+        Assert.Equal(HttpStatusCode.OK, evalSubmitRes.StatusCode);
+
+        Guid evaluationId;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+            evaluationId = db.SessionEvaluations.Where(x => x.SessionId == sessionId && x.StudentId == studentId).Select(x => x.Id).ToList().Single();
+        }
+
+        // 2. Head of Instructors publishes the evaluation
+        using var headClient = factory.CreateClient();
+        TestData.Authenticate(headClient, await TestData.LoginAsync(headClient, head));
+        var pubRes = await headClient.PostAsJsonAsync($"/api/v1/scheduling/evaluation-reviews/{evaluationId}/decision", new { decision = "PUBLISH" });
+        Assert.Equal(HttpStatusCode.OK, pubRes.StatusCode);
+
+        // 3. Parent & Student see published evaluation, leaderboard XP, and eligible certificate
+        using var parentClient = factory.CreateClient();
+        TestData.Authenticate(parentClient, await TestData.LoginAsync(parentClient, parent));
+        var parentSessions = await parentClient.GetFromJsonAsync<JsonDocument>("/api/v1/consumer/me/sessions");
+        var firstSession = Assert.Single(parentSessions!.RootElement.GetProperty("data").GetProperty("items").EnumerateArray());
+        Assert.Equal("PRESENT", firstSession.GetProperty("attendanceStatus").GetString());
+        Assert.Equal(95, firstSession.GetProperty("score").GetInt32());
+        Assert.Equal(10, firstSession.GetProperty("bonusPoints").GetInt32());
+        Assert.Equal("STAR", firstSession.GetProperty("badge").GetString());
+
+        using var studentClient = factory.CreateClient();
+        TestData.Authenticate(studentClient, await TestData.LoginAsync(studentClient, studentAcc));
+        var certDoc = await studentClient.GetFromJsonAsync<JsonDocument>("/api/v1/consumer/me/certificates");
+        var certItem = Assert.Single(certDoc!.RootElement.GetProperty("data").GetProperty("items").EnumerateArray());
+        Assert.True(certItem.GetProperty("eligible").GetBoolean());
+        var certCode = certItem.GetProperty("certificateCode").GetString()!;
+
+        using var anonClient = factory.CreateClient();
+        var verifyDoc = await anonClient.GetFromJsonAsync<JsonDocument>($"/api/v1/certificates/verify/{certCode}");
+        Assert.True(verifyDoc!.RootElement.GetProperty("data").GetProperty("valid").GetBoolean());
+
+        // 4. Parent pays invoice online -> Accountant financial report reflects collected amount
+        var confirmRes = await parentClient.PostAsJsonAsync($"/api/v1/consumer/invoices/{invoiceId}/checkout/confirm", new { method = "CARD", checkoutSessionId = "chk_e2e_lifecycle" });
+        Assert.Equal(HttpStatusCode.OK, confirmRes.StatusCode);
+
+        using var accClient = factory.CreateClient();
+        TestData.Authenticate(accClient, await TestData.LoginAsync(accClient, accountant));
+        var reportDoc = await accClient.GetFromJsonAsync<JsonDocument>("/api/v1/finance/reports/summary");
+        Assert.Equal(200000, reportDoc!.RootElement.GetProperty("data").GetProperty("totalCollectedPiastres").GetInt64());
+    }
 }
 

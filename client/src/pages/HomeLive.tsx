@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Activity, ArrowLeft, BookOpen, CalendarDays, CheckCircle2, Menu, RefreshCw, UserPlus, Users } from "lucide-react";
 import { useLocation } from "wouter";
 import PageHeader from "@/components/PageHeader";
+import QuickActionsBar from "@/components/QuickActionsBar";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import { apiClient, type AuthMe, type DashboardSummary } from "@/lib/apiClient";
@@ -53,6 +54,15 @@ export default function HomeLive({ me }: { me: AuthMe }) {
           actions={<button className="button button-secondary" onClick={() => setRefreshKey(value => value + 1)} disabled={loading}><RefreshCw size={16} /> تحديث البيانات</button>}
         />
         <RoleScopeCard className="home-role-scope-card" compact />
+        <QuickActionsBar
+          actions={[
+            { id: "r02-approvals", label: "الموافقات والقرارات", icon: <CheckCircle2 size={14} />, onClick: () => navigate("/approvals"), tone: "primary" },
+            { id: "r02-schedule", label: "الجدول والجلسات", icon: <CalendarDays size={14} />, onClick: () => navigate("/schedule") },
+            { id: "r02-classes", label: "إدارة المجموعات", icon: <BookOpen size={14} />, onClick: () => navigate("/classes") },
+            { id: "r02-students", label: "الطلاب والاشتراكات", icon: <Users size={14} />, onClick: () => navigate("/students") },
+            { id: "r02-team", label: "فريق الفرع والإشراف", icon: <UserPlus size={14} />, onClick: () => navigate("/team") },
+          ]}
+        />
         <div className="r02-home-live-source"><Activity size={14} /> المصدر: API الفرع · النطاق مستمد من جلسة المستخدم</div>
 
         {loading && <section className="r02-live-state" role="status"><span className="r02-live-spinner" /> جارٍ تحميل مؤشرات الفرع…</section>}

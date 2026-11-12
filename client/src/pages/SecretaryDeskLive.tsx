@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import PageHeader from "@/components/PageHeader";
+import QuickActionsBar from "@/components/QuickActionsBar";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import { useAuth } from "@/contexts/AuthContext";
@@ -412,6 +413,15 @@ export default function SecretaryDeskLive() {
         />
 
         <RoleScopeCard className="secretary-scope-card" />
+        <QuickActionsBar
+          actions={[
+            { id: "r05-new-lead", label: "استفسار جديد", icon: <Plus size={14} />, onClick: () => setNewLeadModalOpen(true), tone: "primary" },
+            { id: "r05-register", label: "تسجيل طالب مباشر", icon: <UserPlus size={14} />, onClick: () => selectTab("registration") },
+            { id: "r05-pipeline", label: "مسار الاستفسارات", icon: <PhoneCall size={14} />, onClick: () => selectTab("pipeline"), badge: newLeadsCount || undefined },
+            { id: "r05-freeze", label: "طلب تجميد اشتراك", icon: <Snowflake size={14} />, onClick: () => setFreezeModalOpen(true) },
+            { id: "r05-shift", label: "تقفيل عهدة الوردية", icon: <Wallet size={14} />, onClick: () => setShiftModalOpen(true) },
+          ]}
+        />
 
         {/* Live KPI Metric Cards */}
         <section className="secretary-stats-grid" aria-label="مؤشرات الاستقبال والتسجيل">

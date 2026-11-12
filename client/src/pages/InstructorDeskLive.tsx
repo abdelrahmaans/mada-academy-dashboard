@@ -9,8 +9,10 @@ import {
 } from "lucide-react";
 import { LoadingState } from "@/components/FeedbackStates";
 import EvaluationReviewQueue from "@/components/EvaluationReviewQueue";
+import QuickActionsBar from "@/components/QuickActionsBar";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
+import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { InstructorSessionsView } from "@/components/instructor/InstructorSessionsView";
 import { InstructorSupervisionView } from "@/components/instructor/InstructorSupervisionView";
 import { InstructorAttendanceView } from "@/components/instructor/InstructorAttendanceView";
@@ -399,7 +401,7 @@ export default function InstructorDeskLive() {
 
   return (
     <RoleDashboardShell
-      className="r04-live-shell"
+      className="app-shell r04-live-shell"
       roleCode="R04"
       roleLabel="المدرب"
       scopeLevel="assigned"
@@ -408,7 +410,7 @@ export default function InstructorDeskLive() {
       branchName={branch}
       tenantName={me.academy?.name}
     >
-      <main className="r04-live-page" dir="rtl">
+      <main className="main-panel r04-live-page" dir="rtl">
         <header className="r04-live-header">
           <div>
             <span className="r04-live-eyebrow">
@@ -430,6 +432,15 @@ export default function InstructorDeskLive() {
           </button>
         </header>
         <RoleScopeCard className="r04-live-scope" compact />
+        <QuickActionsBar
+          actions={[
+            { id: "r04-sessions", label: "حصصي المسندة", icon: <CalendarDays size={14} />, onClick: () => setView("sessions"), tone: "primary" },
+            { id: "r04-attendance", label: "تحضير الحضور", icon: <CalendarCheck size={14} />, onClick: () => setView("attendance") },
+            { id: "r04-evaluations", label: "تقييم الطلاب", icon: <Star size={14} />, onClick: () => setView("evaluations") },
+            { id: "r04-supervision", label: "مجموعات المتابعة", icon: <Users size={14} />, onClick: () => setView("supervision") },
+            { id: "r04-refresh", label: "تحديث الجلسات", icon: <RefreshCw size={14} />, onClick: () => void loadSessions() },
+          ]}
+        />
         <InstructorEarningsCard
           earnings={earnings}
           loading={earningsLoading}

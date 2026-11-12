@@ -3,7 +3,13 @@ import QRCode from "qrcode";
 import { Award, ExternalLink, Loader2, Printer, QrCode, ShieldCheck, X } from "lucide-react";
 import { apiClient, type StudentCertificate } from "@/lib/apiClient";
 
-export default function StudentCertificatesCard({ liveMode }: { liveMode: boolean }) {
+export default function StudentCertificatesCard({
+  liveMode,
+  studentId,
+}: {
+  liveMode: boolean;
+  studentId?: string;
+}) {
   const [certificates, setCertificates] = useState<StudentCertificate[]>([]);
   const [loading, setLoading] = useState(liveMode);
   const [selectedCert, setSelectedCert] = useState<StudentCertificate | null>(null);
@@ -19,7 +25,10 @@ export default function StudentCertificatesCard({ liveMode }: { liveMode: boolea
     apiClient
       .consumerCertificates()
       .then((res) => {
-        if (!cancelled) setCertificates(res.items ?? []);
+        if (!cancelled) {
+          const items = res.items ?? [];
+          setCertificates(studentId ? items.filter((item) => item.studentId === studentId) : items);
+        }
       })
       .catch(() => {
         if (!cancelled) setCertificates([]);
@@ -30,7 +39,7 @@ export default function StudentCertificatesCard({ liveMode }: { liveMode: boolea
     return () => {
       cancelled = true;
     };
-  }, [liveMode]);
+  }, [liveMode, studentId]);
 
   useEffect(() => {
     if (!selectedCert) {

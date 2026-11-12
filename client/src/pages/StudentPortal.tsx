@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
+import QuickActionsBar from "@/components/QuickActionsBar";
 import StudentProgressCard, {
   type StudentAchievement,
 } from "@/components/StudentProgressCard";
@@ -445,6 +446,14 @@ export default function StudentPortal() {
             </div>
           </div>
         )}
+
+        <QuickActionsBar
+          actions={[
+            { id: "r09-progress", label: "التقدم والشهادات الموثقة", icon: <Trophy size={14} />, onClick: () => selectTab("progress"), tone: "primary" },
+            { id: "r09-sessions", label: "جدول حصصي وتقييماتي", icon: <CalendarDays size={14} />, onClick: () => selectTab("sessions") },
+            { id: "r09-refresh", label: "تحديث البيانات", icon: <RefreshCw size={14} />, onClick: () => void retry() },
+          ]}
+        />
 
         {/* Quick Nav Pills */}
         <nav className="consumer-tab-pills" aria-label="أقسام مساحة الطالب">

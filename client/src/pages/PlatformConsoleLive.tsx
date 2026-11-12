@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import { useLocation } from "wouter";
 import PageHeader from "@/components/PageHeader";
+import QuickActionsBar from "@/components/QuickActionsBar";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import SessionLogoutButton from "@/components/SessionLogoutButton";
@@ -1059,6 +1060,14 @@ export default function PlatformConsoleLive() {
           />
 
           <RoleScopeCard className="pc-live-scope" compact />
+          <QuickActionsBar
+            actions={[
+              { id: "r00-new-academy", label: "إنشاء أكاديمية جديدة", icon: <Plus size={14} />, onClick: () => navigate("/platform/academies/new"), tone: "primary" },
+              { id: "r00-academies", label: "إدارة الأكاديميات", icon: <Building2 size={14} />, onClick: () => setView("academies") },
+              { id: "r00-leads", label: "طلبات الديمو", icon: <Megaphone size={14} />, onClick: () => setView("leads") },
+              { id: "r00-billing", label: "المدفوعات والاشتراكات", icon: <FileSpreadsheet size={14} />, onClick: () => setView("billing") },
+            ]}
+          />
 
           {loading && (
             <div className="pc-live-state" role="status">
