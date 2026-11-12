@@ -911,7 +911,7 @@ public static class DemoDataSeeder
         var invCorrectionId = Guid.Parse("86000000-0000-0000-0000-000000000001");
         if (!await db.InvoiceCorrectionRequests.AnyAsync(c => c.Id == invCorrectionId, cancellationToken))
         {
-            var invoice2Id = Guid.Parse("81000000-0000-0000-0000-000000000002");
+            var invoice1Id = Guid.Parse("80000000-0000-0000-0000-000000000001");
             var corrApprovalId = Guid.Parse("84000000-0000-0000-0000-000000000005");
             db.ApprovalRequests.Add(new ApprovalRequest
             {
@@ -920,7 +920,7 @@ public static class DemoDataSeeder
                 BranchId = mainBranchId,
                 RequestType = "INVOICE_CORRECTION",
                 TargetType = "INVOICE",
-                TargetId = invoice2Id.ToString(),
+                TargetId = invoice1Id.ToString(),
                 SubmittedByRole = "R06_ACCOUNTANT",
                 State = "PENDING",
                 Reason = "تطبيق خصم الأشقاء 10% على فاتورة الطالب آدم خالد"
@@ -931,7 +931,7 @@ public static class DemoDataSeeder
                 Id = invCorrectionId,
                 TenantId = tenantId,
                 BranchId = mainBranchId,
-                InvoiceId = invoice2Id,
+                InvoiceId = invoice1Id,
                 ApprovalRequestId = corrApprovalId,
                 RequestedByUserId = accountantId,
                 CurrentTotalPiastres = 320000,
