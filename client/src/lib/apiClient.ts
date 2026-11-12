@@ -949,6 +949,7 @@ export interface CertificateVerification {
 
 export const apiClient = {
   baseUrl: API_BASE,
+  getToken: () => accessToken,
   hasSession: () => Boolean(accessToken),
   login: async (phone: string, password: string, accountType: "staff" | "parent" | "student" = "staff") => {
     const response = await request<TokenResponse>("/auth/login", { method: "POST", body: JSON.stringify({ phone, password, accountType }) }, false);

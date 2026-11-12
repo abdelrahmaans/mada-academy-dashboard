@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "wouter";
-import { Award, Building2, CalendarCheck, CheckCircle2, GraduationCap, Loader2, Search, ShieldAlert, ShieldCheck } from "lucide-react";
+import { Award, Building2, CalendarCheck, CheckCircle2, Download, GraduationCap, Loader2, Search, ShieldAlert, ShieldCheck } from "lucide-react";
 import { apiClient, type CertificateVerification } from "@/lib/apiClient";
 
 export default function CertificateVerify() {
@@ -145,6 +145,19 @@ export default function CertificateVerify() {
                   حضور {result.attendanceRate}% · متوسط التقييم {result.averageScore}/100
                 </div>
               </div>
+            </div>
+
+            <div className="border-t border-slate-100 bg-slate-50/60 p-4 text-center">
+              <a
+                href={`https://academy-dashboard.runasp.net/api/v1/certificates/verify/${encodeURIComponent(result.certificateCode)}/pdf`}
+                target="_blank"
+                rel="noreferrer"
+                download
+                className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-teal-700"
+              >
+                <Download size={15} />
+                تحميل النسخة الرسمية للشهادة (PDF عالي الدقة)
+              </a>
             </div>
           </div>
         )}

@@ -6,6 +6,7 @@ import {
   Building2,
   CircleAlert,
   Database,
+  FileSpreadsheet,
   GraduationCap,
   Menu,
   RefreshCw,
@@ -51,6 +52,7 @@ export default function ReportsLive({ me }: { me: AuthMe }) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [exporting, setExporting] = useState(false);
   const [exportingBi, setExportingBi] = useState(false);
+  const [exportingXlsx, setExportingXlsx] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const isOwner = me.role === "R01_ACADEMY_OWNER";
@@ -202,6 +204,31 @@ export default function ReportsLive({ me }: { me: AuthMe }) {
     }
   };
 
+  const exportXlsx = async () => {
+    try {
+      setExportingXlsx(true);
+      const endpoint = isAccountant
+        ? "https://academy-dashboard.runasp.net/api/v1/finance/reports/summary.xlsx"
+        : "https://academy-dashboard.runasp.net/api/v1/reports/operational.xlsx";
+      const token = apiClient.getToken();
+      const res = await fetch(endpoint, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("تعذر تحميل ملف Excel");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `mada-report-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "تعذر تصدير تقرير Excel.");
+    } finally {
+      setExportingXlsx(false);
+    }
+  };
+
   const money = (piastres: number) =>
     new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -287,8 +314,17 @@ export default function ReportsLive({ me }: { me: AuthMe }) {
                   {exporting
                     ? "جارٍ التصدير…"
                     : isAccountant
-                    ? "تصدير التقرير المالي (CSV)"
+                    ? "تصدير CSV"
                     : "تصدير CSV تشغيلي"}
+                </button>
+                <button
+                  className="button button-secondary"
+                  style={{ color: "#166534", borderColor: "#bbf7d0", background: "#f0fdf4" }}
+                  onClick={() => void exportXlsx()}
+                  disabled={loading || exportingXlsx}
+                >
+                  <FileSpreadsheet size={15} />{" "}
+                  {exportingXlsx ? "جارٍ التجهيز…" : "تصدير Excel (.xlsx)"}
                 </button>
                 <button
                   className="button button-primary"

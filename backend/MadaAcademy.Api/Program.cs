@@ -150,6 +150,8 @@ app.MapMadaInvoiceCorrectionEndpoints();
 app.MapMadaExpenseEndpoints();
 app.MapMadaPlatformAdminEndpoints();
 app.MapMadaOperationalReportEndpoints();
+app.MapMadaExcelReportEndpoints();
+app.MapMadaCertificatePdfEndpoints();
 app.MapMadaAnalyticsEndpoints();
 app.MapMadaCompetitionEndpoints();
 app.MapMadaTenantScopeEndpoints();

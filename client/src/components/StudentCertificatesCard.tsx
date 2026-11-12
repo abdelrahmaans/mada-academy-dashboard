@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { Award, ExternalLink, Loader2, Printer, QrCode, ShieldCheck, X } from "lucide-react";
+import { Award, Download, ExternalLink, Loader2, Printer, QrCode, ShieldCheck, X } from "lucide-react";
 import { apiClient, type StudentCertificate } from "@/lib/apiClient";
 
 export default function StudentCertificatesCard({
@@ -137,13 +137,23 @@ export default function StudentCertificatesCard({
             <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-3 print:hidden">
               <span className="text-xs font-bold text-slate-600">معاينة الشهادة الإلكترونية الموثقة</span>
               <div className="flex items-center gap-2">
+                <a
+                  href={`https://academy-dashboard.runasp.net/api/v1/certificates/verify/${encodeURIComponent(selectedCert.certificateCode)}/pdf`}
+                  target="_blank"
+                  rel="noreferrer"
+                  download
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-teal-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-teal-700 no-underline"
+                >
+                  <Download size={14} />
+                  تحميل PDF رسمي
+                </a>
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-teal-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-teal-700"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100"
                 >
                   <Printer size={14} />
-                  طباعة / PDF
+                  طباعة
                 </button>
                 <button
                   type="button"
