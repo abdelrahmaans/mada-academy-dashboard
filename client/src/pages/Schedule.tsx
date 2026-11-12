@@ -141,13 +141,24 @@ function SchedulePage() {
       setSessions(seededSessions());
       return;
     }
+    if (!me) {
+      return;
+    }
+    const canListInstructors =
+      me.role !== "R04_INSTRUCTOR" &&
+      Boolean(
+        me.permissions?.includes("sessions.create") ||
+          me.permissions?.includes("sessions.read")
+      );
     setLiveMode(true);
     setLoading(true);
     setLoadError(null);
     Promise.allSettled([
       apiClient.listSessions(),
       apiClient.schedulingClassrooms(),
-      apiClient.schedulingInstructors(),
+      canListInstructors
+        ? apiClient.schedulingInstructors()
+        : Promise.resolve({ items: [] }),
     ]).then(([sessionResult, classroomResult, instructorResult]) => {
       if (sessionResult.status === "rejected") {
         setLiveClassrooms([]);
@@ -185,7 +196,7 @@ function SchedulePage() {
     }).finally(() => {
       setLoading(false);
     });
-  }, []);
+  }, [me]);
 
   const liveBranches = Array.from(
     new Map(

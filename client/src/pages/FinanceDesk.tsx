@@ -198,9 +198,11 @@ export default function FinanceDesk() {
   };
 
   useEffect(() => {
-    if (liveMode) {
+    if (!liveMode || workspaceState !== "ready") return;
+    if (canAccessFinanceView(financeAccess, "payroll")) {
       refreshPayrolls().catch(() => undefined);
-
+    }
+    if (canAccessFinanceView(financeAccess, "shifts") || financeAccess.roleCode === "R05") {
       apiClient.listCashierShiftsHistory()
         .then(res => {
           if (res?.items) {
@@ -209,7 +211,7 @@ export default function FinanceDesk() {
         })
         .catch(() => undefined);
     }
-  }, [liveMode]);
+  }, [liveMode, workspaceState, financeAccess]);
 
   const acceptShiftHandover = async (id: string, notes?: string) => {
     const shift = handovers.find(h => h.id === id);
