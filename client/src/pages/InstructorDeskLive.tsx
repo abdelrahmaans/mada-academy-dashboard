@@ -60,6 +60,7 @@ type View = InstructorView;
 export default function InstructorDeskLive() {
   const { me, loading: authLoading } = useAuth();
   const [view, setView] = useState<View>("sessions");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
   const [supervisionGroups, setSupervisionGroups] = useState<MySupervisionGroup[]>([]);
   const [supervisionError, setSupervisionError] = useState<string | null>(null);
@@ -409,8 +410,11 @@ export default function InstructorDeskLive() {
       demo={false}
       branchName={branch}
       tenantName={me.academy?.name}
+      mobileOpen={mobileNavOpen}
+      onCloseMobile={() => setMobileNavOpen(false)}
     >
       <main className="main-panel r04-live-page" dir="rtl">
+        <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel={`فرع ${branch}`} roleLabel="المدرب" />
         <header className="r04-live-header">
           <div>
             <span className="r04-live-eyebrow">

@@ -56,6 +56,7 @@ export default function MarketingDesk() {
   const [contentType, setContentType] = useState("POST");
   const [contentPlatform, setContentPlatform] = useState("INSTAGRAM");
   const [contentCampaignId, setContentCampaignId] = useState("");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const branches = me?.branches ?? [];
   const branchName = (id: string) => branches.find(branch => branch.id === id)?.name ?? "فرع مصرح به";
@@ -152,8 +153,9 @@ export default function MarketingDesk() {
   };
 
   return (
-    <RoleDashboardShell className="app-shell marketing-desk-shell" roleCode="R07" roleLabel="مسؤول التسويق" scopeLevel="branch" scopeLabel="الحملات والمحتوى والـLeads داخل النطاق المصرح" tenantName={me?.academy?.name ?? "أكاديمية مدى"} branchName={branchId ? branchName(branchId) : "كل الفروع المصرح بها"} demo={false}>
+    <RoleDashboardShell className="app-shell marketing-desk-shell" roleCode="R07" roleLabel="مسؤول التسويق" scopeLevel="branch" scopeLabel="الحملات والمحتوى والـLeads داخل النطاق المصرح" tenantName={me?.academy?.name ?? "أكاديمية مدى"} branchName={branchId ? branchName(branchId) : "كل الفروع المصرح بها"} demo={false} mobileOpen={mobileNavOpen} onCloseMobile={() => setMobileNavOpen(false)}>
       <main className="main-panel">
+        <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel={branchId ? branchName(branchId) : "كل الفروع"} roleLabel="مسؤول التسويق" />
         <div className="workspace marketing-desk-content">
           <PageHeader className="welcome-row" copyClassName="welcome-copy" actionsClassName="welcome-actions" eyebrow={<span className="eyebrow"><i className="eyebrow-dot" /> مسؤول التسويق · R07</span>} title="سير عمل التسويق والـLeads" description="أنشئ الحملات والمحتوى والـLeads، تابع الحالات، وقِس التحويل من بيانات محفوظة في PostgreSQL ضمن نطاقك." actions={<span className="marketing-date"><CalendarDays size={14} /> اليوم · {branchId ? branchName(branchId) : "كل الفروع"}</span>} />
           <RoleScopeCard className="marketing-scope-card" />
