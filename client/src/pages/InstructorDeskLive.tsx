@@ -103,7 +103,7 @@ export default function InstructorDeskLive() {
     try {
       const now = new Date();
       const from = new Date(
-        now.getTime() - 30 * 24 * 60 * 60 * 1000
+        now.getTime() - 90 * 24 * 60 * 60 * 1000
       ).toISOString();
       const to = new Date(
         now.getTime() + 60 * 24 * 60 * 60 * 1000

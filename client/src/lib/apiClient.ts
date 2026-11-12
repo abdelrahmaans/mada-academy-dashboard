@@ -834,12 +834,17 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
   const headers = new Headers(init.headers);
   headers.set("content-type", "application/json");
   if (accessToken) headers.set("authorization", `Bearer ${accessToken}`);
+  const method = (init.method ?? "GET").toUpperCase();
   let response: Response;
   try {
     response = await fetch(`${API_BASE}${path}`, { ...init, headers });
   } catch (cause) {
+    if (retry && API_BASE.startsWith("https://") && (method === "GET" || path === "/auth/login")) {
+      await new Promise(resolve => setTimeout(resolve, 1200));
+      return request<T>(path, init, false);
+    }
     const error = new ApiRequestError(cause instanceof Error ? cause.message : "Network request failed", 0);
-    emitApiError({ error, path, method: (init.method ?? "GET").toUpperCase() });
+    emitApiError({ error, path, method });
     throw error;
   }
   if (response.status === 401 && retry && await refreshAccessToken()) return request<T>(path, init, false);

@@ -66,9 +66,11 @@ const DEMO_LEADERBOARD: GroupLeaderboardItem[] = [
 export default function GroupLeaderboardCard({
   groupId,
   currentStudentId,
-  fallbackItems = DEMO_LEADERBOARD,
+  fallbackItems,
 }: GroupLeaderboardCardProps) {
-  const [items, setItems] = useState<GroupLeaderboardItem[]>(fallbackItems);
+  const [items, setItems] = useState<GroupLeaderboardItem[]>(
+    () => fallbackItems ?? (apiClient.hasSession() ? [] : DEMO_LEADERBOARD)
+  );
   const [groupName, setGroupName] = useState<string>("مجموعتي التدريبية");
   const [loading, setLoading] = useState(false);
 

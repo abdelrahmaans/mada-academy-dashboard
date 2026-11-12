@@ -68,11 +68,12 @@ test.describe("critical local MVP journeys", () => {
     const studentsBody = await studentsResponse.json();
     const studentId = studentsBody.data.items[0].id as string;
 
+    const futureDueDate = new Date(Date.now() + 14 * 86_400_000).toISOString().slice(0, 10);
     const createInvoice = await request.post(`${apiBase}/finance/invoices`, {
       headers,
       data: {
         studentId,
-        dueDate: "2026-10-31",
+        dueDate: futureDueDate,
         lines: [{ description: "E2E October tuition", amountPiastres: 3000 }],
       },
     });
@@ -299,7 +300,7 @@ test.describe("critical local MVP journeys", () => {
     await expect(sessionSelect).toBeVisible();
     await sessionSelect.selectOption("50000000-0000-0000-0000-000000000003");
     await expect(page.getByRole("button", { name: "حفظ الحضور", exact: true })).toBeDisabled();
-    await expect(page.getByRole("button", { name: "إتمام الجلسة", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: /^إتمام الجلسة/ })).toBeDisabled();
     await expect(page.getByLabel("حضور Youssef Ahmed")).toBeDisabled();
   });
 
