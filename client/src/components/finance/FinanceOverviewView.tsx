@@ -224,7 +224,7 @@ export function Overview({
                     <div key={shift.id} className="finance-action-item">
                       <div className="finance-action-item-info">
                         <strong>
-                          وردية {shift.id} · {shift.submittedByName || shift.submittedByUserId || "موظف الاستقبال"}
+                          وردية <bdi dir="ltr" title={shift.id}>#{shift.id.slice(0, 8)}</bdi> · {shift.submittedByName || shift.submittedByUserId || "موظف الاستقبال"}
                         </strong>
                         <small>
                           فرع {shift.branchName || "الفرع"} · الكاش المحصل:{" "}
@@ -283,8 +283,8 @@ export function Overview({
                           {expense.description}
                         </strong>
                         <small>
-                          فرع {expense.branch} · {expense.category} ·{" "}
-                          <b style={{ color: "#b45309" }}>{money(expense.amount)} ج.م</b>
+                          فرع <bdi dir="ltr">{expense.branch}</bdi> · <bdi dir="ltr">{expense.category}</bdi> ·{" "}
+                          <bdi style={{ color: "#b45309", fontWeight: 700 }}>{money(expense.amount)} ج.م</bdi>
                         </small>
                       </div>
                       <div className="finance-action-item-actions">

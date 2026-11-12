@@ -92,29 +92,31 @@ html {
   min-width: 360px;
   background: var(--mada-ui-page);
 }
-body {
-  margin: 0;
-  min-width: 360px;
-  min-height: 100vh;
-  background: var(--mada-ui-page);
-  color: var(--mada-brand-navy);
-  font-family: var(--mada-font-ar);
-  font-feature-settings: "ss01" on;
-  -webkit-font-smoothing: antialiased;
-}
-button,
-input {
-  font: inherit;
-}
-button {
-  color: inherit;
-}
-button:not(:disabled) {
-  cursor: pointer;
-}
-::selection {
-  background: #ccece7;
-  color: var(--mada-brand-navy);
+@layer base {
+  body {
+    margin: 0;
+    min-width: 360px;
+    min-height: 100vh;
+    background: var(--mada-ui-page);
+    color: var(--mada-brand-navy);
+    font-family: var(--mada-font-ar);
+    font-feature-settings: "ss01" on;
+    -webkit-font-smoothing: antialiased;
+  }
+  button,
+  input {
+    font: inherit;
+  }
+  button {
+    color: inherit;
+  }
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+  ::selection {
+    background: #ccece7;
+    color: var(--mada-brand-navy);
+  }
 }
 
 .app-shell {
@@ -131,7 +133,7 @@ button:not(:disabled) {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  min-height: 760px;
+  min-height: 0;
   padding: 25px 16px 17px;
   overflow-y: auto;
   color: #e8eef8;
@@ -2302,13 +2304,13 @@ button:not(:disabled) {
   transform: translateY(-1px);
 }
 
-.mada-quick-btn-primary {
+.mada-quick-btn.mada-quick-btn-primary {
   background: #0d9488;
   border-color: #0d9488;
   color: #ffffff;
 }
 
-.mada-quick-btn-primary:hover {
+.mada-quick-btn.mada-quick-btn-primary:hover {
   background: #0f766e;
   border-color: #0f766e;
   color: #ffffff;

@@ -98,6 +98,7 @@
   font-weight: 800;
   letter-spacing: .16em;
   direction: ltr;
+  text-align: right;
 }
 
 .auth-login-aside h1 {
@@ -200,8 +201,8 @@
   font-size: 13px;
   transition: border-color 140ms ease, box-shadow 140ms ease;
 }
-.auth-login-form select { padding: 0 13px; cursor: pointer; }
-.auth-login-form input { padding: 0 43px 0 13px; }
+.auth-login-form select { padding: 0 13px 0 30px; cursor: pointer; }
+.auth-login-form input { padding: 0 43px 0 64px; }
 .auth-login-form input::placeholder { color: #a9b6c1; }
 .auth-login-form select:focus,
 .auth-login-form input:focus { border-color: #69bdb4; box-shadow: 0 0 0 4px rgb(13 148 136 / 11%); outline: 0; }

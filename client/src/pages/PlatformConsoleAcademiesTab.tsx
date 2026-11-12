@@ -115,8 +115,8 @@ export function PlatformConsoleAcademiesTab({
               <tr key={row.id}>
                 <th scope="row">
                   <strong>{row.name}</strong>
-                  <small>
-                    {row.owner ?? "غير مسجل"} · {row.id}
+                  <small title={row.id}>
+                    {row.owner ?? "غير مسجل"} · <bdi dir="ltr">#{row.id.slice(0, 8)}</bdi>
                   </small>
                 </th>
                 <td>

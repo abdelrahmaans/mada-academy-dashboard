@@ -319,8 +319,9 @@
 
 .pc-live-row-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 5px;
-  white-space: nowrap;
+  max-width: 340px;
 }
 
 .pc-live-row-actions button {

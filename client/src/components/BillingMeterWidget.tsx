@@ -159,7 +159,7 @@ export function BillingMeterWidget({ onUpgradeClick }: BillingMeterWidgetProps) 
             <span style={{ fontSize: "13px", fontWeight: 600, color: "#334155", display: "inline-flex", alignItems: "center", gap: "6px" }}>
               <Users size={16} color="#0d9488" /> الطلاب النشطون
             </span>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: isStudentExceeded ? "#ef4444" : "#0f766e" }}>
+            <span dir="ltr" style={{ fontSize: "12px", fontWeight: 700, color: isStudentExceeded ? "#ef4444" : "#0f766e" }}>
               {students.activeCount} / {students.limit}
             </span>
           </div>
@@ -185,7 +185,7 @@ export function BillingMeterWidget({ onUpgradeClick }: BillingMeterWidgetProps) 
             <span style={{ fontSize: "13px", fontWeight: 600, color: "#334155", display: "inline-flex", alignItems: "center", gap: "6px" }}>
               <Building2 size={16} color="#2563eb" /> الفروع المصرحة
             </span>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: "#1d4ed8" }}>
+            <span dir="ltr" style={{ fontSize: "12px", fontWeight: 700, color: "#1d4ed8" }}>
               {branches.activeCount} / {branches.limit}
             </span>
           </div>
@@ -211,7 +211,7 @@ export function BillingMeterWidget({ onUpgradeClick }: BillingMeterWidgetProps) 
             <span style={{ fontSize: "13px", fontWeight: 600, color: "#334155", display: "inline-flex", alignItems: "center", gap: "6px" }}>
               <CheckCircle2 size={16} color="#7c3aed" /> فريق العمل والإشراف
             </span>
-            <span style={{ fontSize: "12px", fontWeight: 700, color: "#6d28d9" }}>
+            <span dir="ltr" style={{ fontSize: "12px", fontWeight: 700, color: "#6d28d9" }}>
               {staff.activeCount} / {staff.limit}
             </span>
           </div>

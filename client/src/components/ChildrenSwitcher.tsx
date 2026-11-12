@@ -1,4 +1,4 @@
-import { Check, ChevronDown, UserRound } from "lucide-react";
+import { Check, UserRound } from "lucide-react";
 
 export type FamilyChild = {
   id: string;
@@ -32,7 +32,6 @@ export default function ChildrenSwitcher({
           <small>حساب ولي الأمر</small>
           <strong>أطفالي المرتبطون</strong>
         </div>
-        <ChevronDown size={15} />
       </div>
       <div className="family-children-list">
         {children.map(child => (

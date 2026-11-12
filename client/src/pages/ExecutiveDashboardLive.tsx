@@ -159,7 +159,19 @@ export default function ExecutiveDashboardLive() {
           <button
             type="button"
             className="pc-live-primary"
-            style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", padding: "8px 14px" }}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+              fontSize: "12px",
+              padding: "9px 14px",
+              background: "#0d9488",
+              color: "#ffffff",
+              border: 0,
+              borderRadius: "9px",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
             onClick={exportBoardRollup}
           >
             <ArrowDownToLine size={15} />
