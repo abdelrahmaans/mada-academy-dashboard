@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, Activity, ArrowDownToLine, BarChart3, Building2, CalendarDays, CheckCircle2, GraduationCap, LayoutDashboard, RefreshCw, Users, Wallet } from "lucide-react";
+import { AlertCircle, Activity, ArrowDownToLine, BarChart3, Building2, CalendarDays, CheckCircle2, GraduationCap, KeyRound, LayoutDashboard, MapPin, RefreshCw, ShieldCheck, Users, Wallet } from "lucide-react";
+import { useLocation } from "wouter";
 import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
+import QuickActionsBar, { type QuickActionItem } from "@/components/QuickActionsBar";
 import { apiClient, type ExecutiveActivityItem, type ExecutiveDashboardReport, type ExecutiveMetrics } from "@/lib/apiClient";
 import { executiveFailureMessage } from "@/lib/liveSurfaceAcceptance";
 import BranchMultiUnitPnLView from "@/components/BranchMultiUnitPnLView";
@@ -52,6 +54,7 @@ function occurredAt(value: string) {
 }
 
 export default function ExecutiveDashboardLive() {
+  const [, navigate] = useLocation();
   const [branchId, setBranchId] = useState("ALL");
   const [period, setPeriod] = useState<PeriodOffset>(0);
   const [report, setReport] = useState<ExecutiveDashboardReport | null>(null);
@@ -64,6 +67,43 @@ export default function ExecutiveDashboardLive() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [liveTab, setLiveTab] = useState<"summary" | "pnl">("summary");
   const range = useMemo(() => periodRange(period), [period]);
+
+  const r01QuickActions: QuickActionItem[] = [
+    {
+      id: "r01-export",
+      label: "تصدير التقرير (CSV)",
+      icon: <ArrowDownToLine size={14} />,
+      onClick: () => exportBoardRollup(),
+      tone: "primary",
+    },
+    {
+      id: "r01-pnl",
+      label: "تحليل الأرباح والاستبقاء",
+      icon: <BarChart3 size={14} />,
+      onClick: () => {
+        setLiveTab("pnl");
+        navigate("/academy-owner/pnl-retention");
+      },
+    },
+    {
+      id: "r01-branches",
+      label: "إدارة شبكة الفروع",
+      icon: <MapPin size={14} />,
+      onClick: () => navigate("/academy/branches"),
+    },
+    {
+      id: "r01-roles",
+      label: "فريق العمل والصلاحيات",
+      icon: <KeyRound size={14} />,
+      onClick: () => navigate("/academy/roles"),
+    },
+    {
+      id: "r01-audit",
+      label: "سجل التدقيق والحوكمة",
+      icon: <ShieldCheck size={14} />,
+      onClick: () => navigate("/academy/audit-trail"),
+    },
+  ];
 
   useEffect(() => {
     let cancelled = false;
@@ -180,6 +220,7 @@ export default function ExecutiveDashboardLive() {
         }
       />
       <RoleScopeCard className="executive-scope-card" />
+      <QuickActionsBar actions={r01QuickActions} />
       <BillingMeterWidget />
 
       <div className="pnl-tabs-nav" style={{ marginBottom: "16px" }}>
