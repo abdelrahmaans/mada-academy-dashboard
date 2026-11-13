@@ -167,7 +167,19 @@ export function PayrollView({
               return (
                 <tr key={item.id}>
                   <td>
-                    <span className="finance-payroll-code">{item.id}</span>
+                    <span
+                      className="finance-payroll-code"
+                      title={`المعرف الكامل: ${item.id}`}
+                      style={{
+                        direction: "ltr",
+                        fontWeight: 700,
+                        fontSize: "0.82rem",
+                        padding: "4px 8px",
+                        borderRadius: "6px",
+                      }}
+                    >
+                      {item.id.includes("-") ? `مسير #${item.id.slice(-4).toUpperCase()}` : item.id}
+                    </span>
                   </td>
                   <td>
                     <strong style={{ fontSize: "0.92rem", color: "#0f172a" }}>{item.instructorName}</strong>
@@ -299,7 +311,7 @@ export function PayrollView({
                     كشف حساب ومستحقات المدرب: {selectedTrainer.instructorName}
                   </h3>
                   <span style={{ fontSize: "0.78rem", color: "#64748b" }}>
-                    كود المسير: <bdi>{selectedTrainer.id}</bdi> · شهر أكتوبر 2026 · معدل الحصة: {money(selectedTrainer.ratePerSession)} ج.م
+                    كود المسير: <bdi style={{ fontWeight: 700, color: "#0f766e" }}>{selectedTrainer.id.includes("-") ? `مسير #${selectedTrainer.id.slice(-4).toUpperCase()}` : selectedTrainer.id}</bdi> · شهر أكتوبر 2026 · معدل الحصة: {money(selectedTrainer.ratePerSession)} ج.م
                   </span>
                 </div>
               </div>
@@ -468,7 +480,9 @@ export function PayrollView({
                         {selectedTrainer.sessions && selectedTrainer.sessions.length > 0 ? (
                           selectedTrainer.sessions.map(s => (
                             <tr key={s.sessionId} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                              <td style={{ padding: "8px 10px", fontFamily: "monospace", fontWeight: 700 }}>{s.sessionId}</td>
+                              <td style={{ padding: "8px 10px", fontFamily: "monospace", fontWeight: 700 }}>
+                                {s.sessionId.includes("-") ? `#${s.sessionId.slice(-4).toUpperCase()}` : s.sessionId}
+                              </td>
                               <td style={{ padding: "8px 10px", fontWeight: 600, color: "#0f172a" }}>{s.courseName} · {s.groupName}</td>
                               <td style={{ padding: "8px 10px", color: "#475569" }}>{s.date} ({s.time})</td>
                               <td style={{ padding: "8px 10px", color: "#64748b" }}>{s.room}</td>
