@@ -107,6 +107,7 @@ function ClassesPage() {
   const [offeringCourseId, setOfferingCourseId] = useState(seedCourses[0].id);
   const [instructor, setInstructor] = useState("");
   const [selectedInstructorId, setSelectedInstructorId] = useState("");
+  const [selectedSupervisorId, setSelectedSupervisorId] = useState("");
   const [offeringBranch, setOfferingBranch] = useState("مدينة نصر");
   const [offeringBranchId, setOfferingBranchId] = useState("");
   const [classroom, setClassroom] = useState("معمل 1");
@@ -483,6 +484,7 @@ function ClassesPage() {
     const firstInstructor = liveInstructors[0];
     setInstructor(firstInstructor?.name ?? "");
     setSelectedInstructorId(firstInstructor?.id ?? "");
+    setSelectedSupervisorId("");
     setOfferingBranch(firstRoom?.branchName ?? "مدينة نصر");
     setOfferingBranchId(firstRoom?.branchId ?? "");
     setClassroom(firstRoom?.name ?? "معمل 1");
@@ -636,6 +638,19 @@ function ClassesPage() {
           studentIds: selectedStudentIds,
           finalPricePiastres: course.basePricePiasters,
         });
+        if (selectedSupervisorId) {
+          try {
+            await apiClient.grantGroupSupervision({
+              supervisorUserId: selectedSupervisorId,
+              courseOfferingId: response.groupId,
+              canReadAttendance: true,
+              canReadEvaluations: true,
+              canDecideEvaluations: true,
+            });
+          } catch {
+            // non-fatal, supervisor can also be managed in /supervision-assignments
+          }
+        }
         setOfferingModalOpen(false);
         resetOfferingForm();
         toast.success("تم حفظ المجموعة وتوليد جلساتها على الخادم.", {
@@ -854,6 +869,8 @@ function ClassesPage() {
         setInstructor={setInstructor}
         selectedInstructorId={selectedInstructorId}
         setSelectedInstructorId={setSelectedInstructorId}
+        selectedSupervisorId={selectedSupervisorId}
+        setSelectedSupervisorId={setSelectedSupervisorId}
         liveInstructors={liveInstructors}
         startDate={startDate}
         setStartDate={setStartDate}

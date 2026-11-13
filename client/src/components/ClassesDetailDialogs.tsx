@@ -182,6 +182,12 @@ export default function ClassesDetailDialogs({
                 <small>المدرب</small>
                 <strong>{selectedOffering.instructor}</strong>
               </div>
+              {selectedOffering.supervisor && (
+                <div>
+                  <small>المشرف الأكاديمي</small>
+                  <strong style={{ color: "#0f766e" }}>{selectedOffering.supervisor}</strong>
+                </div>
+              )}
               {selectedOffering.substitute && (
                 <div>
                   <small>المدرب البديل</small>

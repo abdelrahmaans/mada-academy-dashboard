@@ -84,8 +84,19 @@ export function SecretaryShiftsTab({
                 <div
                   style={{ display: "flex", alignItems: "center", gap: "10px" }}
                 >
-                  <span style={{ fontWeight: 700, fontSize: "0.95rem" }}>
-                    {shift.id}
+                  <span
+                    title={`كود التتبع المالي: ${shift.id}`}
+                    style={{
+                      fontWeight: 700,
+                      fontSize: "0.85rem",
+                      background: "#f1f5f9",
+                      color: "#334155",
+                      padding: "3px 8px",
+                      borderRadius: "6px",
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    وردية #{shift.id.slice(-4).toUpperCase()}
                   </span>
                   <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
                     وردية {shift.shiftName === "MORNING" ? "صباحية" : "مسائية"}{" "}

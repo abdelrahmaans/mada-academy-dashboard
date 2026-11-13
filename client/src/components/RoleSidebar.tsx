@@ -177,7 +177,17 @@ export default function RoleSidebar({
       return location === route && currentHash === `#${hash}`;
     }
     if (path === "/") return location === "/" && !currentHash;
-    return (location === path || location.startsWith(`${path}/`)) && !currentHash;
+    if (location === path || location.startsWith(`${path}/`)) {
+      // If authorized navigation has a specific link matching current hash, defer to it
+      if (currentHash) {
+        const hasSpecificSubItem = authorizedNavigation.some(
+          item => item.path === `${path}${currentHash}`
+        );
+        if (hasSpecificSubItem) return false;
+      }
+      return true;
+    }
+    return false;
   };
 
   const handleNavigate = (path: string) => {

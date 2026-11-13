@@ -44,6 +44,8 @@ export type ClassesCreateDialogsProps = {
   setInstructor: Setter<string>;
   selectedInstructorId: string;
   setSelectedInstructorId: Setter<string>;
+  selectedSupervisorId?: string;
+  setSelectedSupervisorId?: Setter<string>;
   liveInstructors: SchedulingInstructor[];
   startDate: string;
   setStartDate: Setter<string>;
@@ -105,6 +107,8 @@ export function ClassesCreateDialogs({
   setInstructor,
   selectedInstructorId,
   setSelectedInstructorId,
+  selectedSupervisorId,
+  setSelectedSupervisorId,
   liveInstructors,
   startDate,
   setStartDate,
@@ -402,6 +406,27 @@ export function ClassesCreateDialogs({
                   />
                 </label>
               </div>
+              {liveMode && setSelectedSupervisorId && (
+                <label className="form-field">
+                  <span>المشرف الأكاديمي (رئيس المدربين) - اختياري</span>
+                  <select
+                    value={selectedSupervisorId}
+                    onChange={event => setSelectedSupervisorId(event.target.value)}
+                  >
+                    <option value="">بدون مشرف أكاديمي مخصص</option>
+                    {liveInstructors
+                      .filter(
+                        item =>
+                          !item.branchId || item.branchId === offeringBranchId
+                      )
+                      .map(item => (
+                        <option key={item.id} value={item.id}>
+                          {item.name ?? item.id}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              )}
               <div className="form-row">
                 <label className="form-field">
                   <span>الفرع</span>

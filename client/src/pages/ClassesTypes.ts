@@ -32,6 +32,8 @@ export type Offering = {
   track: Track;
   instructor: string;
   substitute?: string;
+  supervisor?: string;
+  supervisorId?: string;
   branch: string;
   classroom: string;
   startDate: string;
