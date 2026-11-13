@@ -17,28 +17,15 @@ import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { apiClient, type AcademyAuditEventItem } from "@/lib/apiClient";
+import {
+  formatAuditAction,
+  formatAuditTargetType,
+  formatAuditTargetId,
+  parseAuditMetadata,
+  AUDIT_ACTION_MAP,
+} from "@/lib/auditLabels";
 import { toast } from "sonner";
 import "./AcademyAuditTrail.css";
-
-const ACTION_LABELS: Record<string, { label: string; tone: "security" | "finance" | "students" | "system" | "marketing" }> = {
-  ROLE_PERMISSIONS_OVERRIDDEN: { label: "تعديل صلاحيات دور", tone: "security" },
-  ROLE_PERMISSIONS_RESET: { label: "استعادة صلاحيات دور", tone: "security" },
-  MEMBER_PERMISSIONS_OVERRIDDEN: { label: "تعديل صلاحيات مستخدم", tone: "security" },
-  MEMBER_PERMISSIONS_RESET: { label: "استعادة صلاحيات مستخدم", tone: "security" },
-  BRANCH_CREATED: { label: "إنشاء فرع جديد", tone: "system" },
-  CLASSROOM_CREATED: { label: "إنشاء قاعة دراسية", tone: "system" },
-  STUDENT_CREATED: { label: "إضافة ملف طالب", tone: "students" },
-  STUDENT_UPDATED: { label: "تحديث بيانات طالب", tone: "students" },
-  STUDENT_ENROLLED: { label: "تسجيل طالب في دورة", tone: "students" },
-  STUDENT_ENROLLMENT_CANCELLED: { label: "إلغاء تسجيل طالب", tone: "students" },
-  INVOICE_CREATED: { label: "إصدار فاتورة", tone: "finance" },
-  PAYMENT_RECORDED: { label: "تسجيل سند قبض", tone: "finance" },
-  EXPENSE_SUBMITTED: { label: "تقديم طلب صرف", tone: "finance" },
-  EXPENSE_APPROVED: { label: "اعتماد سند صرف", tone: "finance" },
-  EXPENSE_REJECTED: { label: "رفض سند صرف", tone: "finance" },
-  SUPERVISION_ASSIGNMENT_GRANTED: { label: "إسناد إشراف أكاديمي", tone: "system" },
-  SUPERVISION_ASSIGNMENT_REVOKED: { label: "إلغاء إشراف أكاديمي", tone: "system" },
-};
 
 function formatArabicDate(dateStr: string) {
   try {
@@ -169,9 +156,11 @@ export default function AcademyAuditTrail() {
                 }}
               >
                 <option value="">كل العمليات ({total})</option>
+                <option value="RETENTION_OUTREACH_RECORDED">تسجيل تواصل استبقاء طالب</option>
                 <option value="ROLE_PERMISSIONS_OVERRIDDEN">تعديل صلاحيات دور</option>
                 <option value="MEMBER_PERMISSIONS_OVERRIDDEN">تعديل صلاحيات مستخدم</option>
                 <option value="STUDENT_ENROLLED">تسجيل طالب</option>
+                <option value="PAYMENT_RECORDED">تسجيل سند قبض</option>
                 <option value="EXPENSE_APPROVED">اعتماد مصروف</option>
                 <option value="BRANCH_CREATED">إنشاء فرع</option>
               </select>
@@ -240,7 +229,7 @@ export default function AcademyAuditTrail() {
                   </tr>
                 ) : (
                   filteredEvents.map((ev) => {
-                    const meta = ACTION_LABELS[ev.action] ?? { label: ev.action, tone: "system" };
+                    const meta = formatAuditAction(ev.action);
                     return (
                       <tr key={ev.id}>
                         <td>
@@ -257,7 +246,7 @@ export default function AcademyAuditTrail() {
                         </td>
                         <td>
                           <span className="audit-target-chip">
-                            {ev.targetType}: {ev.targetId.length > 12 ? `${ev.targetId.slice(0, 10)}…` : ev.targetId}
+                            {formatAuditTargetType(ev.targetType)} ({formatAuditTargetId(ev.targetId, ev.targetType)})
                           </span>
                         </td>
                         <td>
@@ -337,60 +326,87 @@ export default function AcademyAuditTrail() {
             <div className="audit-modal-body">
               <div className="audit-detail-grid">
                 <div className="audit-detail-card">
-                  <span className="audit-detail-label">نوع الإجراء (Action)</span>
-                  <span className="audit-detail-val font-mono">{selectedEvent.action}</span>
+                  <span className="audit-detail-label">نوع الإجراء</span>
+                  <span className="audit-detail-val font-bold text-teal-800">{formatAuditAction(selectedEvent.action).label}</span>
                 </div>
                 <div className="audit-detail-card">
                   <span className="audit-detail-label">تاريخ ووقت التنفيذ</span>
                   <span className="audit-detail-val">{formatArabicDate(selectedEvent.createdAt)}</span>
                 </div>
                 <div className="audit-detail-card">
-                  <span className="audit-detail-label">الفاعل (Actor)</span>
+                  <span className="audit-detail-label">المسؤول / الفاعل</span>
                   <span className="audit-detail-val">{selectedEvent.actorName ?? "النظام التلقائي"}</span>
                 </div>
                 <div className="audit-detail-card">
-                  <span className="audit-detail-label">عنوان IP</span>
-                  <span className="audit-detail-val font-mono">{selectedEvent.ipAddress ?? "داخلي / محمي"}</span>
+                  <span className="audit-detail-label">عنوان الاتصال</span>
+                  <span className="audit-detail-val">{selectedEvent.ipAddress ?? "داخلي / محمي"}</span>
                 </div>
                 <div className="audit-detail-card">
-                  <span className="audit-detail-label">نوع الهدف (Target Type)</span>
-                  <span className="audit-detail-val font-mono">{selectedEvent.targetType}</span>
+                  <span className="audit-detail-label">نوع الهدف المستهدف</span>
+                  <span className="audit-detail-val">{formatAuditTargetType(selectedEvent.targetType)}</span>
                 </div>
                 <div className="audit-detail-card">
-                  <span className="audit-detail-label">معرف الهدف (Target ID)</span>
-                  <span className="audit-detail-val font-mono text-xs">{selectedEvent.targetId}</span>
+                  <span className="audit-detail-label">معرف السجل</span>
+                  <span className="audit-detail-val font-semibold">{formatAuditTargetId(selectedEvent.targetId, selectedEvent.targetType)}</span>
                 </div>
               </div>
 
               {selectedEvent.reason && (
-                <div className="audit-detail-card">
+                <div className="audit-detail-card" style={{ marginTop: "10px" }}>
                   <span className="audit-detail-label">سبب الإجراء والمبرر الرسمي</span>
                   <span className="audit-detail-val">{selectedEvent.reason}</span>
                 </div>
               )}
 
               {selectedEvent.metadataJson && (
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold text-slate-600">بيانات التغيير التفصيلية (Metadata JSON):</span>
-                    <button
-                      type="button"
-                      className="audit-btn py-1 px-2 text-xs"
-                      onClick={() => copyMetadata(selectedEvent.metadataJson ?? "")}
-                    >
-                      {copied ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
-                      {copied ? "تم النسخ" : "نسخ JSON"}
-                    </button>
-                  </div>
-                  <pre className="audit-json-box">
-                    {(() => {
-                      try {
-                        return JSON.stringify(JSON.parse(selectedEvent.metadataJson), null, 2);
-                      } catch {
-                        return selectedEvent.metadataJson;
-                      }
-                    })()}
-                  </pre>
+                <div style={{ marginTop: "14px" }}>
+                  {(() => {
+                    const friendlyEntries = parseAuditMetadata(selectedEvent.metadataJson);
+                    return (
+                      <div className="space-y-3">
+                        {friendlyEntries.length > 0 && (
+                          <div className="audit-detail-card" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                            <span className="audit-detail-label" style={{ color: "#0f766e", marginBottom: "8px", display: "block" }}>
+                              تفاصيل وبيانات العملية:
+                            </span>
+                            <div style={{ display: "grid", gap: "8px" }}>
+                              {friendlyEntries.map((entry, idx) => (
+                                <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12.5px" }}>
+                                  <span style={{ color: "#64748b", fontWeight: 600 }}>{entry.keyLabel}:</span>
+                                  <span style={{ color: "#0f172a", fontWeight: 700 }}>{entry.valueDisplay}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <details style={{ marginTop: "8px", fontSize: "11px", color: "#64748b" }}>
+                          <summary style={{ cursor: "pointer", fontWeight: 700, padding: "4px 0" }}>
+                            عرض كود البيانات التقنية (JSON)
+                          </summary>
+                          <div className="flex items-center justify-between my-1">
+                            <span className="text-[11px] text-slate-500">Payload JSON:</span>
+                            <button
+                              type="button"
+                              className="audit-btn py-1 px-2 text-xs"
+                              onClick={() => copyMetadata(selectedEvent.metadataJson ?? "")}
+                            >
+                              {copied ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
+                              {copied ? "تم النسخ" : "نسخ JSON"}
+                            </button>
+                          </div>
+                          <pre className="audit-json-box">
+                            {(() => {
+                              try {
+                                return JSON.stringify(JSON.parse(selectedEvent.metadataJson ?? ""), null, 2);
+                              } catch {
+                                return selectedEvent.metadataJson;
+                              }
+                            })()}
+                          </pre>
+                        </details>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>

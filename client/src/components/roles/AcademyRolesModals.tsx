@@ -229,7 +229,6 @@ export function CustomizeMemberModal({
                           <div className="perm-item-copy">
                             <div className="perm-label-code">
                               <strong>{perm.label}</strong>
-                              <code>{perm.code}</code>
                             </div>
                             <small>{perm.description}</small>
                           </div>

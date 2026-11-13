@@ -66,7 +66,12 @@ export default function AcademyBranches() {
         <div className="academy-branches-scope"><ShieldCheck size={16} /><span><strong>نطاق الإدارة:</strong> فروع أكاديميتك فقط · المستخدمون ذوو الدور الفرعي يجب ربطهم بفرع نشط.</span></div>
         {error && <div className="academy-branches-error">{error}<button onClick={() => void load()}>إعادة المحاولة</button></div>}
         {loading ? <div className="academy-branches-loading"><LoaderCircle className="spin" size={22} /> جارٍ تحميل الفروع…</div> : <>
-          <section className="academy-branches-metrics"><Metric icon={<Building2 size={17} />} label="إجمالي الفروع" value={branches.length} /><Metric icon={<CheckCircle2 size={17} />} label="فروع نشطة" value={branches.filter(item => item.status === "ACTIVE").length} /><Metric icon={<Users size={17} />} label="مستخدمون مرتبطون" value={branches.reduce((sum, item) => sum + item.membersCount, 0)} /><Metric icon={<Link2 size={17} />} label="طلاب مرتبطون" value={branches.reduce((sum, item) => sum + item.studentsCount, 0)} /></section>
+          <section className="academy-branches-metrics">
+            <Metric icon={<Building2 size={18} />} label="إجمالي الفروع" value={branches.length} tone="teal" />
+            <Metric icon={<CheckCircle2 size={18} />} label="فروع نشطة" value={branches.filter(item => item.status === "ACTIVE").length} tone="blue" />
+            <Metric icon={<Users size={18} />} label="مستخدمون مرتبطون" value={branches.reduce((sum, item) => sum + item.membersCount, 0)} tone="purple" />
+            <Metric icon={<Link2 size={18} />} label="طلاب مرتبطون" value={branches.reduce((sum, item) => sum + item.studentsCount, 0)} tone="amber" />
+          </section>
           <section className="academy-branches-grid">{branches.length === 0 ? <div className="academy-branches-empty"><Building2 size={25} /><strong>لا توجد فروع بعد</strong><span>ابدأ بإنشاء أول فرع للأكاديمية.</span></div> : branches.map(branch => <article className="academy-branch-card" key={branch.id}><header><span className="academy-branch-icon"><Building2 size={19} /></span><div><strong>{branch.name}</strong><small dir="ltr">{branch.code}</small></div><span className={`academy-branch-status ${branch.status.toLowerCase()}`}>{branch.status === "ACTIVE" ? "نشط" : "موقوف"}</span></header><div className="academy-branch-counts"><span><Users size={14} /><b>{branch.membersCount}</b> مستخدم</span><span><Link2 size={14} /><b>{branch.studentsCount}</b> طالب</span></div><footer><button onClick={() => openEdit(branch)}><Edit3 size={14} /> تعديل</button><button onClick={() => void toggleStatus(branch)} disabled={saving}>{branch.status === "ACTIVE" ? "إيقاف الفرع" : "تفعيل الفرع"}</button><button className="link" onClick={() => navigate(`/academy/roles?branch=${branch.id}`)}>إدارة المستخدمين <ArrowRight size={13} /></button></footer></article>)}</section>
         </>}
       </div>
@@ -74,4 +79,14 @@ export default function AcademyBranches() {
     {showAdd && <div className="academy-branches-overlay"><form className="academy-branches-modal" onSubmit={save}><header><div><span><Building2 size={17} /></span><h2>{editing ? "تعديل الفرع" : "إضافة فرع جديد"}</h2></div><button type="button" aria-label="إغلاق النافذة" onClick={() => setShowAdd(false)}><X size={18} /></button></header><p>استخدم كودًا إنجليزيًا ثابتًا لتمييز الفرع داخل الأكاديمية.</p><label>اسم الفرع<input value={form.name} onChange={event => setForm({ ...form, name: event.target.value })} placeholder="فرع مدينة نصر" /></label><label>كود الفرع<input dir="ltr" value={form.code} onChange={event => setForm({ ...form, code: event.target.value.toUpperCase() })} placeholder="NASR" /></label><footer><button type="button" onClick={() => setShowAdd(false)}>إلغاء</button><button className="primary" disabled={saving}>{saving ? "جارٍ الحفظ…" : "حفظ الفرع"}</button></footer></form></div>}
   </RoleDashboardShell>;
 }
-function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) { return <div className="academy-branches-metric"><span>{icon}</span><div><strong>{value}</strong><small>{label}</small></div></div>; }
+function Metric({ icon, label, value, tone = "teal" }: { icon: React.ReactNode; label: string; value: number; tone?: string }) {
+  return (
+    <article className={`academy-branches-metric tone-${tone}`}>
+      <span className="metric-icon-wrap">{icon}</span>
+      <div className="metric-info">
+        <strong>{value}</strong>
+        <small>{label}</small>
+      </div>
+    </article>
+  );
+}
