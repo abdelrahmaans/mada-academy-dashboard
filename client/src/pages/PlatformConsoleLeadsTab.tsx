@@ -110,8 +110,23 @@ export function PlatformConsoleLeadsTab({
             {filteredLeads.map((lead) => (
               <tr key={lead.id}>
                 <td>
-                  <span style={{ fontFamily: "monospace", fontWeight: 700, color: "#475569" }}>
-                    {lead.id}
+                  <span
+                    title={`المعرف الكامل: ${lead.id}`}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      padding: "3px 8px",
+                      borderRadius: "6px",
+                      background: "#f1f5f9",
+                      color: "#334155",
+                      fontFamily: "monospace",
+                      fontWeight: 700,
+                      fontSize: "12px",
+                      direction: "ltr",
+                    }}
+                  >
+                    #{lead.id.slice(-4).toUpperCase()}
                   </span>
                 </td>
                 <td>

@@ -79,27 +79,6 @@ export function PlatformConsoleSupportTab({
             <span className="pc-live-badge">
               <i /> تذاكر الدعم والاجتماعات متصلة
             </span>
-            <button
-              type="button"
-              className="pc-live-primary"
-              onClick={onOpenNewTicketModal}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "8px 16px",
-                fontSize: "12px",
-                fontWeight: 700,
-                borderRadius: "8px",
-                background: "#0f766e",
-                color: "#ffffff",
-                border: "none",
-                cursor: "pointer",
-                boxShadow: "0 2px 6px rgba(15, 118, 110, 0.25)",
-              }}
-            >
-              <Plus size={14} /> تسجيل تذكرة / اقتراح جديد
-            </button>
           </div>
         </header>
 

@@ -72,9 +72,11 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     backPath: "/",
     navigation: [
       { path: "/", label: "غرفة عمليات الفرع", purpose: "daily branch decisions and operations", permission: "branch.read" },
-      { path: "/schedule", label: "الجدول والمجموعات", purpose: "branch schedule and conflict resolution", permission: "sessions.read" },
+      { path: "/classes", label: "المجموعات والكورسات", purpose: "branch groups, courses, and adding cohorts", permission: "sessions.read" },
+      { path: "/schedule", label: "الجدول وحصص الفرع", purpose: "branch schedule and conflict resolution", permission: "sessions.read" },
       { path: "/students", label: "الطلاب والاشتراكات", purpose: "branch student records, freezes, and waitlists", anyOfPermissions: ["students.read", "students.create"] },
-      { path: "/team", label: "فريق الفرع والإشراف", purpose: "branch staff and group supervision", permission: "branch.read" },
+      { path: "/team", label: "فريق العمل والمدربين", purpose: "branch staff, instructors, and status", permission: "branch.read" },
+      { path: "/competitions", label: "المسابقات والفرق والتراكات", purpose: "branch competitions, tracks, teams and kits", permission: "branch.read" },
       { path: "/approvals", label: "الموافقات والقرارات", purpose: "substitutions, expenses, and freeze decisions", anyOfPermissions: ["sessions.create", "finance.expenses.approve"] },
     ],
   },

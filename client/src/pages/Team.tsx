@@ -37,6 +37,11 @@ const INITIAL_STAFF: StaffMember[] = [
     branch: "مدينة نصر",
     status: "active",
     joined: "12 مايو 2025",
+    assignedWork: [
+      "الإشراف الفني والأكاديمي على مدربي الفرع",
+      "مراجعة واعتماد تقييمات الطلاب الأسبوعية",
+      "متابعة جاهزية المعامل والحقائب التدريبية (Kits)",
+    ],
   },
   {
     id: "USR-0202",
@@ -47,6 +52,11 @@ const INITIAL_STAFF: StaffMember[] = [
     status: "active",
     joined: "03 أغسطس 2025",
     headOfInstructorsId: "USR-0201",
+    assignedWork: [
+      "مجموعة Junior Robotics (Level 1) — السبت والثلاثاء 4:00م (12 طالب)",
+      "مجموعة Python Coders — الإثنين والخميس 5:30م (10 طلاب)",
+      "تسجيل حضور وتقييمات الجلسات",
+    ],
   },
   {
     id: "USR-0208",
@@ -57,6 +67,10 @@ const INITIAL_STAFF: StaffMember[] = [
     status: "active",
     joined: "04 مارس 2026",
     headOfInstructorsId: "USR-0201",
+    assignedWork: [
+      "مجموعة AI Little Pioneers — الأحد والأربعاء 4:30م (8 طلاب)",
+      "تدريب وتأهيل فريق الفرع لمسابقة الروبوتات السنوية WRO",
+    ],
   },
   {
     id: "USR-0209",
@@ -67,6 +81,10 @@ const INITIAL_STAFF: StaffMember[] = [
     status: "active",
     joined: "18 يناير 2026",
     headOfInstructorsId: "USR-0201",
+    assignedWork: [
+      "مجموعة الإلكترونيات التطبيقية والدوائر — السبت 10:00ص (14 طالب)",
+      "تجهيز مشاريع التخرج للمجموعات المتقدمة",
+    ],
   },
   {
     id: "USR-0203",
@@ -76,6 +94,9 @@ const INITIAL_STAFF: StaffMember[] = [
     branch: "المعادي",
     status: "active",
     joined: "22 يناير 2025",
+    assignedWork: [
+      "مجموعة Scratch & Game Design — الجمعة والسبت 2:00م (10 طلاب)",
+    ],
   },
   {
     id: "USR-0204",
@@ -85,6 +106,9 @@ const INITIAL_STAFF: StaffMember[] = [
     branch: "الشيخ زايد",
     status: "on_leave",
     joined: "10 يونيو 2025",
+    assignedWork: [
+      "إجازة مؤقتة — تم نقل مجموعاته التدريبية لمدرب بديل",
+    ],
   },
   {
     id: "USR-0205",
@@ -94,6 +118,11 @@ const INITIAL_STAFF: StaffMember[] = [
     branch: "مدينة نصر",
     status: "active",
     joined: "14 نوفمبر 2025",
+    assignedWork: [
+      "إدارة الاستقبال والتسجيلات الجديدة وتسكين الطلاب",
+      "إصدار إيصالات وسندات القبض ومتابعة الخزينة",
+      "متابعة طلبات تجميد الاشتراكات والتعويضات",
+    ],
   },
   {
     id: "USR-0206",
@@ -103,6 +132,11 @@ const INITIAL_STAFF: StaffMember[] = [
     branch: "مدينة نصر",
     status: "active",
     joined: "01 فبراير 2025",
+    assignedWork: [
+      "مطابقة الفواتير والتحصيلات اليومية مع البنك",
+      "اعتماد أذون الصرف وإغلاق ورديات الخزينة",
+      "إصدار مسيرات مستحقات المدربين الشهرية",
+    ],
   },
   {
     id: "USR-0207",
@@ -112,6 +146,10 @@ const INITIAL_STAFF: StaffMember[] = [
     branch: "المعادي",
     status: "active",
     joined: "18 مارس 2026",
+    assignedWork: [
+      "إدارة الحملات الإعلانية ومتابعة العملاء المحتملين (Leads)",
+      "التنسيق مع السكرتارية لمتابعة تحويل الاستفسارات إلى اشتراكات",
+    ],
   },
 ];
 

@@ -1,7 +1,8 @@
-import type { Dispatch, FormEvent, SetStateAction } from "react";
+import { useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
 import {
   AlertCircle,
   ArrowDownLeft,
+  BookOpen,
   Check,
   CheckCircle2,
   ChevronLeft,
@@ -88,6 +89,8 @@ export function TeamManagementViews({
   selectedRole,
   navigate,
 }: TeamManagementViewsProps) {
+  const [selectedMember, setSelectedMember] = useState<StaffMember | null>(null);
+
   return (
     <>
       <section
@@ -125,7 +128,7 @@ export function TeamManagementViews({
             <strong>{activeCount + 1}</strong>
             <small>حسابات فعالة بالفرع</small>
           </div>
-          <small>التغيير هنا تجريبي فقط</small>
+          <small>حسابات مفعلة بالفرع</small>
         </article>
         <article className="finance-stat">
           <span className="finance-stat-icon icon-violet">
@@ -138,46 +141,6 @@ export function TeamManagementViews({
           </div>
           <small>منفصلة عن صلاحيات المدرب</small>
         </article>
-      </section>
-
-      <section className="team-role-section">
-        <div className="team-section-heading">
-          <div>
-            <div className="team-kicker">الأدوار على مستوى الفرع</div>
-            <h2>كل دور له مساحة عمل مختلفة</h2>
-            <p>نظرة مختصرة على الأدوار المعتمدة في هيكل الأكاديمية.</p>
-          </div>
-          <span className="team-role-count">6 أدوار</span>
-        </div>
-        <div className="team-role-grid">
-          {ROLES.map(role => {
-            const Icon = role.icon;
-            return (
-              <button
-                key={role.code}
-                className="team-role-card"
-                onClick={() => openRole(role)}
-              >
-                <span className={`team-role-icon role-${role.tone}`}>
-                  <Icon size={18} />
-                </span>
-                <span className="team-role-copy">
-                  <strong>{role.name}</strong>
-                  <small>{role.english}</small>
-                  <span>{role.description}</span>
-                </span>
-                <span className="team-role-number">
-                  {roleCounts.get(role.code) ?? 0}
-                </span>
-                <ChevronLeft size={15} className="team-role-arrow" />
-              </button>
-            );
-          })}
-        </div>
-        <p className="team-permission-note">
-          <ShieldCheck size={15} /> نطاقات الأدوار إرشادية حسب المستندات
-          الحالية؛ مصفوفة الصلاحيات الدقيقة تُعتمد في مرحلة عقود الـAPI.
-        </p>
       </section>
 
       <section className="panel team-table-panel">
@@ -244,7 +207,11 @@ export function TeamManagementViews({
                   const role = ROLE_BY_CODE[member.role];
                   const RoleIcon = role.icon;
                   return (
-                    <tr key={member.id}>
+                    <tr
+                      key={member.id}
+                      style={{ cursor: "pointer" }}
+                      onClick={() => setSelectedMember(member)}
+                    >
                       <td>
                         <div className="team-member-cell">
                           <span className="team-avatar">
@@ -271,12 +238,44 @@ export function TeamManagementViews({
                       </td>
                       <td>{member.joined}</td>
                       <td>
-                        <button
-                          className="team-row-action"
-                          onClick={() => toggleStatus(member)}
+                        <div
+                          style={{ display: "flex", gap: "6px", alignItems: "center" }}
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          {member.status === "active" ? "إيقاف مؤقت" : "تفعيل"}
-                        </button>
+                          <button
+                            type="button"
+                            className="team-row-action"
+                            style={{
+                              background: "#f0fdfa",
+                              color: "#0f766e",
+                              borderColor: "#ccfbf1",
+                              fontWeight: 700,
+                            }}
+                            onClick={() => setSelectedMember(member)}
+                          >
+                            عرض المهام
+                          </button>
+                          <button
+                            type="button"
+                            className="team-row-action"
+                            style={{
+                              background: member.status === "active" ? "#fef2f2" : "#f0fdf4",
+                              color: member.status === "active" ? "#b91c1c" : "#15803d",
+                              borderColor: member.status === "active" ? "#fecaca" : "#bbf7d0",
+                            }}
+                            onClick={() => {
+                              toggleStatus(member);
+                              if (selectedMember && selectedMember.id === member.id) {
+                                setSelectedMember({
+                                  ...selectedMember,
+                                  status: member.status === "active" ? "on_leave" : "active",
+                                });
+                              }
+                            }}
+                          >
+                            {member.status === "active" ? "إيقاف الحساب" : "تفعيل الحساب"}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -550,6 +549,184 @@ export function TeamManagementViews({
                 onClick={() => setDialog(null)}
               >
                 تم
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {selectedMember && (
+        <div
+          className="dialog-backdrop"
+          onClick={() => setSelectedMember(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <section
+            className="dialog-card"
+            style={{ maxWidth: "520px", borderRadius: "18px" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="dialog-heading">
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span className="panel-icon panel-icon-teal" style={{ width: "38px", height: "38px" }}>
+                  <UserCog size={20} />
+                </span>
+                <div>
+                  <h2 style={{ fontSize: "16px", fontWeight: 800, margin: 0 }}>
+                    ملف العضو: {selectedMember.name}
+                  </h2>
+                  <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#64748b" }}>
+                    {ROLE_BY_CODE[selectedMember.role].name} · {selectedMember.branch}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="icon-button dialog-close"
+                onClick={() => setSelectedMember(null)}
+                aria-label="إغلاق النافذة"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ padding: "16px 20px", display: "grid", gap: "14px" }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "10px",
+                  padding: "12px",
+                  background: "#f8fafc",
+                  borderRadius: "12px",
+                  border: "1px solid #e2e8f0",
+                }}
+              >
+                <div>
+                  <small style={{ color: "#64748b", fontSize: "11px", display: "block" }}>
+                    حالة الحساب:
+                  </small>
+                  <span
+                    className={`team-status status-${selectedMember.status}`}
+                    style={{ marginTop: "4px", display: "inline-flex" }}
+                  >
+                    <i />
+                    {STATUS_LABELS[selectedMember.status]}
+                  </span>
+                </div>
+                <div>
+                  <small style={{ color: "#64748b", fontSize: "11px", display: "block" }}>
+                    رقم الهاتف:
+                  </small>
+                  <strong style={{ fontSize: "13px", color: "#0f172a", direction: "ltr", display: "inline-block", marginTop: "4px" }}>
+                    {selectedMember.phone}
+                  </strong>
+                </div>
+                <div>
+                  <small style={{ color: "#64748b", fontSize: "11px", display: "block" }}>
+                    تاريخ الانضمام:
+                  </small>
+                  <span style={{ fontSize: "12px", color: "#334155" }}>
+                    {selectedMember.joined}
+                  </span>
+                </div>
+                <div>
+                  <small style={{ color: "#64748b", fontSize: "11px", display: "block" }}>
+                    كود المعرف:
+                  </small>
+                  <span style={{ fontSize: "12px", fontFamily: "monospace", color: "#475569" }}>
+                    {selectedMember.id}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <h4 style={{ fontSize: "13px", fontWeight: 700, color: "#0f766e", margin: "0 0 8px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <BookOpen size={15} />
+                  المهام والمجموعات المسندة (ماسك إيه حالياً):
+                </h4>
+                <div style={{ display: "grid", gap: "6px" }}>
+                  {(selectedMember.assignedWork && selectedMember.assignedWork.length > 0
+                    ? selectedMember.assignedWork
+                    : [
+                        "مسؤول عن الحصص والمجموعات المعتمدة داخل الفرع",
+                        "متابعة الطلاب وتسجيل الحضور والتقييمات",
+                      ]
+                  ).map((task, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "8px",
+                        padding: "8px 12px",
+                        background: "#f0fdfa",
+                        border: "1px solid #ccfbf1",
+                        borderRadius: "8px",
+                        fontSize: "12.5px",
+                        color: "#115e59",
+                      }}
+                    >
+                      <CheckCircle2 size={15} style={{ color: "#0d9488", flexShrink: 0, marginTop: "2px" }} />
+                      <span>{task}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  padding: "12px 14px",
+                  borderRadius: "10px",
+                  background: selectedMember.status === "active" ? "#fffbeb" : "#f0fdf4",
+                  border: selectedMember.status === "active" ? "1px solid #fef3c7" : "1px solid #bbf7d0",
+                  fontSize: "12px",
+                  color: selectedMember.status === "active" ? "#b45309" : "#15803d",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "10px",
+                }}
+              >
+                <span>
+                  {selectedMember.status === "active"
+                    ? "الحساب نشط حالياً وله وصول للفرع."
+                    : "الحساب موقوف / مجمد مؤقتاً ولا يمكنه تسجيل الدخول."}
+                </span>
+                <button
+                  type="button"
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: "8px",
+                    border: "none",
+                    fontWeight: 700,
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    background: selectedMember.status === "active" ? "#dc2626" : "#0d9488",
+                    color: "#ffffff",
+                    whiteSpace: "nowrap",
+                  }}
+                  onClick={() => {
+                    toggleStatus(selectedMember);
+                    setSelectedMember({
+                      ...selectedMember,
+                      status: selectedMember.status === "active" ? "on_leave" : "active",
+                    });
+                  }}
+                >
+                  {selectedMember.status === "active" ? "إيقاف الحساب الآن" : "إعادة تفعيل الحساب"}
+                </button>
+              </div>
+            </div>
+
+            <div className="dialog-actions" style={{ padding: "12px 20px" }}>
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() => setSelectedMember(null)}
+              >
+                إغلاق
               </button>
             </div>
           </section>

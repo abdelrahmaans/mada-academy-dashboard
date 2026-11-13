@@ -50,12 +50,14 @@ describe("role navigation scopes", () => {
     ]);
   });
 
-  it("streamlines R02 branch manager navigation to 5 core operational modules", () => {
+  it("streamlines R02 branch manager navigation to core operational modules", () => {
     expect(ROLE_DEFINITIONS.R02.navigation.map(item => item.path)).toEqual([
       "/",
+      "/classes",
       "/schedule",
       "/students",
       "/team",
+      "/competitions",
       "/approvals",
     ]);
   });
@@ -72,7 +74,7 @@ describe("role navigation scopes", () => {
       "/reports", "/instructor-desk", "/head-instructors", "/academic-programs", "/academy-owner",
       "/academy-owner/branches", "/academy-owner/tickets", "/academy-owner/reports", "/academy-owner/pnl-retention", "/executive-dashboard",
       "/platform-console", "/platform/academies/new", "/family-portal", "/student-portal", "/academy/branches", "/academy/classrooms",
-      "/academy/roles", "/academy/audit-trail",
+      "/academy/roles", "/academy/audit-trail", "/competitions",
     ]);
 
     for (const definition of Object.values(ROLE_DEFINITIONS)) {

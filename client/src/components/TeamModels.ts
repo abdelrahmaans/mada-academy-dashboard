@@ -18,6 +18,7 @@ export type StaffMember = {
   status: StaffStatus;
   joined: string;
   headOfInstructorsId?: string;
+  assignedWork?: string[];
 };
 export type RoleInfo = {
   code: RoleCode;

@@ -1556,7 +1556,7 @@ export function ConvertLeadModal({
               {convertSuccess ? "تم إنشاء وتفعيل الأكاديمية بنجاح 🚀" : "تحويل طلب المعاينة إلى أكاديمية مفعّلة"}
             </h3>
             <small style={{ color: "#64748b" }}>
-              طلب وارد: {lead.academyName} · المعرف: <code>{lead.id}</code>
+              طلب وارد: {lead.academyName} · كود الطلب: <code title={`المعرف الكامل: ${lead.id}`}>#{lead.id.slice(-4).toUpperCase()}</code>
             </small>
           </div>
           {!converting && (
