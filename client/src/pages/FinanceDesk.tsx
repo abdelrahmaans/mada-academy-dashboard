@@ -5,8 +5,12 @@ import {
   CheckCircle2,
   FileText,
   Info,
+  LifeBuoy,
   MapPin,
   Menu,
+  Plus,
+  Receipt,
+  RefreshCw,
   ShieldCheck,
   TrendingDown,
   UserCheck,
@@ -15,6 +19,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { FinanceDeskDialogs } from "@/components/FinanceDeskDialogs";
+import QuickActionsBar from "@/components/QuickActionsBar";
+import { QuickPaymentReceiptModal, QuickSupportTicketModal } from "@/components/QuickActionModals";
 import {
   Collections,
   Expenses,
@@ -128,6 +134,8 @@ export default function FinanceDesk() {
     return date.toISOString().slice(0, 10);
   });
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const [invoiceSubmitting, setInvoiceSubmitting] = useState(false);
   const invoiceSubmitGuard = useRef(createSingleFlightGuard());
   const [rejecting, setRejecting] = useState<string | null>(null);
@@ -148,6 +156,7 @@ export default function FinanceDesk() {
   >(() => (liveMode ? "loading" : "ready"));
   const [loadError, setLoadError] = useState("");
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const refreshLiveFinance = () => setLoadAttempt(attempt => attempt + 1);
 
   const [handovers, setHandovers] = useState<ShiftCashHandover[]>(() => (liveMode ? [] : shiftStorage.getHandovers()));
   const [payrolls, setPayrolls] = useState<TrainerPayrollRecord[]>(() => (liveMode ? [] : payrollStorage.getPayrolls()));
@@ -930,27 +939,58 @@ export default function FinanceDesk() {
             </section>
           )}
           {(!liveMode || workspaceState === "ready") && view === "overview" && (
-            <Overview
-              collected={collected || 0}
-              outstanding={outstanding || 0}
-              expenses={approvedExpenses || 0}
-              net={net || 0}
-              pending={pendingCount || 0}
-              handovers={handovers || []}
-              payrolls={payrolls || []}
-              invoices={scopedInvoices || []}
-              pendingExpenses={scopedExpenses || []}
-              onCollections={() => selectView("collections")}
-              onExpenses={() => selectView("expenses")}
-              onReports={() => selectView("reports")}
-              onShifts={() => selectView("shifts")}
-              onPayroll={() => selectView("payroll")}
-              onAcceptShift={acceptShiftHandover}
-              onApproveExpense={approveExpense}
-              onRejectExpense={id => setRejecting(id)}
-              onCreateInvoice={() => setInvoiceDialogOpen(true)}
-              scopeHint={liveMode ? "الفرع الحالي" : "كل الفروع · هذا الشهر"}
-            />
+            <>
+              <QuickActionsBar
+                actions={[
+                  {
+                    id: "r06-payment",
+                    label: "تسجيل دفعة اشتراك / إيصال فوري",
+                    icon: <Receipt size={14} />,
+                    onClick: () => setPaymentModalOpen(true),
+                    tone: "primary",
+                  },
+                  {
+                    id: "r06-invoice",
+                    label: "إصدار فاتورة جديدة",
+                    icon: <Plus size={14} />,
+                    onClick: () => setInvoiceDialogOpen(true),
+                  },
+                  {
+                    id: "r06-ticket",
+                    label: "تسجيل تذكرة دعم مالي / استفسار",
+                    icon: <LifeBuoy size={14} />,
+                    onClick: () => setTicketModalOpen(true),
+                  },
+                  {
+                    id: "r06-refresh",
+                    label: "تحديث الحسابات والمؤشرات",
+                    icon: <RefreshCw size={14} />,
+                    onClick: () => void refreshLiveFinance(),
+                  },
+                ]}
+              />
+              <Overview
+                collected={collected || 0}
+                outstanding={outstanding || 0}
+                expenses={approvedExpenses || 0}
+                net={net || 0}
+                pending={pendingCount || 0}
+                handovers={handovers || []}
+                payrolls={payrolls || []}
+                invoices={scopedInvoices || []}
+                pendingExpenses={scopedExpenses || []}
+                onCollections={() => selectView("collections")}
+                onExpenses={() => selectView("expenses")}
+                onReports={() => selectView("reports")}
+                onShifts={() => selectView("shifts")}
+                onPayroll={() => selectView("payroll")}
+                onAcceptShift={acceptShiftHandover}
+                onApproveExpense={approveExpense}
+                onRejectExpense={id => setRejecting(id)}
+                onCreateInvoice={() => setInvoiceDialogOpen(true)}
+                scopeHint={liveMode ? "الفرع الحالي" : "كل الفروع · هذا الشهر"}
+              />
+            </>
           )}
           {(!liveMode || workspaceState === "ready") &&
             view === "collections" && (
@@ -1163,6 +1203,17 @@ export default function FinanceDesk() {
           </div>
         </div>
       )}
+      <QuickPaymentReceiptModal
+        isOpen={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+        branchName={branchContext}
+        onSuccess={() => void refreshLiveFinance()}
+      />
+      <QuickSupportTicketModal
+        isOpen={ticketModalOpen}
+        onClose={() => setTicketModalOpen(false)}
+        roleLabel="المحاسبة والخزينة · R06"
+      />
     </RoleDashboardShell>
   );
 }

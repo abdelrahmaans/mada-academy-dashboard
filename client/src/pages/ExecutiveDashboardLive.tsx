@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertCircle, Activity, ArrowDownToLine, BarChart3, Building2, CalendarDays, CheckCircle2, GraduationCap, KeyRound, LayoutDashboard, MapPin, RefreshCw, ShieldCheck, Users, Wallet } from "lucide-react";
+import { AlertCircle, Activity, ArrowDownToLine, BarChart3, Building2, CalendarDays, CheckCircle2, GraduationCap, KeyRound, LayoutDashboard, LifeBuoy, MapPin, RefreshCw, ShieldCheck, Users, Wallet } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
@@ -7,6 +7,7 @@ import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import QuickActionsBar, { type QuickActionItem } from "@/components/QuickActionsBar";
+import { QuickSupportTicketModal } from "@/components/QuickActionModals";
 import { apiClient, type ExecutiveActivityItem, type ExecutiveDashboardReport, type ExecutiveMetrics } from "@/lib/apiClient";
 import { executiveFailureMessage } from "@/lib/liveSurfaceAcceptance";
 import BranchMultiUnitPnLView from "@/components/BranchMultiUnitPnLView";
@@ -66,42 +67,28 @@ export default function ExecutiveDashboardLive() {
   const [activityLoading, setActivityLoading] = useState(true);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [liveTab, setLiveTab] = useState<"summary" | "pnl">("summary");
+  const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const range = useMemo(() => periodRange(period), [period]);
 
   const r01QuickActions: QuickActionItem[] = [
     {
       id: "r01-export",
-      label: "تصدير التقرير (CSV)",
+      label: "تصدير تقرير مجلس الإدارة (CSV)",
       icon: <ArrowDownToLine size={14} />,
       onClick: () => exportBoardRollup(),
       tone: "primary",
     },
     {
-      id: "r01-pnl",
-      label: "تحليل الأرباح والاستبقاء",
-      icon: <BarChart3 size={14} />,
-      onClick: () => {
-        setLiveTab("pnl");
-        navigate("/academy-owner/pnl-retention");
-      },
+      id: "r01-ticket",
+      label: "تسجيل تذكرة دعم / استفسار للمنصة",
+      icon: <LifeBuoy size={14} />,
+      onClick: () => setTicketModalOpen(true),
     },
     {
-      id: "r01-branches",
-      label: "إدارة شبكة الفروع",
-      icon: <MapPin size={14} />,
-      onClick: () => navigate("/academy/branches"),
-    },
-    {
-      id: "r01-roles",
-      label: "فريق العمل والصلاحيات",
-      icon: <KeyRound size={14} />,
-      onClick: () => navigate("/academy/roles"),
-    },
-    {
-      id: "r01-audit",
-      label: "سجل التدقيق والحوكمة",
-      icon: <ShieldCheck size={14} />,
-      onClick: () => navigate("/academy/audit-trail"),
+      id: "r01-refresh",
+      label: "تحديث وفحص المؤشرات الحية",
+      icon: <RefreshCw size={14} />,
+      onClick: () => setPeriod((p) => p),
     },
   ];
 
@@ -224,7 +211,7 @@ export default function ExecutiveDashboardLive() {
         }
       />
       <RoleScopeCard className="executive-scope-card" />
-      <QuickActionsBar actions={r01QuickActions} />
+      {liveTab === "summary" && <QuickActionsBar actions={r01QuickActions} />}
       <BillingMeterWidget />
 
       <div className="pnl-tabs-nav" style={{ marginBottom: "16px" }}>
@@ -278,5 +265,10 @@ export default function ExecutiveDashboardLive() {
       </>}
       </div>
     </main>
+    <QuickSupportTicketModal
+      isOpen={ticketModalOpen}
+      onClose={() => setTicketModalOpen(false)}
+      roleLabel="الإدارة التنفيذية · R01"
+    />
   </RoleDashboardShell>;
 }

@@ -43,16 +43,26 @@ export function PlatformConsoleLeadsTab({
 
       {/* Filter Tabs & Search */}
       <div className="pc-live-filter-bar" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", marginBottom: "16px" }}>
-        <div className="pc-live-search" style={{ flex: 1, minWidth: "220px" }}>
-          <Search size={15} />
+        <div style={{ flex: 1, minWidth: "240px", position: "relative", display: "flex", alignItems: "center" }}>
+          <Search size={16} style={{ position: "absolute", right: "12px", color: "#94a3b8" }} />
           <input
             type="search"
             placeholder="ابحث باسم المسؤول، الأكاديمية، الهاتف، أو البريد..."
             value={leadSearch}
             onChange={(e) => setLeadSearch(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "9px 36px 9px 12px",
+              borderRadius: "8px",
+              border: "1px solid #cbd5e1",
+              background: "#ffffff",
+              fontSize: "13px",
+              outline: "none",
+              fontFamily: "inherit",
+            }}
           />
         </div>
-        <div className="pc-filter-tabs" style={{ display: "flex", gap: "6px" }}>
+        <div className="pc-filter-tabs" style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
           {[
             { id: "ALL", label: "الكل" },
             { id: "NEW", label: "جديد 🚨" },
@@ -63,7 +73,17 @@ export function PlatformConsoleLeadsTab({
             <button
               key={tab.id}
               type="button"
-              className={`pc-filter-tab ${leadFilter === tab.id ? "active" : ""}`}
+              style={{
+                padding: "6px 14px",
+                borderRadius: "20px",
+                border: leadFilter === tab.id ? "1px solid #0f766e" : "1px solid #e2e8f0",
+                background: leadFilter === tab.id ? "#0f766e" : "#ffffff",
+                color: leadFilter === tab.id ? "#ffffff" : "#475569",
+                fontSize: "12px",
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
               onClick={() => setLeadFilter(tab.id as typeof leadFilter)}
             >
               {tab.label}
@@ -153,24 +173,42 @@ export function PlatformConsoleLeadsTab({
                   <small>{fmtDate(lead.createdAt)}</small>
                 </td>
                 <td>
-                  <div className="pc-live-row-actions">
+                  <div className="pc-live-row-actions" style={{ gap: "6px" }}>
                     <button
                       type="button"
-                      style={{ color: "#15803d", borderColor: "#bbf7d0", background: "#f0fdf4" }}
+                      style={{
+                        color: "#047857",
+                        borderColor: "#a7f3d0",
+                        background: "#ecfdf5",
+                        padding: "6px 12px",
+                        borderRadius: "8px",
+                        fontWeight: 700,
+                        fontSize: "12px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
                       onClick={() => handleWhatsAppLeadChat(lead)}
                       title="فتح محادثة واتساب فورية لترتيب الديمو"
                     >
-                      <MessageCircle size={13} style={{ display: "inline", verticalAlign: "middle", marginLeft: "2px" }} /> واتساب
+                      <MessageCircle size={14} /> واتساب
                     </button>
                     <button
                       type="button"
                       disabled={lead.status === "CONVERTED"}
-                      className="pc-live-link"
                       style={{
-                        background: lead.status === "CONVERTED" ? "#f8fafc" : "#eff6ff",
-                        color: lead.status === "CONVERTED" ? "#475569" : "#1d4ed8",
-                        borderColor: lead.status === "CONVERTED" ? "#cbd5e1" : "#93c5fd",
+                        background: lead.status === "CONVERTED" ? "#f1f5f9" : "#0f766e",
+                        color: lead.status === "CONVERTED" ? "#64748b" : "#ffffff",
+                        border: lead.status === "CONVERTED" ? "1px solid #cbd5e1" : "none",
+                        padding: "6px 12px",
+                        borderRadius: "8px",
                         fontWeight: 700,
+                        fontSize: "12px",
+                        cursor: lead.status === "CONVERTED" ? "default" : "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        boxShadow: lead.status === "CONVERTED" ? "none" : "0 2px 4px rgba(15, 118, 110, 0.2)",
                       }}
                       onClick={() => handleOpenConvertModal(lead)}
                       title={
@@ -179,7 +217,7 @@ export function PlatformConsoleLeadsTab({
                           : "تحويل فوري إلى أكاديمية مفعّلة بضغطة زر"
                       }
                     >
-                      <Building2 size={13} style={{ display: "inline", verticalAlign: "middle", marginLeft: "2px" }} />
+                      <Building2 size={14} />
                       {lead.status === "CONVERTED" ? "مُفعّل كعميل ✅" : "تحويل إلى أكاديمية 🚀"}
                     </button>
                   </div>

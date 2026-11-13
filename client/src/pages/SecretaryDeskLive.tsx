@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   Clock,
   GraduationCap,
+  LifeBuoy,
   PhoneCall,
   Plus,
+  Receipt,
   RefreshCw,
   Snowflake,
   Sparkles,
@@ -15,6 +17,7 @@ import {
 import { toast } from "sonner";
 import PageHeader from "@/components/PageHeader";
 import QuickActionsBar from "@/components/QuickActionsBar";
+import { QuickPaymentReceiptModal, QuickSupportTicketModal } from "@/components/QuickActionModals";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import { useAuth } from "@/contexts/AuthContext";
@@ -135,6 +138,8 @@ export default function SecretaryDeskLive() {
   const [serverFreezes, setServerFreezes] = useState<SubscriptionFreezeRequest[]>([]);
   const [serverShifts, setServerShifts] = useState<ShiftCashHandover[]>([]);
   const [evaluationReviews, setEvaluationReviews] = useState<EvaluationReviewRecord[]>([]);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [ticketModalOpen, setTicketModalOpen] = useState(false);
 
   const branchName =
     me?.branches?.find((branch) => branch.id === me?.branchId)?.name ??
@@ -429,16 +434,17 @@ export default function SecretaryDeskLive() {
         />
 
         <RoleScopeCard className="secretary-scope-card" />
-        <QuickActionsBar
-          actions={[
-            { id: "r05-new-lead", label: "استفسار جديد", icon: <Plus size={14} />, onClick: () => setNewLeadModalOpen(true), tone: "primary" },
-            { id: "r05-register", label: "تسجيل طالب مباشر", icon: <UserPlus size={14} />, onClick: () => selectTab("registration") },
-            { id: "r05-groups", label: "المجموعات المتاحة", icon: <Layers size={14} />, onClick: () => selectTab("groups") },
-            { id: "r05-pipeline", label: "مسار الاستفسارات", icon: <PhoneCall size={14} />, onClick: () => selectTab("pipeline"), badge: newLeadsCount || undefined },
-            { id: "r05-freeze", label: "طلب تجميد اشتراك", icon: <Snowflake size={14} />, onClick: () => setFreezeModalOpen(true) },
-            { id: "r05-shift", label: "تقفيل عهدة الوردية", icon: <Wallet size={14} />, onClick: () => setShiftModalOpen(true) },
-          ]}
-        />
+        {activeTab === "pulse" && (
+          <QuickActionsBar
+            actions={[
+              { id: "r05-new-lead", label: "تسجيل استفسار جديد", icon: <Plus size={14} />, onClick: () => setNewLeadModalOpen(true), tone: "primary" },
+              { id: "r05-payment", label: "تسجيل دفعة اشتراك / إيصال فوري", icon: <Receipt size={14} />, onClick: () => setPaymentModalOpen(true) },
+              { id: "r05-freeze", label: "طلب تجميد اشتراك", icon: <Snowflake size={14} />, onClick: () => setFreezeModalOpen(true) },
+              { id: "r05-shift", label: "تقفيل عهدة الوردية", icon: <Wallet size={14} />, onClick: () => setShiftModalOpen(true) },
+              { id: "r05-ticket", label: "تسجيل تذكرة دعم / استفسار للمنصة", icon: <LifeBuoy size={14} />, onClick: () => setTicketModalOpen(true) },
+            ]}
+          />
+        )}
 
         {/* Live KPI Metric Cards */}
         <section className="secretary-stats-grid" aria-label="مؤشرات الاستقبال والتسجيل">
@@ -647,6 +653,19 @@ export default function SecretaryDeskLive() {
         shiftFormData={shiftFormData}
         setShiftFormData={setShiftFormData}
         onSubmit={handleShiftSubmit}
+      />
+
+      <QuickPaymentReceiptModal
+        isOpen={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+        branchName={branchName}
+        onSuccess={() => setRefreshKey((k) => k + 1)}
+      />
+
+      <QuickSupportTicketModal
+        isOpen={ticketModalOpen}
+        onClose={() => setTicketModalOpen(false)}
+        roleLabel="السكرتارية والاستقبال · R05"
       />
     </RoleDashboardShell>
   );

@@ -320,8 +320,9 @@
 .pc-live-row-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
-  max-width: 340px;
+  gap: 6px;
+  max-width: none;
+  width: 100%;
 }
 
 .pc-live-row-actions button {

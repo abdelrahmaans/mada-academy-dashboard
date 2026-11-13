@@ -457,13 +457,13 @@ export default function StudentPortal() {
           </div>
         )}
 
-        <QuickActionsBar
-          actions={[
-            { id: "r09-progress", label: "التقدم والشهادات الموثقة", icon: <Trophy size={14} />, onClick: () => selectTab("progress"), tone: "primary" },
-            { id: "r09-sessions", label: "جدول حصصي وتقييماتي", icon: <CalendarDays size={14} />, onClick: () => selectTab("sessions") },
-            { id: "r09-refresh", label: "تحديث البيانات", icon: <RefreshCw size={14} />, onClick: () => void retry() },
-          ]}
-        />
+        {tab === "sessions" && (
+          <QuickActionsBar
+            actions={[
+              { id: "r09-refresh", label: "تحديث ومزامنة درجاتي وحصصي", icon: <RefreshCw size={14} />, onClick: () => void retry(), tone: "primary" },
+            ]}
+          />
+        )}
 
         {/* Quick Nav Pills */}
         <nav className="consumer-tab-pills" aria-label="أقسام مساحة الطالب">

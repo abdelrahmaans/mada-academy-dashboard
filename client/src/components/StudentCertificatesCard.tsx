@@ -133,28 +133,30 @@ export default function StudentCertificatesCard({
 
       {selectedCert && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/75 p-3 sm:p-5 backdrop-blur-sm overflow-y-auto"
+          className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-slate-900/80 p-2 sm:p-5 backdrop-blur-sm overflow-y-auto"
           role="dialog"
           aria-modal="true"
           onClick={(e) => {
             if (e.target === e.currentTarget) setSelectedCert(null);
           }}
         >
+          {/* Always accessible fixed floating close button */}
+          <button
+            type="button"
+            onClick={() => setSelectedCert(null)}
+            className="fixed top-3 left-3 z-[70] flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-white shadow-2xl ring-2 ring-white/20 hover:bg-black active:scale-95 transition-transform"
+            aria-label="إغلاق الشهادة"
+            title="إغلاق (Esc)"
+          >
+            <X size={20} />
+          </button>
+
           <div
-            className="relative my-auto w-full max-w-2xl max-h-[92dvh] overflow-y-auto rounded-3xl border-4 border-amber-300 bg-white shadow-2xl"
+            className="relative my-4 sm:my-auto w-full max-w-2xl max-h-[92dvh] overflow-y-auto rounded-3xl border-4 border-amber-300 bg-white shadow-2xl"
             dir="rtl"
           >
-            {/* Mobile prominent top-left close floating button */}
-            <button
-              type="button"
-              onClick={() => setSelectedCert(null)}
-              className="absolute top-2 left-2 z-40 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900/80 text-white shadow-md hover:bg-slate-900 sm:hidden"
-              aria-label="إغلاق الشهادة"
-            >
-              <X size={16} />
-            </button>
-
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50 px-4 sm:px-6 py-3 print:hidden">
+            {/* Sticky top actions bar */}
+            <div className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50/95 backdrop-blur-sm px-4 sm:px-6 py-3 print:hidden">
               <span className="text-xs font-bold text-slate-700">معاينة الشهادة الإلكترونية الموثقة</span>
               <div className="flex flex-wrap items-center gap-2">
                 <a
@@ -178,10 +180,10 @@ export default function StudentCertificatesCard({
                 <button
                   type="button"
                   onClick={() => setSelectedCert(null)}
-                  className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 shadow-xs"
+                  className="inline-flex items-center gap-1 rounded-xl bg-slate-800 text-white px-3 py-1.5 text-xs font-bold hover:bg-slate-900 shadow-xs"
                   aria-label="إغلاق الشهادة"
                 >
-                  <X size={16} />
+                  <X size={14} />
                   <span>إغلاق</span>
                 </button>
               </div>

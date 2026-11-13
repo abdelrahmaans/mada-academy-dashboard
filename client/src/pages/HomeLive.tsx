@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Activity, ArrowLeft, BookOpen, CalendarDays, CheckCircle2, Menu, RefreshCw, UserPlus, Users } from "lucide-react";
+import { Activity, ArrowLeft, BookOpen, CalendarDays, CheckCircle2, LifeBuoy, Menu, Receipt, RefreshCw, UserPlus, Users } from "lucide-react";
 import { useLocation } from "wouter";
 import PageHeader from "@/components/PageHeader";
 import QuickActionsBar from "@/components/QuickActionsBar";
+import { QuickPaymentReceiptModal, QuickSupportTicketModal } from "@/components/QuickActionModals";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import { apiClient, type AuthMe, type DashboardSummary } from "@/lib/apiClient";
@@ -16,6 +17,8 @@ export default function HomeLive({ me }: { me: AuthMe }) {
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const branchName = me.branches?.find(branch => branch.id === me.branchId)?.name ?? "الفرع المحدد";
 
   useEffect(() => {
@@ -56,11 +59,31 @@ export default function HomeLive({ me }: { me: AuthMe }) {
         <RoleScopeCard className="home-role-scope-card" compact />
         <QuickActionsBar
           actions={[
-            { id: "r02-approvals", label: "الموافقات والقرارات", icon: <CheckCircle2 size={14} />, onClick: () => navigate("/approvals"), tone: "primary" },
-            { id: "r02-schedule", label: "الجدول والجلسات", icon: <CalendarDays size={14} />, onClick: () => navigate("/schedule") },
-            { id: "r02-classes", label: "إدارة المجموعات", icon: <BookOpen size={14} />, onClick: () => navigate("/classes") },
-            { id: "r02-students", label: "الطلاب والاشتراكات", icon: <Users size={14} />, onClick: () => navigate("/students") },
-            { id: "r02-team", label: "فريق الفرع والإشراف", icon: <UserPlus size={14} />, onClick: () => navigate("/team") },
+            {
+              id: "r02-payment",
+              label: "تسجيل دفعة اشتراك / إيصال فوري",
+              icon: <Receipt size={14} />,
+              onClick: () => setPaymentModalOpen(true),
+              tone: "primary",
+            },
+            {
+              id: "r02-ticket",
+              label: "تسجيل تذكرة دعم / استفسار للمنصة",
+              icon: <LifeBuoy size={14} />,
+              onClick: () => setTicketModalOpen(true),
+            },
+            {
+              id: "r02-approvals",
+              label: "الموافقات والقرارات المعلقة",
+              icon: <CheckCircle2 size={14} />,
+              onClick: () => navigate("/approvals"),
+            },
+            {
+              id: "r02-refresh",
+              label: "تحديث مؤشرات الفرع",
+              icon: <RefreshCw size={14} />,
+              onClick: () => setRefreshKey((v) => v + 1),
+            },
           ]}
         />
         <div className="r02-home-live-source"><Activity size={14} /> المصدر: API الفرع · النطاق مستمد من جلسة المستخدم</div>
@@ -89,6 +112,17 @@ export default function HomeLive({ me }: { me: AuthMe }) {
         </>}
       </div>
     </main>
+    <QuickPaymentReceiptModal
+      isOpen={paymentModalOpen}
+      onClose={() => setPaymentModalOpen(false)}
+      branchName={branchName}
+      onSuccess={() => setRefreshKey((v) => v + 1)}
+    />
+    <QuickSupportTicketModal
+      isOpen={ticketModalOpen}
+      onClose={() => setTicketModalOpen(false)}
+      roleLabel="مدير الفرع · R02"
+    />
   </RoleDashboardShell>;
 }
 

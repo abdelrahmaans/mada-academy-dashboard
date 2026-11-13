@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { CalendarDays, CheckCircle2, CircleHelp, Megaphone, Plus, Search, ShieldCheck, TrendingUp, Users } from "lucide-react";
+import { CalendarDays, CheckCircle2, CircleHelp, LifeBuoy, Megaphone, Plus, Search, ShieldCheck, TrendingUp, Users } from "lucide-react";
 import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import QuickActionsBar from "@/components/QuickActionsBar";
+import { QuickSupportTicketModal } from "@/components/QuickActionModals";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -57,6 +58,7 @@ export default function MarketingDesk() {
   const [contentPlatform, setContentPlatform] = useState("INSTAGRAM");
   const [contentCampaignId, setContentCampaignId] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [ticketModalOpen, setTicketModalOpen] = useState(false);
 
   const branches = me?.branches ?? [];
   const branchName = (id: string) => branches.find(branch => branch.id === id)?.name ?? "فرع مصرح به";
@@ -160,10 +162,17 @@ export default function MarketingDesk() {
           <PageHeader className="welcome-row" copyClassName="welcome-copy" actionsClassName="welcome-actions" eyebrow={<span className="eyebrow"><i className="eyebrow-dot" /> مسؤول التسويق · R07</span>} title="سير عمل التسويق والـLeads" description="أنشئ الحملات والمحتوى والـLeads، تابع الحالات، وقِس التحويل من بيانات محفوظة في PostgreSQL ضمن نطاقك." actions={<span className="marketing-date"><CalendarDays size={14} /> اليوم · {branchId ? branchName(branchId) : "كل الفروع"}</span>} />
           <RoleScopeCard className="marketing-scope-card" />
           <QuickActionsBar
+            title="إجراءات التسويق السريعة"
             actions={[
               {
+                id: "r07-ticket-modal",
+                label: "تسجيل تذكرة دعم / استفسار للمنصة",
+                icon: <LifeBuoy size={14} />,
+                onClick: () => setTicketModalOpen(true),
+              },
+              {
                 id: "r07-refresh",
-                label: "تحديث البيانات",
+                label: "تحديث ومزامنة بيانات الـLeads",
                 icon: <TrendingUp size={14} />,
                 onClick: () => void loadMarketing(),
                 tone: "primary",
@@ -206,6 +215,11 @@ export default function MarketingDesk() {
           <div className="marketing-banner"><CircleHelp size={15} /><span><strong>حالة النطاق:</strong> الحملات والمحتوى والـLeads أصبحت محفوظة ومقاسة داخل tenant/branch scope. الـBackend هو مصدر الحقيقة.</span></div>
         </div>
       </main>
+      <QuickSupportTicketModal
+        isOpen={ticketModalOpen}
+        onClose={() => setTicketModalOpen(false)}
+        roleLabel="مسؤول التسويق · R07"
+      />
     </RoleDashboardShell>
   );
 }

@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
+  ArrowDownToLine,
   Building2,
   CalendarDays,
   ChevronLeft,
   CircleHelp,
   FileSpreadsheet,
   GraduationCap,
+  LifeBuoy,
   Megaphone,
   Menu,
   Plus,
@@ -1060,14 +1062,54 @@ export default function PlatformConsoleLive() {
           />
 
           <RoleScopeCard className="pc-live-scope" compact />
-          <QuickActionsBar
-            actions={[
-              { id: "r00-new-academy", label: "إنشاء أكاديمية جديدة", icon: <Plus size={14} />, onClick: () => navigate("/platform/academies/new"), tone: "primary" },
-              { id: "r00-academies", label: "إدارة الأكاديميات", icon: <Building2 size={14} />, onClick: () => setView("academies") },
-              { id: "r00-leads", label: "طلبات الديمو", icon: <Megaphone size={14} />, onClick: () => setView("leads") },
-              { id: "r00-billing", label: "المدفوعات والاشتراكات", icon: <FileSpreadsheet size={14} />, onClick: () => setView("billing") },
-            ]}
-          />
+          {view === "overview" && (
+            <QuickActionsBar
+              actions={[
+                {
+                  id: "r00-new-academy",
+                  label: "إنشاء أكاديمية جديدة",
+                  icon: <Plus size={14} />,
+                  onClick: () => navigate("/platform/academies/new"),
+                  tone: "primary",
+                },
+                {
+                  id: "r00-ticket",
+                  label: "تسجيل تذكرة دعم واردة",
+                  icon: <LifeBuoy size={14} />,
+                  onClick: () => {
+                    setNewTicketAcademyId(academies[0]?.id || "");
+                    setNewTicketModalOpen(true);
+                  },
+                },
+                {
+                  id: "r00-export",
+                  label: "تصدير كشف الأكاديميات (CSV)",
+                  icon: <ArrowDownToLine size={14} />,
+                  onClick: () => {
+                    const rows = [
+                      ["الأكاديمية", "المعرف", "المالك", "الباقة", "الحالة", "الفروع", "المستخدمون"],
+                      ...academies.map((a) => [a.name, a.id, a.owner ?? "غير مسجل", a.planName, a.status, a.branches, a.users]),
+                    ];
+                    const csv = rows.map((r) => r.map((v) => `"${String(v).replaceAll('"', '""')}"`).join(",")).join("\n");
+                    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = `mada-academies-${new Date().toISOString().slice(0, 10)}.csv`;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                    toast.success("تم تصدير كشف الأكاديميات كملف CSV");
+                  },
+                },
+                {
+                  id: "r00-refresh",
+                  label: "تحديث وفحص المنصة",
+                  icon: <RefreshCw size={14} />,
+                  onClick: () => setRefreshKey((v) => v + 1),
+                },
+              ]}
+            />
+          )}
 
           {loading && (
             <div className="pc-live-state" role="status">

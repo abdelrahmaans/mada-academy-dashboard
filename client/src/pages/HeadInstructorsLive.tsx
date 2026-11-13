@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Award, CalendarDays, CheckCircle2, RefreshCw, ShieldCheck, Users } from "lucide-react";
+import { Award, CalendarDays, CheckCircle2, LifeBuoy, RefreshCw, ShieldCheck, Users } from "lucide-react";
 import { useLocation } from "wouter";
 import EvaluationReviewQueue from "@/components/EvaluationReviewQueue";
 import HeadInstructorsLiveOverview, { type HeadInstructorsOverviewData } from "@/components/HeadInstructorsLiveOverview";
 import QuickActionsBar from "@/components/QuickActionsBar";
+import { QuickSupportTicketModal } from "@/components/QuickActionModals";
 import RubricsManagementView from "@/components/RubricsManagementView";
 import { LoadingState } from "@/components/FeedbackStates";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
@@ -30,6 +31,7 @@ export default function HeadInstructorsLive() {
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [markingId, setMarkingId] = useState<string | null>(null);
+  const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const load = useCallback(async () => {
@@ -117,21 +119,32 @@ export default function HeadInstructorsLive() {
           <button className="r03-live-refresh" type="button" onClick={() => void load()} disabled={loading}><RefreshCw size={15} className={loading ? "spinning" : ""} /> تحديث البيانات</button>
         </header>
         <RoleScopeCard className="r03-live-scope" compact />
-        <QuickActionsBar
-          actions={[
-            {
-              id: "r03-review",
-              label: "مراجعة التقييمات المعلقة",
-              icon: <CheckCircle2 size={14} />,
-              onClick: () => setView("evaluations"),
-              badge: data?.evaluations.counts.SUBMITTED,
-              tone: "primary",
-            },
-            { id: "r03-rubrics", label: "بنك معايير التقييم", icon: <Award size={14} />, onClick: () => setView("rubrics") },
-            { id: "r03-supervision", label: "تعيين الإشراف للمجموعات", icon: <Users size={14} />, onClick: () => navigate("/supervision") },
-            { id: "r03-schedule", label: "جدول الجلسات", icon: <CalendarDays size={14} />, onClick: () => navigate("/schedule") },
-          ]}
-        />
+        {view === "overview" && (
+          <QuickActionsBar
+            actions={[
+              {
+                id: "r03-review",
+                label: "مراجعة التقييمات المعلقة",
+                icon: <CheckCircle2 size={14} />,
+                onClick: () => setView("evaluations"),
+                badge: data?.evaluations.counts.SUBMITTED,
+                tone: "primary",
+              },
+              {
+                id: "r03-ticket",
+                label: "تسجيل تذكرة دعم / استفسار للمنصة",
+                icon: <LifeBuoy size={14} />,
+                onClick: () => setTicketModalOpen(true),
+              },
+              {
+                id: "r03-refresh",
+                label: "تحديث وفحص المؤشرات",
+                icon: <RefreshCw size={14} />,
+                onClick: () => void load(),
+              },
+            ]}
+          />
+        )}
         <nav className="r03-live-tabs" aria-label="أقسام إشراف المدربين">
           <button type="button" className={view === "overview" ? "active" : ""} onClick={() => setView("overview")}><Users size={15} /> ملخص الفرع</button>
           <button type="button" className={view === "evaluations" ? "active" : ""} onClick={() => setView("evaluations")}><CheckCircle2 size={15} /> مراجعة التقييمات <b>{data?.evaluations.counts.SUBMITTED ?? "—"}</b></button>
@@ -145,6 +158,11 @@ export default function HeadInstructorsLive() {
         {view === "rubrics" && <RubricsManagementView />}
         </div>
       </main>
+      <QuickSupportTicketModal
+        isOpen={ticketModalOpen}
+        onClose={() => setTicketModalOpen(false)}
+        roleLabel="رئيس المدربين · R03"
+      />
     </RoleDashboardShell>
   );
 }

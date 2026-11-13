@@ -103,11 +103,11 @@ export function PlatformConsoleAcademiesTab({
         <table className="pc-live-table">
           <thead>
             <tr>
-              <th>الأكاديمية والمسؤول</th>
-              <th>الباقة المصرحة</th>
-              <th>حالة الاشتراك</th>
-              <th>الفروع والمستخدمون</th>
-              <th>إجراءات الإدارة السريعة</th>
+              <th style={{ width: "22%" }}>الأكاديمية والمسؤول</th>
+              <th style={{ width: "15%" }}>الباقة المصرحة</th>
+              <th style={{ width: "13%" }}>حالة الاشتراك</th>
+              <th style={{ width: "14%" }}>الفروع والمستخدمون</th>
+              <th style={{ width: "36%", textAlign: "left" }}>إجراءات الإدارة السريعة</th>
             </tr>
           </thead>
           <tbody>
@@ -160,8 +160,8 @@ export function PlatformConsoleAcademiesTab({
                   <strong>{fmtNumber(row.branches)} فروع</strong>
                   <small>{fmtNumber(row.users)} حساب موظف</small>
                 </td>
-                <td>
-                  <div className="pc-live-row-actions">
+                <td style={{ textAlign: "left" }}>
+                  <div className="pc-live-row-actions" style={{ maxWidth: "none", width: "100%", justifyContent: "flex-start" }}>
                     <button
                       type="button"
                       style={{ color: "#0d9488", borderColor: "#ccfbf1", background: "#f0fdfa" }}

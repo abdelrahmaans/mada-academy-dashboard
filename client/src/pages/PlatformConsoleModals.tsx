@@ -549,34 +549,70 @@ export function TicketDetailModal({
 
         <div
           style={{
-            padding: "12px",
-            background: "#f8fafc",
-            borderRadius: "10px",
-            fontSize: "12px",
-            lineHeight: "1.7",
+            padding: "16px",
+            background: "#ffffff",
+            border: "1px solid #e2e8f0",
+            borderRadius: "12px",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+            fontSize: "13px",
+            lineHeight: "1.6",
           }}
         >
-          <p style={{ margin: "0 0 6px" }}>
-            <strong>صاحب الطلب: </strong>
-            {ticket.requesterName} ({ticket.requesterRole}) - هاتف: {ticket.requesterPhone}
-          </p>
-          <p style={{ margin: "0 0 6px" }}>
-            <strong>التصنيف: </strong>
-            {ticket.category} · <strong>الأولوية: </strong>
-            {TICKET_PRIORITY_LABELS[ticket.priority]?.label || ticket.priority}
-          </p>
-          <p style={{ margin: "0 0 6px", color: "#334155" }}>
-            <strong>تفاصيل المشكلة / الطلب: </strong>
-            {ticket.description}
-          </p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", borderBottom: "1px solid #f1f5f9", paddingBottom: "10px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontWeight: 700, color: "#0f172a" }}>صاحب الطلب:</span>
+              <span style={{ color: "#334155" }}>{ticket.requesterName}</span>
+              <span style={{ background: "#f1f5f9", color: "#475569", padding: "2px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 600 }}>
+                {ticket.requesterRole}
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "12px", color: "#64748b" }}>هاتف:</span>
+              <span dir="ltr" style={{ fontWeight: 600, color: "#0f766e" }}>{ticket.requesterPhone}</span>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ color: "#64748b", fontSize: "12px" }}>التصنيف:</span>
+              <span style={{ background: "#f0fdfa", color: "#0d9488", border: "1px solid #ccfbf1", padding: "2px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 700 }}>
+                {ticket.category}
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ color: "#64748b", fontSize: "12px" }}>الأولوية:</span>
+              <span
+                style={{
+                  background: ticket.priority === "urgent" ? "#fef2f2" : ticket.priority === "high" ? "#fff7ed" : "#f8fafc",
+                  color: ticket.priority === "urgent" ? "#dc2626" : ticket.priority === "high" ? "#c2410c" : "#475569",
+                  border: `1px solid ${ticket.priority === "urgent" ? "#fecaca" : ticket.priority === "high" ? "#fed7aa" : "#e2e8f0"}`,
+                  padding: "2px 8px",
+                  borderRadius: "6px",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                }}
+              >
+                {TICKET_PRIORITY_LABELS[ticket.priority]?.label || ticket.priority}
+              </span>
+            </div>
+          </div>
+
+          <div style={{ background: "#f8fafc", border: "1px solid #edf2f7", borderRadius: "8px", padding: "12px", color: "#1e293b" }}>
+            <strong style={{ display: "block", color: "#475569", fontSize: "12px", marginBottom: "4px" }}>تفاصيل المشكلة / الطلب:</strong>
+            <p style={{ margin: 0, fontSize: "13px", lineHeight: "1.7" }}>{ticket.description}</p>
+          </div>
+
           {ticket.meetingUrl && (
-            <p style={{ margin: "6px 0 0", padding: "8px", background: "#f0fdfa", borderRadius: "8px", border: "1px solid #ccfbf1" }}>
-              <strong>🔗 رابط الاجتماع الحالي: </strong>
+            <p style={{ margin: "4px 0 0", padding: "10px 12px", background: "#f0fdfa", borderRadius: "8px", border: "1px solid #ccfbf1" }}>
+              <strong style={{ color: "#0f766e" }}>🔗 رابط الاجتماع الحالي: </strong>
               <a href={ticket.meetingUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#0d9488", textDecoration: "underline", fontWeight: 700 }}>
                 {ticket.meetingUrl}
               </a>
               {ticket.meetingScheduledAt && (
-                <span style={{ display: "block", color: "#115e59", fontSize: "11px", marginTop: "4px" }}>
+                <span style={{ display: "block", color: "#115e59", fontSize: "12px", marginTop: "4px" }}>
                   الموعد: {new Date(ticket.meetingScheduledAt).toLocaleString("ar-EG")}
                 </span>
               )}
@@ -1661,185 +1697,218 @@ export function ConvertLeadModal({
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-              <label>
-                <span style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
-                  اسم الأكاديمية الرسمي *
-                </span>
-                <input
-                  type="text"
-                  required
-                  value={convertForm.name}
-                  onChange={(e) => setConvertForm({ ...convertForm, name: e.target.value })}
-                  placeholder="مثال: أكاديمية الأبطال للسباحة"
-                />
-              </label>
+            <div style={{ display: "grid", gap: "16px" }}>
+              {/* Fieldset 1: Academy & Subscription */}
+              <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "14px", display: "grid", gap: "12px" }}>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: "#0f172a" }}>🏢 بيانات الأكاديمية والاشتراك</span>
+                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "12px" }}>
+                  <label>
+                    <span style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                      اسم الأكاديمية الرسمي *
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      value={convertForm.name}
+                      onChange={(e) => setConvertForm({ ...convertForm, name: e.target.value })}
+                      placeholder="مثال: أكاديمية الأبطال للسباحة"
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", background: "#fff", outline: "none", boxSizing: "border-box" }}
+                    />
+                  </label>
 
-              <label>
-                <span style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
-                  المعرف الداخلي (Slug) *
-                </span>
-                <input
-                  type="text"
-                  dir="ltr"
-                  required
-                  value={convertForm.slug}
-                  onChange={(e) => setConvertForm({ ...convertForm, slug: e.target.value })}
-                  placeholder="champion-academy"
-                />
-              </label>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-              <label>
-                <span style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
-                  باقة الاشتراك المقترحة *
-                </span>
-                <select
-                  value={convertForm.planCode}
-                  onChange={(e) => setConvertForm({ ...convertForm, planCode: e.target.value })}
-                  style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
-                >
-                  <option value="STARTER">Starter · بداية (فرع واحد)</option>
-                  <option value="GROWTH">Growth · نمو (حتى 3 فروع) [موصى به للطلب]</option>
-                  <option value="SCALE">Scale · توسع ومؤسسات (فروع غير محدودة)</option>
-                </select>
-              </label>
-
-              <label>
-                <span style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
-                  اسم الفرع الأساسي الأول *
-                </span>
-                <input
-                  type="text"
-                  required
-                  value={convertForm.branchName}
-                  onChange={(e) => setConvertForm({ ...convertForm, branchName: e.target.value })}
-                  placeholder="الفرع الرئيسي"
-                />
-              </label>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-              <label>
-                <span style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
-                  كود الفرع الأساسي *
-                </span>
-                <input
-                  type="text"
-                  dir="ltr"
-                  required
-                  value={convertForm.branchCode}
-                  onChange={(e) => setConvertForm({ ...convertForm, branchCode: e.target.value.toUpperCase() })}
-                  placeholder="MAIN"
-                />
-              </label>
-
-              <label>
-                <span style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
-                  اسم المسؤول / مالك الأكاديمية *
-                </span>
-                <input
-                  type="text"
-                  required
-                  value={convertForm.ownerName}
-                  onChange={(e) => setConvertForm({ ...convertForm, ownerName: e.target.value })}
-                  placeholder="الاسم الثلاثي"
-                />
-              </label>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-              <label>
-                <span style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
-                  البريد الإلكتروني للتواصل *
-                </span>
-                <input
-                  type="email"
-                  dir="ltr"
-                  required
-                  value={convertForm.ownerEmail}
-                  onChange={(e) => setConvertForm({ ...convertForm, ownerEmail: e.target.value })}
-                  placeholder="owner@academy.com"
-                />
-              </label>
-
-              <label>
-                <span style={{ display: "block", fontSize: "13px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
-                  رقم هاتف الدخول والتواصل *
-                </span>
-                <input
-                  type="tel"
-                  dir="ltr"
-                  required
-                  value={convertForm.ownerPhone}
-                  onChange={(e) => setConvertForm({ ...convertForm, ownerPhone: e.target.value })}
-                  placeholder="01012345678"
-                />
-              </label>
-            </div>
-
-            <div>
-              <label>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                  <span style={{ fontSize: "13px", fontWeight: 600, color: "#334155" }}>
-                    كلمة المرور المؤقتة للحساب *
-                  </span>
-                  <button
-                    type="button"
-                    onClick={onRegeneratePassword}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      color: "#2563eb",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                    }}
-                  >
-                    <RefreshCw size={12} /> توليد كلمة مرور جديدة
-                  </button>
+                  <label>
+                    <span style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                      المعرف الداخلي (Slug) *
+                    </span>
+                    <input
+                      type="text"
+                      dir="ltr"
+                      required
+                      value={convertForm.slug}
+                      onChange={(e) => setConvertForm({ ...convertForm, slug: e.target.value })}
+                      placeholder="champion-academy"
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", background: "#fff", outline: "none", boxSizing: "border-box" }}
+                    />
+                  </label>
                 </div>
-                <input
-                  type="text"
-                  dir="ltr"
-                  required
-                  value={convertForm.ownerPassword}
-                  onChange={(e) => setConvertForm({ ...convertForm, ownerPassword: e.target.value })}
-                  placeholder="8 خانات على الأقل"
-                />
-              </label>
-              <small style={{ color: "#64748b", display: "block", marginTop: "3px" }}>
-                سيتمكن المالك من تغييرها فور تسجيل الدخول من إعدادات حسابه.
-              </small>
+
+                <label>
+                  <span style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                    باقة الاشتراك المقترحة *
+                  </span>
+                  <select
+                    value={convertForm.planCode}
+                    onChange={(e) => setConvertForm({ ...convertForm, planCode: e.target.value })}
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", background: "#fff", outline: "none", boxSizing: "border-box" }}
+                  >
+                    <option value="STARTER">Starter · بداية (فرع واحد)</option>
+                    <option value="GROWTH">Growth · نمو (حتى 3 فروع) [موصى به للطلب]</option>
+                    <option value="SCALE">Scale · توسع ومؤسسات (فروع غير محدودة)</option>
+                  </select>
+                </label>
+              </div>
+
+              {/* Fieldset 2: Branch Setup */}
+              <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "14px", display: "grid", gap: "12px" }}>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: "#0f172a" }}>📍 الفرع الأساسي الأول</span>
+                <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "12px" }}>
+                  <label>
+                    <span style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                      اسم الفرع الأساسي *
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      value={convertForm.branchName}
+                      onChange={(e) => setConvertForm({ ...convertForm, branchName: e.target.value })}
+                      placeholder="الفرع الرئيسي"
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", background: "#fff", outline: "none", boxSizing: "border-box" }}
+                    />
+                  </label>
+
+                  <label>
+                    <span style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                      كود الفرع *
+                    </span>
+                    <input
+                      type="text"
+                      dir="ltr"
+                      required
+                      value={convertForm.branchCode}
+                      onChange={(e) => setConvertForm({ ...convertForm, branchCode: e.target.value.toUpperCase() })}
+                      placeholder="MAIN"
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", background: "#fff", outline: "none", boxSizing: "border-box" }}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Fieldset 3: Owner Account */}
+              <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "14px", display: "grid", gap: "12px" }}>
+                <span style={{ fontSize: "13px", fontWeight: 700, color: "#0f172a" }}>👤 حساب المالك والمسؤول الرئيسي</span>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <label>
+                    <span style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                      اسم المسؤول / مالك الأكاديمية *
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      value={convertForm.ownerName}
+                      onChange={(e) => setConvertForm({ ...convertForm, ownerName: e.target.value })}
+                      placeholder="الاسم الثلاثي"
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", background: "#fff", outline: "none", boxSizing: "border-box" }}
+                    />
+                  </label>
+
+                  <label>
+                    <span style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                      رقم هاتف الدخول والتواصل *
+                    </span>
+                    <input
+                      type="tel"
+                      dir="ltr"
+                      required
+                      value={convertForm.ownerPhone}
+                      onChange={(e) => setConvertForm({ ...convertForm, ownerPhone: e.target.value })}
+                      placeholder="01012345678"
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", background: "#fff", outline: "none", boxSizing: "border-box" }}
+                    />
+                  </label>
+                </div>
+
+                <label>
+                  <span style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "#334155", marginBottom: "4px" }}>
+                    البريد الإلكتروني للتواصل *
+                  </span>
+                  <input
+                    type="email"
+                    dir="ltr"
+                    required
+                    value={convertForm.ownerEmail}
+                    onChange={(e) => setConvertForm({ ...convertForm, ownerEmail: e.target.value })}
+                    placeholder="owner@academy.com"
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", background: "#fff", outline: "none", boxSizing: "border-box" }}
+                  />
+                </label>
+
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                    <span style={{ fontSize: "12px", fontWeight: 600, color: "#334155" }}>
+                      كلمة المرور المؤقتة للحساب *
+                    </span>
+                    <button
+                      type="button"
+                      onClick={onRegeneratePassword}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "#0f766e",
+                        fontSize: "12px",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                    >
+                      <RefreshCw size={12} /> توليد كلمة مرور جديدة
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    dir="ltr"
+                    required
+                    value={convertForm.ownerPassword}
+                    onChange={(e) => setConvertForm({ ...convertForm, ownerPassword: e.target.value })}
+                    placeholder="8 خانات على الأقل"
+                    style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px", background: "#fff", outline: "none", boxSizing: "border-box", fontFamily: "monospace", color: "#0d9488", fontWeight: 700 }}
+                  />
+                  <small style={{ color: "#64748b", display: "block", marginTop: "3px", fontSize: "11px" }}>
+                    سيتمكن المالك من تغييرها فور تسجيل الدخول من إعدادات حسابه.
+                  </small>
+                </div>
+              </div>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "8px" }}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
               <button
                 type="button"
-                className="pc-live-link"
-                disabled={converting}
                 onClick={onClose}
+                disabled={converting}
+                style={{
+                  padding: "9px 18px",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                  background: "#ffffff",
+                  color: "#475569",
+                  fontWeight: 600,
+                  fontSize: "13px",
+                  cursor: "pointer",
+                }}
               >
                 إلغاء
               </button>
               <button
                 type="submit"
-                className="pc-live-primary"
                 disabled={converting}
                 style={{
-                  background: "#2563eb",
-                  borderColor: "#1d4ed8",
-                  display: "flex",
+                  padding: "9px 20px",
+                  borderRadius: "8px",
+                  border: "none",
+                  background: "#0f766e",
+                  color: "#ffffff",
+                  fontWeight: 700,
+                  fontSize: "13px",
+                  cursor: "pointer",
+                  display: "inline-flex",
                   alignItems: "center",
                   gap: "6px",
+                  boxShadow: "0 2px 6px rgba(15, 118, 110, 0.25)",
                 }}
               >
-                <Building2 size={15} />
-                {converting ? "جارٍ تأسيس وتفعيل الأكاديمية..." : "تأكيد التأسيس وتفعيل الأكاديمية 🚀"}
+                <Building2 size={16} />
+                {converting ? "جارٍ التأسيس والتفعيل…" : "تأكيد التأسيس وتفعيل الأكاديمية 🚀"}
               </button>
             </div>
           </form>

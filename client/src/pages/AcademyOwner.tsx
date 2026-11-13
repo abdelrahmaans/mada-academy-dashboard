@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
+  ArrowDownToLine,
   BarChart3,
   Building2,
   CheckCircle2,
@@ -10,8 +11,10 @@ import {
   FileText,
   GraduationCap,
   Headphones,
+  LifeBuoy,
   MapPin,
   MessageSquare,
+  RefreshCw,
   Search,
   ShieldCheck,
   Ticket,
@@ -22,6 +25,7 @@ import { useLocation } from "wouter";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import QuickActionsBar from "@/components/QuickActionsBar";
+import { QuickSupportTicketModal } from "@/components/QuickActionModals";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import StatusBadge from "@/components/StatusBadge";
 import InstructorPerformanceComparison from "@/components/InstructorPerformanceComparison";
@@ -198,6 +202,8 @@ export default function AcademyOwner() {
   const [liveScorecard, setLiveScorecard] = useState<InstructorScorecardItem[]>([]);
   const [liveTeam, setLiveTeam] = useState<BranchTeamMember[]>([]);
   const [liveLoading, setLiveLoading] = useState(false);
+  const [ticketModalOpen, setTicketModalOpen] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!isLive) return;
@@ -416,22 +422,31 @@ export default function AcademyOwner() {
             actions={<><span><CalendarIcon /> {monthLabel}</span><span><ShieldCheck size={14} /> {isLive ? (liveLoading ? "جاري التحديث..." : "متصل بالخادم مباشرة") : "وضع المعاينة"}</span></>}
           />
           <RoleScopeCard className="academy-owner-content-scope" />
-          <QuickActionsBar
-            actions={[
-              { id: "r01-pnl", label: "الأرباح والخسائر P&L", icon: <TrendingUp size={14} />, onClick: () => goToView("pnl"), tone: "primary" },
-              { id: "r01-branches", label: "ملخص أداء الفروع", icon: <Building2 size={14} />, onClick: () => goToView("branches") },
-              {
-                id: "r01-tickets",
-                label: "مركز التذاكر والتصعيدات",
-                icon: <Ticket size={14} />,
-                onClick: () => goToView("tickets"),
-                badge: tickets.filter(ticket => ticket.status !== "resolved").length || undefined,
-              },
-              { id: "r01-reports", label: "التقارير المجمعة", icon: <FileBarChart size={14} />, onClick: () => goToView("reports") },
-              { id: "r01-manage-branches", label: "إدارة الفروع", icon: <MapPin size={14} />, onClick: () => navigate("/academy/branches") },
-              { id: "r01-roles", label: "المستخدمون والصلاحيات", icon: <ShieldCheck size={14} />, onClick: () => navigate("/academy/roles") },
-            ]}
-          />
+          {view === "overview" && (
+            <QuickActionsBar
+              actions={[
+                {
+                  id: "r10-ticket",
+                  label: "تسجيل تذكرة دعم / استفسار للمنصة",
+                  icon: <LifeBuoy size={14} />,
+                  onClick: () => setTicketModalOpen(true),
+                  tone: "primary",
+                },
+                {
+                  id: "r10-export",
+                  label: "تصدير تقرير مجلس الإدارة المالي (CSV)",
+                  icon: <ArrowDownToLine size={14} />,
+                  onClick: () => void downloadReport(),
+                },
+                {
+                  id: "r10-refresh",
+                  label: "تحديث ومزامنة مؤشرات الأكاديمية",
+                  icon: <RefreshCw size={14} />,
+                  onClick: () => setReloadKey((k) => k + 1),
+                },
+              ]}
+            />
+          )}
           {!isLive && <div className="academy-owner-demo-banner" role="note"><AlertCircle size={15} /><span>DEMO</span>بيانات الفروع والتذاكر والتقارير توضيحية محلية وليست متصلة بالـbackend.</div>}
 
           {view === "overview" && <OverviewView totals={academyTotals} rollup={rollup} openTickets={tickets.filter(ticket => ticket.status !== "resolved")} onBranches={() => goToView("branches")} onTickets={() => goToView("tickets")} onPnL={() => goToView("pnl")} />}
@@ -443,6 +458,11 @@ export default function AcademyOwner() {
           <footer className="academy-owner-footnote"><GraduationCap size={16} /><p>R01 يرى كل فروع أكاديميته ويستطيع متابعة التقارير والتذاكر والتصعيدات، لكنه لا يرى بيانات أي أكاديمية أخرى ولا يتجاوز صلاحيات R00.</p><div className="academy-owner-footnote-actions"><button onClick={() => navigate("/academy/roles")}><ShieldCheck size={14} /> إدارة المستخدمين والصلاحيات <ChevronLeft size={14} /></button><button onClick={() => navigate("/team")}>معاينة فريق الفرع <ChevronLeft size={14} /></button></div></footer>
         </div>
       </main>
+      <QuickSupportTicketModal
+        isOpen={ticketModalOpen}
+        onClose={() => setTicketModalOpen(false)}
+        roleLabel="مسؤول الأكاديمية · R10"
+      />
     </RoleDashboardShell>
   );
 }

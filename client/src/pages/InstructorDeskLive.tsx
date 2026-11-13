@@ -2,14 +2,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CalendarCheck,
   CalendarDays,
+  LifeBuoy,
   RefreshCw,
   ShieldCheck,
   Star,
+  UserCheck,
   Users,
 } from "lucide-react";
 import { LoadingState } from "@/components/FeedbackStates";
+import { toast } from "sonner";
 import EvaluationReviewQueue from "@/components/EvaluationReviewQueue";
 import QuickActionsBar from "@/components/QuickActionsBar";
+import { QuickSupportTicketModal } from "@/components/QuickActionModals";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
@@ -80,6 +84,7 @@ export default function InstructorDeskLive() {
   const [savingAttendance, setSavingAttendance] = useState(false);
   const [attendanceDirty, setAttendanceDirty] = useState(false);
   const [savingEvaluation, setSavingEvaluation] = useState(false);
+  const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attendanceError, setAttendanceError] = useState<string | null>(null);
@@ -436,15 +441,31 @@ export default function InstructorDeskLive() {
           </button>
         </header>
         <RoleScopeCard className="r04-live-scope" compact />
-        <QuickActionsBar
-          actions={[
-            { id: "r04-sessions", label: "حصصي المسندة", icon: <CalendarDays size={14} />, onClick: () => setView("sessions"), tone: "primary" },
-            { id: "r04-attendance", label: "تحضير الحضور", icon: <CalendarCheck size={14} />, onClick: () => setView("attendance") },
-            { id: "r04-evaluations", label: "تقييم الطلاب", icon: <Star size={14} />, onClick: () => setView("evaluations") },
-            { id: "r04-supervision", label: "مجموعات المتابعة", icon: <Users size={14} />, onClick: () => setView("supervision") },
-            { id: "r04-refresh", label: "تحديث الجلسات", icon: <RefreshCw size={14} />, onClick: () => void loadSessions() },
-          ]}
-        />
+        {view === "sessions" && (
+          <QuickActionsBar
+            actions={[
+              {
+                id: "r04-substitute",
+                label: "طلب اعتذار / مدرب بديل لحصة",
+                icon: <UserCheck size={14} />,
+                onClick: () => toast.info("اختر الجلسة من جدولك أدناه ثم انقر على (طلب مدرب بديل)"),
+                tone: "primary",
+              },
+              {
+                id: "r04-ticket",
+                label: "تسجيل تذكرة دعم / استفسار للمنصة",
+                icon: <LifeBuoy size={14} />,
+                onClick: () => setTicketModalOpen(true),
+              },
+              {
+                id: "r04-refresh",
+                label: "تحديث الجلسات",
+                icon: <RefreshCw size={14} />,
+                onClick: () => void loadSessions(),
+              },
+            ]}
+          />
+        )}
         <InstructorEarningsCard
           earnings={earnings}
           loading={earningsLoading}
@@ -705,6 +726,11 @@ export default function InstructorDeskLive() {
           />
         )}
       </main>
+      <QuickSupportTicketModal
+        isOpen={ticketModalOpen}
+        onClose={() => setTicketModalOpen(false)}
+        roleLabel="المدرب · R04"
+      />
     </RoleDashboardShell>
   );
 }
