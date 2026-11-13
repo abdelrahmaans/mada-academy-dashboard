@@ -887,18 +887,10 @@ export default function PlatformConsoleLive() {
         </div>
 
         {/* Primary CTA */}
-        <div style={{ padding: "0 4px 6px" }}>
+        <div style={{ padding: "0 8px 10px" }}>
           <button
             type="button"
-            className="pc-primary-button"
-            style={{
-              width: "100%",
-              justifyContent: "center",
-              gap: "8px",
-              height: "38px",
-              fontSize: "12px",
-              borderRadius: "10px",
-            }}
+            className="sidebar-cta-btn"
             onClick={() => navigate("/platform/academies/new")}
           >
             <Plus size={16} />

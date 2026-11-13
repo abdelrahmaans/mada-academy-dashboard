@@ -66,43 +66,83 @@ export function PlatformConsoleSupportTab({
     <>
       {/* Support Tickets Section */}
       <section className="pc-live-card">
-        <header>
+        <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
           <div>
-            <h2>تذاكر الدعم الفني والاجتماعات والاقتراحات</h2>
-            <p>سجل مباشر من قاعدة البيانات لمتابعة بلاغات الأكاديميات وطلبات الاجتماعات وجدولتها.</p>
+            <h2 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", margin: 0 }}>
+              تذاكر الدعم الفني والاجتماعات والاقتراحات
+            </h2>
+            <p style={{ fontSize: "12px", color: "#64748b", margin: "4px 0 0" }}>
+              سجل مباشر من قاعدة البيانات لمتابعة بلاغات الأكاديميات وطلبات الاجتماعات وجدولتها.
+            </p>
           </div>
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+            <span className="pc-live-badge">
+              <i /> تذاكر الدعم والاجتماعات متصلة
+            </span>
             <button
               type="button"
               className="pc-live-primary"
               onClick={onOpenNewTicketModal}
-              style={{ padding: "6px 14px", fontSize: "12px", gap: "6px" }}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "8px 16px",
+                fontSize: "12px",
+                fontWeight: 700,
+                borderRadius: "8px",
+                background: "#0f766e",
+                color: "#ffffff",
+                border: "none",
+                cursor: "pointer",
+                boxShadow: "0 2px 6px rgba(15, 118, 110, 0.25)",
+              }}
             >
               <Plus size={14} /> تسجيل تذكرة / اقتراح جديد
             </button>
-            <span className="pc-live-badge">
-              <i /> تذاكر الدعم والاجتماعات متصلة
-            </span>
           </div>
         </header>
 
-        {/* Filter Tabs */}
-        <div style={{ display: "flex", gap: "8px", marginBottom: "16px", padding: "0 4px", flexWrap: "wrap" }}>
-          {[
-            { id: "ALL", label: "الكل" },
-            { id: "ISSUE", label: "أعطال وبلاغات تقنية 🚨" },
-            { id: "SUGGESTION", label: "اقتراحات وميزات جديدة 💡" },
-            { id: "BILLING", label: "اشتراكات وباقات 💳" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              className={`pc-filter-tab ${ticketFilter === tab.id ? "active" : ""}`}
-              onClick={() => setTicketFilter(tab.id as typeof ticketFilter)}
-            >
-              {tab.label}
-            </button>
-          ))}
+        {/* Filter Tabs & Counter */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "12px",
+            marginBottom: "18px",
+            padding: "10px 14px",
+            background: "#f8fafc",
+            borderRadius: "12px",
+            border: "1px solid #e2e8f0",
+          }}
+        >
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+            {[
+              { id: "ALL", label: "الكل", icon: "📋" },
+              { id: "ISSUE", label: "أعطال وبلاغات تقنية", icon: "🚨" },
+              { id: "SUGGESTION", label: "اقتراحات وميزات جديدة", icon: "💡" },
+              { id: "BILLING", label: "اشتراكات وباقات", icon: "💳" },
+            ].map((tab) => {
+              const active = ticketFilter === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className={`pc-filter-tab ${active ? "active" : ""}`}
+                  onClick={() => setTicketFilter(tab.id as typeof ticketFilter)}
+                >
+                  <span>{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ fontSize: "12px", fontWeight: 600, color: "#64748b" }}>
+            إجمالي التذاكر: <strong style={{ color: "#0f766e" }}>{filteredTickets.length}</strong>
+          </div>
         </div>
 
         <div className="pc-ticket-grid">
