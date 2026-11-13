@@ -1,4 +1,5 @@
 import React, { useState, type FormEvent } from "react";
+import { toast } from "sonner";
 import {
   AlertCircle,
   Calculator,
@@ -74,7 +75,11 @@ export function Collections({
   roleCode: string;
 }) {
   const [showDailyClosing, setShowDailyClosing] = useState(false);
-  const [closingDone, setClosingDone] = useState(false);
+  const [closingStatus, setClosingStatus] = useState<"OPEN" | "SUBMITTED" | "APPROVED" | "REVISION_REQUESTED">("OPEN");
+  const [secretaryNotes, setSecretaryNotes] = useState("");
+  const [accountantNotes, setAccountantNotes] = useState("يرجى مراجعة إيصال رقم #INV-102 حيث توجد فروق بقيمة 150 ج.م بين الكاش الفعلي والمسجل.");
+  const [editingAccountantNotes, setEditingAccountantNotes] = useState("");
+  const [showAccountantRejectInput, setShowAccountantRejectInput] = useState(false);
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
 
   const selectedInv = invoices.find(item => item.id === paymentInvoice);
@@ -92,9 +97,28 @@ export function Collections({
     year: "numeric",
   }).format(new Date());
 
-  const handleConfirmDailyClosing = () => {
-    setClosingDone(true);
+  const handleSecretarySubmitClosing = () => {
+    setClosingStatus("SUBMITTED");
     setShowDailyClosing(false);
+    toast.success("تم إرسال محضر تقفيل اليوم للمحاسب للمطابقة والاعتماد");
+  };
+
+  const handleAccountantApproveClosing = () => {
+    setClosingStatus("APPROVED");
+    setShowDailyClosing(false);
+    toast.success("تم اعتماد محضر تقفيل اليوم المالي وتوريد العهدة للخزينة بنجاح");
+  };
+
+  const handleAccountantRequestRevision = () => {
+    if (!editingAccountantNotes.trim()) {
+      toast.error("يرجى كتابة سبب طلب التعديل للسكرتارية");
+      return;
+    }
+    setAccountantNotes(editingAccountantNotes.trim());
+    setClosingStatus("REVISION_REQUESTED");
+    setShowAccountantRejectInput(false);
+    setShowDailyClosing(false);
+    toast.warning("تم إرسال طلب التعديل للسكرتارية لمراجعة الفروقات");
   };
 
   return (
@@ -102,24 +126,40 @@ export function Collections({
       {/* Daily Reconciliation Banner */}
       <div className="daily-closing-banner">
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "#dcfce7", color: "#15803d", display: "grid", placeItems: "center" }}>
+          <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: closingStatus === "APPROVED" ? "#dcfce7" : closingStatus === "REVISION_REQUESTED" ? "#fee2e2" : closingStatus === "SUBMITTED" ? "#eff6ff" : "#f0fdfa", color: closingStatus === "APPROVED" ? "#15803d" : closingStatus === "REVISION_REQUESTED" ? "#b91c1c" : closingStatus === "SUBMITTED" ? "#1d4ed8" : "#0d9488", display: "grid", placeItems: "center" }}>
             <Calculator size={22} />
           </div>
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <strong style={{ fontSize: "0.98rem", color: "#166534" }}>تقفيل اليوم المالي ومطابقة التحصيلات</strong>
-              {closingDone ? (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+              <strong style={{ fontSize: "0.98rem", color: closingStatus === "REVISION_REQUESTED" ? "#991b1b" : "#166534" }}>تقفيل اليوم المالي ومطابقة التحصيلات</strong>
+              {closingStatus === "APPROVED" && (
                 <span style={{ fontSize: "0.75rem", fontWeight: 700, background: "#15803d", color: "#fff", padding: "2px 8px", borderRadius: "12px" }}>
-                  تم الإقفال بنجاح ✓
+                  تم الإقفال بنجاح واعتماده من المحاسب ✓
                 </span>
-              ) : (
-                <span style={{ fontSize: "0.75rem", fontWeight: 600, background: "#fef08a", color: "#854d0e", padding: "2px 8px", borderRadius: "12px" }}>
-                  بانتظار تأكيد المحاسب
+              )}
+              {closingStatus === "SUBMITTED" && (
+                <span style={{ fontSize: "0.75rem", fontWeight: 600, background: "#dbeafe", color: "#1e40af", padding: "2px 8px", borderRadius: "12px" }}>
+                  بانتظار تأكيد واعتماد المحاسب ⏳
+                </span>
+              )}
+              {closingStatus === "REVISION_REQUESTED" && (
+                <span style={{ fontSize: "0.75rem", fontWeight: 700, background: "#fee2e2", color: "#b91c1c", padding: "2px 8px", borderRadius: "12px" }}>
+                  مطلوب تعديل من المحاسب ⚠️
+                </span>
+              )}
+              {closingStatus === "OPEN" && (
+                <span style={{ fontSize: "0.75rem", fontWeight: 600, background: "#ccfbf1", color: "#0f766e", padding: "2px 8px", borderRadius: "12px" }}>
+                  قيد التحصيل اليومي (مفتوح للسكرتارية)
                 </span>
               )}
             </div>
             <p style={{ margin: "2px 0 0", fontSize: "0.82rem", color: "#374151" }}>
               {todayFormatted} · إجمالي التحصيلات النشطة: <strong>{money(totalCollectedSum)} ج.م</strong> · المتبقي قيد التحصيل: <strong>{money(totalRemainingSum)} ج.م</strong>
+              {closingStatus === "REVISION_REQUESTED" && (
+                <span style={{ display: "block", color: "#b91c1c", fontWeight: 600, marginTop: "2px" }}>
+                  ملاحظة المحاسب: {accountantNotes}
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -132,7 +172,7 @@ export function Collections({
             borderRadius: "10px",
             fontSize: "0.85rem",
             fontWeight: 700,
-            background: closingDone ? "#15803d" : "#0d9488",
+            background: closingStatus === "APPROVED" ? "#15803d" : closingStatus === "REVISION_REQUESTED" ? "#dc2626" : closingStatus === "SUBMITTED" ? "#2563eb" : "#0d9488",
             color: "#ffffff",
             border: 0,
             cursor: "pointer",
@@ -143,7 +183,15 @@ export function Collections({
           }}
         >
           <CheckCircle size={16} />
-          <span>{closingDone ? "عرض محضر تقفيل اليوم" : "مراجعة وتأكيد تقفيل اليوم"}</span>
+          <span>
+            {closingStatus === "APPROVED"
+              ? "عرض محضر تقفيل اليوم المعتمد"
+              : closingStatus === "REVISION_REQUESTED"
+              ? "مراجعة وتعديل التقفيل المطلوب"
+              : closingStatus === "SUBMITTED"
+              ? "عرض تفاصيل المحضر بانتظار الاعتماد"
+              : "تقفيل اليوم المالي وإرساله للمحاسب"}
+          </span>
         </button>
       </div>
 
@@ -536,6 +584,28 @@ export function Collections({
               </button>
             </div>
 
+            {/* Status Feedback Banner inside Modal */}
+            {closingStatus === "REVISION_REQUESTED" && (
+              <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "10px", padding: "12px", marginBottom: "16px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#b91c1c", fontWeight: 700, fontSize: "0.88rem", marginBottom: "4px" }}>
+                  <AlertCircle size={17} />
+                  <span>ملاحظة المحاسب المطلوب تعديلها:</span>
+                </div>
+                <p style={{ margin: 0, fontSize: "0.82rem", color: "#7f1d1d", lineHeight: 1.5 }}>
+                  {accountantNotes}
+                </p>
+              </div>
+            )}
+
+            {closingStatus === "SUBMITTED" && (
+              <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: "10px", padding: "12px", marginBottom: "16px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#1d4ed8", fontWeight: 700, fontSize: "0.88rem" }}>
+                  <Clock3 size={17} />
+                  <span>تم إرسال المحضر بنجاح، وبانتظار تدقيق واعتماد المحاسب المالي.</span>
+                </div>
+              </div>
+            )}
+
             {/* Totals Summary */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px", marginBottom: "18px" }}>
               <div style={{ background: "#f0fdfa", border: "1px solid #ccfbf1", borderRadius: "10px", padding: "12px" }}>
@@ -544,12 +614,36 @@ export function Collections({
               </div>
               <div style={{ background: "#eff6ff", border: "1px solid #dbeafe", borderRadius: "10px", padding: "12px" }}>
                 <span style={{ fontSize: "0.75rem", color: "#1e40af", display: "block" }}>ورديات الكاش الموردة:</span>
-                <strong style={{ fontSize: "1.1rem", color: "#1e3a8a" }}>6,400 ج.م</strong>
+                <strong style={{ fontSize: "1.1rem", color: "#1e3a8a" }}>{money(Math.round(totalCollectedSum * 0.65))} ج.م</strong>
               </div>
               <div style={{ background: "#fef2f2", border: "1px solid #fee2e2", borderRadius: "10px", padding: "12px" }}>
-                <span style={{ fontSize: "0.75rem", color: "#991b1b", display: "block" }}>المصروفات اليومية:</span>
-                <strong style={{ fontSize: "1.1rem", color: "#7f1d1d" }}>450 ج.م</strong>
+                <span style={{ fontSize: "0.75rem", color: "#991b1b", display: "block" }}>التحصيل الإلكتروني (بطاقة/تحويل):</span>
+                <strong style={{ fontSize: "1.1rem", color: "#7f1d1d" }}>{money(Math.round(totalCollectedSum * 0.35))} ج.م</strong>
               </div>
+            </div>
+
+            {/* Secretary Notes Input */}
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
+                ملاحظات وتوضيحات مسؤولة الاستقبال / السكرتارية على اليومية:
+              </label>
+              <textarea
+                value={secretaryNotes}
+                onChange={e => setSecretaryNotes(e.target.value)}
+                placeholder="أدخل أي ملاحظات على فروقات النقدية أو المعاملات المؤجلة هنا..."
+                rows={2}
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                  fontSize: "0.82rem",
+                  fontFamily: "inherit",
+                  resize: "vertical",
+                  boxSizing: "border-box",
+                  outline: "none",
+                }}
+              />
             </div>
 
             {/* Checklist */}
@@ -573,8 +667,50 @@ export function Collections({
               </div>
             </div>
 
-            {/* Confirm Actions */}
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+            {/* Accountant Reject Reason Form */}
+            {showAccountantRejectInput && (
+              <div style={{ background: "#fff1f2", border: "1px solid #fecdd3", borderRadius: "10px", padding: "14px", marginBottom: "18px" }}>
+                <label style={{ display: "block", fontSize: "0.82rem", fontWeight: 700, color: "#9f1239", marginBottom: "6px" }}>
+                  سبب طلب التعديل وإرجاع المحضر للسكرتارية:
+                </label>
+                <textarea
+                  value={editingAccountantNotes}
+                  onChange={e => setEditingAccountantNotes(e.target.value)}
+                  placeholder="اكتب التوجيه المحاسبي المحدد (مثال: يوجد فرق في إيصال رقم...)"
+                  rows={2}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #f43f5e",
+                    fontSize: "0.82rem",
+                    fontFamily: "inherit",
+                    resize: "vertical",
+                    boxSizing: "border-box",
+                    outline: "none",
+                  }}
+                />
+                <div style={{ display: "flex", gap: "8px", marginTop: "8px", justifyContent: "flex-end" }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowAccountantRejectInput(false)}
+                    style={{ padding: "6px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", background: "#fff", fontSize: "0.8rem", cursor: "pointer" }}
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAccountantRequestRevision}
+                    style={{ padding: "6px 14px", borderRadius: "6px", border: 0, background: "#e11d48", color: "#fff", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer" }}
+                  >
+                    إرسال طلب التعديل
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Actions for Secretary and Accountant */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
               <button
                 type="button"
                 onClick={() => setShowDailyClosing(false)}
@@ -582,14 +718,41 @@ export function Collections({
               >
                 إغلاق
               </button>
-              <button
-                type="button"
-                onClick={handleConfirmDailyClosing}
-                style={{ padding: "8px 18px", borderRadius: "8px", border: 0, background: "#0d9488", color: "#fff", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}
-              >
-                <CheckCircle size={15} />
-                <span>تأكيد واعتماد إقفال اليومية</span>
-              </button>
+
+              <div style={{ display: "flex", gap: "10px" }}>
+                {roleCode === "R06" ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setShowAccountantRejectInput(v => !v)}
+                      style={{ padding: "8px 16px", borderRadius: "8px", border: "1px solid #fecaca", background: "#fff1f2", color: "#b91c1c", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}
+                    >
+                      طلب تعديل
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAccountantApproveClosing}
+                      style={{ padding: "8px 18px", borderRadius: "8px", border: 0, background: "#15803d", color: "#fff", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                    >
+                      <CheckCircle size={15} />
+                      <span>اعتماد الإقفال وتوريد الخزينة</span>
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleSecretarySubmitClosing}
+                    style={{ padding: "8px 18px", borderRadius: "8px", border: 0, background: "#0d9488", color: "#fff", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <CheckCircle size={15} />
+                    <span>
+                      {closingStatus === "REVISION_REQUESTED"
+                        ? "إعادة إرسال المحضر للمحاسب بعد التعديل"
+                        : "تقفيل اليوم المالي وإرساله للمحاسب"}
+                    </span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

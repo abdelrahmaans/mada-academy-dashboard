@@ -63,7 +63,7 @@ function StudentPage() {
   const [dataLoading, setDataLoading] = useState(apiClient.hasSession());
   const [dataError, setDataError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StudentStatus | "all">(
+  const [statusFilter, setStatusFilter] = useState<StudentStatus | "all" | "unlinked">(
     "all"
   );
   const [branchFilter, setBranchFilter] = useState("كل الفروع");
@@ -153,7 +153,11 @@ function StudentPage() {
           ...(student.achievements?.map((a) => a.title) ?? []),
         ].some(value => value.toLocaleLowerCase("ar").includes(needle));
       const matchesStatus =
-        statusFilter === "all" || student.status === statusFilter;
+        statusFilter === "all"
+          ? true
+          : statusFilter === "unlinked"
+          ? (student.parentPhone === "—" || student.parentName.includes("غير مرتبط"))
+          : student.status === statusFilter;
       const matchesBranch =
         branchFilter === "كل الفروع" || student.branch === branchFilter;
       const matchesCourse =
@@ -590,9 +594,16 @@ function StudentPage() {
                   { key: "all", label: "الكل", count: students.length },
                   {
                     key: "active",
-                    label: "نشط",
+                    label: "طلاب نشطون",
                     count: students.filter(
                       student => student.status === "active"
+                    ).length,
+                  },
+                  {
+                    key: "unlinked",
+                    label: "بحاجة لربط ولي أمر ⚠️",
+                    count: students.filter(
+                      s => s.parentPhone === "—" || s.parentName.includes("غير مرتبط")
                     ).length,
                   },
                   { key: "on_hold", label: "موقوف مؤقتًا", count: pausedCount },
@@ -612,7 +623,7 @@ function StudentPage() {
                         : "filter-tab"
                     }
                     onClick={() => {
-                      setStatusFilter(item.key as StudentStatus | "all");
+                      setStatusFilter(item.key as typeof statusFilter);
                       setPage(1);
                     }}
                   >
@@ -717,7 +728,11 @@ function StudentPage() {
                             </span>
                             <span>
                               <strong>{student.name}</strong>
-                              <small>{student.id}</small>
+                              <small>
+                                {student.id.includes("-")
+                                  ? `طالب #${student.id.slice(-4).toUpperCase()}`
+                                  : student.id}
+                              </small>
                             </span>
                           </button>
                         </td>
@@ -742,10 +757,31 @@ function StudentPage() {
                         <td data-label="ولي الأمر">
                           <span className="guardian-cell">
                             <strong>{student.parentName}</strong>
-                            <small>
-                              {student.relation} ·{" "}
-                              <b dir="ltr">{student.parentPhone}</b>
-                            </small>
+                            {student.parentPhone !== "—" ? (
+                              <small>
+                                {student.relation} ·{" "}
+                                <b dir="ltr">{student.parentPhone}</b>
+                              </small>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setDetailsStudent(student)}
+                                style={{
+                                  marginTop: "3px",
+                                  padding: "2px 8px",
+                                  borderRadius: "4px",
+                                  background: "#fee2e2",
+                                  color: "#b91c1c",
+                                  fontSize: "11px",
+                                  fontWeight: 700,
+                                  border: "none",
+                                  cursor: "pointer",
+                                  width: "fit-content",
+                                }}
+                              >
+                                + ربط ولي الأمر الآن
+                              </button>
+                            )}
                           </span>
                         </td>
                         <td data-label="العمر">

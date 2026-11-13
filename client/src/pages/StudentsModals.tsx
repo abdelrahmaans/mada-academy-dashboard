@@ -7,6 +7,8 @@ import {
   FileText,
   GraduationCap,
   MapPin,
+  MessageCircle,
+  Phone,
   Plus,
   Search,
   Send,
@@ -317,16 +319,53 @@ export function StudentDetailsModal({
           </span>
           <div>
             <h2 id="student-detail-name">{detailsStudent.name}</h2>
-            <span>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginTop: "4px" }}>
               <span
                 className={`student-status status-${detailsStudent.status}`}
               >
                 <i />
                 {statusLabels[detailsStudent.status]}
               </span>
-            </span>
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  padding: "2px 8px",
+                  borderRadius: "6px",
+                  background: "#f1f5f9",
+                  color: "#475569",
+                  direction: "ltr",
+                  display: "inline-block",
+                }}
+              >
+                {detailsStudent.id.includes("-")
+                  ? `#${detailsStudent.id.slice(-4).toUpperCase()}`
+                  : detailsStudent.id}
+              </span>
+            </div>
           </div>
         </div>
+
+        {/* Unlinked Guardian Warning Banner */}
+        {(detailsStudent.parentPhone === "—" || detailsStudent.parentName.includes("غير مرتبط")) && (
+          <div
+            style={{
+              margin: "12px 0",
+              padding: "10px 14px",
+              borderRadius: "10px",
+              background: "#fef2f2",
+              border: "1px solid #fecaca",
+              color: "#991b1b",
+              fontSize: "12px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <span>⚠️ هذا الطالب غير مرتبط بحساب ولي أمر حتى الآن. يرجى ربط هاتف ولي الأمر بالأسفل لتمكين المتابعة.</span>
+          </div>
+        )}
+
         <div className="detail-grid">
           <div>
             <small>الكورس الحالي</small>
@@ -349,8 +388,52 @@ export function StudentDetailsModal({
             </strong>
           </div>
           <div>
-            <small>هاتف ولي الأمر</small>
-            <strong dir="ltr">{detailsStudent.parentPhone}</strong>
+            <small>هاتف ولي الأمر والتواصل</small>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+              <strong dir="ltr">{detailsStudent.parentPhone}</strong>
+              {detailsStudent.parentPhone && detailsStudent.parentPhone !== "—" && (
+                <div style={{ display: "inline-flex", gap: "4px" }}>
+                  <a
+                    href={`tel:${detailsStudent.parentPhone}`}
+                    style={{
+                      padding: "2px 6px",
+                      borderRadius: "6px",
+                      background: "#f0fdf4",
+                      color: "#16a34a",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      textDecoration: "none",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "3px",
+                    }}
+                    title="اتصال هاتفي بولي الأمر"
+                  >
+                    <Phone size={10} /> اتصال
+                  </a>
+                  <a
+                    href={`https://wa.me/${detailsStudent.parentPhone.replace(/[^0-9]/g, "")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      padding: "2px 6px",
+                      borderRadius: "6px",
+                      background: "#ecfdf5",
+                      color: "#059669",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      textDecoration: "none",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "3px",
+                    }}
+                    title="مراسلة واتساب"
+                  >
+                    <MessageCircle size={10} /> واتساب
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
           <div>
             <small>تاريخ الميلاد</small>
@@ -360,6 +443,37 @@ export function StudentDetailsModal({
             <small>مصدر التسجيل</small>
             <strong>{sourceLabels[detailsStudent.source]}</strong>
           </div>
+        </div>
+
+        {/* Financial Balance Summary */}
+        <div
+          style={{
+            marginTop: "14px",
+            padding: "12px 14px",
+            borderRadius: "12px",
+            background: "#f8fafc",
+            border: "1px solid #e2e8f0",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "8px",
+          }}
+        >
+          <div>
+            <span style={{ fontSize: "11px", color: "#64748b", display: "block" }}>حالة الاشتراك والرسوم المستحقة:</span>
+            <strong style={{ fontSize: "13px", color: detailsStudent.status === "active" ? "#166534" : "#854d0e" }}>
+              {detailsStudent.status === "active" ? "الاشتراك نشط ومسدد بالكامل ✓" : "قيد المتابعة وتحصيل الرسوم"}
+            </strong>
+          </div>
+          <button
+            type="button"
+            className="button button-ghost"
+            style={{ fontSize: "12px", padding: "4px 10px", color: "#0f766e", border: "1px solid #ccfbf1", background: "#f0fdfa", cursor: "pointer" }}
+            onClick={() => onNavigateFinance?.()}
+          >
+            سجل فواتير الطالب
+          </button>
         </div>
 
         {/* سجل الكورسات والدبلومات (الحالية والسابقة) */}

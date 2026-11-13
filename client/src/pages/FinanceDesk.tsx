@@ -361,7 +361,11 @@ export default function FinanceDesk() {
 
     const loadFinanceWorkspace = async () => {
       try {
-        const currentUser = await apiClient.me();
+        const [currentUser, invoiceResponse, studentResponse] = await Promise.all([
+          apiClient.me(),
+          apiClient.financeInvoices(),
+          apiClient.listStudents(),
+        ]);
         const access = financeCapabilitiesForRole(currentUser.role);
         if (cancelled) return;
 
@@ -372,10 +376,6 @@ export default function FinanceDesk() {
           return;
         }
 
-        const [invoiceResponse, studentResponse] = await Promise.all([
-          apiClient.financeInvoices(),
-          apiClient.listStudents(),
-        ]);
         let loadedExpenses: Expense[] = [];
         let loadedReport: FinanceReport | null = null;
         if (access.canReadExpenses) {
@@ -398,7 +398,11 @@ export default function FinanceDesk() {
           loadedInvoices.find(invoice => invoice.collected < invoice.total)
             ?.id ?? ""
         );
-        setView(access.initialView);
+        setView(current => {
+          const rawHash = typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
+          if (rawHash) return current;
+          return current !== "overview" ? current : access.initialView;
+        });
         setWorkspaceState("ready");
       } catch (error) {
         if (cancelled) return;

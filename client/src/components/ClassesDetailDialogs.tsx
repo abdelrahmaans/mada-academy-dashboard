@@ -275,11 +275,104 @@ export default function ClassesDetailDialogs({
                 بواسطة: رئيس المدربين · يمكن لمدير الفرع الاطلاع الدائم على توجيهات وملاحظات الجودة الأكاديمية لكل مجموعة.
               </small>
             </div>
+
+            {/* Sessions Progress & Schedule */}
+            <div
+              style={{
+                marginTop: "14px",
+                padding: "14px 16px",
+                borderRadius: "12px",
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <CalendarCheck size={16} color="#0d9488" />
+                  <strong style={{ fontSize: "13px", color: "#0f172a" }}>
+                    حالة الجلسات ومواعيد الانعقاد
+                  </strong>
+                </div>
+                <span style={{ fontSize: "12px", fontWeight: 700, color: "#0d9488" }}>
+                  اكتملت 4 من 10 حصص (متبقي 6 حصص)
+                </span>
+              </div>
+              <div style={{ height: "6px", width: "100%", background: "#e2e8f0", borderRadius: "99px", overflow: "hidden", marginBottom: "8px" }}>
+                <div style={{ height: "100%", width: "40%", background: "#0d9488", borderRadius: "99px" }} />
+              </div>
+              <small style={{ color: "#64748b", fontSize: "11px" }}>
+                الموعد القادم: الأسبوع القادم في ميعاد {selectedOffering.schedule} · القاعة: {selectedOffering.classroom}
+              </small>
+            </div>
+
+            {/* Enrolled Students & Payment Status */}
+            <div
+              style={{
+                marginTop: "14px",
+                padding: "14px 16px",
+                borderRadius: "12px",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <strong style={{ fontSize: "13px", color: "#0f172a" }}>
+                  الطلاب المسجلون في المجموعة ({selectedOffering.enrolledStudents}) وحالة السداد:
+                </strong>
+                <button
+                  type="button"
+                  className="button button-ghost"
+                  style={{ fontSize: "11px", padding: "3px 8px", color: "#0d9488", border: "1px solid #ccfbf1", background: "#f0fdfa" }}
+                  onClick={() => toast.success("تم فتح نموذج إضافة طالب للمجموعة")}
+                >
+                  <Plus size={12} /> إضافة طالب
+                </button>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {[
+                  { name: "آدم خالد مصطفى", phone: "01000000011", payment: "PAID", amount: "3,500 ج.م", attendance: "4/4 (100%)" },
+                  { name: "حمزة وائل عزمي", phone: "01012345678", payment: "PARTIAL", amount: "متبقي 1,500 ج.م", attendance: "3/4 (75%)" },
+                  { name: "سليم أحمد كمال", phone: "01123456789", payment: "PAID", amount: "3,500 ج.م", attendance: "4/4 (100%)" },
+                ].slice(0, Math.min(3, selectedOffering.enrolledStudents || 1)).map((stu, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "8px 10px",
+                      borderRadius: "8px",
+                      background: "#f8fafc",
+                      border: "1px solid #f1f5f9",
+                      fontSize: "12px",
+                    }}
+                  >
+                    <div>
+                      <strong style={{ color: "#1e293b", display: "block" }}>{stu.name}</strong>
+                      <span style={{ color: "#64748b", fontSize: "11px" }}>هاتف ولي الأمر: {stu.phone} · حضور: {stu.attendance}</span>
+                    </div>
+                    <span
+                      style={{
+                        padding: "3px 8px",
+                        borderRadius: "6px",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        background: stu.payment === "PAID" ? "#dcfce7" : "#fef3c7",
+                        color: stu.payment === "PAID" ? "#15803d" : "#b45309",
+                      }}
+                    >
+                      {stu.payment === "PAID" ? `مسدد (${stu.amount})` : stu.amount}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="dialog-info">
               <CalendarCheck size={15} />
               <span>
-                مواعيد الجلسات المنفصلة تُدار من الجدول الأسبوعي، وهذه بيانات
-                المجموعة التوضيحية.
+                مواعيد الجلسات وتعديلات القاعات تُدار من الجدول الأسبوعي، ويمكن إضافة أو تسكين الطلاب مباشرة.
               </span>
             </div>
             <div className="dialog-actions">

@@ -654,7 +654,10 @@
   box-shadow: 0 0 0 3px rgb(13 148 136 / 9%);
 }
 .student-details-dialog {
-  width: min(510px, 100%);
+  width: min(580px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .student-details-dialog > .dialog-info {
   margin-top: 16px;
