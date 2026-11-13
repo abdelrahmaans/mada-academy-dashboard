@@ -15,6 +15,7 @@ describe("role navigation scopes", () => {
   it("limits R03 navigation to coaching supervision surfaces", () => {
     expect(ROLE_DEFINITIONS.R03.navigation.map(item => item.path)).toEqual([
       "/head-instructors",
+      "/instructor-desk",
       "/academic-programs",
       "/schedule",
     ]);

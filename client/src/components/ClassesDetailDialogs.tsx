@@ -1,4 +1,4 @@
-import { BookOpen, CalendarCheck, CalendarDays, Plus, X } from "lucide-react";
+import { Award, BookOpen, CalendarCheck, CalendarDays, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import type { Course, Offering, Track } from "@/pages/Classes";
 
@@ -215,6 +215,59 @@ export default function ClassesDetailDialogs({
                 <small>نوع الحصة</small>
                 <strong>حصة منتظمة</strong>
               </div>
+            </div>
+
+            {/* Academic Supervision & Head Instructor Feedback */}
+            <div
+              style={{
+                marginTop: "16px",
+                padding: "14px 16px",
+                borderRadius: "12px",
+                background: "#f0fdf4",
+                border: "1px solid #bbf7d0",
+                display: "grid",
+                gap: "8px",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Award size={16} color="#16a34a" />
+                  <strong style={{ fontSize: "13px", color: "#166534" }}>
+                    متابعة رئيس المدربين وجودة المجموعة
+                  </strong>
+                </div>
+                <span
+                  style={{
+                    background: "#dcfce7",
+                    color: "#15803d",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    padding: "2px 8px",
+                    borderRadius: "99px",
+                  }}
+                >
+                  معتمدة ومتابعة
+                </span>
+              </div>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "12px",
+                  color: "#14532d",
+                  lineHeight: 1.6,
+                }}
+              >
+                <strong>آخر توجيه أكاديمي:</strong> "تمت مراجعة تقييمات الجلسة السابقة؛ أداء ممتاز في شرح أساسيات المسار، ونوصي بالتركيز على مشاريع الفرق العملية."
+              </p>
+              <small style={{ color: "#166534", fontSize: "11px" }}>
+                بواسطة: رئيس المدربين · يمكن لمدير الفرع الاطلاع الدائم على توجيهات وملاحظات الجودة الأكاديمية لكل مجموعة.
+              </small>
             </div>
             <div className="dialog-info">
               <CalendarCheck size={15} />

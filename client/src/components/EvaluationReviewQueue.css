@@ -1,3 +1,306 @@
-.evaluation-review-queue{display:grid;gap:18px}.evaluation-review-header{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:22px 24px;border:1px solid var(--border,#e4e7ec);border-radius:18px;background:linear-gradient(135deg,#fff 0%,#f8fbff 100%)}.evaluation-review-header h2{margin:5px 0 7px;font-size:1.25rem}.evaluation-review-header p{max-width:680px;margin:0;color:var(--muted,#667085);line-height:1.7}.evaluation-review-count{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;padding:10px 13px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:.84rem;font-weight:700}.evaluation-review-list{display:grid;gap:14px}.evaluation-review-card{display:grid;gap:16px;padding:20px 22px;border:1px solid var(--border,#e4e7ec);border-radius:18px;background:#fff;box-shadow:0 6px 20px #0f172a08}.evaluation-review-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}.evaluation-review-card-head>div{display:grid;gap:6px}.evaluation-review-student{display:flex;align-items:center;gap:7px;color:#475467;font-size:.88rem;font-weight:700}.evaluation-review-card-head strong{font-size:1.05rem}.evaluation-review-card-head small{display:flex;align-items:center;gap:5px;color:#667085}.evaluation-review-score{display:flex;align-items:baseline;gap:4px;color:#0f766e;font-size:1.3rem;font-weight:800}.evaluation-review-score small{color:#667085;font-size:.72rem}.evaluation-review-note{display:flex;align-items:flex-start;gap:9px;padding:13px 14px;border-radius:12px;background:#f8fafc;color:#344054}.evaluation-review-note svg{flex:none;margin-top:2px;color:#64748b}.evaluation-review-note p{margin:0;white-space:pre-wrap;line-height:1.75}.evaluation-review-feedback{display:grid;gap:7px;color:#475467;font-size:.86rem;font-weight:700}.evaluation-review-feedback textarea{width:100%;resize:vertical;border:1px solid #d0d5dd;border-radius:10px;padding:11px 12px;font:inherit;font-weight:400;line-height:1.6}.evaluation-review-actions{display:flex;justify-content:flex-end;gap:10px}.evaluation-review-actions button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:8px 14px;border:0;border-radius:10px;font:inherit;font-weight:700;cursor:pointer}.evaluation-review-actions button:disabled{opacity:.55;cursor:wait}.evaluation-review-return{background:#fff7ed;color:#c2410c}.evaluation-review-publish{background:#0f766e;color:#fff}.evaluation-review-empty{display:grid;justify-items:center;gap:8px;padding:44px 20px;border:1px dashed #cbd5e1;border-radius:16px;background:#fff;color:#64748b;text-align:center}.evaluation-review-empty svg{color:#0f766e}.evaluation-review-empty strong{color:#344054}@media(max-width:640px){.evaluation-review-header{display:grid;padding:18px}.evaluation-review-count{justify-self:start}.evaluation-review-card{padding:16px}.evaluation-review-actions{display:grid;grid-template-columns:1fr}.evaluation-review-actions button{width:100%}}
+/* ==========================================================================
+   Evaluation Review Queue - Academic Quality & Head Instructor Guidance
+   ========================================================================== */
 
-.evaluation-review-readonly{margin:0;padding:10px 12px;border-radius:10px;background:#f8fafc;color:#667085;font-size:.85rem;line-height:1.6}
+.eval-queue-wrapper {
+  display: grid;
+  gap: 20px;
+  direction: rtl;
+}
+
+/* 1. Header */
+.eval-queue-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 22px 26px;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+}
+
+.eval-queue-header-copy {
+  display: grid;
+  gap: 6px;
+  max-width: 650px;
+}
+
+.eval-queue-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #0d9488;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.eval-queue-title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.eval-queue-subtitle {
+  margin: 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.eval-queue-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #e6f7f5;
+  border: 1px solid #ccfbf1;
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* 2. Review Cards */
+.eval-queue-list {
+  display: grid;
+  gap: 16px;
+}
+
+.eval-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 20px 24px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  display: grid;
+  gap: 16px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.eval-card:hover {
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+}
+
+.eval-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.eval-student-meta {
+  display: grid;
+  gap: 6px;
+}
+
+.eval-student-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.eval-course-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  background: #f1f5f9;
+  color: #334155;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.eval-session-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.eval-score-badge {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: 6px 14px;
+  border-radius: 12px;
+}
+
+.eval-score-num {
+  font-size: 26px;
+  font-weight: 800;
+  color: #047857;
+}
+
+.eval-score-max {
+  font-size: 13px;
+  font-weight: 700;
+  color: #059669;
+}
+
+/* 3. Instructor Note Box */
+.eval-instructor-note {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: grid;
+  gap: 6px;
+}
+
+.eval-note-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.eval-note-text {
+  margin: 0;
+  font-size: 13px;
+  color: #1e293b;
+  line-height: 1.6;
+}
+
+/* 4. Feedback Input Field */
+.eval-feedback-section {
+  display: grid;
+  gap: 6px;
+}
+
+.eval-feedback-label {
+  display: grid;
+  gap: 6px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.eval-feedback-label textarea {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  resize: vertical;
+  line-height: 1.6;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.eval-feedback-label textarea:focus {
+  border-color: #0d9488;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15);
+}
+
+/* 5. Card Actions */
+.eval-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 6px;
+}
+
+.eval-btn-return {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  color: #b45309;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.eval-btn-return:hover {
+  background: #fef3c7;
+  border-color: #fde68a;
+}
+
+.eval-btn-publish {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #0d9488;
+  border: 1px solid #0f766e;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(13, 148, 136, 0.25);
+  transition: background 0.15s ease;
+}
+
+.eval-btn-publish:hover {
+  background: #0f766e;
+}
+
+.eval-btn-return:disabled,
+.eval-btn-publish:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Empty State */
+.eval-queue-empty {
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  padding: 48px 24px;
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 20px;
+  text-align: center;
+}
+
+.eval-queue-empty strong {
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.eval-queue-empty span {
+  font-size: 13px;
+  color: #64748b;
+  max-width: 440px;
+}
+
+/* Responsive */
+@media (max-width: 680px) {
+  .eval-card-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .eval-btn-return,
+  .eval-btn-publish {
+    width: 100%;
+  }
+}

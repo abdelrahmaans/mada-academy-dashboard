@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Award, CalendarDays, CheckCircle2, LifeBuoy, RefreshCw, ShieldCheck, Users } from "lucide-react";
+import { Award, CalendarDays, CheckCircle2, GraduationCap, LifeBuoy, RefreshCw, ShieldCheck, Users } from "lucide-react";
 import { useLocation } from "wouter";
 import EvaluationReviewQueue from "@/components/EvaluationReviewQueue";
 import HeadInstructorsLiveOverview, { type HeadInstructorsOverviewData } from "@/components/HeadInstructorsLiveOverview";
@@ -115,7 +115,7 @@ export default function HeadInstructorsLive() {
         <RoleSurfaceTopbar onMenu={() => setMobileNavOpen(true)} scopeLabel={`فرع ${branch}`} roleLabel="رئيس المدربين" />
         <div className="r03-live-page">
         <header className="r03-live-header">
-          <div><span className="r03-live-eyebrow"><span /> لوحة أكاديمية</span><h1>إشراف فريق المدربين</h1><p>بيانات فعلية من {branch} · الجلسات ضمن آخر 30 يومًا والقادم 60 يومًا.</p></div>
+          <div><span className="r03-live-eyebrow"><span /> إشراف أكاديمي</span><h1>الإشراف الأكاديمي والمجموعات</h1><p>متابعة الجودة الأكاديمية للمجموعات المسندة للإشراف، بجانب دورك الأساسي كمدرب.</p></div>
           <button className="r03-live-refresh" type="button" onClick={() => void load()} disabled={loading}><RefreshCw size={15} className={loading ? "spinning" : ""} /> تحديث البيانات</button>
         </header>
         <RoleScopeCard className="r03-live-scope" compact />
@@ -131,23 +131,23 @@ export default function HeadInstructorsLive() {
                 tone: "primary",
               },
               {
+                id: "r03-instructor-desk",
+                label: "مكتبي كمدرب (حصصي وطلابي)",
+                icon: <GraduationCap size={14} />,
+                onClick: () => navigate("/instructor-desk"),
+              },
+              {
                 id: "r03-ticket",
                 label: "تسجيل تذكرة دعم / استفسار للمنصة",
                 icon: <LifeBuoy size={14} />,
                 onClick: () => setTicketModalOpen(true),
               },
-              {
-                id: "r03-refresh",
-                label: "تحديث وفحص المؤشرات",
-                icon: <RefreshCw size={14} />,
-                onClick: () => void load(),
-              },
             ]}
           />
         )}
         <nav className="r03-live-tabs" aria-label="أقسام إشراف المدربين">
-          <button type="button" className={view === "overview" ? "active" : ""} onClick={() => setView("overview")}><Users size={15} /> ملخص الفرع</button>
-          <button type="button" className={view === "evaluations" ? "active" : ""} onClick={() => setView("evaluations")}><CheckCircle2 size={15} /> مراجعة التقييمات <b>{data?.evaluations.counts.SUBMITTED ?? "—"}</b></button>
+          <button type="button" className={view === "overview" ? "active" : ""} onClick={() => setView("overview")}><Users size={15} /> المجموعات والجلسات المشرف عليها</button>
+          <button type="button" className={view === "evaluations" ? "active" : ""} onClick={() => setView("evaluations")}><CheckCircle2 size={15} /> مراجعة التقييمات والتوجيه <b>{data?.evaluations.counts.SUBMITTED ?? "—"}</b></button>
           <button type="button" className={view === "rubrics" ? "active" : ""} onClick={() => setView("rubrics")}><Award size={15} /> بنك معايير التقييم</button>
         </nav>
         {loading && <LoadingState label="جارٍ تحميل بيانات الفريق والمجموعات والجلسات والتقييمات…" compact />}
