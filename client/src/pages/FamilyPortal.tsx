@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import ChildrenSwitcher from "@/components/ChildrenSwitcher";
 import QuickActionsBar from "@/components/QuickActionsBar";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
+import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import StudentCertificatesCard from "@/components/StudentCertificatesCard";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -52,6 +53,7 @@ export default function FamilyPortal() {
   const [retryKey, setRetryKey] = useState(0);
   const [selectedId, setSelectedId] = useState(isParentAccount ? "" : DEMO_CHILDREN[0].id);
   const [tab, setTab] = useState<PortalTab>("overview");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const child = useMemo(() => children.find(item => item.id === selectedId) ?? children[0], [children, selectedId]);
 
@@ -197,8 +199,15 @@ export default function FamilyPortal() {
       identityKind="consumer"
       tenantName={me?.academy?.name ?? "أكاديمية مدى"}
       demo={!liveMode}
+      mobileOpen={mobileNavOpen}
+      onCloseMobile={() => setMobileNavOpen(false)}
     >
       <div className="family-portal-page" dir="rtl">
+        <RoleSurfaceTopbar
+          onMenu={() => setMobileNavOpen(true)}
+          scopeLabel="بوابة الأسرة"
+          roleLabel="ولي الأمر"
+        />
         {/* Welcome Header */}
         <div className="portal-welcome-header">
           <div>

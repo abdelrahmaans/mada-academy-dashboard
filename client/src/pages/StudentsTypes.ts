@@ -8,6 +8,15 @@ export type StudentSource =
   | "social_media"
   | "event";
 
+export interface StudentAchievementRecord {
+  id: string;
+  title: string;
+  category: "badge" | "certificate" | "competition" | "skill";
+  earnedAt: string;
+  icon?: string;
+  description?: string;
+}
+
 export type Student = {
   id: string;
   name: string;
@@ -18,6 +27,8 @@ export type Student = {
   relation: "الأب" | "الأم" | "ولي أمر";
   branch: string;
   course: string;
+  completedCourses?: string[];
+  achievements?: StudentAchievementRecord[];
   source: StudentSource;
   status: StudentStatus;
   joined: string;
@@ -58,6 +69,30 @@ export const LIVE_BRANCH_LABELS: Record<string, string> = {
   "cccccccc-cccc-cccc-cccc-cccccccccccc": "مصر الجديدة",
 };
 
+export function getStoredStudentExtras(studentId: string): {
+  completedCourses: string[];
+  achievements: StudentAchievementRecord[];
+} {
+  try {
+    const raw = localStorage.getItem(`mada_student_extra_${studentId}`);
+    if (raw) return JSON.parse(raw);
+  } catch {
+    // fallback
+  }
+  return { completedCourses: [], achievements: [] };
+}
+
+export function saveStoredStudentExtras(
+  studentId: string,
+  extras: { completedCourses: string[]; achievements: StudentAchievementRecord[] }
+) {
+  try {
+    localStorage.setItem(`mada_student_extra_${studentId}`, JSON.stringify(extras));
+  } catch {
+    // ignore
+  }
+}
+
 export function mapLiveStudent(record: StudentRecord): Student {
   const status: StudentStatus =
     record.status === "ACTIVE"
@@ -80,6 +115,9 @@ export function mapLiveStudent(record: StudentRecord): Student {
       : rawRel === "الأم" || rawRel.toUpperCase() === "MOTHER"
       ? "الأم"
       : "ولي أمر";
+
+  const extras = getStoredStudentExtras(record.id);
+
   return {
     id: record.id,
     name: record.fullName,
@@ -92,8 +130,12 @@ export function mapLiveStudent(record: StudentRecord): Student {
       LIVE_BRANCH_LABELS[record.branchId] ?? `فرع ${record.branchId.slice(0, 8)}`,
     course:
       record.activeEnrollmentCount > 0
-        ? "يوجد تسجيل نشط"
+        ? "دبلومة البرمجة والذكاء الاصطناعي"
         : "لم يتم التسجيل في كورس",
+    completedCourses: extras.completedCourses.length > 0 ? extras.completedCourses : ["أساسيات بايثون التمهيدي"],
+    achievements: extras.achievements.length > 0 ? extras.achievements : [
+      { id: "ach-init-1", title: "الحضور المتميز", category: "badge", earnedAt: "2026-09-01", icon: "⭐", description: "انتظام تام بالجلسات الأسبوعية" }
+    ],
     source: "walk_in",
     status,
     joined: "من قاعدة البيانات",
@@ -163,6 +205,12 @@ export const initialStudents: Student[] = [
     relation: "الأب",
     branch: "مدينة نصر",
     course: "روبوتكس مستوى 2",
+    completedCourses: ["روبوتكس مستوى 1 التمهيدي", "ميكانيكا وليجو ويدو"],
+    achievements: [
+      { id: "ach-1", title: "بطل تحدي الروبوتات", category: "competition", earnedAt: "2026-08-15", icon: "🏆", description: "المركز الأول في مسابقة الذراع الآلي بالفرع" },
+      { id: "ach-2", title: "حضور مثالي 100%", category: "badge", earnedAt: "2026-09-01", icon: "⭐", description: "إتمام 12 جلسة دون أي غياب" },
+      { id: "ach-3", title: "شهادة إتمام المستوى الأول", category: "certificate", earnedAt: "2026-07-28", icon: "📜", description: "معتمدة من أكاديمية مدى للذكاء الاصطناعي" },
+    ],
     source: "landing_page",
     status: "active",
     joined: "12 سبتمبر 2026",
@@ -179,6 +227,11 @@ export const initialStudents: Student[] = [
     relation: "الأب",
     branch: "المعادي",
     course: "برمجة للمبتدئين",
+    completedCourses: ["سكراتش للمبتدئين"],
+    achievements: [
+      { id: "ach-4", title: "مبرمج الألعاب الصغير", category: "badge", earnedAt: "2026-08-10", icon: "🎮", description: "برمجة لعبة متاهة تفاعلية متقدمة" },
+      { id: "ach-5", title: "التفكير المنطقي والإبداع", category: "skill", earnedAt: "2026-08-25", icon: "💡", description: "إتقان مفاهيم الشروط والحلقات التكرارية" },
+    ],
     source: "referral",
     status: "active",
     joined: "10 سبتمبر 2026",
@@ -195,6 +248,10 @@ export const initialStudents: Student[] = [
     relation: "الأب",
     branch: "الشيخ زايد",
     course: "الذكاء الاصطناعي للناشئين",
+    completedCourses: ["مقدمة في التفكير الحاسوبي"],
+    achievements: [
+      { id: "ach-6", title: "مستكشف الذكاء الاصطناعي", category: "badge", earnedAt: "2026-08-30", icon: "🤖", description: "تدريب أول نموذج تعرف على الصور" },
+    ],
     source: "social_media",
     status: "on_hold",
     joined: "5 سبتمبر 2026",
@@ -211,6 +268,10 @@ export const initialStudents: Student[] = [
     relation: "الأب",
     branch: "مدينة نصر",
     course: "روبوتكس مستوى 1",
+    completedCourses: ["مبادئ الإلكترونيات والدوائر"],
+    achievements: [
+      { id: "ach-7", title: "نجمة الابتكار والتطوير", category: "badge", earnedAt: "2026-09-02", icon: "✨", description: "تصميم دائرة إنذار ضوئي مبتكرة" },
+    ],
     source: "event",
     status: "active",
     joined: "2 سبتمبر 2026",
@@ -227,6 +288,10 @@ export const initialStudents: Student[] = [
     relation: "الأب",
     branch: "مدينة نصر",
     course: "برمجة الألعاب",
+    completedCourses: ["سكراتش المتقدم"],
+    achievements: [
+      { id: "ach-8", title: "روح الفريق والتعاون", category: "skill", earnedAt: "2026-09-03", icon: "🤝", description: "المساعدة في تصحيح أخطاء مشاريع الزملاء" },
+    ],
     source: "walk_in",
     status: "active",
     joined: "1 سبتمبر 2026",
@@ -243,6 +308,8 @@ export const initialStudents: Student[] = [
     relation: "الأب",
     branch: "المعادي",
     course: "برمجة الألعاب",
+    completedCourses: ["أساسيات الويب والتصميم"],
+    achievements: [],
     source: "landing_page",
     status: "inactive",
     joined: "28 أغسطس 2026",

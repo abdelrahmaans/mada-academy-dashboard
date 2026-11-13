@@ -47,6 +47,7 @@ import {
   PAGE_SIZE,
   mapLiveStudent,
   statusLabels,
+  saveStoredStudentExtras,
 } from "./StudentsTypes";
 import { AddStudentModal, StudentDetailsModal } from "./StudentsModals";
 
@@ -66,6 +67,7 @@ function StudentPage() {
     "all"
   );
   const [branchFilter, setBranchFilter] = useState("كل الفروع");
+  const [courseFilter, setCourseFilter] = useState("all");
   const [branchMenuOpen, setBranchMenuOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -127,6 +129,15 @@ function StudentPage() {
     return () => { cancelled = true; };
   }, [dataMode, detailsStudent]);
 
+  const courseOptions = useMemo(() => {
+    const set = new Set<string>();
+    students.forEach((s) => {
+      if (s.course && s.course !== "لم يتم التسجيل في كورس") set.add(s.course);
+      s.completedCourses?.forEach((c) => set.add(c));
+    });
+    return ["all", ...Array.from(set)];
+  }, [students]);
+
   const filteredStudents = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("ar");
     return students.filter(student => {
@@ -138,14 +149,74 @@ function StudentPage() {
           student.parentName,
           student.parentPhone,
           student.course,
+          ...(student.completedCourses ?? []),
+          ...(student.achievements?.map((a) => a.title) ?? []),
         ].some(value => value.toLocaleLowerCase("ar").includes(needle));
       const matchesStatus =
         statusFilter === "all" || student.status === statusFilter;
       const matchesBranch =
         branchFilter === "كل الفروع" || student.branch === branchFilter;
-      return matchesQuery && matchesStatus && matchesBranch;
+      const matchesCourse =
+        courseFilter === "all" ||
+        student.course === courseFilter ||
+        Boolean(student.completedCourses?.includes(courseFilter));
+      return matchesQuery && matchesStatus && matchesBranch && matchesCourse;
     });
-  }, [students, query, statusFilter, branchFilter]);
+  }, [students, query, statusFilter, branchFilter, courseFilter]);
+
+  const handleAddCompletedCourse = (studentId: string, courseName: string) => {
+    setStudents((current) =>
+      current.map((s) => {
+        if (s.id !== studentId) return s;
+        const updatedCourses = Array.from(new Set([...(s.completedCourses ?? []), courseName]));
+        const updatedStudent: Student = { ...s, completedCourses: updatedCourses };
+        saveStoredStudentExtras(s.id, {
+          completedCourses: updatedCourses,
+          achievements: s.achievements ?? [],
+        });
+        if (detailsStudent?.id === s.id) {
+          setDetailsStudent(updatedStudent);
+        }
+        return updatedStudent;
+      })
+    );
+    toast.success(`تمت إضافة الكورس "${courseName}" لسجل الطالب بنجاح!`);
+  };
+
+  const handleAddAchievement = (
+    studentId: string,
+    achData: {
+      title: string;
+      category: "badge" | "certificate" | "competition" | "skill";
+      icon?: string;
+      description?: string;
+    }
+  ) => {
+    setStudents((current) =>
+      current.map((s) => {
+        if (s.id !== studentId) return s;
+        const newAch = {
+          id: `ach-${Date.now()}`,
+          title: achData.title,
+          category: achData.category,
+          earnedAt: new Date().toISOString().split("T")[0],
+          icon: achData.icon ?? "⭐",
+          description: achData.description,
+        };
+        const updatedAchs = [newAch, ...(s.achievements ?? [])];
+        const updatedStudent: Student = { ...s, achievements: updatedAchs };
+        saveStoredStudentExtras(s.id, {
+          completedCourses: s.completedCourses ?? [],
+          achievements: updatedAchs,
+        });
+        if (detailsStudent?.id === s.id) {
+          setDetailsStudent(updatedStudent);
+        }
+        return updatedStudent;
+      })
+    );
+    toast.success(`تم منح الوسام "${achData.title}" للطالب بنجاح!`);
+  };
   const pageCount = Math.max(1, Math.ceil(filteredStudents.length / PAGE_SIZE));
   const visibleStudents = filteredStudents.slice(
     (page - 1) * PAGE_SIZE,
@@ -222,6 +293,7 @@ function StudentPage() {
     setQuery("");
     setStatusFilter("all");
     setBranchFilter("كل الفروع");
+    setCourseFilter("all");
     setPage(1);
   };
 
@@ -578,10 +650,31 @@ function StudentPage() {
                   </select>
                   <ChevronDown size={13} />
                 </label>
+                <label className="branch-filter" style={{ minWidth: "160px" }}>
+                  <BookOpen size={14} />
+                  <select
+                    value={courseFilter}
+                    onChange={event => {
+                      setCourseFilter(event.target.value);
+                      setPage(1);
+                    }}
+                    aria-label="تصفية حسب الكورس أو الدبلومة"
+                  >
+                    <option value="all">كل الكورسات والدبلومات ({courseOptions.length - 1})</option>
+                    {courseOptions
+                      .filter(c => c !== "all")
+                      .map(c => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                  </select>
+                  <ChevronDown size={13} />
+                </label>
                 <button
                   className="filter-button"
                   onClick={() =>
-                    toast("استخدم البحث والحالة والفرع لتصفية القائمة")
+                    toast("تم ضبط الفلاتر حسب المسار، الكورس، الفرع، وحالة القيد.")
                   }
                 >
                   <Filter size={15} />
@@ -595,7 +688,7 @@ function StudentPage() {
                 <thead>
                   <tr>
                     <th>الطالب</th>
-                    <th>الكورس الحالي</th>
+                    <th>الكورس والمسار</th>
                     <th>ولي الأمر</th>
                     <th>العمر</th>
                     <th>الفرع</th>
@@ -628,11 +721,23 @@ function StudentPage() {
                             </span>
                           </button>
                         </td>
-                        <td data-label="الكورس الحالي">
-                          <span className="student-course">
-                            <BookOpen size={14} />
-                            {student.course}
-                          </span>
+                        <td data-label="الكورس والمسار">
+                          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                            <span className="student-course">
+                              <BookOpen size={14} />
+                              {student.course}
+                            </span>
+                            {student.completedCourses && student.completedCourses.length > 0 && (
+                              <span style={{ fontSize: "11px", color: "#0d9488", display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                                <CheckCircle2 size={11} /> {student.completedCourses.length} دورات مكتملة
+                              </span>
+                            )}
+                            {student.achievements && student.achievements.length > 0 && (
+                              <span style={{ fontSize: "11px", color: "#d97706", display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                                🏆 {student.achievements.length} أوسمة معتمدة
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td data-label="ولي الأمر">
                           <span className="guardian-cell">
@@ -802,6 +907,8 @@ function StudentPage() {
         onInviteConsumerAccount={inviteConsumerAccount}
         onNavigateSchedule={() => setLocation("/schedule")}
         onNavigateFinance={() => setLocation("/finance")}
+        onAddCompletedCourse={handleAddCompletedCourse}
+        onAddAchievement={handleAddAchievement}
       />
     </RoleDashboardShell>
   );

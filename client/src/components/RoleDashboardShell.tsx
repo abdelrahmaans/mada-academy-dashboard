@@ -31,8 +31,7 @@ const RoleShellContext = createContext<RoleShellContextValue>({
   closeMobileNav: () => {},
 });
 
-const useRoleShell = () => useContext(RoleShellContext);
-void useRoleShell;
+export const useRoleShell = () => useContext(RoleShellContext);
 
 type RoleDashboardShellProps = Omit<HTMLAttributes<HTMLDivElement>, "role"> & {
   children: ReactNode;

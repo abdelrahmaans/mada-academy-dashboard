@@ -1,15 +1,19 @@
-import { Bell, CheckCheck, MapPin, Search, Sparkles, X } from "lucide-react";
+import { Bell, CheckCheck, MapPin, Menu, Search, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRoleShell } from "./RoleDashboardShell";
 
-type Props = { onMenu: () => void; scopeLabel?: string; roleLabel?: string };
+type Props = { onMenu?: () => void; scopeLabel?: string; roleLabel?: string };
 
 export default function RoleSurfaceTopbar({ onMenu, scopeLabel = "كل الفروع", roleLabel = "مسؤول الأكاديمية" }: Props) {
   const [query, setQuery] = useState("");
   const [notifOpen, setNotifOpen] = useState(false);
   const { me } = useAuth();
+  const shell = useRoleShell();
   const userName = me?.user?.displayName || "المستخدم";
   const userInitials = userName.slice(0, 2);
+
+  const handleOpenMenu = onMenu ?? shell.openMobileNav;
 
   // Role-aware context notifications
   const notifications = [
@@ -41,7 +45,13 @@ export default function RoleSurfaceTopbar({ onMenu, scopeLabel = "كل الفر�
   return (
     <header className="topbar">
       <div className="topbar-right">
-        <button className="icon-button mobile-menu-button" aria-label="فتح القائمة" onClick={onMenu}><span aria-hidden="true">☰</span></button>
+        <button
+          className="icon-button mobile-menu-button"
+          aria-label="فتح القائمة"
+          onClick={handleOpenMenu}
+        >
+          <Menu size={20} />
+        </button>
         <div className="branch-select assigned-branch" aria-label={`النطاق: ${scopeLabel}`}><span className="branch-icon"><MapPin size={17} /></span><span>{scopeLabel}</span></div>
         <label className="top-search"><Search size={18} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="إبحث عن فرع أو مسار..." aria-label="البحث داخل مساحة الأكاديمية" /><kbd>⌘ K</kbd></label>
       </div>

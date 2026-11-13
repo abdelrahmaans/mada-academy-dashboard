@@ -48,7 +48,9 @@ import { SecretaryFollowupsTab } from "./SecretaryFollowupsTab";
 import { SecretaryFreezesTab } from "./SecretaryFreezesTab";
 import { SecretaryShiftsTab } from "./SecretaryShiftsTab";
 import { SecretaryPulseTab } from "./SecretaryPulseTab";
-import { Calendar } from "lucide-react";
+import { SecretaryGroupsTab } from "./SecretaryGroupsTab";
+import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
+import { Calendar, Layers } from "lucide-react";
 import "./SecretaryDeskLive.css";
 
 export default function SecretaryDeskLive() {
@@ -63,11 +65,12 @@ export default function SecretaryDeskLive() {
   const [activeTab, setActiveTab] = useState<SecretaryTab>("pipeline");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash.replace("#", "") as SecretaryTab;
-      const validTabs: SecretaryTab[] = ["pulse", "pipeline", "registration", "followups", "freezes", "shifts"];
+      const validTabs: SecretaryTab[] = ["pulse", "pipeline", "groups", "registration", "followups", "freezes", "shifts"];
       if (validTabs.includes(hash)) {
         setActiveTab(hash);
       }
@@ -382,8 +385,15 @@ export default function SecretaryDeskLive() {
       tenantName={me?.academy?.name}
       branchName={branchName}
       demo={false}
+      mobileOpen={mobileNavOpen}
+      onCloseMobile={() => setMobileNavOpen(false)}
     >
       <main className="secretary-live-workspace" dir="rtl">
+        <RoleSurfaceTopbar
+          onMenu={() => setMobileNavOpen(true)}
+          scopeLabel={`فرع ${branchName}`}
+          roleLabel="السكرتارية والاستقبال"
+        />
         <PageHeader
           className="secretary-live-welcome"
           copyClassName="secretary-live-copy"
@@ -417,6 +427,7 @@ export default function SecretaryDeskLive() {
           actions={[
             { id: "r05-new-lead", label: "استفسار جديد", icon: <Plus size={14} />, onClick: () => setNewLeadModalOpen(true), tone: "primary" },
             { id: "r05-register", label: "تسجيل طالب مباشر", icon: <UserPlus size={14} />, onClick: () => selectTab("registration") },
+            { id: "r05-groups", label: "المجموعات المتاحة", icon: <Layers size={14} />, onClick: () => selectTab("groups") },
             { id: "r05-pipeline", label: "مسار الاستفسارات", icon: <PhoneCall size={14} />, onClick: () => selectTab("pipeline"), badge: newLeadsCount || undefined },
             { id: "r05-freeze", label: "طلب تجميد اشتراك", icon: <Snowflake size={14} />, onClick: () => setFreezeModalOpen(true) },
             { id: "r05-shift", label: "تقفيل عهدة الوردية", icon: <Wallet size={14} />, onClick: () => setShiftModalOpen(true) },
@@ -425,7 +436,7 @@ export default function SecretaryDeskLive() {
 
         {/* Live KPI Metric Cards */}
         <section className="secretary-stats-grid" aria-label="مؤشرات الاستقبال والتسجيل">
-          <article className="secretary-stat-card stat-teal">
+          <article className="secretary-stat-card stat-teal" onClick={() => selectTab("pipeline")} style={{ cursor: "pointer" }}>
             <span className="stat-icon"><Sparkles size={20} /></span>
             <div>
               <small>استفسارات جديدة</small>
@@ -433,7 +444,7 @@ export default function SecretaryDeskLive() {
               <span>بانتظار التواصل الأول</span>
             </div>
           </article>
-          <article className="secretary-stat-card stat-blue">
+          <article className="secretary-stat-card stat-blue" onClick={() => selectTab("followups")} style={{ cursor: "pointer" }}>
             <span className="stat-icon"><PhoneCall size={20} /></span>
             <div>
               <small>متابعات نشطة</small>
@@ -441,7 +452,7 @@ export default function SecretaryDeskLive() {
               <span>قيد المتابعة والاهتمام</span>
             </div>
           </article>
-          <article className="secretary-stat-card stat-amber">
+          <article className="secretary-stat-card stat-amber" onClick={() => selectTab("pipeline")} style={{ cursor: "pointer" }}>
             <span className="stat-icon"><UserCheck size={20} /></span>
             <div>
               <small>تم تحويلهم للتسجيل</small>
@@ -449,12 +460,12 @@ export default function SecretaryDeskLive() {
               <span>طلاب مسجلون من الاستفسارات</span>
             </div>
           </article>
-          <article className="secretary-stat-card stat-navy">
+          <article className="secretary-stat-card stat-navy" onClick={() => selectTab("groups")} style={{ cursor: "pointer" }}>
             <span className="stat-icon"><GraduationCap size={20} /></span>
             <div>
               <small>المجموعات المتاحة</small>
               <strong>{groups.length}</strong>
-              <span>{students.length} طالب نشط بالفرع</span>
+              <span>{students.length} طالب نشط بالفرع (انقر للعرض)</span>
             </div>
           </article>
         </section>
@@ -467,6 +478,13 @@ export default function SecretaryDeskLive() {
             onClick={() => selectTab("pulse")}
           >
             <Calendar size={17} /> جدول اليوم (Daily Pulse)
+          </button>
+          <button
+            type="button"
+            className={`secretary-tab-btn ${activeTab === "groups" ? "active" : ""}`}
+            onClick={() => selectTab("groups")}
+          >
+            <Layers size={17} /> المجموعات المتاحة والشعب ({groups.length})
           </button>
           <button
             type="button"
@@ -512,6 +530,19 @@ export default function SecretaryDeskLive() {
             onDirectRegister={(offeringId) => {
               if (offeringId) {
                 setDirectRegistration(cur => ({ ...cur, courseOfferingId: offeringId }));
+              }
+              selectTab("registration");
+            }}
+          />
+        )}
+
+        {/* TAB 0.5: Groups & Classes */}
+        {activeTab === "groups" && (
+          <SecretaryGroupsTab
+            groups={groups}
+            onDirectRegister={(offeringId) => {
+              if (offeringId) {
+                setDirectRegistration((cur) => ({ ...cur, courseOfferingId: offeringId }));
               }
               selectTab("registration");
             }}

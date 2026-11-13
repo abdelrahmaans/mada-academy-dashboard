@@ -1,5 +1,6 @@
 import React, { type FormEvent } from "react";
 import {
+  Award,
   BookOpen,
   CalendarDays,
   CheckCircle2,
@@ -10,6 +11,9 @@ import {
   Search,
   Send,
   ShieldCheck,
+  Sparkles,
+  Star,
+  Trophy,
   UserPlus,
   Users,
   Wallet,
@@ -240,6 +244,16 @@ export interface StudentDetailsModalProps {
   onInviteConsumerAccount: () => void;
   onNavigateSchedule: () => void;
   onNavigateFinance: () => void;
+  onAddCompletedCourse?: (studentId: string, courseName: string) => void;
+  onAddAchievement?: (
+    studentId: string,
+    achievement: {
+      title: string;
+      category: "badge" | "certificate" | "competition" | "skill";
+      icon?: string;
+      description?: string;
+    }
+  ) => void;
 }
 
 export function StudentDetailsModal({
@@ -270,6 +284,8 @@ export function StudentDetailsModal({
   onInviteConsumerAccount,
   onNavigateSchedule,
   onNavigateFinance,
+  onAddCompletedCourse,
+  onAddAchievement,
 }: StudentDetailsModalProps) {
   if (!detailsStudent) return null;
 
@@ -345,6 +361,217 @@ export function StudentDetailsModal({
             <strong>{sourceLabels[detailsStudent.source]}</strong>
           </div>
         </div>
+
+        {/* سجل الكورسات والدبلومات (الحالية والسابقة) */}
+        <section
+          style={{
+            marginTop: "16px",
+            padding: "16px",
+            background: "#f8fafc",
+            borderRadius: "14px",
+            border: "1px solid #e2e8f0",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "12px",
+              flexWrap: "wrap",
+              gap: "8px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <BookOpen size={18} style={{ color: "#0d9488" }} />
+              <strong style={{ fontSize: "14px", color: "#0f172a" }}>
+                مسار الكورسات والدبلومات المكتملة
+              </strong>
+            </div>
+            <button
+              type="button"
+              className="button button-ghost"
+              style={{
+                fontSize: "12px",
+                padding: "4px 10px",
+                color: "#0d9488",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                border: "1px solid #ccfbf1",
+                background: "#f0fdfa",
+              }}
+              onClick={() => {
+                const name = window.prompt("أدخل اسم الكورس أو الدبلومة السابقة المعتمدة للطالب:");
+                if (name && name.trim()) {
+                  onAddCompletedCourse?.(detailsStudent.id, name.trim());
+                }
+              }}
+            >
+              <Plus size={13} /> إضافة كورس سابق / معتمد
+            </button>
+          </div>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                background: "#ecfdf5",
+                border: "1px solid #a7f3d0",
+                color: "#065f46",
+                padding: "6px 12px",
+                borderRadius: "8px",
+                fontSize: "12px",
+                fontWeight: 600,
+              }}
+            >
+              <span
+                style={{
+                  width: "8px",
+                  height: "8px",
+                  borderRadius: "50%",
+                  background: "#10b981",
+                  display: "inline-block",
+                }}
+              />
+              الكورس الحالي: {detailsStudent.course}
+            </div>
+
+            {detailsStudent.completedCourses && detailsStudent.completedCourses.length > 0 ? (
+              detailsStudent.completedCourses.map((c, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    background: "#ffffff",
+                    border: "1px solid #cbd5e1",
+                    color: "#334155",
+                    padding: "6px 12px",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                  }}
+                >
+                  <CheckCircle2 size={13} style={{ color: "#10b981" }} />
+                  {c} (مكتمل)
+                </div>
+              ))
+            ) : (
+              <span style={{ fontSize: "12px", color: "#94a3b8", alignSelf: "center" }}>
+                لا توجد دورات سابقة مسجلة للطالب
+              </span>
+            )}
+          </div>
+        </section>
+
+        {/* سجل الأوسمة والإنجازات الحقيقية */}
+        <section
+          style={{
+            marginTop: "14px",
+            padding: "16px",
+            background: "#fffbeb",
+            borderRadius: "14px",
+            border: "1px solid #fde68a",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "12px",
+              flexWrap: "wrap",
+              gap: "8px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Trophy size={18} style={{ color: "#d97706" }} />
+              <div>
+                <strong style={{ fontSize: "14px", color: "#92400e" }}>
+                  إنجازات وأوسمة الطالب ({detailsStudent.achievements?.length ?? 0})
+                </strong>
+                <span style={{ display: "block", fontSize: "11px", color: "#b45309" }}>
+                  ظاهرة فورًا للطالب وولي الأمر وللبحث في النظام
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="button button-ghost"
+              style={{
+                fontSize: "12px",
+                padding: "4px 10px",
+                color: "#b45309",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                border: "1px solid #fde68a",
+                background: "#fef3c7",
+              }}
+              onClick={() => {
+                const title = window.prompt("أدخل عنوان الوسام أو الإنجاز (مثال: بطل تحدي الروبوت، حضور مثالي، مفكر مبدع):");
+                if (title && title.trim()) {
+                  onAddAchievement?.(detailsStudent.id, {
+                    title: title.trim(),
+                    category: "badge",
+                    icon: "⭐",
+                    description: "إنجاز معتمد ومسجل بواسطة الإدارة والمدرب",
+                  });
+                }
+              }}
+            >
+              <Plus size={13} /> منح وسام / إنجاز جديد
+            </button>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: "10px",
+            }}
+          >
+            {detailsStudent.achievements && detailsStudent.achievements.length > 0 ? (
+              detailsStudent.achievements.map((ach) => (
+                <div
+                  key={ach.id}
+                  style={{
+                    background: "#ffffff",
+                    border: "1px solid #fef3c7",
+                    borderRadius: "10px",
+                    padding: "10px 12px",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "10px",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                  }}
+                >
+                  <span style={{ fontSize: "20px", lineHeight: 1 }}>{ach.icon || "🏆"}</span>
+                  <div>
+                    <strong style={{ display: "block", fontSize: "13px", color: "#1e293b" }}>
+                      {ach.title}
+                    </strong>
+                    {ach.description && (
+                      <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#64748b" }}>
+                        {ach.description}
+                      </p>
+                    )}
+                    <small style={{ display: "block", marginTop: "4px", fontSize: "10px", color: "#94a3b8" }}>
+                      حُصل في: {ach.earnedAt}
+                    </small>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p style={{ margin: 0, fontSize: "12px", color: "#92400e", gridColumn: "1 / -1" }}>
+                لا توجد أوسمة مسجلة حاليًا. انقر على "منح وسام / إنجاز جديد" لإضافة أول وسام للطالب.
+              </p>
+            )}
+          </div>
+        </section>
 
         {dataMode === "live" && (
           <section className="student-link-panel">

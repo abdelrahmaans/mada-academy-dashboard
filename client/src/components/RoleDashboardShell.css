@@ -3,16 +3,42 @@
   display: none !important;
 }
 
-/* Unified Shell & Main Content Layout */
-.role-dashboard-shell.has-sidebar,
-.role-dashboard-shell.pc-live-shell,
-.role-dashboard-shell.platform-console {
-  display: grid !important;
-  grid-template-columns: 256px minmax(0, 1fr) !important;
+/* Base Shell Properties */
+.role-dashboard-shell {
   min-height: 100vh;
   width: 100%;
   direction: rtl;
   background: #f6f8fb;
+}
+
+/* Desktop Unified Shell Layout (screen > 1024px) */
+@media (min-width: 1025px) {
+  .role-dashboard-shell.has-sidebar,
+  .role-dashboard-shell.pc-live-shell,
+  .role-dashboard-shell.platform-console {
+    display: grid !important;
+    grid-template-columns: 256px minmax(0, 1fr) !important;
+  }
+
+  .role-dashboard-shell.has-sidebar > .sidebar,
+  .role-dashboard-shell.pc-live-shell > .sidebar,
+  .role-dashboard-shell.platform-console > .sidebar {
+    width: 256px !important;
+    min-width: 256px !important;
+    max-width: 256px !important;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    overflow-y: auto;
+  }
+
+  .mobile-menu-button {
+    display: none !important;
+  }
+
+  .shell-mobile-trigger {
+    display: none !important;
+  }
 }
 
 .role-dashboard-shell.no-sidebar:not(.pc-live-shell):not(.platform-console),
@@ -22,18 +48,6 @@
   width: 100%;
   direction: rtl;
   background: #f6f8fb;
-}
-
-.role-dashboard-shell.has-sidebar > .sidebar,
-.role-dashboard-shell.pc-live-shell > .sidebar,
-.role-dashboard-shell.platform-console > .sidebar {
-  width: 256px !important;
-  min-width: 256px !important;
-  max-width: 256px !important;
-  height: 100vh;
-  position: sticky;
-  top: 0;
-  overflow-y: auto;
 }
 
 /* Ensure the page next to the sidebar takes full available width with standard spacing */
@@ -85,7 +99,7 @@
   max-width: 100% !important;
   margin: 0 !important;
   margin-inline: 0 !important;
-  padding: 24px 34px 36px !important;
+  padding: 24px 34px 36px;
   box-sizing: border-box !important;
 }
 
@@ -100,32 +114,26 @@
 .app-shell .student-topbar {
   width: 100% !important;
   box-sizing: border-box !important;
-  padding-inline: 34px !important;
-}
-
-.shell-mobile-trigger {
-  display: none;
+  padding-inline: 34px;
 }
 
 /* =====================================================================
-   Mobile sidebar overlay — fixes the sidebar-open / mobile-scrim bug
-   RoleSidebar applies .sidebar-open on <aside>, these rules make it work
+   Mobile & Tablet Responsive System (<= 1024px)
+   Drawer off-canvas sidebar, sleek topbar trigger, auto-closing on navigation
    ===================================================================== */
-
-/* Mobile scrim (backdrop) — rendered by RoleDashboardShell as a <button> */
 .mobile-scrim {
   display: none;
   position: fixed;
   inset: 0;
-  z-index: 48;
-  width: 100%;
-  height: 100%;
-  background: rgba(15, 23, 42, 0.45);
+  z-index: 9998;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.48);
   border: none;
   padding: 0;
   cursor: pointer;
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2.5px);
+  -webkit-backdrop-filter: blur(2.5px);
   animation: scrim-fade-in 0.22s ease;
 }
 
@@ -134,25 +142,136 @@
   to   { opacity: 1; }
 }
 
-@media (max-width: 900px) {
-  .role-dashboard-shell.app-shell {
-    display: block;
-    width: 100%;
+@media (max-width: 1024px) {
+  /* Shell collapses into single fluid column */
+  .role-dashboard-shell,
+  .role-dashboard-shell.has-sidebar,
+  .role-dashboard-shell.pc-live-shell,
+  .role-dashboard-shell.platform-console,
+  .role-dashboard-shell.app-shell,
+  .app-shell {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    min-width: 0 !important;
   }
 
   .role-dashboard-shell > main,
   .role-dashboard-shell > .main-panel,
-  .role-dashboard-shell > .comp-workspace {
-    width: 100%;
+  .role-dashboard-shell > .comp-workspace,
+  .role-dashboard-shell > .workspace,
+  .role-dashboard-shell > .secretary-live-workspace {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
     min-height: 100vh;
   }
 
-  /* Show the hamburger trigger on mobile */
+  /* Padding adjustments for handheld devices */
+  .role-dashboard-shell .workspace,
+  .role-dashboard-shell .workspace-main,
+  .role-dashboard-shell .r1-live-page,
+  .role-dashboard-shell .secretary-live-workspace,
+  .role-dashboard-shell .finance-desk-content,
+  .role-dashboard-shell .family-portal-content,
+  .role-dashboard-shell .student-content,
+  .role-dashboard-shell .family-portal-page,
+  .role-dashboard-shell .student-portal-page,
+  .role-dashboard-shell .instructor-content,
+  .role-dashboard-shell .academic-content,
+  .role-dashboard-shell .academy-owner-content,
+  .role-dashboard-shell .pc-content,
+  .role-dashboard-shell .pc-live-content,
+  .role-dashboard-shell .r03-live-page {
+    padding: 16px 14px 28px !important;
+  }
+
+  .role-dashboard-shell .topbar,
+  .role-dashboard-shell .r1-live-topbar,
+  .role-dashboard-shell .family-portal-topbar,
+  .role-dashboard-shell .student-topbar,
+  .app-shell .topbar {
+    padding: 10px 14px !important;
+  }
+
+  /* Sidebar sits off-screen to the right (RTL) as an off-canvas drawer */
+  .role-dashboard-shell .sidebar,
+  .app-shell .sidebar,
+  aside.sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    z-index: 9999 !important;
+    width: min(290px, 86vw) !important;
+    min-width: min(290px, 86vw) !important;
+    max-width: 86vw !important;
+    height: 100dvh !important;
+    transform: translateX(110%) !important;
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1) !important;
+    box-shadow: none !important;
+    background: #0f172a !important;
+    overflow-y: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* When drawer is open */
+  .role-dashboard-shell .sidebar.sidebar-open,
+  .role-dashboard-shell .sidebar.open,
+  .app-shell .sidebar.sidebar-open,
+  .app-shell .sidebar.open,
+  aside.sidebar.sidebar-open {
+    transform: translateX(0) !important;
+    box-shadow: -10px 0 45px rgba(15, 23, 42, 0.4) !important;
+  }
+
+  /* Mobile menu button in topbar */
+  .mobile-menu-button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    border: 1px solid #dce8ea !important;
+    border-radius: 10px !important;
+    background: #ffffff !important;
+    color: #0d9488 !important;
+    cursor: pointer !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05) !important;
+    flex-shrink: 0 !important;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    padding: 0 !important;
+  }
+  .mobile-menu-button:hover {
+    background: #f0fdfa !important;
+    border-color: #0d9488 !important;
+  }
+
+  /* Close button inside sidebar header */
+  .sidebar-close {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 34px !important;
+    height: 34px !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 8px !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    cursor: pointer !important;
+    color: #ffffff !important;
+  }
+  .sidebar-close:hover {
+    background: rgba(255, 255, 255, 0.16) !important;
+  }
+
+  /* Floating fallback trigger (only visible when page has NO topbar) */
   .shell-mobile-trigger {
     position: fixed;
-    top: 14px;
-    right: 14px;
-    z-index: 40;
+    top: 12px;
+    right: 12px;
+    z-index: 990;
     display: grid;
     place-items: center;
     width: 40px;
@@ -161,60 +280,91 @@
     border: 1px solid #dce8ea;
     border-radius: 10px;
     background: #ffffff;
-    color: #1a2a35;
+    color: #0d9488;
     box-shadow: 0 4px 14px rgba(16, 46, 56, 0.12);
     cursor: pointer;
     transition: background 0.15s ease, border-color 0.15s ease;
   }
-  .shell-mobile-trigger:hover {
-    background: #f0f7f6;
-    border-color: #0d9488;
-    color: #0d9488;
+  .role-dashboard-shell:has(.topbar) .shell-mobile-trigger,
+  .role-dashboard-shell:has(.pc-live-topbar) .shell-mobile-trigger {
+    display: none !important;
+  }
+}
+
+/* Screen widths <= 768px: Mobile Polish for Grids, Tables, Tabs, and Modals */
+@media (max-width: 768px) {
+  /* Search input in topbar collapses to prevent horizontal squishing */
+  .top-search {
+    max-width: 140px !important;
+  }
+  .top-search kbd {
+    display: none !important;
   }
 
-  /* Sidebar hidden off-screen by default on mobile */
-  .role-dashboard-shell .sidebar,
-  .app-shell .sidebar {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 49;
-    width: 272px;
-    height: 100dvh;
-    transform: translateX(100%);
-    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
-    box-shadow: none;
+  /* All tables horizontally scrollable smoothly */
+  .students-table-wrap,
+  .table-responsive,
+  .comp-table-wrap,
+  .secretary-groups-tab table,
+  table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
   }
 
-  /* Sidebar visible when .sidebar-open or .open is applied */
-  .role-dashboard-shell .sidebar.sidebar-open,
-  .role-dashboard-shell .sidebar.open,
-  .app-shell .sidebar.sidebar-open,
-  .app-shell .sidebar.open {
-    transform: translateX(0);
-    box-shadow: -8px 0 40px rgba(15, 23, 42, 0.22);
+  /* Stat cards responsive auto-fit grid */
+  .secretary-stats-grid,
+  .student-stats-grid,
+  .r1-stats-grid,
+  .portal-overview-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+    gap: 10px !important;
   }
 
-  /* Show the scrim on mobile when sidebar is open */
-  .mobile-scrim {
-    display: block;
-  }
-
-  /* Show the close button inside the sidebar on mobile */
-  .sidebar-close {
+  /* Tab bars stay in a single horizontal scrollable row */
+  .secretary-tabs,
+  .portal-tabs,
+  .role-nav-tabs,
+  .tab-list {
     display: flex !important;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.07);
-    cursor: pointer;
-    transition: background 0.15s ease;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    gap: 8px !important;
+    padding-bottom: 6px !important;
   }
-  .sidebar-close:hover {
-    background: rgba(255, 255, 255, 0.14);
+  .secretary-tab-btn,
+  .portal-tab-btn {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Quick Actions Bar */
+  .quick-actions-bar {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    flex-wrap: nowrap !important;
+  }
+
+  /* Modals & Dialogs on mobile */
+  .dialog-backdrop .student-dialog,
+  .dialog-backdrop .modal-card,
+  .dialog-backdrop section[role="dialog"] {
+    width: calc(100vw - 20px) !important;
+    max-width: calc(100vw - 20px) !important;
+    max-height: calc(100dvh - 30px) !important;
+    margin: 10px auto !important;
+    padding: 16px 14px !important;
+    overflow-y: auto !important;
+  }
+
+  .form-row {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .dialog-top {
+    margin-bottom: 12px !important;
   }
 }

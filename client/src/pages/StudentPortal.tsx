@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
+import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import QuickActionsBar from "@/components/QuickActionsBar";
 import StudentProgressCard, {
   type StudentAchievement,
@@ -243,6 +244,8 @@ export default function StudentPortal() {
     window.location.hash = nextTab === "home" ? "" : nextTab;
   };
 
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
   useEffect(() => {
     if (!isStudentAccount) {
       setLiveMode(false);
@@ -356,8 +359,15 @@ export default function StudentPortal() {
       identityKind="consumer"
       tenantName={me?.academy?.name ?? "أكاديمية مدى"}
       demo={!liveMode}
+      mobileOpen={mobileNavOpen}
+      onCloseMobile={() => setMobileNavOpen(false)}
     >
       <div className="student-portal-page" dir="rtl">
+        <RoleSurfaceTopbar
+          onMenu={() => setMobileNavOpen(true)}
+          scopeLabel="بوابة الطالب"
+          roleLabel="الطالب"
+        />
         {/* Welcome Header */}
         <div className="portal-welcome-header">
           <div>
