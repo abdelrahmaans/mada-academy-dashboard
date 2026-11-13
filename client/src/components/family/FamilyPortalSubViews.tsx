@@ -21,8 +21,10 @@ import {
 import { toast } from "sonner";
 import {
   apiClient,
+  evaluationReviewStorage,
   freezeStorage,
   type ConsumerCheckoutSession,
+  type ConsumerSessionRecord,
   type FinanceInvoice,
   type SubscriptionFreezeRequest,
 } from "@/lib/apiClient";
@@ -86,7 +88,11 @@ export function ChildOverview({
 
       {/* Live Group Leaderboard Podium */}
       <div style={{ marginBottom: "20px" }}>
-        <GroupLeaderboardCard currentStudentId={child.id} />
+        <GroupLeaderboardCard
+          currentStudentId={child.id}
+          studentName={child.name}
+          groupId={(child.sessionRecords?.[0] as { courseOfferingId?: string } | undefined)?.courseOfferingId}
+        />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "20px" }}>
@@ -254,9 +260,48 @@ export function ChildEvaluations({ child }: { child: ChildData }) {
     ? evaluations.reduce((sum, item) => sum + (item.score ?? 0), 0) / evaluations.length
     : null;
 
+  const [reviewModalSession, setReviewModalSession] = useState<ConsumerSessionRecord | null>(null);
+  const [reviewNote, setReviewNote] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  const handleSubmitReview = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reviewModalSession) return;
+    if (!reviewNote.trim()) {
+      toast.error("يرجى كتابة سبب طلب المراجعة أو استفسارك.");
+      return;
+    }
+
+    setSubmittingReview(true);
+    try {
+      evaluationReviewStorage.createReview({
+        sessionId: reviewModalSession.sessionId,
+        studentId: child.id,
+        studentName: child.name,
+        courseName: reviewModalSession.courseName || child.course || "البرنامج التدريبي",
+        score: reviewModalSession.score,
+        notes: reviewNote.trim(),
+        sessionDate: reviewModalSession.startAt
+          ? new Date(reviewModalSession.startAt).toISOString().split("T")[0]
+          : new Date().toISOString().split("T")[0],
+      });
+      toast.success("تم إرسال طلب مراجعة التقييم لإدارة الفرع والسكرتارية بنجاح وسيتم الرد عليك قريباً.");
+      setReviewModalSession(null);
+      setReviewNote("");
+    } catch {
+      toast.error("حدث خطأ أثناء حفظ الطلب.");
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-      <GroupLeaderboardCard currentStudentId={child.id} />
+      <GroupLeaderboardCard
+        currentStudentId={child.id}
+        studentName={child.name}
+        groupId={(child.sessionRecords?.[0] as { courseOfferingId?: string } | undefined)?.courseOfferingId}
+      />
 
       <section className="consumer-panel">
         <div className="consumer-panel-header">
@@ -319,6 +364,30 @@ export function ChildEvaluations({ child }: { child: ChildData }) {
                 <p style={{ margin: "6px 0 0", color: "#334155", fontSize: "0.88rem", lineHeight: "1.6" }}>
                   <strong>ملاحظة وتوجيه المدرب:</strong> {ev.notes || "لا توجد ملاحظة مسجلة لهذه الجلسة."}
                 </p>
+                <div style={{ marginTop: "10px" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReviewModalSession(ev);
+                      setReviewNote("");
+                    }}
+                    style={{
+                      background: "#f8fafc",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: "6px",
+                      padding: "4px 10px",
+                      fontSize: "0.78rem",
+                      fontWeight: 600,
+                      color: "#475569",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                  >
+                    <Star size={13} /> طلب مراجعة أو استفسار عن التقييم
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
@@ -334,6 +403,135 @@ export function ChildEvaluations({ child }: { child: ChildData }) {
         </div>
       )}
       </section>
+
+      {/* Review Request Modal */}
+      {reviewModalSession && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "16px",
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setReviewModalSession(null);
+          }}
+        >
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: "16px",
+              width: "100%",
+              maxWidth: "480px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+              padding: "24px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Star size={20} color="#d97706" />
+                <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#0f172a" }}>
+                  طلب مراجعة تقييم الجلسة
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReviewModalSession(null)}
+                style={{
+                  background: "#f1f5f9",
+                  border: "none",
+                  borderRadius: "50%",
+                  width: "32px",
+                  height: "32px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "10px", fontSize: "0.85rem", color: "#475569", lineHeight: "1.6" }}>
+              <div><strong>الطالب:</strong> {child.name}</div>
+              <div><strong>الجلسة:</strong> #{reviewModalSession.sessionNumber} · {reviewModalSession.courseName}</div>
+              <div><strong>الدرجة الحالية:</strong> {reviewModalSession.score} / 100</div>
+            </div>
+
+            <form onSubmit={handleSubmitReview} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "0.88rem", fontWeight: 700, color: "#1e293b", marginBottom: "6px" }}>
+                  ملاحظات أو استفسار ولي الأمر
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  value={reviewNote}
+                  onChange={(e) => setReviewNote(e.target.value)}
+                  placeholder="مثال: نرجو توضيح درجة التطبيق العملي للطفل، أو مراجعة معيار الدرجات مع المدرب..."
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #cbd5e1",
+                    fontSize: "0.9rem",
+                    outline: "none",
+                    fontFamily: "inherit",
+                    resize: "vertical",
+                  }}
+                />
+                <span style={{ fontSize: "0.78rem", color: "#64748b" }}>
+                  سيتم توجيه طلبك فوراً إلى مدير الفرع ومسؤول السكرتارية للمتابعة وإعادة المراجعة.
+                </span>
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "8px" }}>
+                <button
+                  type="button"
+                  onClick={() => setReviewModalSession(null)}
+                  style={{
+                    padding: "9px 18px",
+                    borderRadius: "8px",
+                    border: "1px solid #cbd5e1",
+                    background: "#ffffff",
+                    color: "#475569",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingReview}
+                  style={{
+                    padding: "9px 20px",
+                    borderRadius: "8px",
+                    border: "none",
+                    background: "#0f766e",
+                    color: "#ffffff",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  {submittingReview ? "جارٍ الإرسال..." : "إرسال طلب المراجعة"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

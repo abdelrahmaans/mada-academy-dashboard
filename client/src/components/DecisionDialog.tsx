@@ -4,6 +4,7 @@ import {
   Check,
   FileText,
   Snowflake,
+  Star,
   UserCheck,
   Wallet,
   X,
@@ -22,10 +23,16 @@ function formatMoney(value: number) {
 function ApprovalTypeIcon({ kind }: { kind: ApprovalItem["kind"] }) {
   return (
     <div
-      className={`approval-type-icon ${kind === "discount" ? "approval-discount-icon" : kind === "expense" ? "approval-expense-icon" : kind === "freeze" ? "approval-session-icon" : "approval-substitute-icon"}`}
+      className={`approval-type-icon ${kind === "discount" ? "approval-discount-icon" : kind === "expense" ? "approval-expense-icon" : kind === "freeze" || kind === "session" ? "approval-session-icon" : kind === "evaluation" ? "approval-discount-icon" : "approval-substitute-icon"}`}
       aria-hidden="true"
     >
-      {kind === "session" ? <CalendarDays size={18} /> : kind === "freeze" ? <Snowflake size={18} /> : kind === "discount" || kind === "correction" ? (
+      {kind === "session" ? (
+        <CalendarDays size={18} />
+      ) : kind === "freeze" ? (
+        <Snowflake size={18} />
+      ) : kind === "evaluation" ? (
+        <Star size={18} />
+      ) : kind === "discount" || kind === "correction" ? (
         <FileText size={18} />
       ) : kind === "expense" ? (
         <Wallet size={18} />
@@ -169,6 +176,15 @@ export default function DecisionDialog({
                 <small>التصنيف</small>
                 <strong>{item.expenseCategory}</strong>
               </span>
+            </>
+          ) : item.kind === "evaluation" ? (
+            <>
+              <span><small>الطالب</small><strong>{item.student}</strong></span>
+              <span><small>المقرر / المجموعة</small><strong>{item.course}</strong></span>
+              <span><small>تاريخ الجلسة</small><strong>{item.sessionDate}</strong></span>
+              {typeof item.evaluationScore === "number" && (
+                <span><small>درجة التقييم</small><strong>{item.evaluationScore} / 100</strong></span>
+              )}
             </>
           ) : item.kind === "freeze" ? (
             <>

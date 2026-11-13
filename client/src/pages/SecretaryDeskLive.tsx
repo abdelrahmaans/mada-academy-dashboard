@@ -24,6 +24,7 @@ import {
   type ConvertLeadInput,
   type CreateLeadInput,
   type DirectStudentInput,
+  type EvaluationReviewRecord,
   type LeadRecord,
   type SchedulingGroupRecord,
   type ShiftCashHandover,
@@ -133,6 +134,7 @@ export default function SecretaryDeskLive() {
 
   const [serverFreezes, setServerFreezes] = useState<SubscriptionFreezeRequest[]>([]);
   const [serverShifts, setServerShifts] = useState<ShiftCashHandover[]>([]);
+  const [evaluationReviews, setEvaluationReviews] = useState<EvaluationReviewRecord[]>([]);
 
   const branchName =
     me?.branches?.find((branch) => branch.id === me?.branchId)?.name ??
@@ -149,7 +151,8 @@ export default function SecretaryDeskLive() {
       apiClient.listStudents(),
       apiClient.freezeRequests(),
       apiClient.listCashierShiftsHistory(),
-    ]).then(([leadsRes, groupsRes, studentsRes, freezesRes, shiftsRes]) => {
+      apiClient.listEvaluationReviews(),
+    ]).then(([leadsRes, groupsRes, studentsRes, freezesRes, shiftsRes, reviewsRes]) => {
       if (!active) return;
       if (leadsRes.status === "fulfilled") setLeads(leadsRes.value.items);
       if (groupsRes.status === "fulfilled") setGroups(groupsRes.value.items);
@@ -157,6 +160,9 @@ export default function SecretaryDeskLive() {
       if (freezesRes.status === "fulfilled") setServerFreezes(freezesRes.value);
       if (shiftsRes.status === "fulfilled" && shiftsRes.value?.items) {
         setServerShifts(shiftsRes.value.items.map(mapServerShiftHistoryToHandover));
+      }
+      if (reviewsRes.status === "fulfilled" && reviewsRes.value?.items) {
+        setEvaluationReviews(reviewsRes.value.items);
       }
       setLoading(false);
     });
@@ -592,6 +598,7 @@ export default function SecretaryDeskLive() {
         {activeTab === "freezes" && (
           <SecretaryFreezesTab
             serverFreezes={serverFreezes}
+            evaluationReviews={evaluationReviews}
             onOpenFreezeModal={() => setFreezeModalOpen(true)}
           />
         )}

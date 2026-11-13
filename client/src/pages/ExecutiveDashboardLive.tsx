@@ -202,6 +202,7 @@ export default function ExecutiveDashboardLive() {
             style={{
               display: "inline-flex",
               alignItems: "center",
+              justifyContent: "center",
               gap: "6px",
               fontSize: "12px",
               padding: "9px 14px",
@@ -211,6 +212,9 @@ export default function ExecutiveDashboardLive() {
               borderRadius: "9px",
               fontWeight: 700,
               cursor: "pointer",
+              maxWidth: "100%",
+              whiteSpace: "normal",
+              boxSizing: "border-box",
             }}
             onClick={exportBoardRollup}
           >

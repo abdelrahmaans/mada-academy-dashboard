@@ -132,17 +132,37 @@ export default function StudentCertificatesCard({
       )}
 
       {selectedCert && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-2xl overflow-hidden rounded-3xl border-4 border-amber-300 bg-white shadow-2xl" dir="rtl">
-            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-3 print:hidden">
-              <span className="text-xs font-bold text-slate-600">معاينة الشهادة الإلكترونية الموثقة</span>
-              <div className="flex items-center gap-2">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/75 p-3 sm:p-5 backdrop-blur-sm overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedCert(null);
+          }}
+        >
+          <div
+            className="relative my-auto w-full max-w-2xl max-h-[92dvh] overflow-y-auto rounded-3xl border-4 border-amber-300 bg-white shadow-2xl"
+            dir="rtl"
+          >
+            {/* Mobile prominent top-left close floating button */}
+            <button
+              type="button"
+              onClick={() => setSelectedCert(null)}
+              className="absolute top-2 left-2 z-40 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900/80 text-white shadow-md hover:bg-slate-900 sm:hidden"
+              aria-label="إغلاق الشهادة"
+            >
+              <X size={16} />
+            </button>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50 px-4 sm:px-6 py-3 print:hidden">
+              <span className="text-xs font-bold text-slate-700">معاينة الشهادة الإلكترونية الموثقة</span>
+              <div className="flex flex-wrap items-center gap-2">
                 <a
                   href={`https://academy-dashboard.runasp.net/api/v1/certificates/verify/${encodeURIComponent(selectedCert.certificateCode)}/pdf`}
                   target="_blank"
                   rel="noreferrer"
                   download
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-teal-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-teal-700 no-underline"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-teal-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-teal-700 no-underline shadow-xs"
                 >
                   <Download size={14} />
                   تحميل PDF رسمي
@@ -150,7 +170,7 @@ export default function StudentCertificatesCard({
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 shadow-xs"
                 >
                   <Printer size={14} />
                   طباعة
@@ -158,28 +178,30 @@ export default function StudentCertificatesCard({
                 <button
                   type="button"
                   onClick={() => setSelectedCert(null)}
-                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+                  className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-100 shadow-xs"
+                  aria-label="إغلاق الشهادة"
                 >
-                  <X size={18} />
+                  <X size={16} />
+                  <span>إغلاق</span>
                 </button>
               </div>
             </div>
 
-            <div className="space-y-6 p-8 text-center">
+            <div className="space-y-5 p-5 sm:p-8 text-center">
               <div className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-4 py-1 text-xs font-extrabold text-amber-800">
                 <ShieldCheck size={16} className="text-amber-600" />
                 {selectedCert.academyName} — {selectedCert.branchName}
               </div>
 
               <div>
-                <h2 className="text-2xl font-black text-slate-900">شهادة إتمام برنامج تدريبي</h2>
-                <p className="mt-2 text-sm text-slate-600">تشهد الأكاديمية بأن الطالب / الطالبة</p>
-                <div className="mt-2 text-2xl font-extrabold text-teal-700">{selectedCert.studentName}</div>
-                <p className="mt-2 text-sm text-slate-600">قد أتمّ متطلبات البرنامج التدريبي</p>
-                <div className="mt-1 text-lg font-extrabold text-slate-900">{selectedCert.courseName}</div>
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900">شهادة إتمام برنامج تدريبي</h2>
+                <p className="mt-2 text-xs sm:text-sm text-slate-600">تشهد الأكاديمية بأن الطالب / الطالبة</p>
+                <div className="mt-2 text-xl sm:text-2xl font-extrabold text-teal-700">{selectedCert.studentName}</div>
+                <p className="mt-2 text-xs sm:text-sm text-slate-600">قد أتمّ متطلبات البرنامج التدريبي</p>
+                <div className="mt-1 text-base sm:text-lg font-extrabold text-slate-900">{selectedCert.courseName}</div>
               </div>
 
-              <div className="mx-auto grid max-w-md grid-cols-3 gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs">
+              <div className="mx-auto grid max-w-md grid-cols-3 gap-2 sm:gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs">
                 <div>
                   <div className="text-slate-500">نسبة الحضور</div>
                   <div className="mt-0.5 font-extrabold text-slate-900">{selectedCert.attendanceRate}%</div>
@@ -196,9 +218,9 @@ export default function StudentCertificatesCard({
 
               <div className="flex flex-col items-center justify-center gap-2 pt-2">
                 {qrDataUrl ? (
-                  <img src={qrDataUrl} alt={`QR ${selectedCert.certificateCode}`} className="h-32 w-32 rounded-xl border border-slate-200 p-1.5" />
+                  <img src={qrDataUrl} alt={`QR ${selectedCert.certificateCode}`} className="h-28 w-28 sm:h-32 sm:w-32 rounded-xl border border-slate-200 p-1.5 bg-white shadow-xs" />
                 ) : (
-                  <div className="flex h-32 w-32 items-center justify-center rounded-xl border border-slate-200 text-xs text-slate-400">
+                  <div className="flex h-28 w-28 sm:h-32 sm:w-32 items-center justify-center rounded-xl border border-slate-200 text-xs text-slate-400">
                     QR Code
                   </div>
                 )}
@@ -206,6 +228,16 @@ export default function StudentCertificatesCard({
                   {selectedCert.certificateCode}
                 </div>
                 <p className="text-[11px] text-slate-400">امسح الرمز للتحقق الفوري من صحة الشهادة عبر منصة مدى</p>
+              </div>
+
+              <div className="border-t border-slate-100 pt-4 print:hidden">
+                <button
+                  type="button"
+                  onClick={() => setSelectedCert(null)}
+                  className="w-full rounded-xl bg-slate-100 py-2.5 text-xs font-extrabold text-slate-700 hover:bg-slate-200"
+                >
+                  إغلاق نافذة الشهادة والعودة
+                </button>
               </div>
             </div>
           </div>

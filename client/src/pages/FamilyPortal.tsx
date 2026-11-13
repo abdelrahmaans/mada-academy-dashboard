@@ -300,34 +300,8 @@ export default function FamilyPortal() {
           </div>
         ) : null}
 
-        {/* Selected Child Banner */}
-        {child && (
-          <div className="family-child-banner">
-            <div className="family-child-banner-left">
-              <span className={`family-banner-avatar ${child.color}`}>{child.initials}</span>
-              <div className="family-banner-meta">
-                <small>الملف الأكاديمي النشط</small>
-                <h2>{child.name}</h2>
-                <p>{child.course} · فرع {child.branch}</p>
-              </div>
-            </div>
-            <span className="family-status-badge">
-              <CheckCircle2 size={15} /> تسجيل نشط بالفصل الحالي
-            </span>
-          </div>
-        )}
-
-        <QuickActionsBar
-          actions={[
-            { id: "r08-pay", label: "سداد الفواتير أونلاين", icon: <Wallet size={14} />, onClick: () => selectTab("invoices"), tone: "primary" },
-            { id: "r08-evals", label: "متابعة التقييمات", icon: <Star size={14} />, onClick: () => selectTab("evaluations") },
-            { id: "r08-attendance", label: "سجل الحضور", icon: <CalendarDays size={14} />, onClick: () => selectTab("attendance") },
-            { id: "r08-freeze", label: "طلب تجميد اشتراك", icon: <Snowflake size={14} />, onClick: () => selectTab("freeze") },
-          ]}
-        />
-
-        {/* Quick Nav Pills */}
-        <nav className="consumer-tab-pills" aria-label="أقسام بوابة الأسرة">
+        {/* Quick Nav Pills: Single authoritative tab navigation */}
+        <nav className="consumer-tab-pills" aria-label="أقسام بوابة الأسرة" style={{ marginTop: "16px", marginBottom: "20px" }}>
           {tabs.map(item => {
             const Icon = item.icon;
             const active = tab === item.id;

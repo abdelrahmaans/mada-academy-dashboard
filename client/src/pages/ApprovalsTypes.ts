@@ -6,6 +6,7 @@ import type {
 import type { NotificationItem } from "@/components/NotificationCenter";
 import type {
   ApprovalRequestRecord,
+  EvaluationReviewRecord,
   FinanceExpense,
   InvoiceCorrection,
   NotificationRecord,
@@ -313,6 +314,30 @@ export function freezeFromStorage(record: SubscriptionFreezeRequest): ApprovalIt
     sessionDate: `من ${record.startDate} إلى ${record.endDate}`,
     requestType: `${record.affectedSessionsCount} حصص متأثرة · ${record.makeUpCreditsAwarded} رصيد تعويض`,
     targetId: record.id,
+    live: true,
+  };
+}
+
+export function evaluationReviewFromApi(record: EvaluationReviewRecord): ApprovalItem {
+  return {
+    id: record.id,
+    kind: "evaluation",
+    title: `طلب مراجعة تقييم · ${record.studentName}`,
+    summary: record.notes || `تقييم جلسة ${record.courseName} (درجة: ${record.score ?? "غير محدد"})`,
+    branch: "كل الفروع",
+    requestedBy: record.instructorName ? `${record.instructorName} · المدرب` : "ولي الأمر / المدرب",
+    submittedAt: record.submittedAt
+      ? new Date(record.submittedAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" })
+      : "اليوم",
+    submittedAtSort: record.submittedAt || new Date().toISOString(),
+    status: "pending",
+    student: record.studentName,
+    course: record.courseName,
+    instructor: record.instructorName ?? undefined,
+    sessionDate: record.sessionDate,
+    targetId: record.id,
+    evaluationScore: record.score ?? undefined,
+    evaluationNotes: record.notes ?? undefined,
     live: true,
   };
 }

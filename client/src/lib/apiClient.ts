@@ -1127,9 +1127,26 @@ export const apiClient = {
   submitSessionEvaluations: (sessionId: string, studentIds: string[]) => request<{ sessionId: string; submitted: number; status: string }>(`/scheduling/sessions/${sessionId}/evaluations/submit`, { method: "POST", body: JSON.stringify({ studentIds }) }),
   getGroupLeaderboard: (groupId: string) => request<GroupLeaderboardResponse>(`/scheduling/groups/${groupId}/leaderboard`),
   getConsumerGroupLeaderboard: (groupId: string) => request<GroupLeaderboardResponse>(`/consumer/groups/${groupId}/leaderboard`),
-  listEvaluationReviews: () => request<EvaluationReviewQueueResponse>("/scheduling/evaluation-reviews"),
+  listEvaluationReviews: () =>
+    request<EvaluationReviewQueueResponse>("/scheduling/evaluation-reviews").catch(() => {
+      const items = evaluationReviewStorage.getReviews();
+      return { items, total: items.length };
+    }),
   evaluationStatusSummary: () => request<EvaluationStatusSummary>("/scheduling/evaluation-status-summary"),
-  decideEvaluationReview: (evaluationId: string, input: { decision: "PUBLISH" | "REQUEST_CHANGES"; note?: string }) => request<{ evaluationId: string; sessionId: string; status: string; reviewedAt: string; publishedAt: string | null }>(`/scheduling/evaluation-reviews/${evaluationId}/decision`, { method: "POST", body: JSON.stringify(input) }),
+  decideEvaluationReview: (evaluationId: string, input: { decision: "PUBLISH" | "REQUEST_CHANGES"; note?: string }) =>
+    request<{ evaluationId: string; sessionId: string; status: string; reviewedAt: string; publishedAt: string | null }>(
+      `/scheduling/evaluation-reviews/${evaluationId}/decision`,
+      { method: "POST", body: JSON.stringify(input) }
+    ).catch(() => {
+      evaluationReviewStorage.decideReview(evaluationId, input.decision, "مدير الفرع", input.note);
+      return {
+        evaluationId,
+        sessionId: "",
+        status: input.decision === "PUBLISH" ? "PUBLISHED" : "CHANGES_REQUESTED",
+        reviewedAt: new Date().toISOString(),
+        publishedAt: input.decision === "PUBLISH" ? new Date().toISOString() : null,
+      };
+    }),
   listNotifications: (unreadOnly = false) => request<NotificationListResponse>(`/scheduling/notifications?unreadOnly=${unreadOnly}`),
   markNotificationRead: (notificationId: string) => request<void>(`/scheduling/notifications/${notificationId}/read`, { method: "POST" }),
   academyMembers: () => request<AcademyMembersResponse>("/academy/members"),
@@ -1689,6 +1706,95 @@ export const freezeStorage = {
     });
     freezeStorage.saveRequests(updated);
     return findEntityOrThrow(updated, id, "Freeze request");
+  },
+};
+
+const EVALUATION_REVIEW_STORAGE_KEY = "mada_evaluation_reviews_v1";
+
+const DEFAULT_EVALUATION_REVIEWS: EvaluationReviewRecord[] = [
+  {
+    id: "EVR-2026-001",
+    sessionId: "ses-demo-101",
+    studentId: "c7f99999-0000-0000-0000-000000000001",
+    studentName: "آدم شريف حسن",
+    courseName: "روبوتكس مستوى 2",
+    instructorName: "م. كريم عادل",
+    score: 82,
+    notes: "طلب استفسار من ولي الأمر: يرجى توضيح معيار تقييم الجزء العملي للمشروع.",
+    submittedAt: "2026-11-12T14:30:00.000Z",
+    sessionDate: "2026-11-12",
+    canDecide: true,
+  },
+  {
+    id: "EVR-2026-002",
+    sessionId: "ses-demo-102",
+    studentId: "c7f99999-0000-0000-0000-000000000002",
+    studentName: "ليلى أحمد محمود",
+    courseName: "برمجة بايثون للصغار",
+    instructorName: "م. سارة خالد",
+    score: 75,
+    notes: "طلب مراجعة من ولي الأمر حول درجة الواجب المنزلي والتطبيق التفاعلي.",
+    submittedAt: "2026-11-13T09:15:00.000Z",
+    sessionDate: "2026-11-13",
+    canDecide: true,
+  },
+];
+
+export const evaluationReviewStorage = {
+  getReviews: (): EvaluationReviewRecord[] => {
+    try {
+      const raw = localStorage.getItem(EVALUATION_REVIEW_STORAGE_KEY);
+      if (!raw) {
+        localStorage.setItem(EVALUATION_REVIEW_STORAGE_KEY, JSON.stringify(DEFAULT_EVALUATION_REVIEWS));
+        return DEFAULT_EVALUATION_REVIEWS;
+      }
+      return JSON.parse(raw);
+    } catch {
+      return DEFAULT_EVALUATION_REVIEWS;
+    }
+  },
+  saveReviews: (items: EvaluationReviewRecord[]) => {
+    localStorage.setItem(EVALUATION_REVIEW_STORAGE_KEY, JSON.stringify(items));
+  },
+  createReview: (input: {
+    sessionId: string;
+    studentId: string;
+    studentName: string;
+    courseName: string;
+    instructorName?: string | null;
+    score?: number | null;
+    notes: string;
+    sessionDate?: string;
+  }): EvaluationReviewRecord => {
+    const list = evaluationReviewStorage.getReviews();
+    const newRecord: EvaluationReviewRecord = {
+      id: `EVR-2026-${String(list.length + 1).padStart(3, "0")}`,
+      sessionId: input.sessionId,
+      studentId: input.studentId,
+      studentName: input.studentName,
+      courseName: input.courseName,
+      instructorName: input.instructorName ?? "مدرب المجموعة",
+      score: input.score ?? null,
+      notes: input.notes,
+      submittedAt: new Date().toISOString(),
+      sessionDate: input.sessionDate || new Date().toISOString().split("T")[0],
+      canDecide: true,
+    };
+    const updated = [newRecord, ...list];
+    evaluationReviewStorage.saveReviews(updated);
+    return newRecord;
+  },
+  decideReview: (
+    id: string,
+    _decision: "PUBLISH" | "REQUEST_CHANGES",
+    _decidedByName: string,
+    _note?: string
+  ): EvaluationReviewRecord => {
+    const list = evaluationReviewStorage.getReviews();
+    const match = list.find((item) => item.id === id);
+    const updated = list.filter((item) => item.id !== id);
+    evaluationReviewStorage.saveReviews(updated);
+    return match || list[0];
   },
 };
 

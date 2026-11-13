@@ -56,6 +56,7 @@ import {
   correctionFromApi,
   expenseFromApi,
   freezeFromStorage,
+  evaluationReviewFromApi,
 } from "./ApprovalsTypes";
 
 export type {
@@ -72,6 +73,7 @@ export {
   correctionFromApi,
   expenseFromApi,
   freezeFromStorage,
+  evaluationReviewFromApi,
 };
 
 export default function Approvals() {
@@ -117,7 +119,8 @@ export default function Approvals() {
       apiClient.invoiceCorrections(),
       apiClient.financeExpenses({ status: "ALL" }),
       apiClient.freezeRequests(),
-    ]).then(([approvalResult, notificationResult, correctionResult, expenseResult, freezeResult]) => {
+      apiClient.listEvaluationReviews(),
+    ]).then(([approvalResult, notificationResult, correctionResult, expenseResult, freezeResult, evaluationResult]) => {
       if (approvalResult.status === "rejected") {
         setRequests([]);
         setNotifications([]);
@@ -139,7 +142,10 @@ export default function Approvals() {
       const freezes = freezeResult.status === "fulfilled"
         ? freezeResult.value.map(freezeFromStorage)
         : [];
-      setRequests([...supported.map(approvalFromApi), ...corrections, ...expenses, ...freezes]);
+      const evaluations = evaluationResult.status === "fulfilled"
+        ? evaluationResult.value.items.map(evaluationReviewFromApi)
+        : [];
+      setRequests([...supported.map(approvalFromApi), ...corrections, ...expenses, ...freezes, ...evaluations]);
       setNotifications(notifications);
 
       const optionalFailure = [notificationResult, correctionResult, expenseResult].find(result => result.status === "rejected");
@@ -283,6 +289,11 @@ export default function Approvals() {
       try {
         if (item.kind === "freeze") {
           await apiClient.decideFreezeRequest(id, status === "approved" ? "APPROVED" : "REJECTED", decisionNote.trim());
+        } else if (item.kind === "evaluation") {
+          await apiClient.decideEvaluationReview(id, {
+            decision: status === "approved" ? "PUBLISH" : "REQUEST_CHANGES",
+            note: decisionNote.trim() || undefined,
+          });
         } else if (item.kind === "expense") {
           if (status === "approved") await apiClient.approveFinanceExpense(id, decisionNote.trim());
           else await apiClient.rejectFinanceExpense(id, decisionNote.trim());
@@ -579,6 +590,7 @@ export default function Approvals() {
                 onChange={setTab}
                 tabs={liveMode ? [
                   { id: "all", label: "كل الطلبات", count: branchRequests.length },
+                  { id: "evaluation", label: "مراجعة تقييمات", count: pending.filter(item => item.kind === "evaluation").length },
                   { id: "freeze", label: "تجميد اشتراكات", count: pending.filter(item => item.kind === "freeze").length },
                   { id: "session", label: "طلبات الجلسات", count: pendingSessionRequests },
                   { id: "substitute", label: "مدرب بديل", count: pendingSubstitutes },
@@ -588,6 +600,11 @@ export default function Approvals() {
                     id: "all",
                     label: "كل الطلبات",
                     count: branchRequests.length,
+                  },
+                  {
+                    id: "evaluation",
+                    label: "مراجعة تقييمات",
+                    count: branchRequests.filter(item => item.kind === "evaluation").length,
                   },
                   {
                     id: "freeze",

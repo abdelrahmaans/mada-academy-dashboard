@@ -9,10 +9,11 @@ import {
   UserCheck,
   Users,
   Wallet,
+  Star,
   X,
 } from "lucide-react";
 
-export type ApprovalKind = "discount" | "substitute" | "expense" | "session" | "correction" | "freeze";
+export type ApprovalKind = "discount" | "substitute" | "expense" | "session" | "correction" | "freeze" | "evaluation";
 export type ApprovalStatus = "pending" | "approved" | "rejected";
 
 export type ApprovalItem = {
@@ -41,6 +42,8 @@ export type ApprovalItem = {
   correctionInvoice?: string;
   sessionDate?: string;
   sessionTime?: string;
+  evaluationScore?: number;
+  evaluationNotes?: string;
   status: ApprovalStatus;
   decidedAt?: string;
   decidedAtSort?: number;
@@ -67,13 +70,29 @@ function formatMoney(value: number) {
 function ApprovalTypeIcon({ kind }: { kind: ApprovalKind }) {
   return (
     <div
-      className={`approval-type-icon ${kind === "discount" ? "approval-discount-icon" : kind === "expense" ? "approval-expense-icon" : kind === "session" ? "approval-session-icon" : kind === "freeze" ? "approval-session-icon" : "approval-substitute-icon"}`}
+      className={`approval-type-icon ${
+        kind === "discount"
+          ? "approval-discount-icon"
+          : kind === "expense"
+          ? "approval-expense-icon"
+          : kind === "session" || kind === "freeze"
+          ? "approval-session-icon"
+          : kind === "evaluation"
+          ? "approval-evaluation-icon"
+          : "approval-substitute-icon"
+      }`}
       aria-hidden="true"
     >
-      {kind === "session" ? <CalendarDays size={18} /> : kind === "freeze" ? <Snowflake size={18} /> : kind === "discount" || kind === "correction" ? (
+      {kind === "session" ? (
+        <CalendarDays size={18} />
+      ) : kind === "freeze" ? (
+        <Snowflake size={18} />
+      ) : kind === "discount" || kind === "correction" ? (
         <FileText size={18} />
       ) : kind === "expense" ? (
         <Wallet size={18} />
+      ) : kind === "evaluation" ? (
+        <Star size={18} />
       ) : (
         <UserCheck size={18} />
       )}
@@ -120,6 +139,17 @@ function ApprovalDetailStrip({ item }: { item: ApprovalItem }) {
 
   if (item.kind === "session") {
     return <div className="approval-detail-strip"><span>{item.requestType ?? "طلب جلسة"}</span><i /><span>الجلسة المستهدفة</span><bdi dir="ltr">{item.targetId}</bdi></div>;
+  }
+  if (item.kind === "evaluation") {
+    return (
+      <div className="approval-detail-strip">
+        <span>الطالب: {item.student}</span>
+        <i />
+        <span>{item.course}</span>
+        <i />
+        <span>التقييم: {item.summary}</span>
+      </div>
+    );
   }
   if (item.kind === "correction") {
     return <div className="approval-detail-strip"><span>تصحيح الفاتورة</span><i /><bdi dir="ltr">{item.correctionInvoice}</bdi><i /><span>{item.summary}</span></div>;
