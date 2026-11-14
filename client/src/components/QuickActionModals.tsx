@@ -11,6 +11,7 @@ import {
   Printer,
   Receipt,
   Send,
+  ShieldCheck,
   Sparkles,
   UserCheck,
   UserPlus,
@@ -40,6 +41,30 @@ export function QuickSupportTicketModal({
 
   if (!isOpen) return null;
 
+  const isAcademyOwner =
+    roleLabel.includes("R01") ||
+    roleLabel.includes("أكاديمي أونر") ||
+    roleLabel.includes("الإدارة التنفيذية");
+  const isBranchManager = roleLabel.includes("R02") || roleLabel.includes("مدير الفرع");
+
+  const targetDestination = isAcademyOwner
+    ? {
+        level: "ADMIN",
+        recipient: "إدارة ودعم منصة مدى (Platform Admin - R00)",
+        hint: "تُرفع مباشرة لفريق إدارة وتطوير المنصة لاتخاذ الإجراء التقني المطلوب.",
+      }
+    : isBranchManager
+    ? {
+        level: "OWNER",
+        recipient: "الأكاديمي أونر والإدارة التنفيذية (Academy Owner - R01)",
+        hint: "تُرفع للأكاديمي أونر والإدارة التنفيذية لمراجعتها واعتمادها ومتابعة الفرع.",
+      }
+    : {
+        level: "MANAGER",
+        recipient: "مدير الفرع المباشر (Branch Manager - R02)",
+        hint: "تُرفع لمدير الفرع لمتابعتها وحلها فوراً ضمن صلاحيات إدارة الفرع.",
+      };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!subject.trim() || !description.trim()) {
@@ -50,18 +75,19 @@ export function QuickSupportTicketModal({
     setSubmitting(true);
     try {
       const ticketId = `TCK-${Math.floor(1000 + Math.random() * 9000)}`;
-      // Save locally or via API if available
       try {
         await apiClient.createSupportTicket({
           subject: subject.trim(),
-          description: `[دور: ${roleLabel}] ${description.trim()}`,
+          description: `[توجيه إلى: ${targetDestination.recipient}] [مرفوعة من: ${roleLabel}] ${description.trim()}`,
           category: category as any,
           priority: priority as any,
         });
       } catch {
         // Fallback gracefully
       }
-      toast.success(`تم تسجيل التذكرة بنجاح برقم (${ticketId}) وجارٍ متابعتها من فريق المنصة.`);
+      toast.success(
+        `تم تسجيل التذكرة بنجاح برقم (${ticketId}) وموجهة إلى ${targetDestination.recipient}.`
+      );
       onClose();
       setSubject("");
       setDescription("");
@@ -135,6 +161,40 @@ export function QuickSupportTicketModal({
           >
             <X size={16} />
           </button>
+        </div>
+
+        <div
+          style={{
+            background: "#f8fafc",
+            border: "1px solid #e2e8f0",
+            borderRadius: "10px",
+            padding: "10px 14px",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            fontSize: "0.82rem",
+          }}
+        >
+          <div
+            style={{
+              width: "28px",
+              height: "28px",
+              borderRadius: "6px",
+              background: "#ccfbf1",
+              color: "#0f766e",
+              display: "grid",
+              placeItems: "center",
+              flexShrink: 0,
+            }}
+          >
+            <ShieldCheck size={16} />
+          </div>
+          <div>
+            <strong style={{ color: "#0f766e", display: "block" }}>
+              مسار تصعيد التذكرة: {targetDestination.recipient}
+            </strong>
+            <span style={{ color: "#64748b" }}>{targetDestination.hint}</span>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>

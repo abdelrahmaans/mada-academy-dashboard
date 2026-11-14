@@ -1,6 +1,6 @@
 import type { StudentRecord } from "@/lib/apiClient";
 
-export type StudentStatus = "active" | "on_hold" | "inactive" | "graduated";
+export type StudentStatus = "active" | "on_hold" | "inactive" | "graduated" | "new_intake";
 export type StudentSource =
   | "walk_in"
   | "landing_page"
@@ -47,10 +47,11 @@ export type StudentJourneySummary = {
 };
 
 export const statusLabels: Record<StudentStatus, string> = {
-  active: "نشط",
-  on_hold: "موقوف مؤقتًا",
+  active: "نشط ومقيد",
+  on_hold: "معلق (Holding) / انتظار",
   inactive: "غير نشط",
   graduated: "متخرج",
+  new_intake: "طلاب جدد (محولون من التسويق)",
 };
 
 export const sourceLabels: Record<StudentSource, string> = {

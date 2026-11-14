@@ -33,6 +33,7 @@ import {
   type ConsumerAccountLookupRecord,
   type ConsumerInvitationDelivery,
   type ConsumerLinksResponse,
+  type LeadRecord,
 } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
@@ -92,15 +93,20 @@ function StudentPage() {
   const [source, setSource] = useState<StudentSource>("walk_in");
   const [newBranch, setNewBranch] = useState("مدينة نصر");
   const [page, setPage] = useState(1);
+  const [inboundLeads, setInboundLeads] = useState<LeadRecord[]>([]);
 
   useEffect(() => {
     if (!apiClient.hasSession()) return;
     let cancelled = false;
     setDataLoading(true);
-    apiClient.listStudents()
-      .then(response => {
+    Promise.all([
+      apiClient.listStudents().catch(() => ({ items: [] })),
+      apiClient.listLeads().catch(() => ({ items: [] })),
+    ])
+      .then(([studentsRes, leadsRes]) => {
         if (cancelled) return;
-        setStudents(response.items.map(mapLiveStudent));
+        setStudents(studentsRes.items.map(mapLiveStudent));
+        setInboundLeads(leadsRes.items || []);
         setDataMode("live");
         setDataError(null);
         setPage(1);
@@ -138,9 +144,47 @@ function StudentPage() {
     return ["all", ...Array.from(set)];
   }, [students]);
 
+  const intakeStudents: Student[] = useMemo(() => {
+    return inboundLeads.map((l) => {
+      const isReady = l.status === "REGISTERED" || l.notes?.includes("جاهز للتسكين");
+      const hasInterview = l.notes?.includes("موعد المقابلة") || l.notes?.includes("إنترفيو");
+      const bName =
+        l.branchName ||
+        (l.branchId ? branches.find((b) => b === l.branchName) || "مدينة نصر" : "الفرع الرئيسي");
+      return {
+        id: l.id,
+        name: l.childName || "طالب جديد",
+        birthDate: "",
+        gender: "male",
+        parentName: l.parentName || "غير محدد",
+        parentPhone: l.phone || "—",
+        relation: "ولي أمر",
+        branch: bName,
+        course:
+          l.courseName ||
+          (isReady
+            ? "جاهز للتسكين الفوري 🚀"
+            : hasInterview
+            ? "بانتظار المقابلة 📅"
+            : "مسار الروبوتكس والذكاء الاصطناعي"),
+        source: "social_media",
+        status: "new_intake",
+        joined: l.createdAt ? l.createdAt.slice(0, 10) : "حديثاً",
+        initials: l.childName ? l.childName.trim().charAt(0) : "ط",
+        color: isReady ? "teal" : "amber",
+      };
+    });
+  }, [inboundLeads]);
+
+  const allAvailableStudents = useMemo(() => {
+    return [...students, ...intakeStudents];
+  }, [students, intakeStudents]);
+
   const filteredStudents = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("ar");
-    return students.filter(student => {
+    const sourcePool = statusFilter === "new_intake" ? intakeStudents : allAvailableStudents;
+
+    return sourcePool.filter((student) => {
       const matchesQuery =
         !needle ||
         [
@@ -151,12 +195,12 @@ function StudentPage() {
           student.course,
           ...(student.completedCourses ?? []),
           ...(student.achievements?.map((a) => a.title) ?? []),
-        ].some(value => value.toLocaleLowerCase("ar").includes(needle));
+        ].some((value) => value.toLocaleLowerCase("ar").includes(needle));
       const matchesStatus =
         statusFilter === "all"
           ? true
           : statusFilter === "unlinked"
-          ? (student.parentPhone === "—" || student.parentName.includes("غير مرتبط"))
+          ? student.parentPhone === "—" || student.parentName.includes("غير مرتبط")
           : student.status === statusFilter;
       const matchesBranch =
         branchFilter === "كل الفروع" || student.branch === branchFilter;
@@ -166,7 +210,7 @@ function StudentPage() {
         Boolean(student.completedCourses?.includes(courseFilter));
       return matchesQuery && matchesStatus && matchesBranch && matchesCourse;
     });
-  }, [students, query, statusFilter, branchFilter, courseFilter]);
+  }, [allAvailableStudents, intakeStudents, query, statusFilter, branchFilter, courseFilter]);
 
   const handleAddCompletedCourse = (studentId: string, courseName: string) => {
     setStudents((current) =>
@@ -591,30 +635,35 @@ function StudentPage() {
                 aria-label="فلترة حسب الحالة"
               >
                 {[
-                  { key: "all", label: "الكل", count: students.length },
                   {
                     key: "active",
-                    label: "طلاب نشطون",
-                    count: students.filter(
-                      student => student.status === "active"
-                    ).length,
+                    label: "طلاب نشطون ومقيدون",
+                    count: students.filter((student) => student.status === "active").length,
+                  },
+                  {
+                    key: "new_intake",
+                    label: "طلاب جدد محولون من التسويق 🚀",
+                    count: intakeStudents.length,
+                  },
+                  {
+                    key: "on_hold",
+                    label: "قائمة الانتظار والمعلقون (Holding) ⏳",
+                    count: pausedCount,
                   },
                   {
                     key: "unlinked",
                     label: "بحاجة لربط ولي أمر ⚠️",
                     count: students.filter(
-                      s => s.parentPhone === "—" || s.parentName.includes("غير مرتبط")
+                      (s) => s.parentPhone === "—" || s.parentName.includes("غير مرتبط")
                     ).length,
                   },
-                  { key: "on_hold", label: "موقوف مؤقتًا", count: pausedCount },
                   {
                     key: "graduated",
                     label: "متخرج",
-                    count: students.filter(
-                      student => student.status === "graduated"
-                    ).length,
+                    count: students.filter((student) => student.status === "graduated").length,
                   },
-                ].map(item => (
+                  { key: "all", label: "جميع السجلات", count: allAvailableStudents.length },
+                ].map((item) => (
                   <button
                     key={item.key}
                     className={
@@ -794,12 +843,67 @@ function StudentPage() {
                           </span>
                         </td>
                         <td data-label="الحالة">
-                          <span
-                            className={`student-status status-${student.status}`}
-                          >
-                            <i />
-                            {statusLabels[student.status]}
-                          </span>
+                          {student.status === "new_intake" ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                              <span
+                                style={{
+                                  fontSize: "11px",
+                                  fontWeight: 800,
+                                  padding: "3px 8px",
+                                  borderRadius: "6px",
+                                  background: "#fef3c7",
+                                  color: "#b45309",
+                                  width: "fit-content",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                }}
+                              >
+                                محول من التسويق 🚀
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setStudentName(student.name);
+                                  setParentName(student.parentName);
+                                  setParentPhone(student.parentPhone !== "—" ? student.parentPhone : "");
+                                  setNewBranch(student.branch !== "الفرع الرئيسي" ? student.branch : "مدينة نصر");
+                                  setAddOpen(true);
+                                }}
+                                style={{
+                                  fontSize: "11px",
+                                  fontWeight: 700,
+                                  padding: "4px 8px",
+                                  borderRadius: "6px",
+                                  background: "#0f766e",
+                                  color: "#ffffff",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  width: "fit-content",
+                                }}
+                              >
+                                <UserPlus size={12} /> تسكين بمجموعة
+                              </button>
+                            </div>
+                          ) : student.status === "on_hold" ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                              <span className="student-status status-on_hold">
+                                <i />
+                                معلق (Holding)
+                              </span>
+                              <small style={{ fontSize: "10px", color: "#64748b" }}>
+                                بانتظار اكتمال مقاعد المجموعة
+                              </small>
+                            </div>
+                          ) : (
+                            <span className={`student-status status-${student.status}`}>
+                              <i />
+                              {statusLabels[student.status]}
+                            </span>
+                          )}
                         </td>
                         <td data-label="تاريخ التسجيل">
                           <span className="joined-date">{student.joined}</span>
