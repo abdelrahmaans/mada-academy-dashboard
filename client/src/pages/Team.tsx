@@ -308,9 +308,11 @@ export default function Team() {
 
     if (
       newRole === "R04" &&
+      activeInstructorHeads.length > 0 &&
+      supervisorId &&
       !activeInstructorHeads.some(member => member.id === supervisorId)
     ) {
-      toast.error("اختر مشرفًا أكاديميًا نشطًا من نفس الفرع");
+      toast.error("اختر مشرفًا أكاديميًا نشطًا من نفس الفرع أو اتركه لمدير الفرع");
       return;
     }
     const joined = new Intl.DateTimeFormat("ar-EG", {

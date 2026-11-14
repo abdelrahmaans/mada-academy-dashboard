@@ -1,4 +1,4 @@
-import React, { useState, useMemo, type FormEvent } from "react";
+import React, { useState, useEffect, useMemo, type FormEvent } from "react";
 import { toast } from "sonner";
 import {
   AlertCircle,
@@ -125,6 +125,17 @@ export function Collections({
   const [editingAccountantNotes, setEditingAccountantNotes] = useState("");
   const [showAccountantRejectInput, setShowAccountantRejectInput] = useState(false);
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (showDailyClosing) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [showDailyClosing]);
+
   const [invoiceTab, setInvoiceTab] = useState<"today" | "all" | "unpaid" | "paid">(() => {
     const hasToday = invoices.some(inv => inv.payments?.some(p => (p.receivedOn || p.createdAt?.slice(0, 10)) === todayIso) || inv.due === todayIso);
     return hasToday ? "today" : "all";

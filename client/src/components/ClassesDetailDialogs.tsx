@@ -163,8 +163,8 @@ export default function ClassesDetailDialogs({
             </div>
             <div className="academic-detail-title">
               <div>
-                <small>
-                  {selectedOffering.id} · {trackLabels[selectedOffering.track]}
+                <small title={`المعرف الكامل: ${selectedOffering.id}`}>
+                  {selectedOffering.id.startsWith("GRP-") ? selectedOffering.id : `مجموعة #${selectedOffering.id.slice(-4).toUpperCase()}`} · {trackLabels[selectedOffering.track]}
                 </small>
                 <h2 id="offering-detail-title">
                   {selectedOffering.courseName}
@@ -182,12 +182,30 @@ export default function ClassesDetailDialogs({
                 <small>المدرب</small>
                 <strong>{selectedOffering.instructor}</strong>
               </div>
-              {selectedOffering.supervisor && (
-                <div>
-                  <small>المشرف الأكاديمي</small>
-                  <strong style={{ color: "#0f766e" }}>{selectedOffering.supervisor}</strong>
+              <div>
+                <small>المشرف الأكاديمي (رئيس المدربين)</small>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "2px" }}>
+                  <strong style={{ color: selectedOffering.supervisor ? "#0f766e" : "#64748b" }}>
+                    {selectedOffering.supervisor || "بدون مشرف أكاديمي حالياً"}
+                  </strong>
+                  <a
+                    href="/supervision-assignments"
+                    style={{
+                      fontSize: "11px",
+                      color: "#0d9488",
+                      background: "#f0fdfa",
+                      border: "1px solid #ccfbf1",
+                      padding: "2px 7px",
+                      borderRadius: "6px",
+                      textDecoration: "none",
+                      fontWeight: 700,
+                    }}
+                    title="الانتقال إلى شاشة تعيين وإدارة الإشراف الأكاديمي"
+                  >
+                    إسناد / تغيير ⚙️
+                  </a>
                 </div>
-              )}
+              </div>
               {selectedOffering.substitute && (
                 <div>
                   <small>المدرب البديل</small>

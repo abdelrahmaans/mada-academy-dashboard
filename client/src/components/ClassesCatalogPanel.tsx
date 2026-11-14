@@ -1,4 +1,4 @@
-import { BookOpen, Box, CalendarDays, ChevronDown, ChevronLeft, Clock3, Filter, MapPin, MoreHorizontal, Plus, Search, Sparkles, Trophy, Users } from "lucide-react";
+import { BookOpen, Box, CalendarDays, ChevronDown, ChevronLeft, Clock3, Filter, MapPin, MoreHorizontal, Plus, Search, ShieldCheck, Sparkles, Trophy, Users } from "lucide-react";
 import { toast } from "sonner";
 import type { Course, Offering, TabKey, Track } from "@/pages/ClassesTypes";
 import type { WaitlistEntry } from "@/lib/apiClient";
@@ -141,6 +141,20 @@ export default function ClassesCatalogPanel({
                   <Box size={15} />
                   تجهيزات الفرع (Kits & Rooms)
                 </button>
+                <a
+                  href="/supervision-assignments"
+                  className="classes-tab"
+                  style={{
+                    textDecoration: "none",
+                    color: "#0f766e",
+                    background: "rgba(15, 118, 110, 0.06)",
+                    border: "1px dashed #0f766e",
+                  }}
+                  title="تعيين المشرفين الأكاديميين للمجموعات وتحديد صلاحياتهم"
+                >
+                  <ShieldCheck size={15} />
+                  إسناد الإشراف الأكاديمي ↗
+                </a>
               </div>
               {tab !== "waitlist" && (
                 <div className="classes-filters">
@@ -366,8 +380,8 @@ export default function ClassesCatalogPanel({
                             </span>
                             <span className="group-course-copy">
                               <strong>{offering.courseName}</strong>
-                              <small>
-                                {offering.id} · {trackLabels[offering.track]}
+                              <small title={`المعرف الكامل: ${offering.id}`}>
+                                {offering.id.startsWith("GRP-") ? offering.id : `مجموعة #${offering.id.slice(-4).toUpperCase()}`} · {trackLabels[offering.track]}
                               </small>
                             </span>
                           </td>

@@ -400,25 +400,20 @@ export function TeamManagementViews({
               </div>
               {newRole === "R04" && (
                 <label className="team-supervisor-field">
-                  المشرف الأكاديمي <b>*</b>
+                  المشرف الأكاديمي المباشر
                   <select
-                    required
                     value={supervisorId}
                     onChange={event => setSupervisorId(event.target.value)}
-                    disabled={activeInstructorHeads.length === 0}
                   >
-                    {activeInstructorHeads.length === 0 ? (
-                      <option value="">لا يوجد رئيس مدربين نشط في الفرع</option>
-                    ) : (
-                      activeInstructorHeads.map(head => (
-                        <option key={head.id} value={head.id}>
-                          {head.name}
-                        </option>
-                      ))
-                    )}
+                    <option value="">مدير الفرع المباشر (إشراف الفرع العام)</option>
+                    {activeInstructorHeads.map(head => (
+                      <option key={head.id} value={head.id}>
+                        {head.name} (رئيس مدربين)
+                      </option>
+                    ))}
                   </select>
                   <small>
-                    وفق علاقة المشرف المباشر للكوتش في مخطط البيانات.
+                    وفق هيكلية الإشراف الأكاديمي ومتابعة جلسات التدريب.
                   </small>
                 </label>
               )}

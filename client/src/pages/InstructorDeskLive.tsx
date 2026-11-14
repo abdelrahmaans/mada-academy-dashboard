@@ -494,13 +494,16 @@ export default function InstructorDeskLive() {
           >
             <Star size={15} /> التقييمات <b>{evaluations.length}</b>
           </button>
-          <button
-            type="button"
-            className={view === "supervision" ? "active" : ""}
-            onClick={() => setView("supervision")}
-          >
-            <Users size={15} /> مجموعات أتابعها <b>{supervisionGroups.length}</b>
-          </button>
+          {(supervisionGroups.length > 0 || me?.role?.startsWith("R03")) && (
+            <button
+              type="button"
+              className={view === "supervision" ? "active" : ""}
+              onClick={() => setView("supervision")}
+              title="المجموعات المسندة إليك للإشراف الأكاديمي بواسطة مدير الفرع"
+            >
+              <Users size={15} /> الإشراف الأكاديمي (مجموعات مسندة) <b>{supervisionGroups.length}</b>
+            </button>
+          )}
           {canReadAssignedEvaluations && (
             <button
               type="button"

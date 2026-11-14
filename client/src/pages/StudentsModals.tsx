@@ -77,6 +77,16 @@ export function AddStudentModal({
   onSubmit,
   branches,
 }: AddStudentModalProps) {
+  React.useEffect(() => {
+    if (isOpen) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -289,6 +299,16 @@ export function StudentDetailsModal({
   onAddCompletedCourse,
   onAddAchievement,
 }: StudentDetailsModalProps) {
+  React.useEffect(() => {
+    if (detailsStudent) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [detailsStudent]);
+
   if (!detailsStudent) return null;
 
   return (
