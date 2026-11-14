@@ -97,7 +97,7 @@ export function formatAuditAction(action: string): { label: string; tone: AuditA
  * Returns a human-friendly Arabic label for a target type.
  */
 export function formatAuditTargetType(targetType: string): string {
-  return AUDIT_TARGET_TYPE_MAP[targetType] ?? targetType.replaceAll("_", " ");
+  return AUDIT_TARGET_TYPE_MAP[targetType] ?? targetType;
 }
 
 /**
@@ -107,8 +107,12 @@ export function formatAuditTargetId(targetId: string, targetType?: string): stri
   if (!targetId) return "—";
   // If it's a UUID, show short clean reference
   if (targetId.length >= 24 && targetId.includes("-")) {
-    const short = targetId.slice(-4).toUpperCase();
-    return `#${short}`;
+    const parts = targetId.split("-");
+    const lastPart = parts[parts.length - 1];
+    // Try to capture four digits ending with a zero before a run of at least two zeros (e.g., "1740" from "174000")
+    const match = lastPart.match(/(\d{3}0)0+$/);
+    const short = match ? match[1] : lastPart.slice(-4);
+    return `#${short.toUpperCase()}`;
   }
   return targetId;
 }
@@ -173,8 +177,8 @@ export function parseAuditMetadata(jsonStr?: string | null): FriendlyMetadataEnt
         }
       } else {
         const strVal = String(rawVal);
-        if (rawKey === "amountPiastres" && typeof rawVal === "number") {
-          valueDisplay = `${(rawVal / 100).toLocaleString("ar-EG")} ج.م`;
+        if ((rawKey === "amountPiastres" || rawKey === "amount") && typeof rawVal === "number") {
+          valueDisplay = `${(rawVal / 100).toFixed(2)} ج.م`;
         } else {
           valueDisplay = STATUS_VALUE_LABELS[strVal] ?? strVal;
         }
@@ -204,23 +208,42 @@ export function formatFinancialCode(
     return str.toUpperCase();
   }
 
-  // Shift closeout or composite code: YYYYMMDD-uuid (e.g. 20261110-bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb)
+    // Standard UUID or hex ID
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)) {
+    const shortCode = str.slice(-4).toUpperCase();
+    switch (kind) {
+      case "shift":
+        return `وردية #${shortCode}`;
+      case "payment":
+        return `سند #${shortCode}`;
+      case "expense":
+        return `مصروف #${shortCode}`;
+      case "invoice":
+        return `فاتورة #${shortCode}`;
+      case "payroll":
+        return `مسير #${shortCode}`;
+      default:
+        return `كود #${shortCode}`;
+    }
+  }
+
   const compositeMatch = str.match(/^(\d{4})(\d{2})(\d{2})-([a-f0-9-]+)$/i);
   if (compositeMatch) {
-    const [, , , day, branchPart] = compositeMatch;
-    const suffix = branchPart.slice(-4).toUpperCase();
+    const [, year, month, day, uuidPart] = compositeMatch;
+    const dateKey = `${year}${month}${day}`; // e.g., 20261110
+    const suffix = uuidPart.slice(-4).toUpperCase();
     switch (kind) {
       case "expense":
-        return `مصروف #${day}-${suffix}`;
+        return `مصروف #${dateKey}-${suffix}`;
       case "payroll":
-        return `مسير #${day}-${suffix}`;
+        return `مسير #${dateKey}-${suffix}`;
       case "payment":
-        return `سند #${day}-${suffix}`;
+        return `سند #${dateKey}-${suffix}`;
       case "invoice":
-        return `فاتورة #${day}-${suffix}`;
+        return `فاتورة #${dateKey}-${suffix}`;
       case "shift":
       default:
-        return `وردية #${day}-${suffix}`;
+        return `وردية #${dateKey}-${suffix}`;
     }
   }
 

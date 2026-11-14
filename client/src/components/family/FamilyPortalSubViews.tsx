@@ -9,6 +9,7 @@ import {
   CreditCard,
   Loader2,
   Plus,
+  Printer,
   Receipt,
   RefreshCw,
   ShieldCheck,
@@ -31,6 +32,10 @@ import {
 import { attendanceStatusLabel } from "@/lib/statusLabels";
 import type { ChildData, PortalTab } from "@/pages/FamilyPortalTypes";
 import GroupLeaderboardCard from "@/components/GroupLeaderboardCard";
+import {
+  FinancialPrintModal,
+  type FinancialPrintData,
+} from "@/components/finance/FinancialPrintModal";
 
 export function ChildOverview({
   child,
@@ -550,6 +555,7 @@ export function ChildInvoices({
   onPaymentSuccess?: () => void;
 }) {
   const [checkoutInvoice, setCheckoutInvoice] = useState<FinanceInvoice | null>(null);
+  const [printData, setPrintData] = useState<FinancialPrintData | null>(null);
   const [payMethod, setPayMethod] = useState<"CARD" | "WALLET" | "INSTAPAY">("CARD");
   const [payAmountEgp, setPayAmountEgp] = useState<string>("");
   const [session, setSession] = useState<ConsumerCheckoutSession | null>(null);
@@ -697,7 +703,32 @@ export function ChildInvoices({
                           <Receipt size={16} style={{ color: "#0d9488" }} />
                           <span>إيصال سداد بتاريخ {p.receivedOn} ({p.method === "CASH" ? "نقدي بخزينة الفرع" : "تحويل إلكتروني"})</span>
                         </div>
-                        <strong style={{ color: "#059669" }}>+{(p.amountPiastres / 100).toLocaleString("ar-EG")} ج.م</strong>
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                          <strong style={{ color: "#059669" }}>+{(p.amountPiastres / 100).toLocaleString("ar-EG")} ج.م</strong>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPrintData({
+                                type: "RECEIPT",
+                                paymentId: p.id,
+                                invoiceId: invoice.id,
+                                studentName: (invoice as any).studentName || "الطالب المشترك",
+                                parentName: (invoice as any).parentName || "ولي الأمر",
+                                phone: "",
+                                courseName: invoice.lines?.[0]?.description || "الكورس التدريبي",
+                                branchName: (invoice as any).branchName || "الفرع المعتمد",
+                                amount: p.amountPiastres / 100,
+                                paymentMethod: p.method,
+                                date: p.receivedOn,
+                                remainingAfterPayment: invoice.remainingPiastres / 100,
+                              });
+                            }}
+                            className="inline-flex items-center gap-1 text-teal-700 bg-teal-50 px-2 py-1 rounded text-xs font-bold hover:bg-teal-100"
+                            title="عرض / طباعة إيصال السداد المعتمد"
+                          >
+                            <Printer size={12} /> طباعة الإيصال
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -846,6 +877,12 @@ export function ChildInvoices({
           </div>
         </div>
       )}
+
+      {/* Official Financial Print Modal */}
+      <FinancialPrintModal
+        data={printData}
+        onClose={() => setPrintData(null)}
+      />
     </section>
   );
 }

@@ -1,0 +1,474 @@
+/* ==========================================================================
+   Financial Print Modal & Official Paper Styles (Screen & Print Media)
+   ========================================================================== */
+
+.financial-print-backdrop {
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(5px);
+  overflow-y: auto;
+}
+
+.financial-print-modal-card {
+  width: 100%;
+  max-width: 860px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: dialog-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.financial-print-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: #1e293b;
+  border-radius: 14px;
+  color: #fff;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+.print-controls-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.print-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #0d9488;
+  color: #fff;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.print-hint-text {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.print-controls-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.print-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #0d9488, #0f766e);
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 9px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+}
+
+.print-trigger-btn:hover {
+  background: linear-gradient(135deg, #0f766e, #115e59);
+}
+
+.close-print-btn {
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.close-print-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+/* ==========================================================================
+   The Printable Paper Canvas
+   ========================================================================== */
+
+.financial-paper {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 40px;
+  color: #0f172a;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  border: 1px solid #cbd5e1;
+  font-family: var(--mada-font-ar, "Cairo", sans-serif);
+}
+
+.paper-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.paper-branding {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.paper-logo-badge {
+  width: 58px;
+  height: 58px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0f172a, #0d9488);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 1.15rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.paper-academy-info h1 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.paper-academy-info p {
+  margin: 2px 0 6px 0;
+  font-size: 0.8rem;
+  color: #64748b;
+  font-family: var(--mada-font-en, sans-serif);
+}
+
+.paper-branch-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.78rem;
+  color: #0d9488;
+  font-weight: 700;
+}
+
+.paper-doc-badge {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.doc-type-title {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #0f766e;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+  padding: 4px 14px;
+  border-radius: 8px;
+}
+
+.doc-serial-code {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #334155;
+  margin-top: 4px;
+}
+
+.doc-date-sub {
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.code-mono {
+  font-family: monospace;
+  font-weight: 800;
+  color: #0d9488;
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.paper-divider {
+  height: 2px;
+  background: linear-gradient(90deg, #0d9488, #cbd5e1);
+  margin: 24px 0;
+  border-radius: 2px;
+}
+
+/* Parties Grid */
+.paper-parties-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+
+.party-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.party-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.party-name {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.party-sub {
+  font-size: 0.82rem;
+  color: #475569;
+}
+
+.party-sub span {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+/* Amount Banner */
+.receipt-amount-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: #f0fdfa;
+  border: 2px solid #99f6e4;
+  border-radius: 12px;
+  padding: 16px 22px;
+  margin-bottom: 20px;
+}
+
+.amount-digit-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.currency-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #0f766e;
+}
+
+.amount-number {
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: #0f766e;
+}
+
+.amount-number small {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.amount-words-box {
+  flex: 1;
+  text-align: right;
+  border-right: 1px solid #ccfbf1;
+  padding-right: 20px;
+}
+
+.tafqeet-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.tafqeet-text {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #134e4a;
+  margin-top: 2px;
+}
+
+/* Tables */
+.paper-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-bottom: 16px;
+  text-align: right;
+}
+
+.paper-table th {
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 700;
+  padding: 10px 14px;
+  border-bottom: 2px solid #cbd5e1;
+}
+
+.paper-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #1e293b;
+}
+
+.paper-table .amount-cell {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #0f766e;
+}
+
+.paper-table.mini {
+  font-size: 0.78rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.paper-table.mini th {
+  background: #e2e8f0;
+  padding: 6px 10px;
+}
+
+.paper-table.mini td {
+  padding: 6px 10px;
+}
+
+.payment-method-pill {
+  display: inline-block;
+  padding: 3px 8px;
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.receipt-balance-reminder {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  font-size: 0.88rem;
+  color: #64748b;
+  margin-top: 8px;
+}
+
+.receipt-balance-reminder strong {
+  color: #dc2626;
+}
+
+/* Footer & Signatures */
+.paper-footer {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px dashed #cbd5e1;
+}
+
+.footer-signatures {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  text-align: center;
+}
+
+.sig-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.sig-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.sig-name {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #0f172a;
+  min-height: 20px;
+}
+
+.sig-line {
+  width: 120px;
+  height: 1px;
+  background: #94a3b8;
+  margin-top: 24px;
+}
+
+.paper-stamp-circle {
+  width: 72px;
+  height: 72px;
+  border: 2px dashed #0d9488;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #0d9488;
+  font-size: 0.75rem;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.paper-stamp-circle small {
+  font-size: 0.62rem;
+  color: #14b8a6;
+}
+
+.paper-policy-note {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+/* ==========================================================================
+   PRINT MEDIA RULES
+   ========================================================================== */
+
+@media print {
+  /* Hide the rest of the application */
+  body * {
+    visibility: hidden;
+  }
+
+  .financial-print-backdrop {
+    position: absolute;
+    inset: 0;
+    background: transparent !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+
+  .financial-paper,
+  .financial-paper * {
+    visibility: visible;
+  }
+
+  .financial-paper {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 20mm !important;
+    border-radius: 0 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}

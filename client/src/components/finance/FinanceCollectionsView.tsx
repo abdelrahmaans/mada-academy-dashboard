@@ -36,6 +36,10 @@ import {
   PAYMENT_METHOD_LABELS,
 } from "./FinanceShared";
 import { formatFinancialCode } from "@/lib/auditLabels";
+import {
+  FinancialPrintModal,
+  type FinancialPrintData,
+} from "./FinancialPrintModal";
 
 export interface DailyClosingRecord {
   date: string;
@@ -125,6 +129,55 @@ export function Collections({
   const [editingAccountantNotes, setEditingAccountantNotes] = useState("");
   const [showAccountantRejectInput, setShowAccountantRejectInput] = useState(false);
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
+  const [printData, setPrintData] = useState<FinancialPrintData | null>(null);
+
+  const handlePrintReceipt = (inv: Invoice, payment: any) => {
+    const pAmount = payment.amountPiastres ? payment.amountPiastres / 100 : payment.amount || 0;
+    const remaining = Math.max(0, inv.total - inv.collected);
+    setPrintData({
+      type: "RECEIPT",
+      paymentId: payment.id,
+      invoiceId: inv.id,
+      studentName: inv.student,
+      parentName: inv.parent,
+      phone: (inv as any).phone || "01000000000",
+      courseName: inv.course,
+      branchName: inv.branch,
+      amount: pAmount,
+      paymentMethod: payment.method,
+      date: payment.receivedOn || payment.createdAt?.slice(0, 10) || todayIso,
+      collectorName: roleCode === "R06_ACCOUNTANT" ? "المحاسب المعتمد" : "سكرتارية الاستقبال",
+      notes: payment.note,
+      externalReference: payment.externalReference || undefined,
+      remainingAfterPayment: remaining,
+    });
+  };
+
+  const handlePrintInvoice = (inv: Invoice) => {
+    setPrintData({
+      type: "INVOICE",
+      invoiceId: inv.id,
+      studentName: inv.student,
+      parentName: inv.parent,
+      phone: (inv as any).phone || "01000000000",
+      courseName: inv.course,
+      branchName: inv.branch,
+      totalAmount: inv.total,
+      paidAmount: inv.collected,
+      remainingAmount: Math.max(0, inv.total - inv.collected),
+      status: inv.collected >= inv.total ? "PAID" : inv.collected > 0 ? "PARTIAL" : "UNPAID",
+      dueDate: inv.due,
+      issuedAt: (inv as any).createdAt?.slice(0, 10) || todayIso,
+      payments: (inv.payments || []).map(p => ({
+        id: p.id,
+        date: p.receivedOn || p.createdAt?.slice(0, 10) || todayIso,
+        method: p.method === "CASH" ? "نقداً" : p.method === "CARD" ? "فيزا" : p.method,
+        amount: p.amountPiastres ? p.amountPiastres / 100 : (p as any).amount || 0,
+        reference: p.externalReference || undefined,
+      })),
+      notes: `فاتورة اشتراك معتمدة بفرع ${inv.branch}`,
+    });
+  };
 
   useEffect(() => {
     if (showDailyClosing) {
@@ -603,6 +656,27 @@ export function Collections({
                         >
                           <Eye size={13} /> {isExpanded ? "إخفاء التفاصيل وسندات القبض" : `تفاصيل وسندات القبض (${invoice.payments?.length || 0})`}
                         </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handlePrintInvoice(invoice)}
+                          title="طباعة الفاتورة الرسمية"
+                          style={{
+                            padding: "5px 10px",
+                            borderRadius: "7px",
+                            fontSize: "0.78rem",
+                            background: "#f0fdfa",
+                            color: "#0f766e",
+                            border: "1px solid #ccfbf1",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            fontWeight: 600,
+                          }}
+                        >
+                          <Printer size={13} /> طباعة الفاتورة
+                        </button>
                       </div>
 
                       {/* Evidence Attachment Slots */}
@@ -676,6 +750,7 @@ export function Collections({
                                     <th style={{ padding: "6px 10px", color: "#475569" }}>المبلغ</th>
                                     <th style={{ padding: "6px 10px", color: "#475569" }}>المرجع الخارجي</th>
                                     <th style={{ padding: "6px 10px", color: "#475569" }}>البيان / الملاحظات</th>
+                                    <th style={{ padding: "6px 10px", color: "#475569", textAlign: "center" }}>السند المعتمد</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -709,6 +784,28 @@ export function Collections({
                                         <td style={{ padding: "6px 10px", fontWeight: 700, color: "#0f172a" }}>{money(pAmount)} ج.م</td>
                                         <td style={{ padding: "6px 10px", color: "#64748b" }}>{p.externalReference || "—"}</td>
                                         <td style={{ padding: "6px 10px", color: "#475569" }}>{p.note || "سداد قسط اشتراك"}</td>
+                                        <td style={{ padding: "6px 10px", textAlign: "center" }}>
+                                          <button
+                                            type="button"
+                                            onClick={() => handlePrintReceipt(invoice, p)}
+                                            title="طباعة سند القبض الرسمي"
+                                            style={{
+                                              padding: "3px 8px",
+                                              borderRadius: "6px",
+                                              border: "1px solid #cbd5e1",
+                                              background: "#ffffff",
+                                              color: "#0f766e",
+                                              fontSize: "0.74rem",
+                                              fontWeight: 700,
+                                              cursor: "pointer",
+                                              display: "inline-flex",
+                                              alignItems: "center",
+                                              gap: "4px",
+                                            }}
+                                          >
+                                            <Printer size={12} /> طباعة
+                                          </button>
+                                        </td>
                                       </tr>
                                     );
                                   })}
@@ -1143,6 +1240,11 @@ export function Collections({
           </div>
         </div>
       )}
+      {/* Official Financial Printable Receipt / Invoice Modal */}
+      <FinancialPrintModal
+        data={printData}
+        onClose={() => setPrintData(null)}
+      />
     </div>
   );
 }

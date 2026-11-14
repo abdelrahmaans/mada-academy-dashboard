@@ -26,7 +26,8 @@
     "e2e:angular-r04": "playwright test --config=playwright.angular-r04.config.ts",
     "e2e:angular-r09": "playwright test --config=playwright.angular-r09.config.ts",
     "e2e:angular-r06": "playwright test --config=playwright.angular-r06.config.ts",
-    "e2e:angular-r08": "playwright test --config=playwright.angular-r08.config.ts"
+    "e2e:angular-r08": "playwright test --config=playwright.angular-r08.config.ts",
+    "dev:full": "concurrently \"pnpm dev\" \"pnpm backend:dev\""
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -97,6 +98,7 @@
     "@vitejs/plugin-react": "^5.0.4",
     "add": "^2.0.6",
     "autoprefixer": "^10.4.20",
+    "concurrently": "^10.0.7",
     "eslint": "^10.13.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",

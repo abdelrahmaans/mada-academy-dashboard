@@ -1,4 +1,5 @@
-import React, { type FormEvent } from "react";
+import React, { useState, type FormEvent } from "react";
+import { WhatsAppNotificationModal } from "@/components/WhatsAppNotificationModal";
 import {
   Award,
   BookOpen,
@@ -299,6 +300,8 @@ export function StudentDetailsModal({
   onAddCompletedCourse,
   onAddAchievement,
 }: StudentDetailsModalProps) {
+  const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false);
+
   React.useEffect(() => {
     if (detailsStudent) {
       const prev = document.body.style.overflow;
@@ -431,26 +434,26 @@ export function StudentDetailsModal({
                   >
                     <Phone size={10} /> اتصال
                   </a>
-                  <a
-                    href={`https://wa.me/${detailsStudent.parentPhone.replace(/[^0-9]/g, "")}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => setWhatsAppModalOpen(true)}
                     style={{
-                      padding: "2px 6px",
+                      padding: "2px 8px",
                       borderRadius: "6px",
                       background: "#ecfdf5",
                       color: "#059669",
                       fontSize: "11px",
                       fontWeight: 700,
-                      textDecoration: "none",
+                      border: "1px solid #a7f3d0",
                       display: "inline-flex",
                       alignItems: "center",
-                      gap: "3px",
+                      gap: "4px",
+                      cursor: "pointer",
                     }}
-                    title="مراسلة واتساب"
+                    title="إرسال إشعار واتساب مجهز"
                   >
-                    <MessageCircle size={10} /> واتساب
-                  </a>
+                    <MessageCircle size={11} /> مراسلة واتساب
+                  </button>
                 </div>
               )}
             </div>
@@ -1026,6 +1029,18 @@ export function StudentDetailsModal({
           </button>
         </div>
       </section>
+
+      <WhatsAppNotificationModal
+        isOpen={whatsAppModalOpen}
+        onClose={() => setWhatsAppModalOpen(false)}
+        recipient={{
+          studentName: detailsStudent.name,
+          parentName: detailsStudent.parentName,
+          phone: detailsStudent.parentPhone,
+          courseName: detailsStudent.course,
+          branchName: detailsStudent.branch,
+        }}
+      />
     </div>
   );
 }
