@@ -43,6 +43,8 @@ export type Expense = {
   evidenceFileName?: string | null;
 };
 
+const todayDateIso = typeof window !== "undefined" ? new Date().toISOString().slice(0, 10) : "2026-11-14";
+
 export const INVOICES: Invoice[] = [
   {
     id: "INV-0908",
@@ -54,7 +56,19 @@ export const INVOICES: Invoice[] = [
     total: 4800,
     collected: 2400,
     due: "26 سبتمبر",
-    payments: [],
+    payments: [
+      {
+        id: "PAY-TODAY-01",
+        invoiceId: "INV-0908",
+        amountPiastres: 240000,
+        method: "CASH",
+        receivedOn: todayDateIso,
+        externalReference: "REC-9081",
+        note: "دفعة نقدية مسددة في الاستقبال اليوم",
+        createdAt: `${todayDateIso}T10:15:00Z`,
+        evidenceStatus: "NONE",
+      },
+    ],
   },
   {
     id: "INV-0904",
@@ -66,7 +80,20 @@ export const INVOICES: Invoice[] = [
     total: 4500,
     collected: 1500,
     due: "20 سبتمبر",
-    payments: [],
+    payments: [
+      {
+        id: "PAY-TODAY-02",
+        invoiceId: "INV-0904",
+        amountPiastres: 150000,
+        method: "CARD",
+        receivedOn: todayDateIso,
+        externalReference: "TXN-CARD-4412",
+        note: "سداد عبر بطاقة بنكية POS",
+        createdAt: `${todayDateIso}T11:30:00Z`,
+        evidenceStatus: "ATTACHED",
+        evidenceFileName: "pos-receipt-4412.pdf",
+      },
+    ],
   },
   {
     id: "INV-0905",
@@ -78,7 +105,20 @@ export const INVOICES: Invoice[] = [
     total: 5200,
     collected: 5200,
     due: "18 سبتمبر",
-    payments: [],
+    payments: [
+      {
+        id: "PAY-PAST-01",
+        invoiceId: "INV-0905",
+        amountPiastres: 520000,
+        method: "CASH",
+        receivedOn: "2026-09-18",
+        externalReference: "REC-9051",
+        note: "سداد كامل الاشتراك نقداً",
+        createdAt: "2026-09-18T09:00:00Z",
+        evidenceStatus: "ATTACHED",
+        evidenceFileName: "receipt-0905.pdf",
+      },
+    ],
   },
   {
     id: "INV-0902",

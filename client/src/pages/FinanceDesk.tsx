@@ -574,7 +574,24 @@ export default function FinanceDesk() {
     setInvoices(current =>
       current.map(item =>
         item.id === paymentInvoice
-          ? { ...item, collected: item.collected + amount }
+          ? {
+              ...item,
+              collected: item.collected + amount,
+              payments: [
+                {
+                  id: `PAY-REC-${Date.now()}`,
+                  invoiceId: item.id,
+                  amountPiastres: Math.round(amount * 100),
+                  method: paymentMethod,
+                  receivedOn: receivedOn || new Date().toISOString().slice(0, 10),
+                  externalReference: externalReference || undefined,
+                  note: "دفعة مسجلة من مكتب التحصيل",
+                  createdAt: new Date().toISOString(),
+                  evidenceStatus: "NONE",
+                },
+                ...item.payments,
+              ],
+            }
           : item
       )
     );

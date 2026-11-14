@@ -1,4 +1,4 @@
-import React, { useState, type FormEvent } from "react";
+import React, { useState, useMemo, type FormEvent } from "react";
 import { toast } from "sonner";
 import {
   AlertCircle,
@@ -12,17 +12,22 @@ import {
   Eye,
   FileDown,
   FileText,
+  Filter,
+  Layers,
   Lock,
   Plus,
   Printer,
+  Receipt,
   Search,
   ShieldCheck,
   Sparkles,
+  TrendingUp,
   Upload,
   Wallet,
   X,
 } from "lucide-react";
 import type { Invoice, PaymentMethod } from "@/pages/FinanceDeskTypes";
+import type { FinancePayment } from "@/lib/apiClient";
 import {
   money,
   invoiceStatus,
@@ -30,6 +35,42 @@ import {
   STATUS_LABEL,
   PAYMENT_METHOD_LABELS,
 } from "./FinanceShared";
+
+export interface DailyClosingRecord {
+  date: string;
+  status: "OPEN" | "SUBMITTED" | "APPROVED" | "REVISION_REQUESTED";
+  todayCollectedTotal: number;
+  todayCollectedCash: number;
+  todayCollectedElectronic: number;
+  todayTransactionsCount: number;
+  secretaryNotes: string;
+  accountantNotes: string;
+  submittedAt?: string;
+  approvedAt?: string;
+}
+
+const getStoredDailyClosing = (dateKey: string): DailyClosingRecord => {
+  try {
+    const raw = localStorage.getItem(`mada_daily_closing_${dateKey}`);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return {
+    date: dateKey,
+    status: "OPEN",
+    todayCollectedTotal: 0,
+    todayCollectedCash: 0,
+    todayCollectedElectronic: 0,
+    todayTransactionsCount: 0,
+    secretaryNotes: "",
+    accountantNotes: "يرجى مراجعة إيصال رقم #INV-102 حيث توجد فروق بقيمة 150 ج.م بين الكاش الفعلي والمسجل.",
+  };
+};
+
+const saveStoredDailyClosing = (record: DailyClosingRecord) => {
+  try {
+    localStorage.setItem(`mada_daily_closing_${record.date}`, JSON.stringify(record));
+  } catch {}
+};
 
 export function Collections({
   invoices,
@@ -74,21 +115,87 @@ export function Collections({
   setExternalReference: (v: string) => void;
   roleCode: string;
 }) {
+  const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const [closingRecord, setClosingRecord] = useState<DailyClosingRecord>(() => getStoredDailyClosing(todayIso));
+  const closingStatus = closingRecord.status;
   const [showDailyClosing, setShowDailyClosing] = useState(false);
-  const [closingStatus, setClosingStatus] = useState<"OPEN" | "SUBMITTED" | "APPROVED" | "REVISION_REQUESTED">("OPEN");
-  const [secretaryNotes, setSecretaryNotes] = useState("");
-  const [accountantNotes, setAccountantNotes] = useState("يرجى مراجعة إيصال رقم #INV-102 حيث توجد فروق بقيمة 150 ج.م بين الكاش الفعلي والمسجل.");
+  const [secretaryNotes, setSecretaryNotes] = useState(closingRecord.secretaryNotes || "");
+  const [accountantNotes, setAccountantNotes] = useState(closingRecord.accountantNotes || "يرجى مراجعة إيصال رقم #INV-102 حيث توجد فروق بقيمة 150 ج.م بين الكاش الفعلي والمسجل.");
   const [editingAccountantNotes, setEditingAccountantNotes] = useState("");
   const [showAccountantRejectInput, setShowAccountantRejectInput] = useState(false);
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
+  const [invoiceTab, setInvoiceTab] = useState<"today" | "all" | "unpaid" | "paid">(() => {
+    const hasToday = invoices.some(inv => inv.payments?.some(p => (p.receivedOn || p.createdAt?.slice(0, 10)) === todayIso) || inv.due === todayIso);
+    return hasToday ? "today" : "all";
+  });
 
   const selectedInv = invoices.find(item => item.id === paymentInvoice);
   const selectedRemaining = selectedInv ? Math.max(0, selectedInv.total - selectedInv.collected) : 0;
 
-  // Daily Closing calculations
-  const totalInvoicesSum = invoices.reduce((sum, inv) => sum + inv.total, 0);
-  const totalCollectedSum = invoices.reduce((sum, inv) => sum + inv.collected, 0);
-  const totalRemainingSum = Math.max(0, totalInvoicesSum - totalCollectedSum);
+  // Dynamic Today Calculations (Calculated directly from today's receipts)
+  const todayPaymentsList = useMemo(() => {
+    const list: Array<{ payment: FinancePayment; invoice: Invoice; amountEgp: number }> = [];
+    for (const inv of invoices) {
+      for (const p of inv.payments || []) {
+        const pDate = p.receivedOn || p.createdAt?.slice(0, 10);
+        if (pDate === todayIso) {
+          const amountEgp = (p.amountPiastres ? p.amountPiastres / 100 : (p as any).amount || 0);
+          list.push({ payment: p, invoice: inv, amountEgp });
+        }
+      }
+    }
+    return list;
+  }, [invoices, todayIso]);
+
+  const todayCollectedTotal = useMemo(() => {
+    return todayPaymentsList.reduce((acc, curr) => acc + curr.amountEgp, 0);
+  }, [todayPaymentsList]);
+
+  const todayCollectedCash = useMemo(() => {
+    return todayPaymentsList
+      .filter(item => item.payment.method === "CASH")
+      .reduce((acc, curr) => acc + curr.amountEgp, 0);
+  }, [todayPaymentsList]);
+
+  const todayCollectedElectronic = useMemo(() => {
+    return todayPaymentsList
+      .filter(item => item.payment.method !== "CASH")
+      .reduce((acc, curr) => acc + curr.amountEgp, 0);
+  }, [todayPaymentsList]);
+
+  const todayTransactionsCount = todayPaymentsList.length;
+
+  // Filter invoices according to selected tab and search query
+  const filteredInvoicesByTab = useMemo(() => {
+    return invoices.filter(inv => {
+      const remaining = Math.max(0, inv.total - inv.collected);
+      if (invoiceTab === "today") {
+        const hasTodayPayment = inv.payments?.some(p => (p.receivedOn || p.createdAt?.slice(0, 10)) === todayIso);
+        const isDueToday = inv.due === todayIso;
+        const isUploading = inv.payments?.some(p => evidenceUploadingIds.has(`payment:${p.id}`));
+        return hasTodayPayment || isDueToday || isUploading;
+      }
+      if (invoiceTab === "unpaid") {
+        return remaining > 0;
+      }
+      if (invoiceTab === "paid") {
+        return remaining === 0;
+      }
+      return true; // "all"
+    });
+  }, [invoices, invoiceTab, todayIso]);
+
+  const todayInvoicesCount = useMemo(() => {
+    return invoices.filter(inv => inv.payments?.some(p => (p.receivedOn || p.createdAt?.slice(0, 10)) === todayIso) || inv.due === todayIso).length;
+  }, [invoices, todayIso]);
+
+  const unpaidInvoicesCount = useMemo(() => {
+    return invoices.filter(inv => inv.collected < inv.total).length;
+  }, [invoices]);
+
+  const paidInvoicesCount = useMemo(() => {
+    return invoices.filter(inv => inv.collected >= inv.total).length;
+  }, [invoices]);
 
   const todayFormatted = new Intl.DateTimeFormat("ar-EG", {
     weekday: "long",
@@ -98,13 +205,34 @@ export function Collections({
   }).format(new Date());
 
   const handleSecretarySubmitClosing = () => {
-    setClosingStatus("SUBMITTED");
+    const updated: DailyClosingRecord = {
+      ...closingRecord,
+      status: "SUBMITTED",
+      todayCollectedTotal,
+      todayCollectedCash,
+      todayCollectedElectronic,
+      todayTransactionsCount,
+      secretaryNotes,
+      submittedAt: new Intl.DateTimeFormat("ar-EG", { hour: "2-digit", minute: "2-digit" }).format(new Date()),
+    };
+    saveStoredDailyClosing(updated);
+    setClosingRecord(updated);
     setShowDailyClosing(false);
     toast.success("تم إرسال محضر تقفيل اليوم للمحاسب للمطابقة والاعتماد");
   };
 
   const handleAccountantApproveClosing = () => {
-    setClosingStatus("APPROVED");
+    const updated: DailyClosingRecord = {
+      ...closingRecord,
+      status: "APPROVED",
+      todayCollectedTotal,
+      todayCollectedCash,
+      todayCollectedElectronic,
+      todayTransactionsCount,
+      approvedAt: new Intl.DateTimeFormat("ar-EG", { hour: "2-digit", minute: "2-digit" }).format(new Date()),
+    };
+    saveStoredDailyClosing(updated);
+    setClosingRecord(updated);
     setShowDailyClosing(false);
     toast.success("تم اعتماد محضر تقفيل اليوم المالي وتوريد العهدة للخزينة بنجاح");
   };
@@ -114,8 +242,15 @@ export function Collections({
       toast.error("يرجى كتابة سبب طلب التعديل للسكرتارية");
       return;
     }
-    setAccountantNotes(editingAccountantNotes.trim());
-    setClosingStatus("REVISION_REQUESTED");
+    const updatedNotes = editingAccountantNotes.trim();
+    setAccountantNotes(updatedNotes);
+    const updated: DailyClosingRecord = {
+      ...closingRecord,
+      status: "REVISION_REQUESTED",
+      accountantNotes: updatedNotes,
+    };
+    saveStoredDailyClosing(updated);
+    setClosingRecord(updated);
     setShowAccountantRejectInput(false);
     setShowDailyClosing(false);
     toast.warning("تم إرسال طلب التعديل للسكرتارية لمراجعة الفروقات");
@@ -154,7 +289,7 @@ export function Collections({
               )}
             </div>
             <p style={{ margin: "2px 0 0", fontSize: "0.82rem", color: "#374151" }}>
-              {todayFormatted} · إجمالي التحصيلات النشطة: <strong>{money(totalCollectedSum)} ج.م</strong> · المتبقي قيد التحصيل: <strong>{money(totalRemainingSum)} ج.م</strong>
+              {todayFormatted} · تحصيلات اليوم الفعلية: <strong>{money(todayCollectedTotal)} ج.م</strong> ({todayTransactionsCount} إيصالات) · كاش: <strong>{money(todayCollectedCash)} ج.م</strong> · إلكتروني: <strong>{money(todayCollectedElectronic)} ج.م</strong>
               {closingStatus === "REVISION_REQUESTED" && (
                 <span style={{ display: "block", color: "#b91c1c", fontWeight: 600, marginTop: "2px" }}>
                   ملاحظة المحاسب: {accountantNotes}
@@ -224,17 +359,126 @@ export function Collections({
             }
           />
 
+          {/* Invoice Filter Tabs */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", padding: "10px 14px", background: "#f8fafc", borderRadius: "10px", margin: "10px 0 14px", border: "1px solid #e2e8f0" }}>
+            <button
+              type="button"
+              onClick={() => setInvoiceTab("today")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: "20px",
+                fontSize: "0.82rem",
+                fontWeight: 700,
+                border: 0,
+                cursor: "pointer",
+                background: invoiceTab === "today" ? "#0d9488" : "#ffffff",
+                color: invoiceTab === "today" ? "#ffffff" : "#475569",
+                boxShadow: invoiceTab === "today" ? "0 2px 6px rgba(13, 148, 136, 0.25)" : "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <Sparkles size={14} />
+              <span>معاملات وفواتير اليوم ({todayInvoicesCount})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setInvoiceTab("all")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: "20px",
+                fontSize: "0.82rem",
+                fontWeight: 700,
+                border: 0,
+                cursor: "pointer",
+                background: invoiceTab === "all" ? "#0d9488" : "#ffffff",
+                color: invoiceTab === "all" ? "#ffffff" : "#475569",
+                boxShadow: invoiceTab === "all" ? "0 2px 6px rgba(13, 148, 136, 0.25)" : "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <Layers size={14} />
+              <span>كل الفواتير ({invoices.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setInvoiceTab("unpaid")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: "20px",
+                fontSize: "0.82rem",
+                fontWeight: 700,
+                border: 0,
+                cursor: "pointer",
+                background: invoiceTab === "unpaid" ? "#e11d48" : "#ffffff",
+                color: invoiceTab === "unpaid" ? "#ffffff" : "#475569",
+                boxShadow: invoiceTab === "unpaid" ? "0 2px 6px rgba(225, 29, 72, 0.25)" : "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <AlertCircle size={14} />
+              <span>فواتير مستحقة / غير مسددة ({unpaidInvoicesCount})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setInvoiceTab("paid")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: "20px",
+                fontSize: "0.82rem",
+                fontWeight: 700,
+                border: 0,
+                cursor: "pointer",
+                background: invoiceTab === "paid" ? "#15803d" : "#ffffff",
+                color: invoiceTab === "paid" ? "#ffffff" : "#475569",
+                boxShadow: invoiceTab === "paid" ? "0 2px 6px rgba(21, 128, 61, 0.25)" : "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                transition: "all 0.15s ease",
+              }}
+            >
+              <CheckCircle size={14} />
+              <span>مسددة بالكامل ({paidInvoicesCount})</span>
+            </button>
+          </div>
+
           <div className="finance-invoices-container">
-            {invoices.length === 0 ? (
-              <p className="finance-desk-empty" style={{ padding: "30px 0", textAlign: "center", color: "#64748b" }}>
-                لا توجد فواتير مطابقة للبحث أو الفرع المحدد.
-              </p>
+            {filteredInvoicesByTab.length === 0 ? (
+              <div className="finance-desk-empty" style={{ padding: "35px 20px", textAlign: "center", color: "#64748b", background: "#f8fafc", borderRadius: "10px", border: "1px dashed #cbd5e1" }}>
+                <p style={{ margin: "0 0 8px", fontWeight: 600, fontSize: "0.95rem", color: "#334155" }}>
+                  {invoiceTab === "today"
+                    ? "لا توجد معاملات تحصيل أو فواتير مسجلة لتاريخ اليوم حتى الآن."
+                    : "لا توجد فواتير مطابقة لخيارات البحث أو الفلتر المحدد."}
+                </p>
+                {invoiceTab === "today" && (
+                  <button
+                    type="button"
+                    onClick={() => setInvoiceTab("all")}
+                    style={{ background: "#0d9488", color: "#fff", border: 0, borderRadius: "6px", padding: "6px 14px", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer" }}
+                  >
+                    عرض كل الفواتير المتاحة
+                  </button>
+                )}
+              </div>
             ) : (
-              invoices.map(invoice => {
+              filteredInvoicesByTab.map(invoice => {
                 const status = invoiceStatus(invoice);
                 const remaining = Math.max(0, invoice.total - invoice.collected);
                 const percentPaid = Math.min(100, Math.round((invoice.collected / invoice.total) * 100));
                 const isExpanded = expandedInvoiceId === invoice.id;
+
+                // Today payments specifically on this invoice
+                const todayPaymentsForThis = invoice.payments?.filter(p => (p.receivedOn || p.createdAt?.slice(0, 10)) === todayIso) || [];
+                const todayPaidSum = todayPaymentsForThis.reduce((s, p) => s + (p.amountPiastres ? p.amountPiastres / 100 : (p as any).amount || 0), 0);
 
                 return (
                   <article className="finance-invoice-card" key={invoice.id}>
@@ -244,9 +488,16 @@ export function Collections({
                           {invoice.student.slice(0, 1)}
                         </div>
                         <div>
-                          <strong style={{ fontSize: "0.95rem", color: "#0f172a", display: "block" }}>
-                            {invoice.student}
-                          </strong>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                            <strong style={{ fontSize: "0.95rem", color: "#0f172a" }}>
+                              {invoice.student}
+                            </strong>
+                            {todayPaidSum > 0 && (
+                              <span style={{ fontSize: "0.73rem", fontWeight: 700, background: "#ecfdf5", color: "#065f46", border: "1px solid #a7f3d0", padding: "1px 8px", borderRadius: "10px", display: "inline-flex", alignItems: "center", gap: "3px" }}>
+                                <Sparkles size={11} /> سداد اليوم: {money(todayPaidSum)} ج.م
+                              </span>
+                            )}
+                          </div>
                           <span style={{ fontSize: "0.78rem", color: "#64748b" }}>
                             رقم الفاتورة: <bdi>{invoice.number}</bdi> · ولي الأمر: {invoice.parent}
                           </span>
@@ -328,22 +579,23 @@ export function Collections({
                             padding: "5px 10px",
                             borderRadius: "7px",
                             fontSize: "0.78rem",
-                            background: "#f8fafc",
-                            color: "#475569",
-                            border: "1px solid #e2e8f0",
+                            background: isExpanded ? "#e0f2fe" : "#f8fafc",
+                            color: isExpanded ? "#0369a1" : "#475569",
+                            border: `1px solid ${isExpanded ? "#bae6fd" : "#e2e8f0"}`,
                             cursor: "pointer",
                             display: "inline-flex",
                             alignItems: "center",
                             gap: "4px",
+                            fontWeight: isExpanded ? 700 : 500,
                           }}
                         >
-                          <Eye size={13} /> {isExpanded ? "إخفاء التفاصيل" : "تفاصيل الحصص والاشتراك"}
+                          <Eye size={13} /> {isExpanded ? "إخفاء التفاصيل وسندات القبض" : `تفاصيل وسندات القبض (${invoice.payments?.length || 0})`}
                         </button>
                       </div>
 
                       {/* Evidence Attachment Slots */}
                       <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        {invoice.payments.map(payment => {
+                        {invoice.payments?.map(payment => {
                           const isUploading = evidenceUploadingIds.has(`payment:${payment.id}`);
                           return (
                             <span key={payment.id} style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
@@ -379,18 +631,67 @@ export function Collections({
                       </div>
                     </div>
 
-                    {/* Collapsible Session & Subscription Breakdown */}
+                    {/* Collapsible Session & Itemized Payment Ledger Breakdown */}
                     {isExpanded && (
-                      <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "12px 14px", marginTop: "4px", fontSize: "0.82rem" }}>
-                        <div style={{ fontWeight: 700, color: "#334155", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
-                          <CalendarDays size={14} className="text-teal-600" />
-                          <span>خطة الاشتراك والحصص المشمولة بالفاتورة:</span>
+                      <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "14px", marginTop: "8px", fontSize: "0.82rem" }}>
+                        {/* Course and Subscription metadata */}
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "10px", color: "#475569", background: "#fff", padding: "10px", borderRadius: "8px", border: "1px solid #e2e8f0", marginBottom: "12px" }}>
+                          <div>الكورس المسجل: <strong style={{ color: "#0f172a" }}>{invoice.course}</strong></div>
+                          <div>الفرع المعتمد: <strong style={{ color: "#0f172a" }}>{invoice.branch}</strong></div>
+                          <div>عدد الحصص المشمولة: <strong style={{ color: "#0f172a" }}>12 حصة معملية</strong></div>
+                          <div>ولي الأمر: <strong style={{ color: "#0f172a" }}>{invoice.parent}</strong></div>
                         </div>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px", color: "#475569" }}>
-                          <div>الكورس المسجل: <strong>{invoice.course}</strong></div>
-                          <div>الفرع المعتمد: <strong>{invoice.branch}</strong></div>
-                          <div>عدد الحصص المشمولة: <strong>12 حصة معملية</strong></div>
-                          <div>هاتف ولي الأمر: <strong>+20 100 000 0012</strong></div>
+
+                        {/* Itemized Receipts & Payments Table */}
+                        <div>
+                          <div style={{ fontWeight: 700, color: "#1e293b", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <Receipt size={14} className="text-teal-600" />
+                            <span>سجل سندات القبض والإيصالات الصادرة لهذه الفاتورة:</span>
+                          </div>
+
+                          {(!invoice.payments || invoice.payments.length === 0) ? (
+                            <div style={{ color: "#94a3b8", padding: "8px", background: "#fff", borderRadius: "6px", textAlign: "center", border: "1px dashed #e2e8f0" }}>
+                              لم يتم تسجيل أي سندات قبض أو سدادات لهذه الفاتورة حتى الآن.
+                            </div>
+                          ) : (
+                            <div style={{ overflowX: "auto", background: "#fff", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                              <table style={{ width: "100%", fontSize: "0.78rem", borderCollapse: "collapse", textAlign: "right" }}>
+                                <thead>
+                                  <tr style={{ background: "#f1f5f9", borderBottom: "1px solid #e2e8f0" }}>
+                                    <th style={{ padding: "6px 10px", color: "#475569" }}>كود السند</th>
+                                    <th style={{ padding: "6px 10px", color: "#475569" }}>تاريخ الاستلام</th>
+                                    <th style={{ padding: "6px 10px", color: "#475569" }}>طريقة الدفع</th>
+                                    <th style={{ padding: "6px 10px", color: "#475569" }}>المبلغ</th>
+                                    <th style={{ padding: "6px 10px", color: "#475569" }}>المرجع الخارجي</th>
+                                    <th style={{ padding: "6px 10px", color: "#475569" }}>البيان / الملاحظات</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {invoice.payments.map((p, idx) => {
+                                    const pDate = p.receivedOn || p.createdAt?.slice(0, 10);
+                                    const isToday = pDate === todayIso;
+                                    const pAmount = p.amountPiastres ? p.amountPiastres / 100 : (p as any).amount || 0;
+                                    return (
+                                      <tr key={p.id || idx} style={{ borderBottom: "1px solid #f1f5f9", background: isToday ? "#f0fdf4" : "transparent" }}>
+                                        <td style={{ padding: "6px 10px", fontWeight: 700, color: "#0f766e" }}>
+                                          {p.id} {isToday && <span style={{ fontSize: "0.7rem", color: "#15803d" }}>(اليوم)</span>}
+                                        </td>
+                                        <td style={{ padding: "6px 10px", color: "#334155" }}>{pDate}</td>
+                                        <td style={{ padding: "6px 10px" }}>
+                                          <span style={{ fontSize: "0.72rem", padding: "2px 6px", borderRadius: "4px", background: p.method === "CASH" ? "#ecfdf5" : "#eff6ff", color: p.method === "CASH" ? "#065f46" : "#1e40af" }}>
+                                            {p.method === "CASH" ? "كاش نقدي" : p.method === "CARD" ? "بطاقة / فيزا" : p.method}
+                                          </span>
+                                        </td>
+                                        <td style={{ padding: "6px 10px", fontWeight: 700, color: "#0f172a" }}>{money(pAmount)} ج.م</td>
+                                        <td style={{ padding: "6px 10px", color: "#64748b" }}>{p.externalReference || "—"}</td>
+                                        <td style={{ padding: "6px 10px", color: "#475569" }}>{p.note || "سداد قسط اشتراك"}</td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -606,20 +907,68 @@ export function Collections({
               </div>
             )}
 
-            {/* Totals Summary */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px", marginBottom: "18px" }}>
+            {/* Dynamic Today Totals Summary */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: "12px", marginBottom: "18px" }}>
               <div style={{ background: "#f0fdfa", border: "1px solid #ccfbf1", borderRadius: "10px", padding: "12px" }}>
-                <span style={{ fontSize: "0.75rem", color: "#0f766e", display: "block" }}>إجمالي تحصيل الفواتير:</span>
-                <strong style={{ fontSize: "1.1rem", color: "#115e59" }}>{money(totalCollectedSum)} ج.م</strong>
+                <span style={{ fontSize: "0.75rem", color: "#0f766e", display: "block" }}>إجمالي تحصيل اليوم الفعلي:</span>
+                <strong style={{ fontSize: "1.15rem", color: "#0d9488" }}>{money(todayCollectedTotal)} ج.م</strong>
+                <span style={{ fontSize: "0.72rem", color: "#64748b", display: "block", marginTop: "2px" }}>عبر {todayTransactionsCount} إيصالات وسندات مسجلة</span>
               </div>
               <div style={{ background: "#eff6ff", border: "1px solid #dbeafe", borderRadius: "10px", padding: "12px" }}>
-                <span style={{ fontSize: "0.75rem", color: "#1e40af", display: "block" }}>ورديات الكاش الموردة:</span>
-                <strong style={{ fontSize: "1.1rem", color: "#1e3a8a" }}>{money(Math.round(totalCollectedSum * 0.65))} ج.م</strong>
+                <span style={{ fontSize: "0.75rem", color: "#1e40af", display: "block" }}>نقدية الكاش بالخزينة:</span>
+                <strong style={{ fontSize: "1.15rem", color: "#1e3a8a" }}>{money(todayCollectedCash)} ج.م</strong>
+                <span style={{ fontSize: "0.72rem", color: "#64748b", display: "block", marginTop: "2px" }}>توريد فعلي لخزينة الفرع</span>
               </div>
-              <div style={{ background: "#fef2f2", border: "1px solid #fee2e2", borderRadius: "10px", padding: "12px" }}>
-                <span style={{ fontSize: "0.75rem", color: "#991b1b", display: "block" }}>التحصيل الإلكتروني (بطاقة/تحويل):</span>
-                <strong style={{ fontSize: "1.1rem", color: "#7f1d1d" }}>{money(Math.round(totalCollectedSum * 0.35))} ج.م</strong>
+              <div style={{ background: "#fdf4ff", border: "1px solid #f5d0fe", borderRadius: "10px", padding: "12px" }}>
+                <span style={{ fontSize: "0.75rem", color: "#86198f", display: "block" }}>التحصيل الإلكتروني (فيزا/محافظ):</span>
+                <strong style={{ fontSize: "1.15rem", color: "#701a75" }}>{money(todayCollectedElectronic)} ج.م</strong>
+                <span style={{ fontSize: "0.72rem", color: "#64748b", display: "block", marginTop: "2px" }}>حسابات بنكية وإنستاباي</span>
               </div>
+            </div>
+
+            {/* Itemized Today Transactions List inside Modal */}
+            <div style={{ marginBottom: "18px" }}>
+              <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#334155", marginBottom: "8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Receipt size={15} className="text-teal-600" />
+                  <span>بيان حركات وإيصالات اليوم الخاضعة للإقفال ({todayPaymentsList.length}):</span>
+                </div>
+              </div>
+
+              {todayPaymentsList.length === 0 ? (
+                <div style={{ background: "#f8fafc", border: "1px dashed #cbd5e1", borderRadius: "8px", padding: "14px", textAlign: "center", color: "#64748b", fontSize: "0.82rem" }}>
+                  لم يتم تسجيل أي عمليات تحصيل نقدية أو إلكترونية اليوم حتى الآن.
+                </div>
+              ) : (
+                <div style={{ maxHeight: "160px", overflowY: "auto", border: "1px solid #e2e8f0", borderRadius: "8px" }}>
+                  <table style={{ width: "100%", fontSize: "0.8rem", borderCollapse: "collapse", textAlign: "right" }}>
+                    <thead style={{ background: "#f1f5f9", position: "sticky", top: 0 }}>
+                      <tr>
+                        <th style={{ padding: "6px 10px", color: "#475569" }}>كود السند</th>
+                        <th style={{ padding: "6px 10px", color: "#475569" }}>الطالب</th>
+                        <th style={{ padding: "6px 10px", color: "#475569" }}>طريقة الدفع</th>
+                        <th style={{ padding: "6px 10px", color: "#475569" }}>المبلغ</th>
+                        <th style={{ padding: "6px 10px", color: "#475569" }}>المرجع</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {todayPaymentsList.map((item, idx) => (
+                        <tr key={item.payment.id || idx} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: "6px 10px", fontWeight: 600, color: "#0f766e" }}>{item.payment.id}</td>
+                          <td style={{ padding: "6px 10px", color: "#1e293b" }}>{item.invoice.student}</td>
+                          <td style={{ padding: "6px 10px" }}>
+                            <span style={{ fontSize: "0.72rem", padding: "2px 6px", borderRadius: "4px", background: item.payment.method === "CASH" ? "#ecfdf5" : "#eff6ff", color: item.payment.method === "CASH" ? "#065f46" : "#1e40af" }}>
+                              {item.payment.method === "CASH" ? "نقداً" : item.payment.method}
+                            </span>
+                          </td>
+                          <td style={{ padding: "6px 10px", fontWeight: 700, color: "#0f172a" }}>{money(item.amountEgp)} ج.م</td>
+                          <td style={{ padding: "6px 10px", color: "#64748b" }}>{item.payment.externalReference || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             {/* Secretary Notes Input */}
