@@ -35,6 +35,7 @@ import {
   STATUS_LABEL,
   PAYMENT_METHOD_LABELS,
 } from "./FinanceShared";
+import { formatFinancialCode } from "@/lib/auditLabels";
 
 export interface DailyClosingRecord {
   date: string;
@@ -674,7 +675,19 @@ export function Collections({
                                     return (
                                       <tr key={p.id || idx} style={{ borderBottom: "1px solid #f1f5f9", background: isToday ? "#f0fdf4" : "transparent" }}>
                                         <td style={{ padding: "6px 10px", fontWeight: 700, color: "#0f766e" }}>
-                                          {p.id} {isToday && <span style={{ fontSize: "0.7rem", color: "#15803d" }}>(اليوم)</span>}
+                                          <span
+                                            title={`معرف السند: ${p.id}`}
+                                            style={{
+                                              fontFamily: "monospace",
+                                              background: "#f1f5f9",
+                                              padding: "2px 6px",
+                                              borderRadius: "4px",
+                                              fontSize: "0.82rem",
+                                            }}
+                                          >
+                                            {formatFinancialCode(p.id, "payment")}
+                                          </span>{" "}
+                                          {isToday && <span style={{ fontSize: "0.7rem", color: "#15803d" }}>(اليوم)</span>}
                                         </td>
                                         <td style={{ padding: "6px 10px", color: "#334155" }}>{pDate}</td>
                                         <td style={{ padding: "6px 10px" }}>
@@ -954,7 +967,20 @@ export function Collections({
                     <tbody>
                       {todayPaymentsList.map((item, idx) => (
                         <tr key={item.payment.id || idx} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                          <td style={{ padding: "6px 10px", fontWeight: 600, color: "#0f766e" }}>{item.payment.id}</td>
+                          <td style={{ padding: "6px 10px", fontWeight: 600, color: "#0f766e" }}>
+                            <span
+                              title={`معرف السند: ${item.payment.id}`}
+                              style={{
+                                fontFamily: "monospace",
+                                background: "#f1f5f9",
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                fontSize: "0.82rem",
+                              }}
+                            >
+                              {formatFinancialCode(item.payment.id, "payment")}
+                            </span>
+                          </td>
                           <td style={{ padding: "6px 10px", color: "#1e293b" }}>{item.invoice.student}</td>
                           <td style={{ padding: "6px 10px" }}>
                             <span style={{ fontSize: "0.72rem", padding: "2px 6px", borderRadius: "4px", background: item.payment.method === "CASH" ? "#ecfdf5" : "#eff6ff", color: item.payment.method === "CASH" ? "#065f46" : "#1e40af" }}>

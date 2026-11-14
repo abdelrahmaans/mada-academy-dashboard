@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import type { ShiftCashHandover } from "@/lib/apiClient";
+import { formatFinancialCode } from "@/lib/auditLabels";
 import { Kpi, PanelTitle, money } from "./FinanceShared";
 
 export function ShiftsView({
@@ -93,7 +94,20 @@ export function ShiftsView({
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span style={{ fontWeight: 700, fontSize: "1rem", color: "#0f172a" }}>{shift.id}</span>
+                  <span
+                    title={`معرف النظام: ${shift.id}`}
+                    style={{
+                      fontWeight: 700,
+                      fontSize: "0.88rem",
+                      background: "#f1f5f9",
+                      color: "#334155",
+                      padding: "3px 8px",
+                      borderRadius: "6px",
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    {formatFinancialCode(shift.id, "shift")}
+                  </span>
                   <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
                     وردية {shift.shiftName === "MORNING" ? "صباحية" : "مسائية"} · {shift.shiftDate} · فرع {shift.branchName}
                   </span>
@@ -207,8 +221,11 @@ export function ShiftsView({
                   <Banknote size={22} />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#0f172a" }}>
-                    محضر وتفاصيل وردية الاستقبال: {selectedShiftForDetails.id}
+                  <h3
+                    style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#0f172a" }}
+                    title={`معرف النظام: ${selectedShiftForDetails.id}`}
+                  >
+                    محضر وتفاصيل {formatFinancialCode(selectedShiftForDetails.id, "shift")}
                   </h3>
                   <span style={{ fontSize: "0.78rem", color: "#64748b" }}>
                     وردية {selectedShiftForDetails.shiftName === "MORNING" ? "صباحية" : "مسائية"} · {selectedShiftForDetails.shiftDate} · فرع {selectedShiftForDetails.branchName} · مسؤول الوردية: {selectedShiftForDetails.submittedByName}

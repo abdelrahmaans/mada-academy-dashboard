@@ -19,6 +19,7 @@ import {
   money,
   EXPENSE_LABEL,
 } from "./FinanceShared";
+import { formatFinancialCode } from "@/lib/auditLabels";
 
 export function Expenses({
   expenses,
@@ -100,7 +101,21 @@ export function Expenses({
                           {expense.description}
                         </strong>
                         <span style={{ fontSize: "0.78rem", color: "#64748b" }}>
-                          كود المصروف: <bdi>{expense.id}</bdi> · التصنيف: {expense.category} · الفرع: {expense.branch} · {expense.date}
+                          كود المصروف:{" "}
+                          <bdi
+                            title={`معرف النظام: ${expense.id}`}
+                            style={{
+                              fontFamily: "monospace",
+                              fontWeight: 700,
+                              background: "#f1f5f9",
+                              padding: "1px 6px",
+                              borderRadius: "4px",
+                              color: "#334155",
+                            }}
+                          >
+                            {formatFinancialCode(expense.id, "expense")}
+                          </bdi>{" "}
+                          · التصنيف: {expense.category} · الفرع: {expense.branch} · {expense.date}
                         </span>
                       </div>
                     </div>

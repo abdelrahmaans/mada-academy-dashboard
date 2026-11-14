@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import type { TrainerPayrollRecord } from "@/lib/apiClient";
+import { formatFinancialCode } from "@/lib/auditLabels";
 import { Kpi, PanelTitle, money } from "./FinanceShared";
 
 export function PayrollView({
@@ -178,7 +179,7 @@ export function PayrollView({
                         borderRadius: "6px",
                       }}
                     >
-                      {item.id.includes("-") ? `مسير #${item.id.slice(-4).toUpperCase()}` : item.id}
+                      {formatFinancialCode(item.id, "payroll")}
                     </span>
                   </td>
                   <td>
@@ -311,7 +312,7 @@ export function PayrollView({
                     كشف حساب ومستحقات المدرب: {selectedTrainer.instructorName}
                   </h3>
                   <span style={{ fontSize: "0.78rem", color: "#64748b" }}>
-                    كود المسير: <bdi style={{ fontWeight: 700, color: "#0f766e" }}>{selectedTrainer.id.includes("-") ? `مسير #${selectedTrainer.id.slice(-4).toUpperCase()}` : selectedTrainer.id}</bdi> · شهر أكتوبر 2026 · معدل الحصة: {money(selectedTrainer.ratePerSession)} ج.م
+                    كود المسير: <bdi style={{ fontWeight: 700, color: "#0f766e" }} title={`المعرف الكامل: ${selectedTrainer.id}`}>{formatFinancialCode(selectedTrainer.id, "payroll")}</bdi> · شهر أكتوبر 2026 · معدل الحصة: {money(selectedTrainer.ratePerSession)} ج.م
                   </span>
                 </div>
               </div>
@@ -520,7 +521,12 @@ export function PayrollView({
                   </div>
                   <div style={{ textAlign: "left" }}>
                     <span style={{ fontSize: "0.75rem", color: "#64748b", display: "block" }}>رقم السند المالي:</span>
-                    <strong style={{ fontFamily: "monospace", fontSize: "0.95rem", color: "#0f172a" }}>{selectedTrainer.id}</strong>
+                    <strong
+                      style={{ fontFamily: "monospace", fontSize: "0.95rem", color: "#0f172a" }}
+                      title={`المعرف الكامل: ${selectedTrainer.id}`}
+                    >
+                      {formatFinancialCode(selectedTrainer.id, "payroll")}
+                    </strong>
                     <span style={{ fontSize: "0.75rem", color: "#64748b", display: "block", marginTop: "2px" }}>شهر: أكتوبر 2026</span>
                   </div>
                 </div>
@@ -529,7 +535,14 @@ export function PayrollView({
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", background: "#f8fafc", padding: "12px", borderRadius: "8px", marginBottom: "16px", fontSize: "0.82rem" }}>
                   <div>اسم المدرب: <strong>{selectedTrainer.instructorName}</strong></div>
                   <div>الفرع المعتمد: <strong>مدينة نصر</strong></div>
-                  <div>كود المدرب: <strong>{selectedTrainer.instructorId}</strong></div>
+                  <div>
+                    كود المدرب:{" "}
+                    <strong title={`معرف المدرب: ${selectedTrainer.instructorId}`}>
+                      {selectedTrainer.instructorId.includes("-")
+                        ? `مدرب #${selectedTrainer.instructorId.slice(-4).toUpperCase()}`
+                        : selectedTrainer.instructorId}
+                    </strong>
+                  </div>
                   <div>تاريخ الإصدار: <strong>{new Date().toISOString().slice(0, 10)}</strong></div>
                 </div>
 
@@ -691,7 +704,18 @@ export function PayrollView({
                     صرف مستحقات الراتب المعتمدة
                   </h3>
                   <span style={{ fontSize: "0.78rem", color: "#64748b" }}>
-                    المدرب: <strong>{payoutTarget.instructorName}</strong> · كود: <bdi>{payoutTarget.id}</bdi>
+                    المدرب: <strong>{payoutTarget.instructorName}</strong> ·{" "}
+                    <bdi
+                      title={`المعرف الكامل: ${payoutTarget.id}`}
+                      style={{
+                        fontFamily: "monospace",
+                        background: "#f1f5f9",
+                        padding: "2px 6px",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      {formatFinancialCode(payoutTarget.id, "payroll")}
+                    </bdi>
                   </span>
                 </div>
               </div>

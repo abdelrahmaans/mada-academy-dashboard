@@ -188,3 +188,54 @@ export function parseAuditMetadata(jsonStr?: string | null): FriendlyMetadataEnt
   }
 }
 
+/**
+ * Formats raw UUIDs or technical composite keys (e.g., date-branch keys)
+ * into elegant, user-friendly business codes while keeping technical IDs available in tooltips.
+ */
+export function formatFinancialCode(
+  id: string | null | undefined,
+  kind: "shift" | "payment" | "expense" | "invoice" | "payroll" | "generic" = "generic"
+): string {
+  if (!id) return "—";
+  const str = String(id).trim();
+
+  // If already a clean humanized code like SHF-01, REC-102, INV-2026-001, GRP-01, etc.
+  if (/^[A-Z]{2,4}-\d+$/i.test(str)) {
+    return str.toUpperCase();
+  }
+
+  // Shift closeout composite code: YYYYMMDD-uuid (e.g. 20261110-bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb)
+  const shiftCompositeMatch = str.match(/^(\d{4})(\d{2})(\d{2})-([a-f0-9-]+)$/i);
+  if (shiftCompositeMatch) {
+    const [, , , day, branchPart] = shiftCompositeMatch;
+    const suffix = branchPart.slice(-4).toUpperCase();
+    return `وردية #${day}-${suffix}`;
+  }
+
+  // Standard UUID or hex ID
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)) {
+    const shortCode = str.slice(-4).toUpperCase();
+    switch (kind) {
+      case "shift":
+        return `وردية #${shortCode}`;
+      case "payment":
+        return `سند #${shortCode}`;
+      case "expense":
+        return `مصروف #${shortCode}`;
+      case "invoice":
+        return `فاتورة #${shortCode}`;
+      case "payroll":
+        return `مسير #${shortCode}`;
+      default:
+        return `كود #${shortCode}`;
+    }
+  }
+
+  if (str.length > 16) {
+    return `#${str.slice(-4).toUpperCase()}`;
+  }
+
+  return str;
+}
+
+

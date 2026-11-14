@@ -27,6 +27,7 @@ import {
   EXPENSE_LABEL,
   PAYMENT_METHOD_LABELS,
 } from "./FinanceShared";
+import { formatFinancialCode } from "@/lib/auditLabels";
 
 export function Overview({
   collected,
@@ -224,7 +225,7 @@ export function Overview({
                     <div key={shift.id} className="finance-action-item">
                       <div className="finance-action-item-info">
                         <strong>
-                          وردية <bdi dir="ltr" title={shift.id}>#{shift.id.slice(0, 8)}</bdi> · {shift.submittedByName || shift.submittedByUserId || "موظف الاستقبال"}
+                          <bdi dir="ltr" title={`معرف الوردية: ${shift.id}`}>{formatFinancialCode(shift.id, "shift")}</bdi> · {shift.submittedByName || shift.submittedByUserId || "موظف الاستقبال"}
                         </strong>
                         <small>
                           فرع {shift.branchName || "الفرع"} · الكاش المحصل:{" "}
