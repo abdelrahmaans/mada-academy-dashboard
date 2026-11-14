@@ -778,7 +778,12 @@ type TokenResponse = {
   expiresIn: number;
 };
 
-const API_BASE = (import.meta.env.VITE_API_URL || "https://academy-dashboard.runasp.net/api/v1").replace(/\/$/, "");
+const isLocalHost = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+const API_BASE = (
+  isLocalHost
+    ? "http://localhost:5000/api/v1"
+    : (import.meta.env.VITE_API_URL || "https://academy-dashboard.runasp.net/api/v1")
+).replace(/\/$/, "");
 const ACCESS_KEY = "mada.accessToken";
 const REFRESH_KEY = "mada.refreshToken";
 

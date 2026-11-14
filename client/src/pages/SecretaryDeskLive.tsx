@@ -158,8 +158,7 @@ export default function SecretaryDeskLive() {
       apiClient.listStudents(),
       apiClient.freezeRequests(),
       apiClient.listCashierShiftsHistory(),
-      apiClient.listEvaluationReviews(),
-    ]).then(([leadsRes, groupsRes, studentsRes, freezesRes, shiftsRes, reviewsRes]) => {
+    ]).then(([leadsRes, groupsRes, studentsRes, freezesRes, shiftsRes]) => {
       if (!active) return;
       if (leadsRes.status === "fulfilled") setLeads(leadsRes.value.items);
       if (groupsRes.status === "fulfilled") setGroups(groupsRes.value.items);
@@ -167,9 +166,6 @@ export default function SecretaryDeskLive() {
       if (freezesRes.status === "fulfilled") setServerFreezes(freezesRes.value);
       if (shiftsRes.status === "fulfilled" && shiftsRes.value?.items) {
         setServerShifts(shiftsRes.value.items.map(mapServerShiftHistoryToHandover));
-      }
-      if (reviewsRes.status === "fulfilled" && reviewsRes.value?.items) {
-        setEvaluationReviews(reviewsRes.value.items);
       }
       setLoading(false);
     });
