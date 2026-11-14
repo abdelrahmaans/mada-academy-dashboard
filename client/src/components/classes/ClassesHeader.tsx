@@ -25,16 +25,16 @@ export function ClassesHeader({
       <div className="students-breadcrumb">
         <button onClick={onNavigateHome}>الرئيسية</button>
         <ChevronLeft size={13} />
-        <span>الحصص والكورسات</span>
+        <span>المجموعات الدراسية، الحصص والكورسات</span>
       </div>
 
       <section className="students-welcome classes-welcome">
         <div>
           <div className="eyebrow">
-            <span className="eyebrow-dot" /> المسارات التعليمية · إدارة الجداول
+            <span className="eyebrow-dot" /> المسارات التعليمية · المجموعات والتشغيل
           </div>
-          <h1>الحصص والكورسات</h1>
-          <p>نظّم محتوى الكورسات، المجموعات، وجداول حصص الفروع.</p>
+          <h1>المجموعات الدراسية (الجروبات)</h1>
+          <p>متابعة المجموعات النشطة، القاعات، الجداول، وتجهيزات الفرع والكيتس لإطلاق مجموعات جديدة.</p>
         </div>
         <div className="welcome-actions">
           <button
@@ -52,7 +52,7 @@ export function ClassesHeader({
             }
           >
             <Plus size={18} />
-            {tab === "courses" ? "إضافة كورس" : "إضافة مجموعة"}
+            {tab === "courses" ? "إضافة كورس" : "إضافة مجموعة جديدة (جروب)"}
           </button>
         </div>
       </section>

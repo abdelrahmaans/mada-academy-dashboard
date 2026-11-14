@@ -108,7 +108,7 @@ const APP_ROUTES = [
   ["/academy/audit-trail", ProtectedAcademyAuditTrail],
   ["/", SmartRoleHome],
   ["/students", () => <Guard roles={["R02_BRANCH_MANAGER", "R05_SECRETARY"]} anyOfPermissions={["students.read", "students.create"]}><Students /></Guard>],
-  ["/classes", () => <Guard roles={["R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS"]} permission="sessions.read"><Classes /></Guard>],
+  ["/classes", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS", "R05_SECRETARY"]} anyOfPermissions={["sessions.read", "branch.read"]}><Classes /></Guard>],
   ["/schedule", () => <Guard roles={["R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS", "R04_INSTRUCTOR", "R05_SECRETARY"]} anyOfPermissions={["sessions.read", "sessions.assigned.read"]}><Schedule /></Guard>],
   ["/secretary", () => <Guard roles={["R05_SECRETARY"]}><Redirect to="/secretary-desk" /></Guard>],
   ["/secretary-desk", () => <Guard roles={["R05_SECRETARY"]} permission="branch.read"><SecretaryDesk /></Guard>],

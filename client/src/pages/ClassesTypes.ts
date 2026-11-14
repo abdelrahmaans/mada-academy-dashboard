@@ -46,7 +46,7 @@ export type Offering = {
   enrolledStudents: number;
 };
 
-export type TabKey = "courses" | "groups" | "waitlist";
+export type TabKey = "groups" | "courses" | "waitlist" | "readiness";
 
 export const trackLabels: Record<Track, string> = {
   robotics: "روبوتكس",

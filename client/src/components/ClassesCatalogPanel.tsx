@@ -1,12 +1,13 @@
-import { BookOpen, CalendarDays, ChevronDown, ChevronLeft, Clock3, Filter, MapPin, MoreHorizontal, Search, Sparkles, Users } from "lucide-react";
+import { BookOpen, Box, CalendarDays, ChevronDown, ChevronLeft, Clock3, Filter, MapPin, MoreHorizontal, Plus, Search, Sparkles, Trophy, Users } from "lucide-react";
 import { toast } from "sonner";
-import type { Course, Offering, Track } from "@/pages/Classes";
+import type { Course, Offering, TabKey, Track } from "@/pages/ClassesTypes";
 import type { WaitlistEntry } from "@/lib/apiClient";
 import WaitlistManagementView from "@/components/WaitlistManagementView";
+import { BranchReadinessTab } from "@/components/classes/BranchReadinessTab";
 
 type Props = {
-  tab: "courses" | "groups" | "waitlist";
-  setTab: (tab: "courses" | "groups" | "waitlist") => void;
+  tab: TabKey;
+  setTab: (tab: TabKey) => void;
   courses: Course[];
   offerings: Offering[];
   filteredCourses: Course[];
@@ -34,11 +35,15 @@ type Props = {
   onAddWaitlistEntry: (input: Omit<WaitlistEntry, "id" | "status" | "priorityRank" | "addedAt">) => void;
   onCancelWaitlistEntry?: (id: string) => void;
   onDeleteWaitlistEntry?: (id: string) => void;
+  onOpenOfferingModal?: () => void;
+  onOpenCourseModal?: () => void;
+  branchName?: string;
 };
 
 export default function ClassesCatalogPanel({
   tab, setTab, courses, offerings, filteredCourses, filteredOfferings, trackFilter, setTrackFilter, branchFilter, setBranchFilter, statusFilter, setStatusFilter, trackOptions, branches, trackLabels, trackIcons, levelLabels, courseStatusLabels, offeringStatusLabels, liveMode, clearFilters, setSelectedCourse, setSelectedOffering,
   waitlistEntries, onNotifyWaitlist, onEnrollWaitlist, onAddWaitlistEntry, onCancelWaitlistEntry, onDeleteWaitlistEntry,
+  onOpenOfferingModal, onOpenCourseModal, branchName,
 }: Props) {
   const activeWaitlistCount = waitlistEntries.filter(e => e.status === "WAITING").length;
 
@@ -51,18 +56,30 @@ export default function ClassesCatalogPanel({
                     <BookOpen size={18} />
                   ) : tab === "groups" ? (
                     <CalendarDays size={18} />
+                  ) : tab === "readiness" ? (
+                    <Box size={18} />
                   ) : (
                     <Users size={18} />
                   )}
                 </span>
                 <div>
                   <h2>
-                    {tab === "waitlist" ? "إدارة الطاقة الاستيعابية وقوائم الانتظار" : "المحتوى الأكاديمي والتشغيلي"}
+                    {tab === "waitlist"
+                      ? "إدارة الطاقة الاستيعابية وقوائم الانتظار"
+                      : tab === "readiness"
+                      ? "تجهيزات الفرع والجاهزية التشغيلية (Kits & Rooms)"
+                      : tab === "courses"
+                      ? "الكورسات والمناهج الأكاديمية"
+                      : "المجموعات والحصص النشطة (الجروبات)"}
                   </h2>
                   <p>
                     {tab === "waitlist"
                       ? "تنظيم المقاعد المكتملة، أولويات الحجز، والإشعارات الآلية للشواغر عبر واتساب"
-                      : "القوالب التعليمية منفصلة عن مجموعات التشغيل والجداول"}
+                      : tab === "readiness"
+                      ? "مراجعة القاعات، المعامل، عتاد الكيتس، والكورسات المعتمدة قبل إنشاء المجموعات"
+                      : tab === "courses"
+                      ? "القوالب التعليمية والمناهج المعتمدة بالأكاديمية"
+                      : "عرض المجموعات الحالية، متابعة الحصص والطلاب المسجلين، وإنشاء مجموعات جديدة"}
                   </p>
                 </div>
               </div>
@@ -82,17 +99,6 @@ export default function ClassesCatalogPanel({
               >
                 <button
                   role="tab"
-                  aria-selected={tab === "courses"}
-                  className={
-                    tab === "courses" ? "classes-tab active" : "classes-tab"
-                  }
-                  onClick={() => setTab("courses")}
-                >
-                  <BookOpen size={15} />
-                  الكورسات<span>{courses.length}</span>
-                </button>
-                <button
-                  role="tab"
                   aria-selected={tab === "groups"}
                   className={
                     tab === "groups" ? "classes-tab active" : "classes-tab"
@@ -100,7 +106,18 @@ export default function ClassesCatalogPanel({
                   onClick={() => setTab("groups")}
                 >
                   <CalendarDays size={15} />
-                  المجموعات والحصص<span>{offerings.length}</span>
+                  المجموعات الدراسية (الجروبات)<span>{offerings.length}</span>
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={tab === "courses"}
+                  className={
+                    tab === "courses" ? "classes-tab active" : "classes-tab"
+                  }
+                  onClick={() => setTab("courses")}
+                >
+                  <BookOpen size={15} />
+                  الكورسات والمناهج<span>{courses.length}</span>
                 </button>
                 <button
                   role="tab"
@@ -112,6 +129,17 @@ export default function ClassesCatalogPanel({
                 >
                   <Users size={15} />
                   قوائم الانتظار والشواغر<span>{activeWaitlistCount}</span>
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={tab === "readiness"}
+                  className={
+                    tab === "readiness" ? "classes-tab active" : "classes-tab"
+                  }
+                  onClick={() => setTab("readiness")}
+                >
+                  <Box size={15} />
+                  تجهيزات الفرع (Kits & Rooms)
                 </button>
               </div>
               {tab !== "waitlist" && (
@@ -274,6 +302,43 @@ export default function ClassesCatalogPanel({
               </>
             ) : tab === "groups" ? (
               <>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8fafc", border: "1px solid #e2e8f0", padding: "12px 16px", borderRadius: "10px", margin: "10px 0 14px", flexWrap: "wrap", gap: "10px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <CalendarDays size={18} className="text-teal-600" />
+                    <div>
+                      <strong style={{ fontSize: "0.92rem", color: "#0f172a", display: "block" }}>
+                        قائمة المجموعات الدراسية الحالية ({filteredOfferings.length} مجموعة)
+                      </strong>
+                      <span style={{ fontSize: "0.76rem", color: "#64748b" }}>
+                        اضغط على أي مجموعة في الجدول لعرض التفاصيل الكاملة، الطلاب المسجلين، وحالة الحصص
+                      </span>
+                    </div>
+                  </div>
+                  {onOpenOfferingModal && (
+                    <button
+                      type="button"
+                      onClick={onOpenOfferingModal}
+                      style={{
+                        background: "#0d9488",
+                        color: "#ffffff",
+                        border: 0,
+                        borderRadius: "8px",
+                        padding: "7px 16px",
+                        fontSize: "0.84rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        boxShadow: "0 2px 6px rgba(13, 148, 136, 0.25)",
+                      }}
+                    >
+                      <Plus size={16} />
+                      <span>+ إنشاء مجموعة جديدة (جروب)</span>
+                    </button>
+                  )}
+                </div>
+
                 <div className="groups-table-wrap">
                   <table className="groups-table">
                     <thead>
@@ -367,16 +432,19 @@ export default function ClassesCatalogPanel({
                               {offeringStatusLabels[offering.status]}
                             </span>
                           </td>
-                          <td data-label="تفاصيل">
+                          <td data-label="تفاصيل" style={{ whiteSpace: "nowrap" }}>
                             <button
+                              type="button"
                               className="student-row-more"
                               aria-label={`تفاصيل ${offering.id}`}
+                              style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 10px", borderRadius: "6px", fontSize: "0.78rem", background: "#f0fdfa", color: "#0d9488", border: "1px solid #ccfbf1", cursor: "pointer", fontWeight: 700 }}
                               onClick={event => {
                                 event.stopPropagation();
                                 setSelectedOffering(offering);
                               }}
                             >
-                              <ChevronLeft size={17} />
+                              <span>التفاصيل والطلاب</span>
+                              <ChevronLeft size={14} />
                             </button>
                           </td>
                         </tr>
@@ -419,6 +487,18 @@ export default function ClassesCatalogPanel({
                   </button>
                 </div>
               </>
+            ) : tab === "readiness" ? (
+              <BranchReadinessTab
+                branchName={branchName || branchFilter}
+                courses={courses}
+                offerings={offerings}
+                onOpenCreateGroupModal={() => {
+                  if (onOpenOfferingModal) onOpenOfferingModal();
+                }}
+                onOpenCreateGroupForCourse={cId => {
+                  if (onOpenOfferingModal) onOpenOfferingModal();
+                }}
+              />
             ) : (
               <WaitlistManagementView
                 offerings={offerings}

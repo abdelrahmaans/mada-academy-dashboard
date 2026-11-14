@@ -72,7 +72,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     backPath: "/",
     navigation: [
       { path: "/", label: "غرفة عمليات الفرع", purpose: "daily branch decisions and operations", permission: "branch.read" },
-      { path: "/classes", label: "المجموعات والكورسات", purpose: "branch groups, courses, and adding cohorts", permission: "sessions.read" },
+      { path: "/classes", label: "المجموعات الدراسية (الجروبات)", purpose: "branch groups, courses, rooms, kits readiness, and creating cohorts", permission: "sessions.read" },
       { path: "/schedule", label: "الجدول وحصص الفرع", purpose: "branch schedule and conflict resolution", permission: "sessions.read" },
       { path: "/students", label: "الطلاب والاشتراكات", purpose: "branch student records, freezes, and waitlists", anyOfPermissions: ["students.read", "students.create"] },
       { path: "/team", label: "فريق العمل والمدربين", purpose: "branch staff, instructors, and status", permission: "branch.read" },
@@ -118,6 +118,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     backPath: "/secretary-desk",
     navigation: [
       { path: "/secretary-desk", label: "مكتب الخدمة", purpose: "lead to enrollment", permission: "branch.read" },
+      { path: "/classes", label: "المجموعات الدراسية (الجروبات)", purpose: "view active groups, enroll students, and create cohorts", anyOfPermissions: ["sessions.read", "branch.read"] },
       { path: "/finance-desk", label: "التحصيل والفواتير", purpose: "branch-scoped collections and payments", anyOfPermissions: ["invoices.read", "invoices.create", "payments.create", "payments.evidence.read"] },
       { path: "/students", label: "الطلاب", purpose: "branch operational records", anyOfPermissions: ["students.read", "students.create"] },
       { path: "/schedule", label: "المجموعات والمواعيد", purpose: "enrollment availability", permission: "sessions.read" },

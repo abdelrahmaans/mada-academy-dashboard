@@ -83,7 +83,32 @@ function ClassesPage() {
   const [courses, setCourses] = useState(() => apiClient.hasSession() ? [] : seedCourses);
   const [offerings, setOfferings] = useState(() => apiClient.hasSession() ? [] : seedOfferings);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [tab, setTab] = useState<TabKey>("courses");
+  const [tab, setTab] = useState<TabKey>(() => {
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash.replace("#", "");
+      if (hash === "readiness" || hash === "branch_readiness" || hash === "kits" || hash === "rooms") return "readiness";
+      if (hash === "courses") return "courses";
+      if (hash === "waitlist") return "waitlist";
+    }
+    return "groups";
+  });
+
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (hash === "readiness" || hash === "branch_readiness" || hash === "kits" || hash === "rooms") {
+        setTab("readiness");
+      } else if (hash === "courses") {
+        setTab("courses");
+      } else if (hash === "waitlist") {
+        setTab("waitlist");
+      } else if (hash === "groups") {
+        setTab("groups");
+      }
+    };
+    window.addEventListener("hashchange", handleHash);
+    return () => window.removeEventListener("hashchange", handleHash);
+  }, []);
   const [search, setSearch] = useState("");
   const [trackFilter, setTrackFilter] = useState<Track | "all">("all");
   const [branchFilter, setBranchFilter] = useState("كل الفروع");
@@ -814,6 +839,9 @@ function ClassesPage() {
             onAddWaitlistEntry={handleAddWaitlistEntry}
             onCancelWaitlistEntry={handleCancelWaitlistEntry}
             onDeleteWaitlistEntry={handleDeleteWaitlistEntry}
+            onOpenOfferingModal={() => setOfferingModalOpen(true)}
+            onOpenCourseModal={() => setCourseModalOpen(true)}
+            branchName={branchContext}
           />
           <div className="students-demo-note">
             <Activity size={14} />
