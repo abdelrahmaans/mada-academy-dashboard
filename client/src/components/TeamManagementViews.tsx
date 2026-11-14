@@ -1,4 +1,5 @@
 import { useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
+import { toast } from "sonner";
 import {
   AlertCircle,
   ArrowDownLeft,
@@ -635,8 +636,25 @@ export function TeamManagementViews({
                   <small style={{ color: "#64748b", fontSize: "11px", display: "block" }}>
                     كود المعرف:
                   </small>
-                  <span style={{ fontSize: "12px", fontFamily: "monospace", color: "#475569" }}>
-                    {selectedMember.id}
+                  <span
+                    title={selectedMember.id}
+                    style={{
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: "#0f766e",
+                      background: "#f0fdfa",
+                      padding: "2px 8px",
+                      borderRadius: "6px",
+                      border: "1px solid #ccfbf1",
+                      display: "inline-block",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => {
+                      navigator.clipboard?.writeText(selectedMember.id);
+                      toast.success("تم نسخ كود المعرف");
+                    }}
+                  >
+                    {selectedMember.id.startsWith("USR-") ? selectedMember.id : `عضو #${selectedMember.id.slice(-4)}`}
                   </span>
                 </div>
               </div>

@@ -12,7 +12,13 @@ import {
   Trophy,
   UserPlus,
   Users,
-  X
+  X,
+  Share2,
+  DollarSign,
+  Award,
+  Calendar,
+  Layers,
+  Cpu,
 } from "lucide-react";
 import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
@@ -35,6 +41,7 @@ import {
   CreateTeamModal,
   AddTeamMemberModal,
   RecordAwardModal,
+  CompetitionsSocialCardModal,
 } from "@/components/competitions/CompetitionsModals";
 
 type TabType = "TOURNAMENTS" | "TEAMS" | "HALL_OF_FAME";
@@ -74,15 +81,39 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
   const [newCompTrack, setNewCompTrack] = useState("robotics");
   const [newCompSeason, setNewCompSeason] = useState("2026/2027");
   const [newCompLocation, setNewCompLocation] = useState("");
+  const [newCompEventDate, setNewCompEventDate] = useState("");
+  const [newCompLevel, setNewCompLevel] = useState("NATIONAL");
+  const [newCompAgeGroup, setNewCompAgeGroup] = useState("8 - 15 سنة");
 
   const [newTeamName, setNewTeamName] = useState("");
   const [newTeamProject, setNewTeamProject] = useState("");
+  const [teamCoachId, setTeamCoachId] = useState("");
+  const [teamKitType, setTeamKitType] = useState("SPIKE_PRIME");
+  const [teamBootcampDate, setTeamBootcampDate] = useState("");
+  const [teamTrainingFee, setTeamTrainingFee] = useState<number>(1500);
+  const [teamInstallments, setTeamInstallments] = useState<Array<{ name: string; amount: number; dueDate?: string }>>([
+    { name: "دفعة التسجيل الأولى", amount: 750, dueDate: "" },
+    { name: "دفعة التصفيات النهائية", amount: 750, dueDate: "" },
+  ]);
 
   const [memberStudentId, setMemberStudentId] = useState("");
   const [memberRole, setMemberRole] = useState("LEAD_PROGRAMMER");
 
   const [awardTitle, setAwardTitle] = useState("");
   const [awardRank, setAwardRank] = useState<number>(1);
+  const [awardKind, setAwardKind] = useState("CHAMPION_1ST");
+  const [awardCashPrize, setAwardCashPrize] = useState<number>(0);
+
+  // Social Share Modal
+  const [selectedAwardForShare, setSelectedAwardForShare] = useState<HallOfFameCardItem | null>(null);
+  const [showSocialModal, setShowSocialModal] = useState(false);
+
+  // Coaches list
+  const [coachesList, setCoachesList] = useState<Array<{ id: string; fullName: string }>>([
+    { id: "coach-ahmed", fullName: "كوتش أحمد محمود (مدينة نصر)" },
+    { id: "coach-sara", fullName: "كوتش سارة كمال (المعادي)" },
+    { id: "coach-youssef", fullName: "كوتش يوسف عماد (الشيخ زايد)" },
+  ]);
 
   // Students list for member assignment
   const [studentsList, setStudentsList] = useState<Array<{ id: string; fullName: string }>>([]);
@@ -154,12 +185,15 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
         organizer: newCompOrganizer.trim(),
         track: newCompTrack,
         season: newCompSeason,
-        location: newCompLocation.trim() || undefined
+        location: newCompLocation.trim() || undefined,
+        eventDate: newCompEventDate || undefined,
       });
       toast.success("تم إدراج البطولة بنجاح في جدول الأكاديمية!");
       setShowCompModal(false);
       setNewCompName("");
       setNewCompOrganizer("");
+      setNewCompLocation("");
+      setNewCompEventDate("");
       void loadData();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "فشل إنشاء البطولة");
@@ -177,16 +211,42 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
       return;
     }
     try {
-      await apiClient.createCompetitionTeam(selectedCompId, {
+      const selectedCoach = coachesList.find((c) => c.id === teamCoachId);
+      const res = await apiClient.createCompetitionTeam(selectedCompId, {
         name: newTeamName.trim(),
-        projectTitle: newTeamProject.trim() || undefined
+        projectTitle: newTeamProject.trim() || undefined,
+        coachInstructorId: teamCoachId || undefined,
       });
-      toast.success("تم تشكيل الفريق وبدء مرحلة الإعداد!");
+
+      const kitDisplay =
+        teamKitType === "SPIKE_PRIME"
+          ? "LEGO SPIKE Prime 🤖"
+          : teamKitType === "EV3"
+          ? "LEGO EV3"
+          : teamKitType === "ARDUINO_IOT"
+          ? "Arduino & IoT ⚡"
+          : teamKitType === "RASPBERRY_AI"
+          ? "Raspberry Pi & AI 🧠"
+          : "برمجيات ومحاكاة 💻";
+
+      const enrichedTeam: CompetitionTeamItem = {
+        ...res,
+        coachName: selectedCoach
+          ? selectedCoach.fullName.replace("كوتش ", "")
+          : res.coachName || "كوتش معتمد",
+        kitCode: kitDisplay,
+        status: "BOOTCAMP",
+        trainingFee: teamTrainingFee,
+        bootcampStartDate: teamBootcampDate || new Date().toISOString().slice(0, 10),
+        installments: teamInstallments,
+      };
+
+      setTeams((prev) => [enrichedTeam, ...prev.filter((t) => t.id !== res.id)]);
+      toast.success("تم تشكيل الفريق واعتماد معسكر التدريب المكثف (Bootcamp) بنجاح!");
       setShowTeamModal(false);
       setNewTeamName("");
       setNewTeamProject("");
-      const teamsRes = await apiClient.competitionTeams(selectedCompId);
-      setTeams(teamsRes);
+      setTeamBootcampDate("");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "فشل تشكيل الفريق");
     }
@@ -215,7 +275,7 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
     try {
       await apiClient.addCompetitionTeamMember(activeTeamForMember.id, {
         studentId: memberStudentId,
-        roleInTeam: memberRole
+        roleInTeam: memberRole,
       });
       toast.success("تم تسجيل الطالب في الفريق بنجاح!");
       setShowMemberModal(false);
@@ -241,12 +301,38 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
         teamId: activeTeamForAward.id,
         title: awardTitle.trim(),
         rank: awardRank,
-        isPublishedToHallOfFame: true
+        isPublishedToHallOfFame: true,
       });
-      toast.success("مبروك! تم تتويج الفريق وتوثيق الإنجاز في لوحة الشرف!");
+
+      const currentComp = competitions.find((c) => c.id === selectedCompId);
+      const newAwardCard: HallOfFameCardItem = {
+        id: `award-${Date.now()}`,
+        title: awardTitle.trim(),
+        rank: awardRank,
+        awardKind,
+        cashPrize: awardCashPrize > 0 ? awardCashPrize : undefined,
+        awardDate: new Date().toISOString().slice(0, 10),
+        competitionName: currentComp?.name ?? "بطولة رسمية",
+        organizer: currentComp?.organizer ?? "الاتحاد المصري للروبوتات",
+        season: currentComp?.season ?? "2026/2027",
+        track: currentComp?.track ?? "robotics",
+        teamName: activeTeamForAward.name,
+        projectTitle: activeTeamForAward.projectTitle,
+        coachName: activeTeamForAward.coachName,
+        branchName: activeTeamForAward.branchName || "فرع الأكاديمية",
+        studentNames:
+          activeTeamForAward.members && activeTeamForAward.members.length > 0
+            ? activeTeamForAward.members.map((m) => m.studentName)
+            : ["عمر طارق حسام", "يوسف حسام علي", "مريم حسام الدين"],
+        certificateUrl: null,
+        photosJson: null,
+      };
+
+      setHallOfFame((prev) => [newAwardCard, ...prev]);
+      toast.success("مبروك! تم تتويج الفريق وتوثيق الإنجاز في لوحة الشرف 🏆");
       setShowAwardModal(false);
       setAwardTitle("");
-      void loadData();
+      setAwardCashPrize(0);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "فشل تسجيل الجائزة");
     }
@@ -395,20 +481,25 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
               <div>
                 <h2 style={{ fontSize: "16px", fontWeight: "700", margin: 0, color: "#0f172a" }}>
-                  دليل المسابقات والفعاليات
+                  دليل المسابقات والفعاليات الرسمية
                 </h2>
                 <small style={{ color: "#64748b" }}>
-                  اختر أي بطولة لاستعراض فرقها وإضافة معسكرات التدريب الخاصة بها
+                  اختر أي بطولة لاستعراض فرقها وإدارة معسكرات التدريب الخاصة بها
                 </small>
               </div>
-              <button
-                type="button"
-                className="comp-btn-primary"
-                onClick={() => setShowCompModal(true)}
+              <span
+                style={{
+                  fontSize: "12px",
+                  fontWeight: "700",
+                  color: "#0d9488",
+                  background: "#f0fdfa",
+                  padding: "4px 12px",
+                  borderRadius: "20px",
+                  border: "1px solid #ccfbf1",
+                }}
               >
-                <Plus size={15} />
-                <span>تسجيل بطولة</span>
-              </button>
+                {competitions.length} بطولات مدرجة
+              </span>
             </div>
 
             {competitions.length === 0 ? (
@@ -486,40 +577,73 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
         {/* TAB 2: TEAMS & BOOTCAMP TRACKER */}
         {activeTab === "TEAMS" && (
           <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px", flexWrap: "wrap", gap: "10px" }}>
-              <div>
-                <h2 style={{ fontSize: "16px", fontWeight: "700", margin: 0, color: "#0f172a" }}>
-                  فرق الأكاديمية المشاركة في: {competitions.find(c => c.id === selectedCompId)?.name ?? "البطولة المحددة"}
+            {/* Enhanced Toolbar */}
+            <div className="comp-teams-toolbar">
+              <div className="comp-teams-toolbar-info">
+                <h2>
+                  فرق الأكاديمية ومعسكرات التدريب (Bootcamp) ·{" "}
+                  {competitions.find((c) => c.id === selectedCompId)?.name ?? "البطولة المحددة"}
                 </h2>
-                <small style={{ color: "#64748b" }}>
-                  متابعة تشكيل الفرق، الأدوار التخصصية لكل طالب، وحالة المعسكر التدريبي المكثف
-                </small>
+                <p>
+                  إدارة الفرق التنافسية، الحقائب التدريبية (Kits)، أقساط ورسوم المعسكر، واعتماد
+                  الجاهزية والمشاركة الرسمية
+                </p>
               </div>
-              <div style={{ display: "flex", gap: "8px" }}>
-                <select
-                  className="comp-form-select"
-                  value={selectedCompId ?? ""}
-                  onChange={e => handleSelectComp(e.target.value)}
+
+              <div className="comp-teams-toolbar-actions">
+                <label className="comp-select-label">
+                  <span>البطولة:</span>
+                  <select
+                    className="comp-form-select"
+                    value={selectedCompId ?? ""}
+                    onChange={(e) => handleSelectComp(e.target.value)}
+                    style={{ minWidth: "220px" }}
+                  >
+                    {competitions.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <button
+                  type="button"
+                  className="comp-btn-primary"
+                  onClick={() => setShowTeamModal(true)}
                 >
-                  {competitions.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+                  <Plus size={16} />
+                  <span>تشكيل فريق ومعسكر جديد</span>
+                </button>
+              </div>
+            </div>
+
+            {teams.length === 0 ? (
+              <div
+                className="reports-live-state"
+                style={{
+                  background: "#fff",
+                  borderRadius: "14px",
+                  padding: "40px",
+                  border: "1px dashed #cbd5e1",
+                }}
+              >
+                <Users size={42} color="#0d9488" />
+                <h4 style={{ margin: "10px 0 4px 0", color: "#0f172a" }}>
+                  لا توجد فرق مسجلة في هذه البطولة بعد
+                </h4>
+                <p style={{ color: "#64748b", margin: "0 0 16px 0" }}>
+                  اضغط على زر "تشكيل فريق ومعسكر جديد" لتحديد اسم الفريق، المشروع، المدرب، والحقيبة
+                  المستخدمة.
+                </p>
                 <button
                   type="button"
                   className="comp-btn-primary"
                   onClick={() => setShowTeamModal(true)}
                 >
                   <Plus size={15} />
-                  <span>تشكيل فريق جديد</span>
+                  <span>بدء تشكيل الفريق الآن</span>
                 </button>
-              </div>
-            </div>
-
-            {teams.length === 0 ? (
-              <div className="reports-live-state">
-                <Users size={36} color="#cbd5e1" />
-                <p>لا توجد فرق مسجلة في هذه البطولة بعد. اضغط "تشكيل فريق جديد" للبدء.</p>
               </div>
             ) : (
               <div className="comp-cards-grid">
@@ -528,7 +652,7 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
                     <div className="comp-team-header">
                       <div>
                         <h4>{team.name}</h4>
-                        <small style={{ color: "#64748b" }}>الفرع: {team.branchName} · المدرب: {team.coachName}</small>
+                        <small style={{ color: "#64748b" }}>الفرع: {team.branchName || "الفرع الرئيسي"} · المدرب: كوتش {team.coachName}</small>
                       </div>
                       <span className={`team-status-badge team-status-${team.status.toLowerCase()}`}>
                         {team.status === "FORMING" ? "قيد التشكيل" :
@@ -539,15 +663,23 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
                       </span>
                     </div>
 
+                    {/* Bootcamp Strip: Kit, Fee, Sync */}
+                    <div className="comp-team-bootcamp-strip">
+                      <span className="comp-badge-kit">
+                        <Cpu size={12} /> {team.kitCode || "LEGO SPIKE Prime 🤖"}
+                      </span>
+                      <span className="comp-badge-fee">
+                        <DollarSign size={12} /> رسوم المعسكر: {(team.trainingFee ?? 1500).toLocaleString()} ج.م
+                      </span>
+                      <span className="comp-badge-sync">
+                        <Award size={12} /> معسكر مسابقة 🏆 (مربوط بالأكاديمية)
+                      </span>
+                    </div>
+
                     {team.projectTitle && (
                       <div style={{ background: "#f8fafc", padding: "8px 12px", borderRadius: "8px", fontSize: "12px", borderRight: "3px solid #0d9488" }}>
-                        <strong style={{ color: "#0f172a" }}>المشروع: </strong>
+                        <strong style={{ color: "#0f172a" }}>فكرة المشروع: </strong>
                         <span style={{ color: "#475569" }}>{team.projectTitle}</span>
-                        {team.kitCode && (
-                          <div style={{ marginTop: "4px", color: "#64748b", fontSize: "11px" }}>
-                            الحقيبة المسندة: <strong>{team.kitCode}</strong>
-                          </div>
-                        )}
                       </div>
                     )}
 
@@ -555,7 +687,7 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
                     <div className="team-roster">
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span style={{ fontSize: "12px", fontWeight: "700", color: "#334155" }}>
-                          قائمة أعضاء الفريق ({team.members.length})
+                          أعضاء الفريق المتدربون ({team.members.length})
                         </span>
                         <button
                           type="button"
@@ -572,7 +704,7 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
 
                       {team.members.length === 0 ? (
                         <div style={{ fontSize: "11px", color: "#94a3b8", textAlign: "center", padding: "8px" }}>
-                          لم يتم ضم طلاب للفريق بعد.
+                          لم يتم ضم طلاب بعد؛ اضغط "إضافة طالب" لضم أعضاء الفريق وتوزيع أدوارهم.
                         </div>
                       ) : (
                         team.members.map(m => (
@@ -606,7 +738,7 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
                             style={{ padding: "4px 8px", fontSize: "11px", color: "#b45309", borderColor: "#fde68a", background: "#fffbeb" }}
                             onClick={() => handleUpdateStatus(team.id, "BOOTCAMP")}
                           >
-                            <span>بدء المعسكر</span>
+                            <span>بدء المعسكر ⚡</span>
                           </button>
                         )}
                         {team.status === "BOOTCAMP" && (
@@ -616,7 +748,7 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
                             style={{ padding: "4px 8px", fontSize: "11px", color: "#15803d", borderColor: "#bbf7d0", background: "#f0fdf4" }}
                             onClick={() => handleUpdateStatus(team.id, "READY")}
                           >
-                            <span>جاهز للمسابقة</span>
+                            <span>اعتماد الجاهزية ✅</span>
                           </button>
                         )}
                       </div>
@@ -624,14 +756,14 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
                       <button
                         type="button"
                         className="comp-btn-primary"
-                        style={{ padding: "5px 10px", fontSize: "11px", background: "#f59e0b" }}
+                        style={{ padding: "5px 12px", fontSize: "11px", background: "#f59e0b" }}
                         onClick={() => {
                           setActiveTeamForAward(team);
                           setShowAwardModal(true);
                         }}
                       >
                         <Trophy size={13} />
-                        <span>توثيق جائزة</span>
+                        <span>توثيق جائزة وتتويج</span>
                       </button>
                     </div>
                   </div>
@@ -651,7 +783,7 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
                   لوحة الشرف والإنجازات الذهبية (Hall of Fame)
                 </h2>
                 <small style={{ color: "#64748b" }}>
-                  سجل التتويج التاريخي لفرق الأكاديمية في البطولات الرسمية لتعزيز الفخر والتسويق
+                  سجل التتويج التاريخي لفرق الأكاديمية والجوائز التخصصية للمشاركة والتسويق وفخر الأهالي
                 </small>
               </div>
             </div>
@@ -691,6 +823,13 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
                         <span style={{ color: "#64748b" }}>الفرع والمدرب:</span>
                         <span style={{ color: "#334155" }}>{award.branchName} · كوتش {award.coachName}</span>
                       </div>
+                      {award.cashPrize && award.cashPrize > 0 && (
+                        <div style={{ marginTop: "6px" }}>
+                          <span className="hof-cash-prize">
+                            <DollarSign size={12} /> قيمة الجائزة المالية: {award.cashPrize.toLocaleString()} ج.م
+                          </span>
+                        </div>
+                      )}
                       {award.projectTitle && (
                         <div style={{ marginTop: "6px", paddingTop: "6px", borderTop: "1px dashed #e2e8f0", fontSize: "11px", color: "#475569" }}>
                           مشروع الابتكار: <strong>{award.projectTitle}</strong>
@@ -710,6 +849,19 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
                         ))}
                       </div>
                     </div>
+
+                    {/* Social Media Share Button */}
+                    <button
+                      type="button"
+                      className="hof-share-btn"
+                      onClick={() => {
+                        setSelectedAwardForShare(award);
+                        setShowSocialModal(true);
+                      }}
+                    >
+                      <Share2 size={14} />
+                      <span>مشاركة الإنجاز / كارت السوشيال ميديا 📸</span>
+                    </button>
                   </div>
                 ))}
               </div>
@@ -731,6 +883,12 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
           setSeason={setNewCompSeason}
           location={newCompLocation}
           setLocation={setNewCompLocation}
+          eventDate={newCompEventDate}
+          setEventDate={setNewCompEventDate}
+          level={newCompLevel}
+          setLevel={setNewCompLevel}
+          ageGroup={newCompAgeGroup}
+          setAgeGroup={setNewCompAgeGroup}
           onSubmit={handleCreateCompetition}
         />
 
@@ -741,6 +899,17 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
           setName={setNewTeamName}
           project={newTeamProject}
           setProject={setNewTeamProject}
+          coachId={teamCoachId}
+          setCoachId={setTeamCoachId}
+          kitType={teamKitType}
+          setKitType={setTeamKitType}
+          bootcampDate={teamBootcampDate}
+          setBootcampDate={setTeamBootcampDate}
+          trainingFee={teamTrainingFee}
+          setTrainingFee={setTeamTrainingFee}
+          installments={teamInstallments}
+          setInstallments={setTeamInstallments}
+          coachesList={coachesList}
           onSubmit={handleCreateTeam}
         />
 
@@ -764,7 +933,17 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
           setTitle={setAwardTitle}
           rank={awardRank}
           setRank={setAwardRank}
+          awardKind={awardKind}
+          setAwardKind={setAwardKind}
+          cashPrize={awardCashPrize}
+          setCashPrize={setAwardCashPrize}
           onSubmit={handleRecordAward}
+        />
+
+        <CompetitionsSocialCardModal
+          isOpen={showSocialModal}
+          award={selectedAwardForShare}
+          onClose={() => setShowSocialModal(false)}
         />
       </div>
     </RoleDashboardShell>

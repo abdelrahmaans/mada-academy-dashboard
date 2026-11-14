@@ -293,8 +293,8 @@ export default function WaitlistManagementView({
                   <td data-label="المجموعة والكورس">
                     <div className="group-info-cell">
                       <span className="course-name">{entry.courseName}</span>
-                      <small className="group-id-tag">
-                        كود المجموعة: {entry.groupId}
+                      <small className="group-id-tag" title={entry.groupId}>
+                        كود المجموعة: {entry.groupId ? (entry.groupId.startsWith("GRP-") ? entry.groupId : `مجموعة #${entry.groupId.slice(-4)}`) : "مجموعة عامة"}
                       </small>
                       {matchedOffering && (
                         <div className="mini-capacity-bar">
@@ -475,113 +475,234 @@ export default function WaitlistManagementView({
 
       {/* Modal: Add to Waitlist */}
       {addModalOpen && (
-        <div className="modal-backdrop">
-          <div className="modal-dialog waitlist-modal-dialog">
-            <div className="modal-header">
+        <div
+          className="dialog-backdrop"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.6)",
+            backdropFilter: "blur(4px)",
+            display: "grid",
+            placeItems: "center",
+            zIndex: 9999,
+            padding: "20px",
+          }}
+          onClick={() => setAddModalOpen(false)}
+        >
+          <div
+            className="student-dialog"
+            style={{
+              background: "#ffffff",
+              borderRadius: "16px",
+              width: "100%",
+              maxWidth: "540px",
+              boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.15)",
+              overflow: "hidden",
+              border: "1px solid #e2e8f0",
+            }}
+            onClick={e => e.stopPropagation()}
+            dir="rtl"
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                padding: "20px 24px",
+                borderBottom: "1px solid #e2e8f0",
+                background: "#f8fafc",
+              }}
+            >
               <div>
-                <h3>إدراج طالب في قائمة الانتظار</h3>
-                <p>تسجيل أسبقية حجز عند اكتمال الطاقة الاستيعابية للمجموعة</p>
+                <h3 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: "#0f172a" }}>
+                  إدراج طالب في قائمة الانتظار
+                </h3>
+                <p style={{ margin: "4px 0 0", fontSize: "0.82rem", color: "#64748b" }}>
+                  تسجيل أسبقية حجز عند اكتمال الطاقة الاستيعابية للمجموعة
+                </p>
               </div>
               <button
-                className="modal-close-btn"
+                type="button"
+                style={{
+                  background: "transparent",
+                  border: 0,
+                  color: "#94a3b8",
+                  cursor: "pointer",
+                  padding: "4px",
+                  borderRadius: "6px",
+                }}
                 onClick={() => setAddModalOpen(false)}
               >
-                <X size={18} />
+                <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateSubmit} className="waitlist-form">
-              <div className="form-group">
-                <label>
-                  <span>المجموعة التدريبية المستهدفة *</span>
-                  <select
-                    required
-                    value={formData.groupId}
-                    onChange={e =>
-                      setFormData({ ...formData, groupId: e.target.value })
-                    }
-                  >
-                    {offerings.map(o => (
-                      <option key={o.id} value={o.id}>
-                        {o.courseName} · {o.branch} · ({o.enrolledStudents}/{o.maxStudents} مقعد){" "}
-                        {o.enrolledStudents >= o.maxStudents ? " [مكتملة 100%]" : ""}
-                      </option>
-                    ))}
-                  </select>
+            <form onSubmit={handleCreateSubmit} style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "#334155" }}>
+                  المجموعة التدريبية المستهدفة *
                 </label>
+                <select
+                  required
+                  value={formData.groupId}
+                  onChange={e => setFormData({ ...formData, groupId: e.target.value })}
+                  style={{
+                    height: "40px",
+                    borderRadius: "8px",
+                    border: "1px solid #cbd5e1",
+                    padding: "0 12px",
+                    background: "#ffffff",
+                    fontSize: "0.85rem",
+                    color: "#0f172a",
+                    outline: "none",
+                    width: "100%",
+                  }}
+                >
+                  {offerings.map(o => (
+                    <option key={o.id} value={o.id}>
+                      {o.courseName} · {o.branch} · ({o.enrolledStudents}/{o.maxStudents} مقعد){" "}
+                      {o.enrolledStudents >= o.maxStudents ? " [مكتملة 100%]" : ""}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              <div className="form-row-2">
-                <div className="form-group">
-                  <label>
-                    <span>اسم الطالب رباعياً *</span>
-                    <input
-                      type="text"
-                      required
-                      placeholder="مثال: يحيى كريم عبد الله"
-                      value={formData.studentName}
-                      onChange={e =>
-                        setFormData({ ...formData, studentName: e.target.value })
-                      }
-                    />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "#334155" }}>
+                    اسم الطالب رباعياً *
                   </label>
-                </div>
-
-                <div className="form-group">
-                  <label>
-                    <span>اسم ولي الأمر *</span>
-                    <input
-                      type="text"
-                      required
-                      placeholder="مثال: كريم عبد الله"
-                      value={formData.parentName}
-                      onChange={e =>
-                        setFormData({ ...formData, parentName: e.target.value })
-                      }
-                    />
-                  </label>
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>
-                  <span>رقم هاتف / واتساب ولي الأمر *</span>
                   <input
-                    type="tel"
+                    type="text"
                     required
-                    placeholder="مثال: +201012345678"
-                    value={formData.phone}
-                    onChange={e =>
-                      setFormData({ ...formData, phone: e.target.value })
-                    }
+                    placeholder="مثال: يحيى كريم عبد الله"
+                    value={formData.studentName}
+                    onChange={e => setFormData({ ...formData, studentName: e.target.value })}
+                    style={{
+                      height: "40px",
+                      borderRadius: "8px",
+                      border: "1px solid #cbd5e1",
+                      padding: "0 12px",
+                      fontSize: "0.85rem",
+                      color: "#0f172a",
+                      outline: "none",
+                      width: "100%",
+                      boxSizing: "border-box",
+                    }}
                   />
-                </label>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "#334155" }}>
+                    اسم ولي الأمر *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="مثال: كريم عبد الله"
+                    value={formData.parentName}
+                    onChange={e => setFormData({ ...formData, parentName: e.target.value })}
+                    style={{
+                      height: "40px",
+                      borderRadius: "8px",
+                      border: "1px solid #cbd5e1",
+                      padding: "0 12px",
+                      fontSize: "0.85rem",
+                      color: "#0f172a",
+                      outline: "none",
+                      width: "100%",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
               </div>
 
-              <div className="form-group">
-                <label>
-                  <span>ملاحظات إضافية أو تفضيل المواعيد</span>
-                  <textarea
-                    rows={2}
-                    placeholder="مثال: يفضل الحصص المسائية، أولوية أولى للتحويل فور انسحاب أي طالب."
-                    value={formData.notes}
-                    onChange={e =>
-                      setFormData({ ...formData, notes: e.target.value })
-                    }
-                  />
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "#334155" }}>
+                  رقم هاتف / واتساب ولي الأمر *
                 </label>
+                <input
+                  type="tel"
+                  required
+                  placeholder="مثال: +201012345678"
+                  value={formData.phone}
+                  onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                  style={{
+                    height: "40px",
+                    borderRadius: "8px",
+                    border: "1px solid #cbd5e1",
+                    padding: "0 12px",
+                    fontSize: "0.85rem",
+                    color: "#0f172a",
+                    outline: "none",
+                    width: "100%",
+                    boxSizing: "border-box",
+                    direction: "ltr",
+                    textAlign: "right",
+                  }}
+                />
               </div>
 
-              <div className="modal-actions">
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "#334155" }}>
+                  ملاحظات إضافية أو تفضيل المواعيد
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="مثال: يفضل الحصص المسائية، أولوية أولى للتحويل فور انسحاب أي طالب."
+                  value={formData.notes}
+                  onChange={e => setFormData({ ...formData, notes: e.target.value })}
+                  style={{
+                    borderRadius: "8px",
+                    border: "1px solid #cbd5e1",
+                    padding: "8px 12px",
+                    fontSize: "0.82rem",
+                    color: "#0f172a",
+                    fontFamily: "inherit",
+                    outline: "none",
+                    width: "100%",
+                    boxSizing: "border-box",
+                    resize: "vertical",
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "10px", borderTop: "1px solid #f1f5f9", paddingTop: "16px" }}>
                 <button
                   type="button"
-                  className="button button-secondary"
                   onClick={() => setAddModalOpen(false)}
+                  style={{
+                    padding: "8px 18px",
+                    borderRadius: "8px",
+                    border: "1px solid #cbd5e1",
+                    background: "#ffffff",
+                    color: "#475569",
+                    fontSize: "0.85rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
                 >
                   إلغاء
                 </button>
-                <button type="submit" className="button button-primary">
-                  <Plus size={16} /> حفظ في قائمة الانتظار
+                <button
+                  type="submit"
+                  style={{
+                    padding: "8px 22px",
+                    borderRadius: "8px",
+                    border: 0,
+                    background: "#0d9488",
+                    color: "#ffffff",
+                    fontSize: "0.85rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    boxShadow: "0 2px 6px rgba(13, 148, 136, 0.25)",
+                  }}
+                >
+                  <Plus size={16} />
+                  <span>حفظ في قائمة الانتظار</span>
                 </button>
               </div>
             </form>

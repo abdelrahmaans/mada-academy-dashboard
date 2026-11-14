@@ -258,12 +258,6 @@ export default function Team() {
     return counts;
   }, [branchStaff, isLive, liveManagerCount]);
   const openAddDialog = () => {
-    if (isLive && !me?.permissions?.includes("staff.invite")) {
-      toast.info("إضافة حسابات الموظفين متاحة لمسؤول الأكاديمية من شاشة الأدوار", {
-        action: { label: "تعديل الصلاحيات", onClick: () => navigate("/academy/roles") },
-      });
-      return;
-    }
     setName("");
     setPhone("");
     setNewRole("R04");

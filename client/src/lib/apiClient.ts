@@ -720,6 +720,9 @@ export type CompetitionTeamItem = {
   projectTitle: string | null;
   projectDescription: string | null;
   status: string;
+  trainingFee?: number;
+  bootcampStartDate?: string;
+  installments?: Array<{ name: string; amount: number; dueDate?: string }>;
   members: CompetitionTeamMemberItem[];
   createdAt: string;
 };
@@ -728,6 +731,9 @@ export type HallOfFameCardItem = {
   id: string;
   title: string;
   rank: number | null;
+  awardKind?: string;
+  cashPrize?: number;
+  citation?: string;
   awardDate: string;
   competitionName: string;
   organizer: string;
