@@ -111,6 +111,18 @@ export default function MarketingDesk() {
   const [noteDueDate, setNoteDueDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [savingNote, setSavingNote] = useState(false);
 
+  // Interview Schedule Modal
+  const [interviewModalLead, setInterviewModalLead] = useState<LeadRecord | null>(null);
+  const [interviewDate, setInterviewDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split("T")[0];
+  });
+  const [interviewTime, setInterviewTime] = useState("04:00 م");
+  const [interviewType, setInterviewType] = useState("اختبار تحديد مستوى برمجي");
+  const [interviewNotes, setInterviewNotes] = useState("");
+  const [schedulingInterview, setSchedulingInterview] = useState(false);
+
   const [campaignName, setCampaignName] = useState("");
   const [campaignChannel, setCampaignChannel] = useState("INSTAGRAM");
   const [savingCampaign, setSavingCampaign] = useState(false);
@@ -204,10 +216,9 @@ export default function MarketingDesk() {
     }
   };
 
-  const handleScheduleInterview = async (lead: LeadRecord) => {
-    const dateInput = prompt("أدخل موعد المقابلة واختبار تحديد المستوى (مثال: السبت 4:00 مساءً):", "السبت القادم 4:00 م");
-    if (!dateInput) return;
-    await handleUpdateLeadStatus(lead, "INTERESTED", `[موعد المقابلة: ${dateInput}]`);
+  const handleScheduleInterview = (lead: LeadRecord) => {
+    setInterviewModalLead(lead);
+    setInterviewNotes(lead.notes ?? "");
   };
 
   const handleMarkReadyForIntake = async (lead: LeadRecord) => {
@@ -1194,6 +1205,117 @@ export default function MarketingDesk() {
                 </button>
                 <button type="submit" disabled={savingNote} className="lead-action-btn primary">
                   {savingNote ? "جارٍ الحفظ…" : "حفظ النوت بالأجندة"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* SCHEDULE INTERVIEW MODAL */}
+      {interviewModalLead && (
+        <div className="marketing-modal-backdrop" onClick={() => setInterviewModalLead(null)}>
+          <div className="marketing-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="marketing-modal-header">
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div className="marketing-modal-icon">
+                  <CalendarDays size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 800 }}>حجز موعد مقابلة واختبار تحديد مستوى</h3>
+                  <p style={{ margin: "2px 0 0", fontSize: "0.82rem", color: "#64748b" }}>
+                    للطالب: <strong style={{ color: "#0f766e" }}>{interviewModalLead.childName}</strong> (ولي الأمر: {interviewModalLead.parentName})
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="marketing-modal-close"
+                onClick={() => setInterviewModalLead(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async e => {
+                e.preventDefault();
+                if (!interviewDate) {
+                  toast.error("يرجى تحديد تاريخ المقابلة");
+                  return;
+                }
+                setSchedulingInterview(true);
+                try {
+                  const scheduleDetails = `[موعد المقابلة: ${interviewDate} الساعة ${interviewTime} · نوع المقابلة: ${interviewType}${interviewNotes.trim() ? ` · ملاحظات: ${interviewNotes.trim()}` : ""}]`;
+                  await handleUpdateLeadStatus(interviewModalLead, "INTERESTED", scheduleDetails);
+                  toast.success("تم حجز موعد المقابلة بنجاح وتحديث حالة العميل إلى 'مهتم'!");
+                  setInterviewModalLead(null);
+                } catch {
+                  toast.error("تعذر حجز الموعد");
+                } finally {
+                  setSchedulingInterview(false);
+                }
+              }}
+              className="marketing-modal-form"
+            >
+              <div className="marketing-modal-grid">
+                <label>
+                  تاريخ المقابلة *
+                  <input
+                    type="date"
+                    required
+                    value={interviewDate}
+                    onChange={e => setInterviewDate(e.target.value)}
+                  />
+                </label>
+                <label>
+                  التوقيت المفضل
+                  <select
+                    value={interviewTime}
+                    onChange={e => setInterviewTime(e.target.value)}
+                  >
+                    <option value="11:00 ص">11:00 صباحًا</option>
+                    <option value="01:00 م">01:00 ظهرًا</option>
+                    <option value="03:00 م">03:00 عصرًا</option>
+                    <option value="04:00 م">04:00 عصرًا (المفضل)</option>
+                    <option value="05:30 م">05:30 مساءً</option>
+                    <option value="07:00 م">07:00 مساءً</option>
+                  </select>
+                </label>
+              </div>
+
+              <label>
+                طبيعة المقابلة / التقييم
+                <select
+                  value={interviewType}
+                  onChange={e => setInterviewType(e.target.value)}
+                >
+                  <option value="اختبار تحديد مستوى برمجي">اختبار تحديد مستوى برمجي (Placement Test)</option>
+                  <option value="جلسة استكشافية وتعريفية">جلسة استكشافية وتعريفية مع ولي الأمر</option>
+                  <option value="حصة تجريبية مجانية">حصة تجريبية مجانية (Trial Session)</option>
+                </select>
+              </label>
+
+              <label>
+                ملاحظات وتفضيلات ولي الأمر
+                <textarea
+                  rows={2}
+                  placeholder="مثال: يفضل فرع مدينة نصر، الطالب لديه اهتمام بالذكاء الاصطناعي..."
+                  value={interviewNotes}
+                  onChange={e => setInterviewNotes(e.target.value)}
+                />
+              </label>
+
+              <div className="marketing-modal-footer">
+                <button
+                  type="button"
+                  className="lead-action-btn"
+                  onClick={() => setInterviewModalLead(null)}
+                >
+                  إلغاء
+                </button>
+                <button type="submit" disabled={schedulingInterview} className="lead-action-btn primary">
+                  {schedulingInterview ? "جارٍ الحفظ…" : "تأكيد حجز المقابلة ✓"}
                 </button>
               </div>
             </form>

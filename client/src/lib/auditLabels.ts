@@ -204,12 +204,31 @@ export function formatFinancialCode(
     return str.toUpperCase();
   }
 
-  // Shift closeout composite code: YYYYMMDD-uuid (e.g. 20261110-bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb)
-  const shiftCompositeMatch = str.match(/^(\d{4})(\d{2})(\d{2})-([a-f0-9-]+)$/i);
-  if (shiftCompositeMatch) {
-    const [, , , day, branchPart] = shiftCompositeMatch;
+  // Shift closeout or composite code: YYYYMMDD-uuid (e.g. 20261110-bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb)
+  const compositeMatch = str.match(/^(\d{4})(\d{2})(\d{2})-([a-f0-9-]+)$/i);
+  if (compositeMatch) {
+    const [, , , day, branchPart] = compositeMatch;
     const suffix = branchPart.slice(-4).toUpperCase();
-    return `وردية #${day}-${suffix}`;
+    switch (kind) {
+      case "expense":
+        return `مصروف #${day}-${suffix}`;
+      case "payroll":
+        return `مسير #${day}-${suffix}`;
+      case "payment":
+        return `سند #${day}-${suffix}`;
+      case "invoice":
+        return `فاتورة #${day}-${suffix}`;
+      case "shift":
+      default:
+        return `وردية #${day}-${suffix}`;
+    }
+  }
+
+  // Long invoice code like MAD-BBBBBB-20261114-0001-17c9a71e4f2944b0ab87d2e
+  const invoiceLongMatch = str.match(/^MAD-([A-Z0-9]+)-(\d{8})-(\d{3,4})-[a-f0-9]+$/i);
+  if (invoiceLongMatch) {
+    const [, branch, , seq] = invoiceLongMatch;
+    return `فاتورة #MAD-${branch.slice(0, 4)}-${seq}`;
   }
 
   // Standard UUID or hex ID

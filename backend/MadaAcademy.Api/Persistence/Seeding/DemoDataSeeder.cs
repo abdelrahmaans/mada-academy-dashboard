@@ -812,10 +812,10 @@ public static class DemoDataSeeder
         }
 
         // Marketing Campaigns + Content Items
+        var campaign1Id = Guid.Parse("b1000000-0000-0000-0000-000000000001");
         var campaign2Id = Guid.Parse("b1000000-0000-0000-0000-000000000002");
         if (!await db.MarketingCampaigns.AnyAsync(c => c.Id == campaign2Id, cancellationToken))
         {
-            var campaign1Id = Guid.Parse("b1000000-0000-0000-0000-000000000001");
             if (!await db.MarketingCampaigns.AnyAsync(c => c.Id == campaign1Id, cancellationToken))
             {
                 db.MarketingCampaigns.Add(new MarketingCampaign
@@ -846,9 +846,12 @@ public static class DemoDataSeeder
             });
 
             db.MarketingContentItems.AddRange(
-                new MarketingContentItem { Id = Guid.Parse("b2000000-0000-0000-0000-000000000001"), TenantId = tenantId, BranchId = mainBranchId, CampaignId = campaign1Id, Title = "ريلز استعراض مشروع السيارة الذكية", ContentType = "REEL", Platform = "INSTAGRAM", Status = "PUBLISHED", DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-2)), CreatedByUserId = mediaId },
-                new MarketingContentItem { Id = Guid.Parse("b2000000-0000-0000-0000-000000000002"), TenantId = tenantId, BranchId = heliopolisBranchId, CampaignId = campaign2Id, Title = "تصميم بوست مواعيد مجموعات نوفمبر", ContentType = "POST", Platform = "FACEBOOK", Status = "IN_REVIEW", DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(3)), CreatedByUserId = mediaId },
-                new MarketingContentItem { Id = Guid.Parse("b2000000-0000-0000-0000-000000000003"), TenantId = tenantId, BranchId = mainBranchId, CampaignId = campaign1Id, Title = "فيديو شهادة ولي أمر الطالب يوسف", ContentType = "VIDEO", Platform = "TIKTOK", Status = "DRAFT", DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(5)), CreatedByUserId = mediaId }
+                new MarketingContentItem { Id = Guid.Parse("b2000000-0000-0000-0000-000000000001"), TenantId = tenantId, BranchId = mainBranchId, CampaignId = campaign1Id, Title = "ريلز استعراض مشروع السيارة الذكية وتفادي العوائق", ContentType = "REEL", Platform = "INSTAGRAM", Status = "PUBLISHED", DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-2)), CreatedByUserId = mediaId },
+                new MarketingContentItem { Id = Guid.Parse("b2000000-0000-0000-0000-000000000002"), TenantId = tenantId, BranchId = heliopolisBranchId, CampaignId = campaign2Id, Title = "تصميم بوست مواعيد مجموعات نوفمبر الشتوية", ContentType = "POST", Platform = "FACEBOOK", Status = "IN_REVIEW", DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(3)), CreatedByUserId = mediaId },
+                new MarketingContentItem { Id = Guid.Parse("b2000000-0000-0000-0000-000000000003"), TenantId = tenantId, BranchId = mainBranchId, CampaignId = campaign1Id, Title = "فيديو شهادة ولي أمر الطالب يوسف حسام", ContentType = "VIDEO", Platform = "TIKTOK", Status = "DRAFT", DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(5)), CreatedByUserId = mediaId },
+                new MarketingContentItem { Id = Guid.Parse("b2000000-0000-0000-0000-000000000004"), TenantId = tenantId, BranchId = mainBranchId, CampaignId = campaign1Id, Title = "كواليس تدريب فريق مسابقة WRO للروبوتات", ContentType = "REEL", Platform = "INSTAGRAM", Status = "IN_REVIEW", DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(2)), CreatedByUserId = mediaId },
+                new MarketingContentItem { Id = Guid.Parse("b2000000-0000-0000-0000-000000000005"), TenantId = tenantId, BranchId = mainBranchId, CampaignId = campaign1Id, Title = "بوست إعلان فتح باب التسجيل وخصم الإخوة 15%", ContentType = "POST", Platform = "FACEBOOK", Status = "PUBLISHED", DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-1)), CreatedByUserId = mediaId },
+                new MarketingContentItem { Id = Guid.Parse("b2000000-0000-0000-0000-000000000006"), TenantId = tenantId, BranchId = heliopolisBranchId, CampaignId = campaign2Id, Title = "رسالة واتساب برودكاست للأمهات لورشة الذكاء الاصطناعي", ContentType = "BROADCAST", Platform = "WHATSAPP", Status = "SCHEDULED", DueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)), CreatedByUserId = mediaId }
             );
         }
 
@@ -858,8 +861,11 @@ public static class DemoDataSeeder
         {
             db.Leads.AddRange(
                 new Lead { Id = lead2Id, TenantId = tenantId, BranchId = mainBranchId, ChildName = "تيم طارق", ParentName = "أ. طارق حسام", Phone = "+201022334455", Channel = "INSTAGRAM", Notes = "مهتم بمسار Python & AI المسائي", Status = "NEW", CampaignId = campaign2Id, CourseOfferingId = codingOfferingId, CreatedByUserId = secretaryId },
-                new Lead { Id = Guid.Parse("b3000000-0000-0000-0000-000000000003"), TenantId = tenantId, BranchId = mainBranchId, ChildName = "سلمى هشام", ParentName = "د. هشام عادل", Phone = "+201099887766", Channel = "REFERRAL", Notes = "في قائمة الانتظار لمجموعة السبت الصباحية", Status = "WAITLISTED", CourseOfferingId = Guid.Parse("40000000-0000-0000-0000-000000000001"), CreatedByUserId = secretaryId },
-                new Lead { Id = Guid.Parse("b3000000-0000-0000-0000-000000000004"), TenantId = tenantId, BranchId = heliopolisBranchId, ChildName = "زينب كريم", ParentName = "أ. كريم سمير", Phone = "+201144556677", Channel = "WALK_IN", Notes = "تمت معاينة المعمل وطلب المتابعة غداً", Status = "CONTACTED", CourseOfferingId = helioOfferingId, CreatedByUserId = helioSecretaryId }
+                new Lead { Id = Guid.Parse("b3000000-0000-0000-0000-000000000003"), TenantId = tenantId, BranchId = mainBranchId, ChildName = "سلمى هشام", ParentName = "د. هشام عادل", Phone = "+201099887766", Channel = "REFERRAL", Notes = "في قائمة الانتظار لمجموعة السبت الصباحية (بانتظار مقعد)", Status = "WAITLISTED", CourseOfferingId = Guid.Parse("40000000-0000-0000-0000-000000000001"), CreatedByUserId = secretaryId },
+                new Lead { Id = Guid.Parse("b3000000-0000-0000-0000-000000000004"), TenantId = tenantId, BranchId = heliopolisBranchId, ChildName = "زينب كريم", ParentName = "أ. كريم سمير", Phone = "+201144556677", Channel = "WALK_IN", Notes = "تمت معاينة المعمل وطلب المتابعة غداً", Status = "CONTACTED", CourseOfferingId = helioOfferingId, CreatedByUserId = helioSecretaryId },
+                new Lead { Id = Guid.Parse("b3000000-0000-0000-0000-000000000005"), TenantId = tenantId, BranchId = mainBranchId, ChildName = "يوسف حسام علي", ParentName = "أ. حسام علي", Phone = "+201012345678", Channel = "FACEBOOK", Notes = "مهتم بدبلومة الروبوتكس | [موعد المقابلة: السبت 4:00 مساءً]", Status = "INTERESTED", CampaignId = campaign1Id, CourseOfferingId = Guid.Parse("40000000-0000-0000-0000-000000000001"), CreatedByUserId = mediaId },
+                new Lead { Id = Guid.Parse("b3000000-0000-0000-0000-000000000006"), TenantId = tenantId, BranchId = mainBranchId, ChildName = "مريم حسام الدين", ParentName = "د. حسام الدين شريف", Phone = "+201011223344", Channel = "INSTAGRAM", Notes = "اجتازت المقابلة بنجاح | [محول للسكرتارية: جاهز للتسكين الفوري بالفرع · بواسطة التسويق]", Status = "REGISTERED", CampaignId = campaign1Id, CourseOfferingId = Guid.Parse("40000000-0000-0000-0000-000000000001"), CreatedByUserId = mediaId },
+                new Lead { Id = Guid.Parse("b3000000-0000-0000-0000-000000000007"), TenantId = tenantId, BranchId = heliopolisBranchId, ChildName = "ياسين رامي فريد", ParentName = "أ. رامي فريد", Phone = "+201055667788", Channel = "WHATSAPP", Notes = "مهتم بمسار بايثون والذكاء الاصطناعي | [محول للسكرتارية: جاهز للتسكين الفوري بالفرع · بواسطة التسويق]", Status = "REGISTERED", CampaignId = campaign2Id, CourseOfferingId = helioOfferingId, CreatedByUserId = mediaId }
             );
         }
 

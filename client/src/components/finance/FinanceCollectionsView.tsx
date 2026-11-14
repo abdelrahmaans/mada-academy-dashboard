@@ -500,7 +500,7 @@ export function Collections({
                             )}
                           </div>
                           <span style={{ fontSize: "0.78rem", color: "#64748b" }}>
-                            رقم الفاتورة: <bdi>{invoice.number}</bdi> · ولي الأمر: {invoice.parent}
+                            رقم الفاتورة: <bdi title={`رقم الفاتورة الأصلي: ${invoice.number}`}>{formatFinancialCode(invoice.number, "invoice")}</bdi> · ولي الأمر: {invoice.parent}
                           </span>
                         </div>
                       </div>

@@ -168,11 +168,30 @@ export function SecretaryPulseTab({
     }
   };
 
+  const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const tomorrowStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split("T")[0];
+  }, []);
+  const yesterdayStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split("T")[0];
+  }, []);
+  const nextSaturdayStr = useMemo(() => {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = (6 - day + 7) % 7 || 7;
+    d.setDate(d.getDate() + diff);
+    return d.toISOString().split("T")[0];
+  }, []);
+
   return (
     <div className="secretary-pulse-container" dir="rtl">
       {/* Date Header & Quick Filter */}
       <div className="pulse-header-bar">
-        <div className="pulse-date-control">
+        <div className="pulse-date-control" style={{ flexWrap: "wrap", gap: "8px" }}>
           <Calendar size={18} />
           <label htmlFor="pulse-date-picker">تاريخ الجدول:</label>
           <input
@@ -181,13 +200,36 @@ export function SecretaryPulseTab({
             value={selectedDate}
             onChange={e => setSelectedDate(e.target.value)}
           />
-          <button
-            type="button"
-            className="pulse-today-btn"
-            onClick={() => setSelectedDate(new Date().toISOString().split("T")[0])}
-          >
-            اليوم
-          </button>
+          <div style={{ display: "inline-flex", gap: "6px", alignItems: "center" }}>
+            <button
+              type="button"
+              className={`pulse-quick-pill ${selectedDate === todayStr ? "active" : ""}`}
+              onClick={() => setSelectedDate(todayStr)}
+            >
+              اليوم
+            </button>
+            <button
+              type="button"
+              className={`pulse-quick-pill ${selectedDate === tomorrowStr ? "active" : ""}`}
+              onClick={() => setSelectedDate(tomorrowStr)}
+            >
+              غداً
+            </button>
+            <button
+              type="button"
+              className={`pulse-quick-pill ${selectedDate === nextSaturdayStr ? "active" : ""}`}
+              onClick={() => setSelectedDate(nextSaturdayStr)}
+            >
+              السبت القادم
+            </button>
+            <button
+              type="button"
+              className={`pulse-quick-pill ${selectedDate === yesterdayStr ? "active" : ""}`}
+              onClick={() => setSelectedDate(yesterdayStr)}
+            >
+              الأمس
+            </button>
+          </div>
         </div>
 
         <div className="pulse-header-actions">
