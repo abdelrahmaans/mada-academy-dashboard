@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Clock,
   Compass,
+  FileDown,
   FileText,
   Filter,
   Instagram,
@@ -37,6 +38,7 @@ import {
   type MarketingCampaignRecord,
   type MarketingContentRecord,
 } from "@/lib/apiClient";
+import { exportToCSV } from "@/lib/exportUtils";
 import "./MarketingDesk.css";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -221,6 +223,28 @@ export default function MarketingDesk() {
     setInterviewNotes(lead.notes ?? "");
   };
 
+  const handleExportLeads = () => {
+    try {
+      exportToCSV(
+        visibleLeads,
+        [
+          { header: "اسم الطفل", accessor: l => (l as any).studentName || (l as any).childName || "—" },
+          { header: "ولي الأمر", accessor: l => (l as any).parentName || "—" },
+          { header: "الهاتف", accessor: l => l.phone },
+          { header: "الفرع", accessor: l => branches.find(b => b.id === l.branchId)?.name || l.branchId },
+          { header: "قناة الجذب", accessor: l => (l as any).source || (l as any).channel || "Instagram" },
+          { header: "الحالة الحالية", accessor: l => STATUS_LABEL[l.status] || l.status },
+          { header: "تاريخ الاستفسار", accessor: l => l.createdAt?.slice(0, 10) || "—" },
+          { header: "الملاحظات والمتابعة", accessor: l => l.notes || "—" },
+        ],
+        "Mada_Marketing_Leads"
+      );
+      toast.success("تم تصدير شيت الـ Leads بنجاح!");
+    } catch (e: any) {
+      toast.error(e.message || "تعذر تصدير البيانات");
+    }
+  };
+
   const handleMarkReadyForIntake = async (lead: LeadRecord) => {
     await handleUpdateLeadStatus(
       lead,
@@ -391,6 +415,12 @@ export default function MarketingDesk() {
                 label: "تسجيل تذكرة دعم للإدارة",
                 icon: <LifeBuoy size={14} />,
                 onClick: () => setTicketModalOpen(true),
+              },
+              {
+                id: "r07-export-leads",
+                label: "تصدير شيت الـ Leads (Excel)",
+                icon: <FileDown size={14} />,
+                onClick: () => handleExportLeads(),
               },
               {
                 id: "r07-refresh",

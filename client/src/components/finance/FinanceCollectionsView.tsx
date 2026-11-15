@@ -36,6 +36,7 @@ import {
   PAYMENT_METHOD_LABELS,
 } from "./FinanceShared";
 import { formatFinancialCode } from "@/lib/auditLabels";
+import { exportToCSV } from "@/lib/exportUtils";
 import {
   FinancialPrintModal,
   type FinancialPrintData,
@@ -151,6 +152,30 @@ export function Collections({
       externalReference: payment.externalReference || undefined,
       remainingAfterPayment: remaining,
     });
+  };
+
+  const handleExportInvoices = () => {
+    try {
+      exportToCSV(
+        invoices,
+        [
+          { header: "كود الفاتورة", accessor: i => formatFinancialCode(i.id, "invoice") },
+          { header: "اسم الطالب", accessor: i => i.student },
+          { header: "ولي الأمر", accessor: i => i.parent },
+          { header: "الفرع", accessor: i => i.branch },
+          { header: "الكورس", accessor: i => i.course },
+          { header: "إجمالي القيمة (ج.م)", accessor: i => i.total },
+          { header: "المحصل (ج.م)", accessor: i => i.collected },
+          { header: "المتبقي (ج.م)", accessor: i => Math.max(0, i.total - i.collected) },
+          { header: "الحالة", accessor: i => (i.collected >= i.total ? "مسددة بالكامل" : i.collected > 0 ? "مسددة جزئياً" : "غير مسددة") },
+          { header: "تاريخ الاستحقاق", accessor: i => i.due },
+        ],
+        "Mada_Invoices_Report"
+      );
+      toast.success("تم تصدير ملف الإكسيل بنجاح!");
+    } catch (e: any) {
+      toast.error(e.message || "تعذر التصدير");
+    }
   };
 
   const handlePrintInvoice = (inv: Invoice) => {
@@ -410,6 +435,15 @@ export function Collections({
                   style={{ display: "inline-flex", alignItems: "center", gap: "6px", height: "32px", padding: "0 12px", borderRadius: "8px", fontSize: "0.82rem" }}
                 >
                   <Plus size={15} /> إنشاء فاتورة
+                </button>
+                <button
+                  className="finance-desk-secondary"
+                  type="button"
+                  onClick={handleExportInvoices}
+                  title="تصدير كشف الفواتير كملف Excel / CSV"
+                  style={{ display: "inline-flex", alignItems: "center", gap: "6px", height: "32px", padding: "0 12px", borderRadius: "8px", fontSize: "0.82rem" }}
+                >
+                  <FileDown size={14} /> تصدير Excel
                 </button>
                 <label className="finance-desk-search" style={{ height: "32px" }}>
                   <Search size={14} />

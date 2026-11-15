@@ -38,6 +38,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import { getRoleDefinition } from "@/lib/roleNavigation";
+import { exportToCSV } from "@/lib/exportUtils";
 import type { RoleCode } from "@/contexts/RoleScopeContext";
 import {
   type Student,
@@ -526,11 +527,29 @@ function StudentPage() {
             <div className="welcome-actions">
               <button
                 className="button button-secondary"
-                onClick={() =>
-                  toast("تصدير ملف الطلاب متاح عند ربط البيانات الحقيقية")
-                }
+                onClick={() => {
+                  try {
+                    exportToCSV(
+                      students,
+                      [
+                        { header: "كود الطالب", accessor: s => s.id },
+                        { header: "اسم الطالب", accessor: s => s.name },
+                        { header: "اسم ولي الأمر", accessor: s => s.parentName },
+                        { header: "هاتف ولي الأمر", accessor: s => s.parentPhone },
+                        { header: "الفرع", accessor: s => s.branch },
+                        { header: "الكورس", accessor: s => s.course },
+                        { header: "الحالة", accessor: s => statusLabels[s.status] || s.status },
+                        { header: "تاريخ الانضمام", accessor: s => s.joined },
+                      ],
+                      "Mada_Students_Directory"
+                    );
+                    toast.success("تم تصدير كشف الطلاب كملف Excel بنجاح!");
+                  } catch (e: any) {
+                    toast.error(e.message || "تعذر تصدير القائمة");
+                  }
+                }}
               >
-                <ArrowDownToLine size={17} /> تصدير القائمة
+                <ArrowDownToLine size={17} /> تصدير القائمة (Excel)
               </button>
               <button
                 className="button button-primary"

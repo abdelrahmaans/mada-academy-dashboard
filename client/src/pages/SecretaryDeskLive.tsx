@@ -5,10 +5,12 @@ import {
   LifeBuoy,
   PhoneCall,
   Plus,
+  QrCode,
   Receipt,
   RefreshCw,
   Snowflake,
   Sparkles,
+  Tv,
   UserCheck,
   UserPlus,
   Users,
@@ -18,6 +20,7 @@ import { toast } from "sonner";
 import PageHeader from "@/components/PageHeader";
 import QuickActionsBar from "@/components/QuickActionsBar";
 import { QuickPaymentReceiptModal, QuickSupportTicketModal } from "@/components/QuickActionModals";
+import { ReceptionCheckInModal } from "@/components/ReceptionCheckInModal";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import { useAuth } from "@/contexts/AuthContext";
@@ -141,6 +144,7 @@ export default function SecretaryDeskLive() {
   const [serverShifts, setServerShifts] = useState<ShiftCashHandover[]>([]);
   const [evaluationReviews, setEvaluationReviews] = useState<EvaluationReviewRecord[]>([]);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [checkInModalOpen, setCheckInModalOpen] = useState(false);
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
 
   const branchName =
@@ -412,6 +416,16 @@ export default function SecretaryDeskLive() {
           description={`إدارة طلبات الالتحاق، ومتابعات أولياء الأمور، وتسجيل الطلاب الجدد في ${branchName} مباشرة في قاعدة البيانات.`}
           actions={
             <div className="secretary-top-actions">
+              <a
+                href="/lobby-display"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="button button-secondary"
+                style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                title="فتح شاشة الاستقبال وشاشات العرض الرقمية"
+              >
+                <Tv size={15} /> شاشة البهو (TV)
+              </a>
               <button
                 type="button"
                 className="button button-secondary"
@@ -434,7 +448,8 @@ export default function SecretaryDeskLive() {
         <RoleScopeCard className="secretary-scope-card" />
         <QuickActionsBar
           actions={[
-            { id: "r05-new-lead", label: "تسجيل استفسار جديد", icon: <Plus size={14} />, onClick: () => setNewLeadModalOpen(true), tone: "primary" },
+            { id: "r05-qr-checkin", label: "📲 مسح كود الحضور السريع (QR Scan)", icon: <QrCode size={14} />, onClick: () => setCheckInModalOpen(true), tone: "primary" },
+            { id: "r05-new-lead", label: "تسجيل استفسار جديد", icon: <Plus size={14} />, onClick: () => setNewLeadModalOpen(true) },
             { id: "r05-payment", label: "تسجيل دفعة اشتراك / إيصال فوري", icon: <Receipt size={14} />, onClick: () => setPaymentModalOpen(true) },
             { id: "r05-freeze", label: "طلب تجميد اشتراك", icon: <Snowflake size={14} />, onClick: () => setFreezeModalOpen(true) },
             { id: "r05-shift", label: "تقفيل عهدة الوردية", icon: <Wallet size={14} />, onClick: () => setShiftModalOpen(true) },
@@ -657,6 +672,12 @@ export default function SecretaryDeskLive() {
         onClose={() => setPaymentModalOpen(false)}
         branchName={branchName}
         onSuccess={() => setRefreshKey((k) => k + 1)}
+      />
+
+      <ReceptionCheckInModal
+        isOpen={checkInModalOpen}
+        onClose={() => setCheckInModalOpen(false)}
+        branchName={branchName}
       />
 
       <QuickSupportTicketModal

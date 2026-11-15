@@ -40,6 +40,7 @@ const AcademyBranches = lazy(() => import("./pages/AcademyBranches"));
 const AcademyClassrooms = lazy(() => import("./pages/AcademyClassrooms"));
 const AcademyAuditTrail = lazy(() => import("./pages/AcademyAuditTrail"));
 const Competitions = lazy(() => import("./pages/CompetitionsLive"));
+const LobbyDisplay = lazy(() => import("./pages/LobbyDisplay"));
 
 function FinanceRedirect() {
   return <Redirect to="/finance-desk" />;
@@ -143,6 +144,7 @@ function Router() {
       <WouterRouter base={basePath}>
         <Switch>
           {APP_ROUTES.map(([path, component]) => <Route key={path} path={path} component={component} />)}
+          <Route path="/lobby-display" component={LobbyDisplay} />
           <Route path="/verify-certificate/:code" component={CertificateVerify} />
           <Route path="/verify-certificate" component={CertificateVerify} />
           <Route path="/404" component={NotFound} />
