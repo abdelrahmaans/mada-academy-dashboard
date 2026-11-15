@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Archive,
   CalendarCheck,
   CalendarDays,
   LifeBuoy,
   RefreshCw,
+  Rocket,
   ShieldCheck,
   Star,
   UserCheck,
@@ -21,6 +23,9 @@ import { InstructorSessionsView } from "@/components/instructor/InstructorSessio
 import { InstructorSupervisionView } from "@/components/instructor/InstructorSupervisionView";
 import { InstructorAttendanceView } from "@/components/instructor/InstructorAttendanceView";
 import { InstructorEvaluationsView } from "@/components/instructor/InstructorEvaluationsView";
+import { SubmitProjectArchiveModal } from "@/components/competitions/SubmitProjectArchiveModal";
+import { ProjectArchiveTabView } from "@/components/competitions/ProjectArchiveTabView";
+import { getArchivedProjects } from "@/lib/projectArchiveStorage";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   apiClient,
@@ -95,6 +100,8 @@ export default function InstructorDeskLive() {
   const [rubrics, setRubrics] = useState<DisciplineRubric[]>([]);
   const [completionModalOpen, setCompletionModalOpen] = useState(false);
   const [substituteModalOpen, setSubstituteModalOpen] = useState(false);
+  const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [allStudents, setAllStudents] = useState<Array<{ id: string; fullName: string }>>([]);
 
   const loadSessions = useCallback(async () => {
     if (!me?.branchId || me.role !== "R04_INSTRUCTOR") {
@@ -138,6 +145,12 @@ export default function InstructorDeskLive() {
       if (sessionsResult.status === "rejected") throw sessionsResult.reason;
       const response = sessionsResult.value;
       setSessions(response.items);
+      try {
+        const studs = await apiClient.listStudents();
+        setAllStudents((studs.items || []).map((s) => ({ id: s.id, fullName: s.fullName })));
+      } catch {
+        // fallback
+      }
       setSelectedSessionId(current =>
         response.items.some(item => item.id === current)
           ? current
@@ -445,11 +458,17 @@ export default function InstructorDeskLive() {
           <QuickActionsBar
             actions={[
               {
+                id: "r04-archive-project",
+                label: "+ توثيق مشروع مسابقة للأرشيف (Drive)",
+                icon: <Archive size={14} />,
+                onClick: () => setProjectModalOpen(true),
+                tone: "primary",
+              },
+              {
                 id: "r04-substitute",
                 label: "طلب اعتذار / مدرب بديل لحصة",
                 icon: <UserCheck size={14} />,
                 onClick: () => toast.info("اختر الجلسة من جدولك أدناه ثم انقر على (طلب مدرب بديل)"),
-                tone: "primary",
               },
               {
                 id: "r04-ticket",
@@ -513,6 +532,13 @@ export default function InstructorDeskLive() {
               <ShieldCheck size={15} /> مراجعة التقييمات
             </button>
           )}
+          <button
+            type="button"
+            className={view === "projects" ? "active" : ""}
+            onClick={() => setView("projects")}
+          >
+            <Archive size={15} /> مشاريع المسابقات والأرشيف
+          </button>
         </nav>
         {loading && (
           <LoadingState label="جارٍ تحميل الجلسات المسندة…" compact />
@@ -560,6 +586,12 @@ export default function InstructorDeskLive() {
         )}
         {!loading && !error && view === "review" && canReadAssignedEvaluations && (
           <EvaluationReviewQueue />
+        )}
+        {!loading && !error && view === "projects" && (
+          <ProjectArchiveTabView
+            onOpenSubmitModal={() => setProjectModalOpen(true)}
+            canSubmit={true}
+          />
         )}
         {!loading &&
           !error &&
@@ -728,6 +760,19 @@ export default function InstructorDeskLive() {
             }}
           />
         )}
+
+        <SubmitProjectArchiveModal
+          isOpen={projectModalOpen}
+          onClose={() => setProjectModalOpen(false)}
+          onSuccess={() => {
+            setProjectModalOpen(false);
+          }}
+          defaultBranchName={branch || "الفرع الرئيسي"}
+          defaultBranchId={me?.branchId || "branch-main"}
+          defaultCoachName={me?.user?.displayName || "كوتش الأكاديمية"}
+          defaultCoachRole="المدرب"
+          availableStudents={allStudents}
+        />
       </main>
       <QuickSupportTicketModal
         isOpen={ticketModalOpen}

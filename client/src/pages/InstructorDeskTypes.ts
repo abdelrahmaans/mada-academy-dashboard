@@ -1,6 +1,6 @@
 import type { AttendanceItem } from "@/lib/apiClient";
 
-export type InstructorView = "sessions" | "attendance" | "evaluations" | "supervision" | "review";
+export type InstructorView = "sessions" | "attendance" | "evaluations" | "supervision" | "review" | "projects";
 export type AttendanceStatus = "PRESENT" | "LATE" | "ABSENT" | "EXCUSED" | "UNMARKED";
 export type AttendanceDraft = { status: AttendanceStatus; lateMinutes: number | null };
 

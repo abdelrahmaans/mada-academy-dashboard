@@ -2,16 +2,20 @@ import React, { useEffect, useState } from "react";
 import {
   Activity,
   AlertCircle,
+  Archive,
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
   Clock,
+  Cloud,
   CreditCard,
+  ExternalLink,
   Loader2,
   Plus,
   Printer,
   Receipt,
   RefreshCw,
+  Rocket,
   ShieldCheck,
   Smartphone,
   Snowflake,
@@ -36,6 +40,7 @@ import {
   FinancialPrintModal,
   type FinancialPrintData,
 } from "@/components/finance/FinancialPrintModal";
+import { getStudentProjects } from "@/lib/projectArchiveStorage";
 
 export function ChildOverview({
   child,
@@ -50,6 +55,8 @@ export function ChildOverview({
   const latestEvaluationValue = latestEvaluation?.score == null
     ? "غير متاح"
     : `${(latestEvaluation.score / 20).toFixed(1)} / 5`;
+
+  const studentProjects = getStudentProjects(child.name || child.id);
 
   return (
     <>
@@ -154,6 +161,120 @@ export function ChildOverview({
           )}
         </section>
       </div>
+
+      {studentProjects.length > 0 && (
+        <section className="consumer-panel" style={{ marginTop: "16px" }}>
+          <div className="consumer-panel-header">
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Rocket size={18} color="#0f766e" />
+              <h2>مشاريع وإنجازات الروبوتكس الموثقة ({studentProjects.length} مشاريع)</h2>
+            </div>
+            <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
+              أرشيف الأكاديمية للمسابقات والمخرجات
+            </span>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "14px" }}>
+            {studentProjects.map((proj) => {
+              const myRole = proj.students.find(
+                (s) =>
+                  s.studentId.toLowerCase() === child.id.toLowerCase() ||
+                  s.studentName.toLowerCase().includes(child.name.toLowerCase()) ||
+                  child.name.toLowerCase().includes(s.studentName.toLowerCase())
+              )?.roleInTeam;
+
+              return (
+                <article
+                  key={proj.id}
+                  style={{
+                    background: "#ffffff",
+                    border: "1px solid #ccfbf1",
+                    borderRadius: "12px",
+                    padding: "16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "10px",
+                    boxShadow: "0 2px 8px rgba(15, 118, 110, 0.05)",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "20px" }}>{proj.teamBadge || "🤖"}</span>
+                      <div>
+                        <strong style={{ fontSize: "0.95rem", color: "#0f172a", display: "block" }}>
+                          فريق {proj.teamName}
+                        </strong>
+                        <small style={{ color: "#64748b", fontSize: "0.78rem" }}>
+                          {proj.competitionName}
+                        </small>
+                      </div>
+                    </div>
+                    {proj.award && (
+                      <span
+                        style={{
+                          background: "#fef3c7",
+                          color: "#92400e",
+                          border: "1px solid #fde68a",
+                          padding: "2px 6px",
+                          borderRadius: "4px",
+                          fontSize: "0.72rem",
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {proj.award}
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    <h4 style={{ margin: "0 0 4px 0", fontSize: "0.9rem", color: "#0f766e" }}>
+                      {proj.projectTitle}
+                    </h4>
+                    <p style={{ margin: 0, fontSize: "0.8rem", color: "#475569", lineHeight: "1.5" }}>
+                      {proj.projectDescription}
+                    </p>
+                  </div>
+
+                  {myRole && (
+                    <div style={{ fontSize: "0.8rem", color: "#334155" }}>
+                      <span>دور الطالب في الفريق: </span>
+                      <b style={{ color: "#0d9488" }}>{myRole}</b>
+                    </div>
+                  )}
+
+                  <div style={{ marginTop: "auto", paddingTop: "8px", borderTop: "1px dashed #e2e8f0" }}>
+                    <a
+                      href={proj.driveUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        fontSize: "0.82rem",
+                        color: "#0f766e",
+                        fontWeight: 700,
+                        textDecoration: "none",
+                        background: "#f0fdfa",
+                        border: "1px solid #99f6e4",
+                        padding: "6px 12px",
+                        borderRadius: "6px",
+                        width: "100%",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Cloud size={14} />
+                      <span>عرض ملفات وفيديوهات الروبوت (Drive)</span>
+                      <ExternalLink size={12} />
+                    </a>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
     </>
   );
 }

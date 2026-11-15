@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
+  Archive,
   ChevronLeft,
   CircleAlert,
   Compass,
@@ -43,8 +44,11 @@ import {
   RecordAwardModal,
   CompetitionsSocialCardModal,
 } from "@/components/competitions/CompetitionsModals";
+import { SubmitProjectArchiveModal } from "@/components/competitions/SubmitProjectArchiveModal";
+import { ProjectArchiveTabView } from "@/components/competitions/ProjectArchiveTabView";
+import { getArchivedProjects } from "@/lib/projectArchiveStorage";
 
-type TabType = "TOURNAMENTS" | "TEAMS" | "HALL_OF_FAME";
+type TabType = "TOURNAMENTS" | "TEAMS" | "HALL_OF_FAME" | "PROJECTS_ARCHIVE";
 
 const ROLE_CODE_BY_ROLE: Record<string, RoleCode> = {
   R01_ACADEMY_OWNER: "R01",
@@ -71,6 +75,8 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [showAwardModal, setShowAwardModal] = useState(false);
+  const [showProjectModal, setShowProjectModal] = useState(false);
+  const [archiveProjectsCount, setArchiveProjectsCount] = useState(() => getArchivedProjects().length);
 
   const [activeTeamForMember, setActiveTeamForMember] = useState<CompetitionTeamItem | null>(null);
   const [activeTeamForAward, setActiveTeamForAward] = useState<CompetitionTeamItem | null>(null);
@@ -379,6 +385,15 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
             <button
               type="button"
               className="comp-btn-primary"
+              onClick={() => setShowProjectModal(true)}
+              style={{ background: "#0f766e" }}
+            >
+              <Archive size={16} />
+              <span>توثيق مشروع للأرشيف (Drive)</span>
+            </button>
+            <button
+              type="button"
+              className="comp-btn-secondary"
               onClick={() => setShowCompModal(true)}
             >
               <Plus size={16} />
@@ -464,6 +479,15 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
             <Sparkles size={16} color="#d97706" />
             <span>لوحة الشرف الذهبية (Hall of Fame)</span>
             <span className="comp-tab-pill">{hallOfFame.length}</span>
+          </button>
+          <button
+            type="button"
+            className={`comp-tab-btn ${activeTab === "PROJECTS_ARCHIVE" ? "active" : ""}`}
+            onClick={() => setActiveTab("PROJECTS_ARCHIVE")}
+          >
+            <Archive size={16} color="#0f766e" />
+            <span>أرشيف مشاريع الفرق والمسابقات (Drive)</span>
+            <span className="comp-tab-pill">{archiveProjectsCount}</span>
           </button>
         </div>
 
@@ -869,6 +893,14 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
           </div>
         )}
 
+        {/* TAB 4: PROJECTS ARCHIVE */}
+        {activeTab === "PROJECTS_ARCHIVE" && (
+          <ProjectArchiveTabView
+            onOpenSubmitModal={() => setShowProjectModal(true)}
+            canSubmit={true}
+          />
+        )}
+
         {/* MODALS */}
         <CreateCompetitionModal
           isOpen={showCompModal}
@@ -944,6 +976,20 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
           isOpen={showSocialModal}
           award={selectedAwardForShare}
           onClose={() => setShowSocialModal(false)}
+        />
+
+        <SubmitProjectArchiveModal
+          isOpen={showProjectModal}
+          onClose={() => setShowProjectModal(false)}
+          onSuccess={() => {
+            setArchiveProjectsCount(getArchivedProjects().length);
+          }}
+          defaultBranchName={me?.branches?.[0]?.name || "الفرع الرئيسي"}
+          defaultBranchId={me?.branches?.[0]?.id || "branch-main"}
+          defaultCoachName={me?.user?.displayName || "كوتش الأكاديمية"}
+          defaultCoachRole={roleDefinition.label}
+          competitionsList={competitions.map((c) => ({ id: c.id, name: c.name }))}
+          availableStudents={studentsList}
         />
       </div>
     </RoleDashboardShell>
