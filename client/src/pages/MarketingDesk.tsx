@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Clock,
   Compass,
+  Eye,
   FileDown,
   FileText,
   Filter,
@@ -29,6 +30,7 @@ import RoleDashboardShell from "@/components/RoleDashboardShell";
 import PageHeader from "@/components/PageHeader";
 import QuickActionsBar from "@/components/QuickActionsBar";
 import { QuickSupportTicketModal } from "@/components/QuickActionModals";
+import { LeadDetailsModal } from "@/components/marketing/LeadDetailsModal";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -97,6 +99,7 @@ export default function MarketingDesk() {
   const [contentModalOpen, setContentModalOpen] = useState(false);
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [detailsModalLead, setDetailsModalLead] = useState<LeadRecord | null>(null);
 
   // Forms
   const [childName, setChildName] = useState("");
@@ -623,11 +626,22 @@ export default function MarketingDesk() {
                     return (
                       <article key={lead.id} className="marketing-lead-card">
                         <div className="marketing-lead-primary">
-                          <div className="marketing-lead-avatar">
+                          <div
+                            className="marketing-lead-avatar"
+                            style={{ cursor: "pointer" }}
+                            onClick={() => setDetailsModalLead(lead)}
+                            title="عرض تفاصيل الـ Lead الكاملة"
+                          >
                             {lead.childName ? lead.childName.trim().charAt(0) : "ط"}
                           </div>
                           <div className="marketing-lead-meta">
-                            <strong>{lead.childName}</strong>
+                            <strong
+                              style={{ cursor: "pointer" }}
+                              onClick={() => setDetailsModalLead(lead)}
+                              title="عرض تفاصيل الـ Lead الكاملة"
+                            >
+                              {lead.childName}
+                            </strong>
                             <span>
                               <span>ولي الأمر: {lead.parentName}</span>
                               <span>·</span>
@@ -686,6 +700,15 @@ export default function MarketingDesk() {
                         </div>
 
                         <div className="marketing-lead-actions">
+                          <button
+                            type="button"
+                            className="lead-action-btn"
+                            onClick={() => setDetailsModalLead(lead)}
+                            title="عرض تفاصيل وسجل العميل"
+                          >
+                            <Eye size={14} /> تفاصيل
+                          </button>
+
                           <button
                             type="button"
                             className="lead-action-btn"
@@ -1352,6 +1375,28 @@ export default function MarketingDesk() {
           </div>
         </div>
       )}
+
+      {/* LEAD FULL DETAILS MODAL */}
+      <LeadDetailsModal
+        isOpen={Boolean(detailsModalLead)}
+        lead={detailsModalLead}
+        onClose={() => setDetailsModalLead(null)}
+        branchName={detailsModalLead ? branchName(detailsModalLead.branchId) : undefined}
+        onScheduleInterview={(lead) => {
+          setDetailsModalLead(null);
+          handleScheduleInterview(lead);
+        }}
+        onMarkReadyForIntake={(lead) => {
+          setDetailsModalLead(null);
+          void handleMarkReadyForIntake(lead);
+        }}
+        onAddNote={async (lead, note) => {
+          await handleUpdateLeadStatus(lead, lead.status, note);
+          setDetailsModalLead((prev) =>
+            prev ? { ...prev, notes: prev.notes ? `${prev.notes} | ${note}` : note } : null
+          );
+        }}
+      />
 
       {/* QUICK SUPPORT TICKET MODAL */}
       <QuickSupportTicketModal

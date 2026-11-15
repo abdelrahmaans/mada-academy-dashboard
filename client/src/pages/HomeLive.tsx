@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Activity, ArrowLeft, BookOpen, CalendarDays, CheckCircle2, LifeBuoy, Menu, Receipt, RefreshCw, UserPlus, Users } from "lucide-react";
+import { Activity, ArrowLeft, BookOpen, CalendarDays, CheckCircle2, Clock, Eye, LifeBuoy, MapPin, Menu, Receipt, RefreshCw, UserPlus, Users, X } from "lucide-react";
 import { useLocation } from "wouter";
 import PageHeader from "@/components/PageHeader";
 import QuickActionsBar from "@/components/QuickActionsBar";
@@ -19,6 +19,12 @@ export default function HomeLive({ me }: { me: AuthMe }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
+  const [selectedSessionForDetails, setSelectedSessionForDetails] = useState<{
+    id: string;
+    sessionNumber: number;
+    startAt: string;
+    status: string;
+  } | null>(null);
   const branchName = me.branches?.find(branch => branch.id === me.branchId)?.name ?? "الفرع المحدد";
 
   useEffect(() => {
@@ -100,7 +106,32 @@ export default function HomeLive({ me }: { me: AuthMe }) {
 
           <section className="r02-live-panel">
             <div className="r02-live-panel-heading"><div><h2>الجلسات القادمة</h2><p>{branchName} · أقرب الجلسات المسجلة</p></div><span>{summary.upcoming.length} جلسات</span></div>
-            {summary.upcoming.length === 0 ? <div className="r02-live-empty">لا توجد جلسات قادمة مسجلة لهذا الفرع.</div> : <div className="r02-live-session-list">{summary.upcoming.map(session => <article key={session.id} className="r02-live-session"><span className="r02-live-session-icon"><CalendarDays size={17} /></span><div><strong>الجلسة رقم {session.sessionNumber}</strong><small>{formatSessionTime(session.startAt)}</small></div><span className="r02-live-session-status">{sessionStatusLabel(session.status)}</span></article>)}</div>}
+            {summary.upcoming.length === 0 ? (
+              <div className="r02-live-empty">لا توجد جلسات قادمة مسجلة لهذا الفرع.</div>
+            ) : (
+              <div className="r02-live-session-list">
+                {summary.upcoming.map((session) => (
+                  <article
+                    key={session.id}
+                    className="r02-live-session"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => setSelectedSessionForDetails(session)}
+                    title="انقر لعرض تفاصيل الجلسة"
+                  >
+                    <span className="r02-live-session-icon">
+                      <CalendarDays size={17} />
+                    </span>
+                    <div>
+                      <strong>الجلسة رقم {session.sessionNumber}</strong>
+                      <small>{formatSessionTime(session.startAt)}</small>
+                    </div>
+                    <span className="r02-live-session-status">
+                      {sessionStatusLabel(session.status)}
+                    </span>
+                  </article>
+                ))}
+              </div>
+            )}
           </section>
         </>}
       </div>
@@ -116,6 +147,78 @@ export default function HomeLive({ me }: { me: AuthMe }) {
       onClose={() => setTicketModalOpen(false)}
       roleLabel="مدير الفرع · R02"
     />
+    {selectedSessionForDetails && (
+      <div
+        className="dialog-backdrop"
+        role="presentation"
+        onClick={() => setSelectedSessionForDetails(null)}
+      >
+        <div
+          className="dialog"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: "500px", width: "100%", padding: "24px", direction: "rtl" }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
+            <div>
+              <span style={{ fontSize: "12px", color: "#0d9488", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                <CalendarDays size={14} /> تفاصيل الجلسة التدريبية
+              </span>
+              <h3 style={{ margin: "4px 0 0", fontSize: "18px", fontWeight: 800 }}>
+                الجلسة رقم {selectedSessionForDetails.sessionNumber}
+              </h3>
+            </div>
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={() => setSelectedSessionForDetails(null)}
+              style={{ padding: "6px" }}
+              aria-label="إغلاق"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          <div style={{ display: "grid", gap: "12px", background: "#f8fafc", padding: "16px", borderRadius: "12px", marginBottom: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
+              <span style={{ color: "#64748b" }}>توقيت الانعقاد:</span>
+              <strong style={{ color: "#0f172a" }}>{formatSessionTime(selectedSessionForDetails.startAt)}</strong>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
+              <span style={{ color: "#64748b" }}>حالة الجلسة:</span>
+              <span className="r02-live-session-status">
+                {sessionStatusLabel(selectedSessionForDetails.status)}
+              </span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
+              <span style={{ color: "#64748b" }}>الفرع المخصص:</span>
+              <strong style={{ color: "#0f172a" }}>{branchName}</strong>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+            <button
+              type="button"
+              className="button button-primary"
+              onClick={() => {
+                setSelectedSessionForDetails(null);
+                navigate("/schedule");
+              }}
+            >
+              <CalendarDays size={15} /> الانتقال إلى جدول الحصص
+            </button>
+            <button
+              type="button"
+              className="button button-secondary"
+              onClick={() => setSelectedSessionForDetails(null)}
+            >
+              إغلاق
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
   </RoleDashboardShell>;
 }
 

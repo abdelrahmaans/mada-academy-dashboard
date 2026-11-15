@@ -4,6 +4,7 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
+  Eye,
   Layers,
   MapPin,
   Search,
@@ -13,19 +14,23 @@ import {
   Users,
 } from "lucide-react";
 import type { SchedulingGroupRecord } from "@/lib/apiClient";
+import { SecretaryGroupDetailsModal } from "@/components/classes/SecretaryGroupDetailsModal";
 
 export interface SecretaryGroupsTabProps {
   groups: SchedulingGroupRecord[];
   onDirectRegister: (offeringId?: string) => void;
+  onOpenBroadcast?: (group: SchedulingGroupRecord) => void;
 }
 
 export function SecretaryGroupsTab({
   groups,
   onDirectRegister,
+  onOpenBroadcast,
 }: SecretaryGroupsTabProps) {
   const [search, setSearch] = useState("");
   const [trackFilter, setTrackFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [selectedGroupForDetails, setSelectedGroupForDetails] = useState<SchedulingGroupRecord | null>(null);
 
   const tracks = useMemo(() => {
     const list = Array.from(new Set(groups.map((g) => g.track).filter(Boolean)));
@@ -204,7 +209,11 @@ export function SecretaryGroupsTab({
                   <span style={{ fontSize: "11px", fontWeight: 700, color: "#0d9488", display: "inline-flex", alignItems: "center", gap: "4px" }}>
                     <BookOpen size={13} /> {g.track || "مسار عام"}
                   </span>
-                  <h4 style={{ margin: "4px 0 2px", fontSize: "15px", fontWeight: 800, color: "#0f172a" }}>
+                  <h4
+                    style={{ margin: "4px 0 2px", fontSize: "15px", fontWeight: 800, color: "#0f172a", cursor: "pointer" }}
+                    onClick={() => setSelectedGroupForDetails(g)}
+                    title="انقر لعرض تفاصيل المجموعة والطلاب"
+                  >
                     {g.courseName}
                   </h4>
                   <small style={{ color: "#64748b", fontSize: "11px" }}>
@@ -270,6 +279,24 @@ export function SecretaryGroupsTab({
               <div style={{ marginTop: "auto", display: "flex", gap: "8px", paddingTop: "8px", borderTop: "1px solid #f1f5f9" }}>
                 <button
                   type="button"
+                  className="button button-secondary"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "5px",
+                    padding: "8px 12px",
+                    fontSize: "12px",
+                  }}
+                  onClick={() => setSelectedGroupForDetails(g)}
+                  title="عرض تفاصيل المجموعة وقائمة الطلاب"
+                >
+                  <Eye size={14} />
+                  <span>تفاصيل</span>
+                </button>
+
+                <button
+                  type="button"
                   className="button button-primary"
                   style={{
                     flex: 1,
@@ -309,6 +336,14 @@ export function SecretaryGroupsTab({
           </div>
         )}
       </div>
+
+      <SecretaryGroupDetailsModal
+        isOpen={Boolean(selectedGroupForDetails)}
+        group={selectedGroupForDetails}
+        onClose={() => setSelectedGroupForDetails(null)}
+        onDirectRegister={onDirectRegister}
+        onOpenBroadcast={onOpenBroadcast}
+      />
     </section>
   );
 }

@@ -567,6 +567,7 @@ export default function SecretaryDeskLive() {
         {activeTab === "groups" && (
           <SecretaryGroupsTab
             groups={groups}
+            onOpenBroadcast={() => setBroadcastModalOpen(true)}
             onDirectRegister={(offeringId) => {
               if (offeringId) {
                 setDirectRegistration((cur) => ({ ...cur, courseOfferingId: offeringId }));
