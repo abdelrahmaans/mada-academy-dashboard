@@ -15,6 +15,21 @@ describe("formatAuditAction", () => {
     expect(result).toEqual({ label: "إضافة ملف طالب جديد", tone: "students" });
   });
 
+  test("returns mapped label for newly added actions", () => {
+    expect(formatAuditAction("PROJECT_ARCHIVED")).toEqual({
+      label: "أرشفة وتوثيق مشروع مسابقة",
+      tone: "system",
+    });
+    expect(formatAuditAction("SHIFT_RECONCILED")).toEqual({
+      label: "جرد ومطابقة نقدية الوردية",
+      tone: "finance",
+    });
+    expect(formatAuditAction("WHATSAPP_BROADCAST_SENT")).toEqual({
+      label: "إرسال رسائل جماعية للطلاب عبر واتساب",
+      tone: "marketing",
+    });
+  });
+
   test("fallback for unknown action", () => {
     const result = formatAuditAction("UNKNOWN_ACTION");
     expect(result.label).toContain("إجراء:");

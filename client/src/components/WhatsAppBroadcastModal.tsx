@@ -40,6 +40,54 @@ interface Props {
   branchName?: string;
 }
 
+export function sanitizeBroadcastPhone(raw: string): string {
+  let p = raw.replace(/\D/g, "");
+  if (p.startsWith("0")) p = "2" + p;
+  if (!p.startsWith("20") && p.length === 10) p = "20" + p;
+  return p;
+}
+
+export function formatBroadcastMessage(
+  templateType: "SESSION_REMINDER" | "ABSENCE" | "INSTALLMENT" | "CUSTOM",
+  st: BroadcastStudent,
+  options?: { activeGroup?: string; branchName?: string; customMessage?: string }
+): string {
+  const activeGroup = options?.activeGroup || "مجموعة الروبوتكس";
+  const branchName = options?.branchName || "الفرع الرئيسي";
+
+  if (templateType === "SESSION_REMINDER") {
+    return `مرحباً ${st.parentName}،
+تحية طيبة من أكاديمية مدى للروبوتكس 🤖
+نود تذكيركم بموعد الحصة القادمة للطالب البطل *${st.studentName}* في مجموعة (${st.groupName || activeGroup}) بفرع ${st.branchName || branchName}.
+يرجى الحضور قبل الموعد بـ 10 دقائق لضمان تجهيز حقيبة الروبوت.
+نتمنى له حصة مليئة بالابتكار والإبداع! ✨`;
+  }
+
+  if (templateType === "ABSENCE") {
+    return `مرحباً ${st.parentName}،
+تحية طيبة من أكاديمية مدى للروبوتكس.
+نحيطكم علماً بغياب الطالب المتميز *${st.studentName}* عن حصة اليوم.
+حرصاً على مستواه الأكاديمي واستمرار تسلسل المشروعات، يرجى التواصل مع إدارة الفرع لتحديد موعد حصة التعويض المجانية.
+دمتم ودام أبناؤنا بخير 🌟`;
+  }
+
+  if (templateType === "INSTALLMENT") {
+    return `مرحباً ${st.parentName}،
+تحية طيبة من إدارة الحسابات بأكاديمية مدى للروبوتكس.
+نود تذكيركم بحلول موعد سداد القسط الأكاديمي للطالب *${st.studentName}*.
+يمكنكم السداد في مقر الفرع أو إلكترونياً عبر تطبيق إنستاباي أو المحافظ الإلكترونية.
+شاكرين لكم حسن تعاونكم الدائم معنا 🌸`;
+  }
+
+  // Custom
+  let text = options?.customMessage || "إشعار هام من أكاديمية مدى للروبوتكس لأولياء الأمور الكرام.";
+  text = text.replace(/\{student\}/g, st.studentName);
+  text = text.replace(/\{parent\}/g, st.parentName);
+  text = text.replace(/\{group\}/g, st.groupName || activeGroup);
+  text = text.replace(/\{branch\}/g, st.branchName || branchName);
+  return text;
+}
+
 export function WhatsAppBroadcastModal({
   isOpen,
   onClose,
@@ -124,46 +172,15 @@ export function WhatsAppBroadcastModal({
     return availableGroups.find((g) => g.id === selectedGroupId)?.name || "مجموعة الروبوتكس";
   }, [availableGroups, selectedGroupId]);
 
-  const sanitizePhone = (raw: string) => {
-    let p = raw.replace(/\D/g, "");
-    if (p.startsWith("0")) p = "2" + p;
-    if (!p.startsWith("20") && p.length === 10) p = "20" + p;
-    return p;
-  };
-
   const getPersonalizedMessage = (st: BroadcastStudent) => {
-    if (templateType === "SESSION_REMINDER") {
-      return `مرحباً ${st.parentName}،
-تحية طيبة من أكاديمية مدى للروبوتكس 🤖
-نود تذكيركم بموعد الحصة القادمة للطالب البطل *${st.studentName}* في مجموعة (${st.groupName || activeGroup}) بفرع ${st.branchName || branchName}.
-يرجى الحضور قبل الموعد بـ 10 دقائق لضمان تجهيز حقيبة الروبوت.
-نتمنى له حصة مليئة بالابتكار والإبداع! ✨`;
-    }
-
-    if (templateType === "ABSENCE") {
-      return `مرحباً ${st.parentName}،
-تحية طيبة من أكاديمية مدى للروبوتكس.
-نحيطكم علماً بغياب الطالب المتميز *${st.studentName}* عن حصة اليوم.
-حرصاً على مستواه الأكاديمي واستمرار تسلسل المشروعات، يرجى التواصل مع إدارة الفرع لتحديد موعد حصة التعويض المجانية.
-دمتم ودام أبناؤنا بخير 🌟`;
-    }
-
-    if (templateType === "INSTALLMENT") {
-      return `مرحباً ${st.parentName}،
-تحية طيبة من إدارة الحسابات بأكاديمية مدى للروبوتكس.
-نود تذكيركم بحلول موعد سداد القسط الأكاديمي للطالب *${st.studentName}*.
-يمكنكم السداد في مقر الفرع أو إلكترونياً عبر تطبيق إنستاباي أو المحافظ الإلكترونية.
-شاكرين لكم حسن تعاونكم الدائم معنا 🌸`;
-    }
-
-    // Custom
-    let text = customMessage || "إشعار هام من أكاديمية مدى للروبوتكس لأولياء الأمور الكرام.";
-    text = text.replace(/\{student\}/g, st.studentName);
-    text = text.replace(/\{parent\}/g, st.parentName);
-    text = text.replace(/\{group\}/g, st.groupName || activeGroup);
-    text = text.replace(/\{branch\}/g, st.branchName || branchName);
-    return text;
+    return formatBroadcastMessage(templateType, st, {
+      activeGroup,
+      branchName,
+      customMessage,
+    });
   };
+
+  const sanitizePhone = sanitizeBroadcastPhone;
 
   if (!isOpen) return null;
 

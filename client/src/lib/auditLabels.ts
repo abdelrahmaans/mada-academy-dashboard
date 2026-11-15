@@ -48,6 +48,8 @@ export const AUDIT_ACTION_MAP: Record<string, AuditActionDefinition> = {
   SUPERVISION_ASSIGNMENT_GRANTED: { label: "إسناد إشراف أكاديمي", tone: "system" },
   SUPERVISION_ASSIGNMENT_REVOKED: { label: "إلغاء إشراف أكاديمي", tone: "system" },
   SESSION_COMPLETED: { label: "إتمام جلسة تدريبية وتسجيل الحضور", tone: "system" },
+  PROJECT_ARCHIVED: { label: "أرشفة وتوثيق مشروع مسابقة", tone: "system" },
+  SHIFT_RECONCILED: { label: "جرد ومطابقة نقدية الوردية", tone: "finance" },
   SESSION_CANCELLED: { label: "إلغاء جلسة تدريبية", tone: "system" },
   EVALUATION_REVIEW_REQUESTED: { label: "طلب مراجعة تقييم طالب", tone: "system" },
   EVALUATION_APPROVED: { label: "اعتماد ونشر تقييم طالب", tone: "system" },
@@ -58,6 +60,7 @@ export const AUDIT_ACTION_MAP: Record<string, AuditActionDefinition> = {
   LEAD_CREATED: { label: "تسجيل عميل محتمل جديد (Lead)", tone: "marketing" },
   LEAD_STATUS_UPDATED: { label: "تحديث حالة متابعة العميل", tone: "marketing" },
   LEAD_CONVERTED: { label: "تحويل العميل إلى طالب مسجل", tone: "marketing" },
+  WHATSAPP_BROADCAST_SENT: { label: "إرسال رسائل جماعية للطلاب عبر واتساب", tone: "marketing" },
   SUPPORT_TICKET_CREATED: { label: "تسجيل تذكرة دعم واستفسار", tone: "system" },
   SUPPORT_TICKET_RESOLVED: { label: "إغلاق ومعالجة تذكرة الدعم", tone: "system" },
 };
@@ -72,6 +75,9 @@ export const AUDIT_TARGET_TYPE_MAP: Record<string, string> = {
   INVOICE: "فاتورة مالية",
   PAYMENT: "سند قبض",
   EXPENSE: "سند صرف",
+  SHIFT: "وردية الخزينة",
+  PROJECT: "مشروع مسابقة",
+  BROADCAST: "رسائل جماعية",
   SUPERVISION: "إشراف أكاديمي",
   FREEZE: "طلب تجميد",
   SESSION: "جلسة تدريبية",
@@ -252,25 +258,6 @@ export function formatFinancialCode(
   if (invoiceLongMatch) {
     const [, branch, , seq] = invoiceLongMatch;
     return `فاتورة #MAD-${branch.slice(0, 4)}-${seq}`;
-  }
-
-  // Standard UUID or hex ID
-  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)) {
-    const shortCode = str.slice(-4).toUpperCase();
-    switch (kind) {
-      case "shift":
-        return `وردية #${shortCode}`;
-      case "payment":
-        return `سند #${shortCode}`;
-      case "expense":
-        return `مصروف #${shortCode}`;
-      case "invoice":
-        return `فاتورة #${shortCode}`;
-      case "payroll":
-        return `مسير #${shortCode}`;
-      default:
-        return `كود #${shortCode}`;
-    }
   }
 
   if (str.length > 16) {

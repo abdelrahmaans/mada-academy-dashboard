@@ -31,6 +31,34 @@ export interface PrintableShiftData {
   notes?: string;
 }
 
+export interface ShiftReconciliationSummary {
+  totalCollected: number;
+  counted: number;
+  difference: number;
+  differenceStatus: "BALANCED" | "SURPLUS" | "DEFICIT";
+  cashTafqeet: string;
+  totalTafqeet: string;
+}
+
+export function calculateShiftReconciliationSummary(shift: PrintableShiftData): ShiftReconciliationSummary {
+  const totalCollected = shift.cashAmount + shift.electronicAmount;
+  const counted = shift.countedCash ?? shift.cashAmount;
+  const diff = shift.difference ?? (counted - shift.cashAmount);
+
+  let differenceStatus: "BALANCED" | "SURPLUS" | "DEFICIT" = "BALANCED";
+  if (diff > 0) differenceStatus = "SURPLUS";
+  else if (diff < 0) differenceStatus = "DEFICIT";
+
+  return {
+    totalCollected,
+    counted,
+    difference: diff,
+    differenceStatus,
+    cashTafqeet: tafqeet(shift.cashAmount),
+    totalTafqeet: tafqeet(totalCollected),
+  };
+}
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
