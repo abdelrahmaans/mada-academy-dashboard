@@ -17,6 +17,10 @@ import {
 import type { ShiftCashHandover } from "@/lib/apiClient";
 import { formatFinancialCode } from "@/lib/auditLabels";
 import { Kpi, PanelTitle, money } from "./FinanceShared";
+import {
+  ShiftReconciliationPrintModal,
+  type PrintableShiftData,
+} from "./ShiftReconciliationPrintModal";
 
 export function ShiftsView({
   handovers,
@@ -29,6 +33,7 @@ export function ShiftsView({
 }) {
   const [selectedShiftForDetails, setSelectedShiftForDetails] = useState<ShiftCashHandover | null>(null);
   const [handoverNoteInput, setHandoverNoteInput] = useState<string>("تم استلام النقدية بالكامل ومطابقة السندات مع الدرج");
+  const [printShift, setPrintShift] = useState<PrintableShiftData | null>(null);
 
   const pendingTotalCash = handovers
     .filter(h => h.status === "SUBMITTED")
@@ -147,6 +152,41 @@ export function ShiftsView({
                     }}
                   >
                     <Eye size={14} /> عرض تفاصيل الوردية والسندات
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPrintShift({
+                        shiftId: shift.id,
+                        shiftName: shift.shiftName,
+                        shiftDate: shift.shiftDate,
+                        branchName: shift.branchName || "الفرع الرئيسي",
+                        cashierName: shift.submittedByName || "مسؤول الاستقبال",
+                        cashAmount: shift.cashAmount,
+                        electronicAmount: shift.electronicAmount,
+                        totalReceiptsCount: shift.totalReceiptsCount || 0,
+                        status: shift.status,
+                        receivedByName: shift.receivedByName,
+                        receivedAt: shift.receivedAt,
+                        notes: shift.notes,
+                      })
+                    }
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: "8px",
+                      fontSize: "0.8rem",
+                      fontWeight: 600,
+                      background: "#f0fdfa",
+                      color: "#0f766e",
+                      border: "1px solid #99f6e4",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "5px",
+                    }}
+                  >
+                    <Printer size={14} /> طباعة السند (A4)
                   </button>
 
                   {isPending && (
@@ -361,6 +401,12 @@ export function ShiftsView({
           </div>
         </div>
       )}
+
+      <ShiftReconciliationPrintModal
+        isOpen={Boolean(printShift)}
+        onClose={() => setPrintShift(null)}
+        shift={printShift}
+      />
     </section>
   );
 }

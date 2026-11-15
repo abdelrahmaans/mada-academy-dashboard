@@ -1,0 +1,304 @@
+/* WhatsApp Broadcast Modal Styles */
+.whatsapp-broadcast-backdrop {
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.whatsapp-broadcast-dialog {
+  max-width: 900px !important;
+  width: 96% !important;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  padding: 20px !important;
+  background: #ffffff;
+}
+
+.whatsapp-broadcast-icon-box {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.whatsapp-broadcast-body {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  padding-left: 4px;
+}
+
+/* Category & Controls Strip */
+.broadcast-controls-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.broadcast-category-selector {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.broadcast-cat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.broadcast-cat-pill.active {
+  background: #15803d;
+  color: #ffffff;
+  border-color: #15803d;
+}
+
+.broadcast-group-select {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 12px;
+  background: #ffffff;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* Two-Column Grid */
+.broadcast-grid-layout {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .broadcast-grid-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Students List Panel */
+.broadcast-students-panel {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  overflow: hidden;
+  max-height: 420px;
+}
+
+.broadcast-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.broadcast-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.broadcast-students-list {
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.broadcast-student-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s ease;
+}
+
+.broadcast-student-row:hover {
+  background: #f8fafc;
+}
+
+.broadcast-student-row.selected {
+  background: #f0fdf4;
+}
+
+.broadcast-student-row.sent {
+  opacity: 0.8;
+  background: #f8fafc;
+}
+
+.broadcast-st-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.broadcast-st-name {
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.broadcast-st-parent {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.broadcast-single-send-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #15803d;
+  color: #ffffff;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.broadcast-single-send-btn:hover {
+  background: #166534;
+}
+
+.broadcast-sent-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #15803d;
+  font-weight: 700;
+}
+
+/* Message & Templates Panel */
+.broadcast-message-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.broadcast-templates-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 6px;
+}
+
+.broadcast-templates-tabs button {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.broadcast-templates-tabs button.active {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+/* Chat Preview */
+.broadcast-preview-card {
+  border: 1px solid #dcfce7;
+  border-radius: 12px;
+  background: #f0fdf4;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.broadcast-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #166534;
+}
+
+.whatsapp-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+
+.broadcast-chat-bubble {
+  background: #ffffff;
+  border-radius: 12px 0 12px 12px;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.chat-bubble-time {
+  display: block;
+  text-align: left;
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 6px;
+}
+
+/* Dispatch Actions */
+.broadcast-dispatch-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.broadcast-send-next-btn {
+  background: #15803d !important;
+  color: #ffffff !important;
+  padding: 12px !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 10px;
+}

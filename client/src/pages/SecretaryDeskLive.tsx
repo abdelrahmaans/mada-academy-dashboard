@@ -3,6 +3,7 @@ import {
   Clock,
   GraduationCap,
   LifeBuoy,
+  MessageCircle,
   PhoneCall,
   Plus,
   QrCode,
@@ -21,6 +22,7 @@ import PageHeader from "@/components/PageHeader";
 import QuickActionsBar from "@/components/QuickActionsBar";
 import { QuickPaymentReceiptModal, QuickSupportTicketModal } from "@/components/QuickActionModals";
 import { ReceptionCheckInModal } from "@/components/ReceptionCheckInModal";
+import { WhatsAppBroadcastModal } from "@/components/WhatsAppBroadcastModal";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import { useAuth } from "@/contexts/AuthContext";
@@ -146,6 +148,7 @@ export default function SecretaryDeskLive() {
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [checkInModalOpen, setCheckInModalOpen] = useState(false);
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
+  const [broadcastModalOpen, setBroadcastModalOpen] = useState(false);
 
   const branchName =
     me?.branches?.find((branch) => branch.id === me?.branchId)?.name ??
@@ -449,6 +452,7 @@ export default function SecretaryDeskLive() {
         <QuickActionsBar
           actions={[
             { id: "r05-qr-checkin", label: "📲 مسح كود الحضور السريع (QR Scan)", icon: <QrCode size={14} />, onClick: () => setCheckInModalOpen(true), tone: "primary" },
+            { id: "r05-whatsapp-broadcast", label: "رسائل واتساب جماعية (المجموعات)", icon: <MessageCircle size={14} />, onClick: () => setBroadcastModalOpen(true) },
             { id: "r05-new-lead", label: "تسجيل استفسار جديد", icon: <Plus size={14} />, onClick: () => setNewLeadModalOpen(true) },
             { id: "r05-payment", label: "تسجيل دفعة اشتراك / إيصال فوري", icon: <Receipt size={14} />, onClick: () => setPaymentModalOpen(true) },
             { id: "r05-freeze", label: "طلب تجميد اشتراك", icon: <Snowflake size={14} />, onClick: () => setFreezeModalOpen(true) },
@@ -626,6 +630,8 @@ export default function SecretaryDeskLive() {
           <SecretaryShiftsTab
             shifts={serverShifts}
             onOpenShiftModal={() => setShiftModalOpen(true)}
+            branchName={branchName}
+            cashierName={me?.user?.displayName || "مسؤول الاستقبال"}
           />
         )}
       </main>
@@ -678,6 +684,23 @@ export default function SecretaryDeskLive() {
         isOpen={checkInModalOpen}
         onClose={() => setCheckInModalOpen(false)}
         branchName={branchName}
+      />
+
+      <WhatsAppBroadcastModal
+        isOpen={broadcastModalOpen}
+        onClose={() => setBroadcastModalOpen(false)}
+        branchName={branchName}
+        availableGroups={groups.map((g) => ({
+          id: g.id,
+          name: `${g.courseName} · ${g.classroomName || "القاعة التدريبية"}`,
+        }))}
+        studentsList={students.map((s) => ({
+          id: s.id,
+          studentName: s.fullName,
+          parentName: s.parentName || "ولي الأمر",
+          phone: s.parentPhone || "+201011223344",
+          branchName,
+        }))}
       />
 
       <QuickSupportTicketModal

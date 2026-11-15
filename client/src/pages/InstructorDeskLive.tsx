@@ -4,6 +4,7 @@ import {
   CalendarCheck,
   CalendarDays,
   LifeBuoy,
+  MessageCircle,
   RefreshCw,
   Rocket,
   ShieldCheck,
@@ -25,6 +26,7 @@ import { InstructorAttendanceView } from "@/components/instructor/InstructorAtte
 import { InstructorEvaluationsView } from "@/components/instructor/InstructorEvaluationsView";
 import { SubmitProjectArchiveModal } from "@/components/competitions/SubmitProjectArchiveModal";
 import { ProjectArchiveTabView } from "@/components/competitions/ProjectArchiveTabView";
+import { WhatsAppBroadcastModal } from "@/components/WhatsAppBroadcastModal";
 import { getArchivedProjects } from "@/lib/projectArchiveStorage";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -101,6 +103,7 @@ export default function InstructorDeskLive() {
   const [completionModalOpen, setCompletionModalOpen] = useState(false);
   const [substituteModalOpen, setSubstituteModalOpen] = useState(false);
   const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [broadcastModalOpen, setBroadcastModalOpen] = useState(false);
   const [allStudents, setAllStudents] = useState<Array<{ id: string; fullName: string }>>([]);
 
   const loadSessions = useCallback(async () => {
@@ -465,6 +468,12 @@ export default function InstructorDeskLive() {
                 tone: "primary",
               },
               {
+                id: "r04-whatsapp-broadcast",
+                label: "رسائل واتساب لطلاب الحصة",
+                icon: <MessageCircle size={14} />,
+                onClick: () => setBroadcastModalOpen(true),
+              },
+              {
                 id: "r04-substitute",
                 label: "طلب اعتذار / مدرب بديل لحصة",
                 icon: <UserCheck size={14} />,
@@ -772,6 +781,24 @@ export default function InstructorDeskLive() {
           defaultCoachName={me?.user?.displayName || "كوتش الأكاديمية"}
           defaultCoachRole="المدرب"
           availableStudents={allStudents}
+        />
+
+        <WhatsAppBroadcastModal
+          isOpen={broadcastModalOpen}
+          onClose={() => setBroadcastModalOpen(false)}
+          branchName={branch || "الفرع الرئيسي"}
+          availableGroups={sessions.map((s) => ({
+            id: s.id,
+            name: `${s.courseName || "جلسة"} · ${formatDate(s.startAt)}`,
+          }))}
+          studentsList={attendanceRows.map((a) => ({
+            id: a.studentId,
+            studentName: a.studentName,
+            parentName: "ولي الأمر",
+            phone: "+201011223344",
+            groupName: selectedSession?.courseName || undefined,
+            branchName: branch,
+          }))}
         />
       </main>
       <QuickSupportTicketModal

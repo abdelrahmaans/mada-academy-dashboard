@@ -1,17 +1,26 @@
-import React from "react";
-import { Plus } from "lucide-react";
+import React, { useState } from "react";
+import { Plus, Printer } from "lucide-react";
 import { shiftStorage, type ShiftCashHandover } from "@/lib/apiClient";
+import {
+  ShiftReconciliationPrintModal,
+  type PrintableShiftData,
+} from "@/components/finance/ShiftReconciliationPrintModal";
 
 export interface SecretaryShiftsTabProps {
   shifts?: ShiftCashHandover[];
   onOpenShiftModal: () => void;
+  branchName?: string;
+  cashierName?: string;
 }
 
 export function SecretaryShiftsTab({
   shifts,
   onOpenShiftModal,
+  branchName = "الفرع الرئيسي",
+  cashierName = "مسؤول الاستقبال",
 }: SecretaryShiftsTabProps) {
   const allShifts = shifts ?? shiftStorage.getHandovers();
+  const [printShift, setPrintShift] = useState<PrintableShiftData | null>(null);
 
   return (
     <section className="secretary-panel">
@@ -160,10 +169,56 @@ export function SecretaryShiftsTab({
                   {shift.receivedAt ? ` (في ${new Date(shift.receivedAt).toLocaleString("ar-EG")})` : ""}
                 </div>
               )}
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  borderTop: "1px solid #f1f5f9",
+                  paddingTop: "8px",
+                  marginTop: "4px",
+                }}
+              >
+                <button
+                  type="button"
+                  className="button button-ghost"
+                  onClick={() =>
+                    setPrintShift({
+                      shiftId: shift.id,
+                      shiftName: shift.shiftName,
+                      shiftDate: shift.shiftDate,
+                      branchName,
+                      cashierName,
+                      cashAmount: shift.cashAmount,
+                      electronicAmount: shift.electronicAmount,
+                      totalReceiptsCount: shift.totalReceiptsCount || 0,
+                      status: shift.status,
+                      receivedByName: shift.receivedByName,
+                      receivedAt: shift.receivedAt,
+                      notes: shift.notes,
+                    })
+                  }
+                  style={{
+                    fontSize: "0.82rem",
+                    color: "#0f766e",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <Printer size={14} /> طباعة سند تقفيل الوردية (A4)
+                </button>
+              </div>
             </article>
           );
         })}
       </div>
+
+      <ShiftReconciliationPrintModal
+        isOpen={Boolean(printShift)}
+        onClose={() => setPrintShift(null)}
+        shift={printShift}
+      />
     </section>
   );
 }
