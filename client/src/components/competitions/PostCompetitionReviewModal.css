@@ -1,0 +1,209 @@
+/* ==========================================================================
+   Post-Competition Review & Analytics Modal
+   ========================================================================== */
+
+.post-comp-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  direction: rtl;
+  animation: postCompFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.post-comp-card {
+  width: 100%;
+  max-width: 720px;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: 90vh;
+  animation: postCompSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes postCompFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes postCompSlide {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.post-comp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #fffbeb;
+  gap: 12px;
+}
+
+.post-comp-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: #fef3c7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.post-comp-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #92400e;
+}
+
+.post-comp-sub {
+  margin: 4px 0 0;
+  font-size: 0.82rem;
+  color: #b45309;
+}
+
+.post-comp-close {
+  background: #ffffff;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #b45309;
+  cursor: pointer;
+}
+
+.post-comp-form {
+  padding: 20px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.post-comp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.post-comp-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.post-comp-form input,
+.post-comp-form select,
+.post-comp-form textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  color: #0f172a;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.post-comp-form input:focus,
+.post-comp-form select:focus,
+.post-comp-form textarea:focus {
+  border-color: #f59e0b;
+}
+
+.post-comp-input-icon-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.post-comp-input-icon-wrap svg {
+  position: absolute;
+  right: 12px;
+  color: #94a3b8;
+}
+
+.post-comp-input-icon-wrap input {
+  padding-right: 36px;
+  direction: ltr;
+}
+
+.post-comp-analysis-section {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.post-comp-section-title {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.post-comp-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.post-comp-btn {
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.post-comp-btn.cancel {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.post-comp-btn.submit {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
+}
+
+.post-comp-btn:hover {
+  transform: translateY(-1px);
+}

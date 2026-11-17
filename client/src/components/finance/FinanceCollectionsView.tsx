@@ -41,6 +41,7 @@ import {
   FinancialPrintModal,
   type FinancialPrintData,
 } from "./FinancialPrintModal";
+import { InvoiceDetailsModal } from "./InvoiceDetailsModal";
 
 export interface DailyClosingRecord {
   date: string;
@@ -131,6 +132,7 @@ export function Collections({
   const [showAccountantRejectInput, setShowAccountantRejectInput] = useState(false);
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
   const [printData, setPrintData] = useState<FinancialPrintData | null>(null);
+  const [detailsModalInvoice, setDetailsModalInvoice] = useState<Invoice | null>(null);
 
   const handlePrintReceipt = (inv: Invoice, payment: any) => {
     const pAmount = payment.amountPiastres ? payment.amountPiastres / 100 : payment.amount || 0;
@@ -670,6 +672,27 @@ export function Collections({
                             <CreditCard size={13} /> سداد لهذه الفاتورة
                           </button>
                         )}
+
+                        <button
+                          type="button"
+                          onClick={() => setDetailsModalInvoice(invoice)}
+                          style={{
+                            padding: "5px 10px",
+                            borderRadius: "7px",
+                            fontSize: "0.78rem",
+                            background: "#fffbeb",
+                            color: "#b45309",
+                            border: "1px solid #fde68a",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            fontWeight: 700,
+                          }}
+                          title="فتح هاب تفاصيل الفاتورة والمطابقة الكاملة"
+                        >
+                          <FileText size={13} /> هاب الفاتورة الشامل 👁️
+                        </button>
 
                         <button
                           type="button"
@@ -1278,6 +1301,19 @@ export function Collections({
       <FinancialPrintModal
         data={printData}
         onClose={() => setPrintData(null)}
+      />
+
+      {/* Invoice Details & Payment Operations Hub Modal */}
+      <InvoiceDetailsModal
+        isOpen={Boolean(detailsModalInvoice)}
+        invoice={detailsModalInvoice}
+        onClose={() => setDetailsModalInvoice(null)}
+        onRecordPayment={(id) => {
+          setPaymentInvoice(id);
+          const inv = invoices.find((i) => i.id === id);
+          if (inv) setAmount(String(inv.total - inv.collected));
+        }}
+        onPrintInvoice={(inv) => handlePrintInvoice(inv)}
       />
     </div>
   );

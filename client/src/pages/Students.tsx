@@ -20,6 +20,7 @@ import {
   Search,
   Send,
   ShieldCheck,
+  Sparkles,
   UserPlus,
   Users,
   Wallet,
@@ -52,6 +53,7 @@ import {
   saveStoredStudentExtras,
 } from "./StudentsTypes";
 import { AddStudentModal, StudentDetailsModal } from "./StudentsModals";
+import { StudentDataHubModal } from "@/components/students/StudentDataHubModal";
 
 function StudentPage() {
   const [, setLocation] = useLocation();
@@ -74,6 +76,7 @@ function StudentPage() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [detailsStudent, setDetailsStudent] = useState<Student | null>(null);
+  const [hubStudent, setHubStudent] = useState<Student | null>(null);
   const [consumerLinks, setConsumerLinks] = useState<ConsumerLinksResponse | null>(null);
   const [linksLoading, setLinksLoading] = useState(false);
   const [linksError, setLinksError] = useState<string | null>(null);
@@ -928,13 +931,40 @@ function StudentPage() {
                           <span className="joined-date">{student.joined}</span>
                         </td>
                         <td data-label="التفاصيل">
-                          <button
-                            className="student-row-more"
-                            aria-label={`عرض ملف ${student.name}`}
-                            onClick={() => setDetailsStudent(student)}
-                          >
-                            <ChevronLeft size={17} />
-                          </button>
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                            <button
+                              type="button"
+                              className="button button-ghost"
+                              style={{
+                                padding: "3px 8px",
+                                fontSize: "11px",
+                                fontWeight: 700,
+                                color: "#0f766e",
+                                border: "1px solid #ccfbf1",
+                                background: "#f0fdfa",
+                                borderRadius: "8px",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "3px",
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setHubStudent(student);
+                              }}
+                              title="فتح هاب بيانات الطالب 360° (Data Hub)"
+                            >
+                              <Sparkles size={11} />
+                              <span>Hub</span>
+                            </button>
+                            <button
+                              className="student-row-more"
+                              aria-label={`عرض ملف ${student.name}`}
+                              onClick={() => setDetailsStudent(student)}
+                            >
+                              <ChevronLeft size={17} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1068,6 +1098,16 @@ function StudentPage() {
         onNavigateFinance={() => setLocation("/finance")}
         onAddCompletedCourse={handleAddCompletedCourse}
         onAddAchievement={handleAddAchievement}
+        onOpenDataHub={(st) => setHubStudent(st)}
+      />
+
+      <StudentDataHubModal
+        isOpen={Boolean(hubStudent)}
+        student={hubStudent}
+        onClose={() => setHubStudent(null)}
+        onRecordPayment={() => setLocation("/finance-desk")}
+        onCreateInvoice={() => setLocation("/finance-desk")}
+        onEnrollGroup={() => setLocation("/classes")}
       />
     </RoleDashboardShell>
   );

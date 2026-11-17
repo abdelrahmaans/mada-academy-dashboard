@@ -267,6 +267,7 @@ export interface StudentDetailsModalProps {
       description?: string;
     }
   ) => void;
+  onOpenDataHub?: (student: Student) => void;
 }
 
 export function StudentDetailsModal({
@@ -299,6 +300,7 @@ export function StudentDetailsModal({
   onNavigateFinance,
   onAddCompletedCourse,
   onAddAchievement,
+  onOpenDataHub,
 }: StudentDetailsModalProps) {
   const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false);
 
@@ -365,6 +367,32 @@ export function StudentDetailsModal({
                   ? `#${detailsStudent.id.slice(-4).toUpperCase()}`
                   : detailsStudent.id}
               </span>
+              {onOpenDataHub && (
+                <button
+                  type="button"
+                  style={{
+                    padding: "3px 10px",
+                    borderRadius: "6px",
+                    background: "linear-gradient(135deg, #0d9488, #0f766e)",
+                    color: "#ffffff",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    border: "none",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                  onClick={() => {
+                    onClose();
+                    onOpenDataHub(detailsStudent);
+                  }}
+                  title="فتح هاب بيانات الطالب الشامل 360°"
+                >
+                  <Sparkles size={11} />
+                  <span>فتح هاب بيانات الطالب 360° (Data Hub)</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

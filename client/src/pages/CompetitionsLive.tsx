@@ -46,6 +46,8 @@ import {
 } from "@/components/competitions/CompetitionsModals";
 import { SubmitProjectArchiveModal } from "@/components/competitions/SubmitProjectArchiveModal";
 import { ProjectArchiveTabView } from "@/components/competitions/ProjectArchiveTabView";
+import { CompetitionDetailsHubModal } from "@/components/competitions/CompetitionDetailsHubModal";
+import { PostCompetitionReviewModal } from "@/components/competitions/PostCompetitionReviewModal";
 import { getArchivedProjects } from "@/lib/projectArchiveStorage";
 
 type TabType = "TOURNAMENTS" | "TEAMS" | "HALL_OF_FAME" | "PROJECTS_ARCHIVE";
@@ -76,6 +78,8 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [showAwardModal, setShowAwardModal] = useState(false);
   const [showProjectModal, setShowProjectModal] = useState(false);
+  const [hubComp, setHubComp] = useState<CompetitionSummaryItem | null>(null);
+  const [showPostCompModal, setShowPostCompModal] = useState(false);
   const [archiveProjectsCount, setArchiveProjectsCount] = useState(() => getArchivedProjects().length);
 
   const [activeTeamForMember, setActiveTeamForMember] = useState<CompetitionTeamItem | null>(null);
@@ -576,19 +580,34 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
                         <span style={{ fontSize: "11px", color: "#64748b" }}>
                           المقر: {c.location ?? "محلي / إقليمي"}
                         </span>
-                        <button
-                          type="button"
-                          className="comp-btn-secondary"
-                          style={{ padding: "6px 12px", fontSize: "12px", color: "#0d9488", borderColor: "#99f6e4", background: "#f0fdfa" }}
-                          onClick={e => {
-                            e.stopPropagation();
-                            handleSelectComp(c.id);
-                            setActiveTab("TEAMS");
-                          }}
-                        >
-                          <span>عرض الفرق</span>
-                          <ChevronLeft size={14} />
-                        </button>
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          <button
+                            type="button"
+                            className="comp-btn-secondary"
+                            style={{ padding: "5px 10px", fontSize: "11px", color: "#b45309", borderColor: "#fde68a", background: "#fffbeb" }}
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleSelectComp(c.id);
+                              setHubComp(c);
+                            }}
+                            title="عرض تفاصيل البطولة والفرق وهاب النتائج"
+                          >
+                            <span>هاب البطولة</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="comp-btn-secondary"
+                            style={{ padding: "5px 10px", fontSize: "11px", color: "#0d9488", borderColor: "#99f6e4", background: "#f0fdfa" }}
+                            onClick={e => {
+                              e.stopPropagation();
+                              handleSelectComp(c.id);
+                              setActiveTab("TEAMS");
+                            }}
+                          >
+                            <span>عرض الفرق</span>
+                            <ChevronLeft size={14} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -630,6 +649,17 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
                     ))}
                   </select>
                 </label>
+
+                <button
+                  type="button"
+                  className="comp-btn-secondary"
+                  style={{ background: "#fffbeb", color: "#b45309", borderColor: "#fde68a", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  onClick={() => setShowPostCompModal(true)}
+                  title="توثيق نتائج ومراكز ما بعد المسابقة والتحليل الفني"
+                >
+                  <Trophy size={15} />
+                  <span>نتائج وتحليل ما بعد المسابقة 🏆</span>
+                </button>
 
                 <button
                   type="button"
@@ -990,6 +1020,27 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
           defaultCoachRole={roleDefinition.label}
           competitionsList={competitions.map((c) => ({ id: c.id, name: c.name }))}
           availableStudents={studentsList}
+        />
+
+        <CompetitionDetailsHubModal
+          isOpen={Boolean(hubComp)}
+          competition={hubComp}
+          teams={teams}
+          onClose={() => setHubComp(null)}
+          onCreateTeam={() => setShowTeamModal(true)}
+          onPostCompetitionReview={() => setShowPostCompModal(true)}
+          onArchiveProject={() => setShowProjectModal(true)}
+        />
+
+        <PostCompetitionReviewModal
+          isOpen={showPostCompModal}
+          competition={competitions.find((c) => c.id === selectedCompId) || competitions[0] || null}
+          teams={teams}
+          onClose={() => setShowPostCompModal(false)}
+          onSuccess={() => {
+            setArchiveProjectsCount(getArchivedProjects().length);
+            void loadData();
+          }}
         />
       </div>
     </RoleDashboardShell>
