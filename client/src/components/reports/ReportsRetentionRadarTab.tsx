@@ -1,18 +1,28 @@
-import React from "react";
-import { FileSpreadsheet } from "lucide-react";
-import type { RetentionRadarResponse } from "@/lib/apiClient";
+import React, { useState } from "react";
+import { FileSpreadsheet, MessageCircle, AlertTriangle, ShieldCheck } from "lucide-react";
+import type { RetentionRadarResponse, RetentionRadarItem } from "@/lib/apiClient";
+import { RetentionOutreachModal } from "./RetentionOutreachModal";
 
 export interface ReportsRetentionRadarTabProps {
   radar: RetentionRadarResponse | null;
   money: (piastres: number) => string;
   onExportBiCsv: () => void;
+  onOpenStudentHub?: (studentId: string, studentName: string) => void;
 }
 
 export function ReportsRetentionRadarTab({
   radar,
   money,
   onExportBiCsv,
+  onOpenStudentHub,
 }: ReportsRetentionRadarTabProps) {
+  const [filterRisk, setFilterRisk] = useState<"ALL" | "HIGH" | "MEDIUM" | "LOW">("ALL");
+  const [selectedOutreachItem, setSelectedOutreachItem] = useState<RetentionRadarItem | null>(null);
+
+  const filteredItems = (radar?.items || []).filter((item) => {
+    if (filterRisk === "ALL") return true;
+    return item.riskLevel.toUpperCase() === filterRisk;
+  });
   return (
     <section className="reports-live-radar-section">
       {radar ? (
@@ -46,7 +56,7 @@ export function ReportsRetentionRadarTab({
                 <h2>قائمة الطلاب ومؤشر خطورة التسرب (Churn Radar)</h2>
                 <p>
                   تقييم مركب يعتمد على: تتابع الغياب، انخفاض درجات التقييم، وتأخر
-                  سداد الفواتير لأكثر من 14 يوماً.
+                  سداد الفواتير لأكثر من 14 يوماً مع إمكانية التدخل والتواصل المباشر.
                 </p>
               </div>
               <button
@@ -56,6 +66,42 @@ export function ReportsRetentionRadarTab({
                 <FileSpreadsheet size={14} /> تصدير إكسيل التحليل
               </button>
             </div>
+
+            {/* Quick Filter Chips */}
+            <div className="radar-filters">
+              <button
+                type="button"
+                className={`radar-filter-chip ${filterRisk === "ALL" ? "active" : ""}`}
+                onClick={() => setFilterRisk("ALL")}
+              >
+                جميع الحالات ({radar.items.length})
+              </button>
+              <button
+                type="button"
+                className={`radar-filter-chip ${filterRisk === "HIGH" ? "active" : ""}`}
+                onClick={() => setFilterRisk("HIGH")}
+                style={{ color: filterRisk === "HIGH" ? "#ffffff" : "#dc2626" }}
+              >
+                خطر تسرب مرتفع ⚠️ ({radar.summary.highRiskCount})
+              </button>
+              <button
+                type="button"
+                className={`radar-filter-chip ${filterRisk === "MEDIUM" ? "active" : ""}`}
+                onClick={() => setFilterRisk("MEDIUM")}
+                style={{ color: filterRisk === "MEDIUM" ? "#ffffff" : "#d97706" }}
+              >
+                قيد المتابعة الدورية ({radar.summary.mediumRiskCount})
+              </button>
+              <button
+                type="button"
+                className={`radar-filter-chip ${filterRisk === "LOW" ? "active" : ""}`}
+                onClick={() => setFilterRisk("LOW")}
+                style={{ color: filterRisk === "LOW" ? "#ffffff" : "#16a34a" }}
+              >
+                حالات مستقرة ({radar.summary.lowRiskCount})
+              </button>
+            </div>
+
             <div className="reports-live-table-wrap">
               <table>
                 <thead>
@@ -69,11 +115,11 @@ export function ReportsRetentionRadarTab({
                     <th>المتبقي المالي</th>
                     <th>تأخر السداد</th>
                     <th>مستوى الخطر</th>
-                    <th>التوصية التنفيذية</th>
+                    <th>التوصية والعمليات السريعة</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {radar.items.map(item => (
+                  {filteredItems.map(item => (
                     <tr
                       key={item.studentId}
                       className={`radar-row-${item.riskLevel.toLowerCase()}`}
@@ -130,7 +176,17 @@ export function ReportsRetentionRadarTab({
                         </span>
                       </td>
                       <td className="radar-action-cell">
-                        <small>{item.recommendedAction}</small>
+                        <div className="radar-action-flex">
+                          <small>{item.recommendedAction}</small>
+                          <button
+                            type="button"
+                            className="radar-intervene-btn"
+                            onClick={() => setSelectedOutreachItem(item)}
+                            title="فتح نافذة التدخل المباشر ومراسلة ولي الأمر"
+                          >
+                            إجراء تواصل ⚡
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -138,6 +194,16 @@ export function ReportsRetentionRadarTab({
               </table>
             </div>
           </div>
+
+          {/* Retention Outreach Intervention Modal */}
+          {selectedOutreachItem && (
+            <RetentionOutreachModal
+              isOpen={Boolean(selectedOutreachItem)}
+              item={selectedOutreachItem}
+              onClose={() => setSelectedOutreachItem(null)}
+              onOpenStudentHub={onOpenStudentHub}
+            />
+          )}
         </>
       ) : (
         <div className="reports-live-empty">

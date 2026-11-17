@@ -32,6 +32,12 @@
 .text-primary{color:#0284c7}
 .text-muted{color:#94a3b8}
 .radar-action-cell small{display:block;max-width:280px;color:#334155;font-size:11px;line-height:1.4;white-space:normal}
+.radar-action-flex{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.radar-intervene-btn{background:#0d9488;color:#ffffff;border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;transition:all 0.15s ease}
+.radar-intervene-btn:hover{background:#0f766e;transform:translateY(-1px)}
+.radar-filters{display:flex;gap:8px;margin-bottom:12px}
+.radar-filter-chip{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid #e2e8f0;background:#ffffff;color:#475569;cursor:pointer}
+.radar-filter-chip.active{background:#0d9488;color:#ffffff;border-color:#0d9488}
 .tag-pill{display:inline-block;padding:2px 8px;border-radius:6px;background:#e2e8f0;color:#334155;font-size:11px}
 .tag-status{display:inline-block;padding:2px 8px;border-radius:6px;background:#e0f2fe;color:#0369a1;font-size:11px;font-weight:600}
 .occupancy-cell{display:flex;align-items:center;gap:8px}

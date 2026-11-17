@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Course, Offering } from "@/pages/ClassesTypes";
+import { KitInventoryDetailsModal, type KitItem } from "./KitInventoryDetailsModal";
 
 interface BranchReadinessTabProps {
   branchName: string;
@@ -42,6 +43,7 @@ export function BranchReadinessTab({
   onOpenCreateGroupModal,
 }: BranchReadinessTabProps) {
   const [activeSection, setActiveSection] = useState<"ALL" | "ROOMS" | "KITS" | "COURSES" | "COMPETITIONS">("ALL");
+  const [selectedKit, setSelectedKit] = useState<KitItem | null>(null);
 
   // Sample real data for Branch Facilities & Rooms
   const roomsData = [
@@ -479,6 +481,7 @@ export function BranchReadinessTab({
                   <th style={{ padding: "12px 16px", color: "#475569" }}>الطاقة الاستيعابية</th>
                   <th style={{ padding: "12px 16px", color: "#475569" }}>حالة الفحص</th>
                   <th style={{ padding: "12px 16px", color: "#475569" }}>ملاحظات الجاهزية</th>
+                  <th style={{ padding: "12px 16px", color: "#475569" }}>العمليات والجرد</th>
                 </tr>
               </thead>
               <tbody>
@@ -511,6 +514,29 @@ export function BranchReadinessTab({
                     </td>
                     <td style={{ padding: "12px 16px", color: "#64748b", fontSize: "0.78rem" }}>
                       {kit.notes}
+                    </td>
+                    <td style={{ padding: "12px 16px" }}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedKit(kit)}
+                        style={{
+                          background: "#0d9488",
+                          color: "#ffffff",
+                          border: "none",
+                          borderRadius: "8px",
+                          padding: "6px 12px",
+                          fontSize: "0.78rem",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "5px",
+                          boxShadow: "0 1px 2px rgba(13, 148, 136, 0.2)",
+                        }}
+                      >
+                        <Cpu size={13} />
+                        <span>تفاصيل وجرد العتاد 👁️</span>
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -682,6 +708,16 @@ export function BranchReadinessTab({
             ))}
           </div>
         </section>
+      )}
+
+      {/* Hardware & Kits Inventory Operations Hub Modal */}
+      {selectedKit && (
+        <KitInventoryDetailsModal
+          isOpen={Boolean(selectedKit)}
+          kit={selectedKit}
+          branchName={branchName}
+          onClose={() => setSelectedKit(null)}
+        />
       )}
     </div>
   );

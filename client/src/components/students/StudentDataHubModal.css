@@ -197,6 +197,27 @@
   color: #475569;
 }
 
+.hub-action-btn.cert {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.hub-action-btn.cert:hover {
+  background: #fde68a;
+}
+
+.hub-sm-btn.gold {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: #ffffff;
+  border: none;
+}
+
+.hub-cert-highlight {
+  border: 1.5px dashed #f59e0b !important;
+  background: #fffbeb !important;
+}
+
 .hub-action-btn:hover {
   transform: translateY(-1px);
 }

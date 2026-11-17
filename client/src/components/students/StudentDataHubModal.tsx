@@ -29,6 +29,10 @@ import { toast } from "sonner";
 import type { Student } from "@/pages/StudentsTypes";
 import type { Invoice } from "@/pages/FinanceDeskTypes";
 import { InvoiceDetailsModal } from "@/components/finance/InvoiceDetailsModal";
+import {
+  StudentCertificatePrintModal,
+  type CertificateData,
+} from "@/components/certificates/StudentCertificatePrintModal";
 import "./StudentDataHubModal.css";
 
 interface Props {
@@ -52,6 +56,8 @@ export function StudentDataHubModal({
 }: Props) {
   const [activeTab, setActiveTab] = useState<HubTab>("OVERVIEW");
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [isCertModalOpen, setIsCertModalOpen] = useState(false);
+  const [activeCert, setActiveCert] = useState<CertificateData | null>(null);
 
   if (!isOpen || !student) return null;
 
@@ -93,6 +99,25 @@ export function StudentDataHubModal({
       `مرحباً ${student.parentName}، تحية طيبة من أكاديمية مدى للروبوتكس والذكاء الاصطناعي بخصوص الطالب البطل *${student.name}*. يسعدنا تواصلكم الدائم معنا.`
     );
     window.open(`https://web.whatsapp.com/send?phone=${clean}&text=${msg}`, "_blank");
+  };
+
+  const handleOpenCertificate = () => {
+    const certCode = `MADA-CERT-${(student.branch?.slice(0, 3) || "CAI").toUpperCase()}-2026-${student.id.slice(-4).toUpperCase()}`;
+    setActiveCert({
+      certificateCode: certCode,
+      studentName: student.name,
+      courseName: student.course || "الروبوتكس والذكاء الاصطناعي (Advanced Robotics)",
+      track: "ROBOTICS",
+      branchName: student.branch || "الفرع الرئيسي",
+      coachName: "م. أحمد الشناوي",
+      directorName: "د. مروان الشريف",
+      grade: student.status === "graduated" ? "امتياز مع مرتبة الشرف 🏆" : "امتياز (معدل متقدم)",
+      scorePercent: 96,
+      hoursCount: 36,
+      issueDate: "نوفمبر 2026",
+      parentPhone: student.parentPhone,
+    });
+    setIsCertModalOpen(true);
   };
 
   const handlePrintStudentCard = () => {
@@ -198,6 +223,16 @@ export function StudentDataHubModal({
               >
                 <Users size={15} />
                 <span>تسكين بمجموعة / معسكر</span>
+              </button>
+
+              <button
+                type="button"
+                className="hub-action-btn cert"
+                onClick={handleOpenCertificate}
+                title="إصدار وطباعة الشهادة المعتمدة مع رمز التحقق الإلكتروني QR"
+              >
+                <Award size={15} />
+                <span>شهادة معتمدة 📜</span>
               </button>
 
               <button
@@ -327,6 +362,27 @@ export function StudentDataHubModal({
                       <strong>{student.source || "سوشيال ميديا"}</strong>
                     </div>
                   </div>
+                </div>
+
+                {/* Accredited Official Certificate Highlight */}
+                <div className="hub-section-box hub-cert-highlight">
+                  <div className="hub-box-head-with-action">
+                    <h4 className="hub-box-title">
+                      <Award size={16} color="#d97706" />
+                      <span>الشهادة الإلكترونية الرسمية المعتمدة:</span>
+                    </h4>
+                    <button
+                      type="button"
+                      className="hub-sm-btn gold"
+                      onClick={handleOpenCertificate}
+                    >
+                      <Printer size={13} />
+                      <span>معاينة وطباعة الشهادة (A4 Landscape) 🎓</span>
+                    </button>
+                  </div>
+                  <p className="hub-box-desc" style={{ fontSize: "12px", color: "#92400e", margin: "6px 0 0" }}>
+                    شهادة تخرج وتفوق رسمية صادرة برقم تسلسلي موثق ومزودة برمز QR فريد يربط مباشرة بمنصة التحقق الإلكترونية للأكاديمية مع إمكانية مشاركتها المباشرة لولي الأمر عبر واتساب.
+                  </p>
                 </div>
               </div>
             )}
@@ -568,6 +624,15 @@ export function StudentDataHubModal({
           onRecordPayment={() => {
             if (onRecordPayment) onRecordPayment(student.id);
           }}
+        />
+      )}
+
+      {/* Official Verifiable Certificate Print Modal */}
+      {isCertModalOpen && (
+        <StudentCertificatePrintModal
+          isOpen={isCertModalOpen}
+          certificate={activeCert}
+          onClose={() => setIsCertModalOpen(false)}
         />
       )}
     </>

@@ -1,0 +1,563 @@
+/* ==========================================================================
+   Student Verifiable Certificate Modal & Official A4 Landscape Print
+   ========================================================================== */
+
+.cert-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  direction: rtl;
+  overflow-y: auto;
+  animation: certFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cert-modal-container {
+  width: 100%;
+  max-width: 1060px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: certSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes certFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes certSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Floating Action Bar */
+.cert-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  padding: 10px 20px;
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.15);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cert-action-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.cert-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cert-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+}
+
+.cert-btn.primary {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
+}
+
+.cert-btn.whatsapp {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.cert-btn.secondary {
+  background: #f8fafc;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.cert-btn.close {
+  background: #f1f5f9;
+  color: #64748b;
+  padding: 8px 10px;
+}
+
+.cert-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* Certificate Sheet Outer Container */
+.cert-sheet-wrapper {
+  background: #ffffff;
+  border-radius: 18px;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  padding: 14px;
+}
+
+/* Certificate Sheet: Exact aspect ratio of A4 Landscape (297 / 210 = 1.414) */
+.cert-sheet {
+  width: 100%;
+  aspect-ratio: 1.414 / 1;
+  background: #ffffff;
+  box-sizing: border-box;
+  position: relative;
+  font-family: inherit;
+  color: #0f172a;
+  background-image: radial-gradient(circle at center, #ffffff 60%, #fffdf8 100%);
+}
+
+.cert-outer-frame {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 8px solid #0f766e;
+  border-radius: 14px;
+  position: relative;
+  background: #ffffff;
+}
+
+.cert-inner-frame {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 18px 24px;
+  border: 2px dashed #d97706;
+  border-radius: 10px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Corner Ornaments */
+.cert-corner {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border: 3px solid #d97706;
+}
+
+.cert-corner.top-right {
+  top: 4px;
+  right: 4px;
+  border-left: none;
+  border-bottom: none;
+}
+
+.cert-corner.top-left {
+  top: 4px;
+  left: 4px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.cert-corner.bottom-right {
+  bottom: 4px;
+  right: 4px;
+  border-left: none;
+  border-top: none;
+}
+
+.cert-corner.bottom-left {
+  bottom: 4px;
+  left: 4px;
+  border-right: none;
+  border-top: none;
+}
+
+/* Content Container */
+.cert-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Header */
+.cert-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.cert-brand-right {
+  text-align: right;
+}
+
+.cert-academy-ar {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #0f766e;
+}
+
+.cert-academy-en {
+  margin: 2px 0 0;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #b45309;
+}
+
+.cert-branch-tag {
+  display: inline-block;
+  background: #f0fdfa;
+  color: #0d9488;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-top: 3px;
+}
+
+.cert-emblem-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.cert-emblem-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #fef3c7;
+  border: 2px solid #fde68a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cert-accredited-chip {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #0f766e;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.cert-brand-left {
+  text-align: left;
+}
+
+.cert-serial-label {
+  margin: 0;
+  font-size: 0.68rem;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.cert-serial-num {
+  font-size: 0.82rem;
+  font-weight: 900;
+  color: #0f172a;
+  display: block;
+}
+
+.cert-date-tag {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  display: block;
+}
+
+/* Titles Box */
+.cert-titles-box {
+  text-align: center;
+  margin: 4px 0;
+}
+
+.cert-main-title {
+  margin: 0;
+  font-size: 1.65rem;
+  font-weight: 900;
+  color: #b45309;
+  letter-spacing: 0.5px;
+}
+
+.cert-main-subtitle {
+  margin: 2px 0 0;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #0f766e;
+}
+
+.cert-title-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.divider-line {
+  width: 60px;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, #d97706, transparent);
+}
+
+/* Body Prose */
+.cert-body-prose {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.cert-intro {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.cert-recipient-box {
+  border-bottom: 2px solid #0f766e;
+  padding: 0 24px 4px;
+  margin: 2px 0;
+  min-width: 320px;
+}
+
+.cert-student-name {
+  margin: 0;
+  font-size: 1.7rem;
+  font-weight: 900;
+  color: #0f766e;
+}
+
+.cert-student-name-en {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 1px;
+}
+
+.cert-statement {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.cert-course-badge-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 6px 18px;
+  margin: 3px 0;
+}
+
+.cert-course-name {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.cert-course-meta {
+  margin: 2px 0 0;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.cert-grade-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  color: #334155;
+  margin-top: 2px;
+}
+
+.cert-grade-banner strong {
+  color: #d97706;
+  font-weight: 900;
+}
+
+.cert-score-pill {
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+/* Footer: Signatures & Seal & QR */
+.cert-footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.cert-signature-box {
+  text-align: center;
+  width: 170px;
+}
+
+.signature-line {
+  width: 130px;
+  height: 1px;
+  background: #cbd5e1;
+  margin: 0 auto 6px;
+}
+
+.cert-signature-box strong {
+  display: block;
+  font-size: 0.82rem;
+  color: #0f172a;
+}
+
+.cert-signature-box small {
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+.cert-seal-center {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.cert-qr-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.cert-qr-img {
+  width: 58px;
+  height: 58px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.cert-qr-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: #0f766e;
+}
+
+.cert-gold-seal {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fde68a, #d97706);
+  border: 2px dashed #92400e;
+  box-shadow: 0 0 10px rgba(217, 119, 6, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gold-seal-inner {
+  text-align: center;
+  color: #78350f;
+  font-weight: 900;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gold-seal-inner small {
+  font-size: 0.55rem;
+  font-weight: 900;
+}
+
+/* ==========================================================================
+   PRINT STYLES: Flawless A4 Landscape
+   ========================================================================== */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 0;
+  }
+
+  body, html {
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .no-print,
+  .cert-modal-backdrop::before,
+  nav,
+  header,
+  aside,
+  button {
+    display: none !important;
+  }
+
+  .cert-modal-backdrop {
+    position: static !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+  }
+
+  .cert-modal-container {
+    max-width: none !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .cert-sheet-wrapper {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 297mm !important;
+    height: 210mm !important;
+  }
+
+  .cert-sheet {
+    width: 297mm !important;
+    height: 210mm !important;
+    page-break-inside: avoid !important;
+  }
+
+  .cert-outer-frame {
+    border-width: 6mm !important;
+  }
+}
