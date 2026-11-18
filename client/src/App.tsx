@@ -40,6 +40,7 @@ const AcademyBranches = lazy(() => import("./pages/AcademyBranches"));
 const AcademyClassrooms = lazy(() => import("./pages/AcademyClassrooms"));
 const AcademyAuditTrail = lazy(() => import("./pages/AcademyAuditTrail"));
 const Competitions = lazy(() => import("./pages/CompetitionsLive"));
+const NurseryDesk = lazy(() => import("./pages/NurseryDeskLive"));
 const LobbyDisplay = lazy(() => import("./pages/LobbyDisplay"));
 
 function FinanceRedirect() {
@@ -122,6 +123,7 @@ const APP_ROUTES = [
   ["/approvals", () => <Guard roles={["R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS", "R05_SECRETARY", "R06_ACCOUNTANT"]} anyOfPermissions={["sessions.create", "evaluations.review", "finance.expenses.approve"]}><Approvals /></Guard>],
   ["/reports", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R06_ACCOUNTANT"]} anyOfPermissions={["reports.read", "finance.summary.read"]}><Reports /></Guard>],
   ["/competitions", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS", "R04_INSTRUCTOR", "R05_SECRETARY"]}><Competitions /></Guard>],
+  ["/nursery-desk", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS", "R04_INSTRUCTOR", "R05_SECRETARY"]}><NurseryDesk /></Guard>],
   ["/instructor", () => <Guard roles={["R04_INSTRUCTOR", "R03_HEAD_INSTRUCTORS"]}><Redirect to="/instructor-desk" /></Guard>],
   ["/instructor-desk", () => <Guard roles={["R04_INSTRUCTOR", "R03_HEAD_INSTRUCTORS"]} anyOfPermissions={["sessions.assigned.read", "attendance.write", "evaluations.write"]}><InstructorDesk /></Guard>],
   ["/head-instructors", () => <Guard roles={["R03_HEAD_INSTRUCTORS"]} permission="branch.read"><HeadInstructors /></Guard>],

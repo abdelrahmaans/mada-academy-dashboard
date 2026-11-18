@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Archive,
+  Baby,
   CalendarCheck,
   CalendarDays,
   LifeBuoy,
@@ -480,6 +481,12 @@ export default function InstructorDeskLive() {
                 label: "تسجيل تذكرة دعم / استفسار للمنصة",
                 icon: <LifeBuoy size={14} />,
                 onClick: () => setTicketModalOpen(true),
+              },
+              {
+                id: "r04-nursery-desk",
+                label: "متابعة أطفال الحضانة والمنهج اليومي 👶",
+                icon: <Baby size={14} />,
+                onClick: () => { window.location.href = "/nursery-desk"; },
               },
               {
                 id: "r04-refresh",
