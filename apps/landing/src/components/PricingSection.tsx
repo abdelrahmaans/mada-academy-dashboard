@@ -47,6 +47,7 @@ const PLANS_DATA: Plan[] = [
     id: 'starter',
     name: 'الانطلاق (Starter)',
     subtitle: 'للأكاديميات الصغيرة التي تدير فرعاً واحداً وتريد بداية منظمة وبتكلفة مناسبة',
+    badge: 'للأكاديميات الصغيرة',
     pricing: {
       EGP: {
         monthly: 950,
@@ -83,7 +84,7 @@ const PLANS_DATA: Plan[] = [
     id: 'growth',
     name: 'النمو (Growth)',
     subtitle: 'الخيار الأقوى للأكاديميات المتوسعة التي تبحث عن أتمتة تشغيلية ومالية شاملة',
-    badge: 'الأكثر طلباً بين الأكاديميات',
+    badge: 'الأكثر طلباً — ابدأ هنا',
     isPopular: true,
     pricing: {
       EGP: {
@@ -121,7 +122,7 @@ const PLANS_DATA: Plan[] = [
     id: 'enterprise',
     name: 'المؤسسات (Enterprise)',
     subtitle: 'لسلاسل المعاهد والمؤسسات الكبرى الراغبة في استضافة خاصة ودعم VIP',
-    badge: 'أعلى مستوى أمان وربط',
+    badge: 'للشبكات والمؤسسات',
     pricing: {
       EGP: {
         monthly: 5900,
@@ -254,6 +255,8 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, on
           {PLANS_DATA.map((plan) => {
             const priceInfo = plan.pricing[currency];
             const currentPrice = isAnnual ? priceInfo.formatted.annual : priceInfo.formatted.monthly;
+            const includedFeatures = plan.features.filter((feature) => feature.included);
+            const excludedFeatures = plan.features.filter((feature) => !feature.included);
 
             return (
               <div
@@ -306,32 +309,38 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, on
                   {/* Feature List */}
                   <div className="space-y-3.5 py-4 text-right">
                     <div className="text-xs font-bold text-[#14243A]/60 uppercase tracking-wider mb-2">
-                      ما تتضمنه هذه الباقة:
+                      المزايا المتاحة في هذه الباقة:
                     </div>
 
-                    {plan.features.map((feat, idx) => (
+                    {includedFeatures.map((feat, idx) => (
                       <div 
-                        key={idx} 
-                        className={`flex items-start gap-2.5 text-xs sm:text-sm ${
-                          feat.included 
-                            ? feat.highlight ? 'font-bold text-[#14243A]' : 'text-[#14243A]/85' 
-                            : 'text-[#14243A]/30 line-through'
-                        }`}
+                        key={idx}
+                        className={`flex items-start gap-2.5 text-xs sm:text-sm ${feat.highlight ? 'font-bold text-[#14243A]' : 'text-[#14243A]/85'}`}
                       >
                         <div className="mt-0.5 shrink-0">
-                          {feat.included ? (
-                            <div className="w-4 h-4 rounded-full bg-[#0D9488]/15 text-[#0D9488] flex items-center justify-center">
-                              <Check className="w-3 h-3 stroke-[3]" />
-                            </div>
-                          ) : (
-                            <div className="w-4 h-4 rounded-full bg-[#14243A]/10 text-[#14243A]/40 flex items-center justify-center text-[10px]">
-                              ✕
-                            </div>
-                          )}
+                          <div className="w-4 h-4 rounded-full bg-[#0D9488]/15 text-[#0D9488] flex items-center justify-center">
+                            <Check className="w-3 h-3 stroke-[3]" />
+                          </div>
                         </div>
                         <span>{feat.text}</span>
                       </div>
                     ))}
+
+                    {excludedFeatures.length > 0 && (
+                      <div className="mt-5 pt-4 border-t border-[#14243A]/10">
+                        <div className="text-[11px] font-bold text-[#14243A]/40 mb-2">
+                          غير متاح حالياً في هذه الباقة:
+                        </div>
+                        <div className="space-y-2">
+                          {excludedFeatures.map((feat, idx) => (
+                            <div key={idx} className="flex items-start gap-2 text-[11px] text-[#14243A]/35">
+                              <span className="mt-0.5 shrink-0">—</span>
+                              <span>{feat.text}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
