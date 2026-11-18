@@ -40,6 +40,7 @@ interface Plan {
   }[];
   ctaText: string;
   ctaSubtext: string;
+  customPricing?: boolean;
 }
 
 const PLANS_DATA: Plan[] = [
@@ -66,7 +67,7 @@ const PLANS_DATA: Plan[] = [
       }
     },
     features: [
-      { text: 'حتى 150 طالباً نشطاً', included: true, highlight: true },
+      { text: 'حتى 200 طالب نشط', included: true, highlight: true },
       { text: 'فرع واحد وحتى 4 قاعات تدريسية', included: true },
       { text: '5 حسابات للفريق من موظفين ومدربين', included: true },
       { text: 'إدارة بيانات الطلاب والمجموعات', included: true },
@@ -105,9 +106,9 @@ const PLANS_DATA: Plan[] = [
       }
     },
     features: [
-      { text: 'حتى 650 طالباً نشطاً', included: true, highlight: true },
+      { text: 'حتى 750 طالباً نشطاً', included: true, highlight: true },
       { text: 'حتى 3 فروع في حساب موحّد', included: true, highlight: true },
-      { text: 'حسابات موظفين ومدربين غير محدودة', included: true },
+      { text: 'حسابات متعددة للموظفين والمدربين', included: true },
       { text: 'بوابة مستقلة للطالب وولي الأمر', included: true, highlight: true },
       { text: 'اعتماد وأرشفة الإيصالات والتحويلات', included: true, highlight: true },
       { text: 'احتساب رواتب ونسب وساعات المدربين آلياً', included: true },
@@ -117,13 +118,13 @@ const PLANS_DATA: Plan[] = [
       { text: 'نقل بيانات الطلاب من Excel مرة واحدة', included: true }
     ],
     ctaText: 'ابدأ تجربة النمو 14 يوماً',
-    ctaSubtext: 'بدون بطاقة — كل المزايا الأساسية مشمولة خلال التجربة'
+    ctaSubtext: '14 يوماً مجاناً بدون بطاقة — اختر الاستمرار أو الباقة المناسبة بعدها'
   },
   {
     id: 'enterprise',
     name: 'المؤسسات',
-    subtitle: 'للشبكات والمؤسسات التي تحتاج فروعاً غير محدودة وربطاً مخصصاً وأعلى مستوى من الدعم والأمان',
-    badge: 'للشبكات والمؤسسات',
+    subtitle: 'للشبكات والمؤسسات التي تحتاج توسعاً كبيراً وربطاً مخصصاً وأعلى مستوى من الدعم والأمان',
+    badge: 'للتوسع المؤسسي',
     pricing: {
       EGP: {
         monthly: 5900,
@@ -142,8 +143,8 @@ const PLANS_DATA: Plan[] = [
       }
     },
     features: [
-      { text: 'طلاب ومدربون غير محدودين', included: true, highlight: true },
-      { text: 'فروع وقاعات غير محدودة', included: true, highlight: true },
+      { text: 'طلاب ومدربون حسب حجم المؤسسة', included: true, highlight: true },
+      { text: 'فروع وقاعات قابلة للتوسع حسب الاتفاق', included: true, highlight: true },
       { text: 'نطاق ودومين خاص باسم الأكاديمية', included: true, highlight: true },
       { text: 'بيئة استضافة مخصصة ومعزولة', included: true },
       { text: 'ربط API مع أنظمة ERP والفوترة', included: true },
@@ -154,7 +155,8 @@ const PLANS_DATA: Plan[] = [
       { text: 'تخصيص الشعار والألوان والتقارير', included: true }
     ],
     ctaText: 'تحدث مع مستشار مدى',
-    ctaSubtext: 'خطة مخصصة حسب حجم الأكاديمية واحتياجاتها'
+    ctaSubtext: 'سعر مخصص حسب عدد الفروع والربط المطلوب',
+    customPricing: true
   }
 ];
 
@@ -288,21 +290,27 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, on
 
                   {/* Pricing Display */}
                   <div className="py-6 text-right">
-                    <div className="flex items-baseline gap-2">
+                    <div className={`flex items-baseline gap-2 ${plan.customPricing ? 'items-center' : ''}`}>
                       <span className="text-4xl sm:text-5xl font-black text-[#14243A] font-mono tracking-tight">
-                        {currentPrice}
+                        {plan.customPricing ? 'حسب الاحتياج' : currentPrice}
                       </span>
-                      <span className="text-sm font-bold text-[#14243A]/60">
-                        {priceInfo.formatted.currencySymbol} / شهرياً
-                      </span>
+                      {!plan.customPricing && (
+                        <span className="text-sm font-bold text-[#14243A]/60">
+                          {priceInfo.formatted.currencySymbol} / شهرياً
+                        </span>
+                      )}
                     </div>
 
                     <div className="text-xs text-[#14243A]/50 mt-1.5 font-medium">
-                      {isAnnual ? 'يتم سداد الاشتراك سنوياً بخصم شهرين مجاناً' : 'اشتراك شهري مرن، يمكنك الإلغاء في أي وقت'}
+                      {plan.customPricing
+                        ? 'نحدد السعر بعد معرفة عدد الفروع واحتياجات التشغيل والربط'
+                        : isAnnual
+                          ? 'يتم السداد سنوياً مع توفير قيمة شهرين'
+                          : 'اشتراك شهري مرن، يمكنك الإلغاء في أي وقت'}
                     </div>
                     {plan.id === 'growth' && (
-                      <div className="inline-flex mt-3 items-center rounded-full bg-[#0D9488]/10 px-3 py-1 text-[11px] font-black text-[#0D9488]">
-                        تجربة مجانية 14 يوماً لباقة النمو
+                      <div className="inline-flex mt-3 items-center rounded-full bg-[#0D9488]/10 px-3 py-1 text-[11px] font-black text-[#0D9488] text-right">
+                        تجربة مجانية 14 يوماً بدون بطاقة — لا يبدأ أي اشتراك تلقائياً
                       </div>
                     )}
                   </div>
@@ -437,45 +445,45 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, on
               <tbody className="divide-y divide-[#14243A]/10 text-[#14243A]/80">
                 <tr>
                   <td className="py-3.5 px-6 font-semibold">عدد الطلاب النشطين المسموح به</td>
-                  <td className="py-3.5 px-4 text-center font-mono">150 طالباً</td>
-                  <td className="py-3.5 px-4 text-center font-mono font-bold text-[#0D9488]">650 طالباً</td>
-                  <td className="py-3.5 px-4 text-center font-mono font-bold">غير محدود</td>
+                  <td className="py-3.5 px-4 text-center font-mono">200 طالب</td>
+                  <td className="py-3.5 px-4 text-center font-mono font-bold text-[#0D9488]">750 طالباً</td>
+                  <td className="py-3.5 px-4 text-center font-mono font-bold">حسب الاتفاق</td>
                 </tr>
                 <tr className="bg-[#F8FAFC]">
                   <td className="py-3.5 px-6 font-semibold">عدد الفروع المدارة في حساب واحد</td>
                   <td className="py-3.5 px-4 text-center font-mono">فرع واحد</td>
                   <td className="py-3.5 px-4 text-center font-mono font-bold text-[#0D9488]">حتى 3 فروع</td>
-                  <td className="py-3.5 px-4 text-center font-mono font-bold">غير محدود</td>
+                  <td className="py-3.5 px-4 text-center font-mono font-bold">قابل للتوسع</td>
                 </tr>
                 <tr>
                   <td className="py-3.5 px-6 font-semibold">بوابات الطالب وولي الأمر</td>
                   <td className="py-3.5 px-4 text-center text-rose-500 font-bold">✕ غير متاحة</td>
                   <td className="py-3.5 px-4 text-center text-emerald-600 font-bold">✓ مشمولة</td>
-                  <td className="py-3.5 px-4 text-center text-emerald-600 font-bold">✓ مشمولة مع تخصيص موسّع</td>
+                  <td className="py-3.5 px-4 text-center text-emerald-600 font-bold">✓ مشمولة مع تخصيص</td>
                 </tr>
                 <tr className="bg-[#F8FAFC]">
                   <td className="py-3.5 px-6 font-semibold">أرشفة إيصالات التحويل البنكي وسندات القبض</td>
                   <td className="py-3.5 px-4 text-center">سندات أساسية</td>
                   <td className="py-3.5 px-4 text-center text-emerald-600 font-bold">✓ أرشفة مستندات وصور</td>
-                  <td className="py-3.5 px-4 text-center text-emerald-600 font-bold">✓ سحابة خاصة معزولة</td>
+                  <td className="py-3.5 px-4 text-center text-emerald-600 font-bold">✓ حسب الباقة المخصصة</td>
                 </tr>
                 <tr>
                   <td className="py-3.5 px-6 font-semibold">حساب رواتب وحصص المدربين التلقائي</td>
                   <td className="py-3.5 px-4 text-center text-rose-500 font-bold">✕</td>
                   <td className="py-3.5 px-4 text-center text-emerald-600 font-bold">✓ مشمول آلياً</td>
-                  <td className="py-3.5 px-4 text-center text-emerald-600 font-bold">✓ مشمول مع تخصيص</td>
+                  <td className="py-3.5 px-4 text-center text-emerald-600 font-bold">✓ حسب نطاق المشروع</td>
                 </tr>
                 <tr className="bg-[#F8FAFC]">
                   <td className="py-3.5 px-6 font-semibold">تخصيص دومين ونطاق خاص (Custom Domain)</td>
                   <td className="py-3.5 px-4 text-center text-rose-500 font-bold">✕</td>
                   <td className="py-3.5 px-4 text-center text-rose-500 font-bold">✕ (متاح كإضافة)</td>
-                  <td className="py-3.5 px-4 text-center text-emerald-600 font-bold">✓ مجاناً باسم أكاديميتك</td>
+                  <td className="py-3.5 px-4 text-center text-emerald-600 font-bold">✓ ضمن العرض المخصص</td>
                 </tr>
                 <tr>
                   <td className="py-3.5 px-6 font-semibold">نوع الدعم الفني وسرعة الاستجابة</td>
                   <td className="py-3.5 px-4 text-center">بريد + واتساب عادي</td>
                   <td className="py-3.5 px-4 text-center text-[#0D9488] font-bold">أولوية عالية ومكالمات</td>
-                  <td className="py-3.5 px-4 text-center font-bold">مدير حساب خاص 24/7 VIP</td>
+                  <td className="py-3.5 px-4 text-center font-bold">مدير حساب ودعم أولوية</td>
                 </tr>
               </tbody>
             </table>
