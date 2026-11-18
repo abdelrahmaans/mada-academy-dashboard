@@ -22,7 +22,6 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdminLogin, onScrollToDemo
           <div className="space-y-4">
             <h3 className="text-2xl font-black text-white tracking-tight flex items-center justify-end gap-2">
               <span className="text-[#0D9488]">مدى</span>
-              <span>أكاديمي</span>
             </h3>
             
             <p className="text-xs sm:text-sm text-white/70 leading-relaxed font-normal max-w-sm ml-auto">
@@ -109,7 +108,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAdminLogin, onScrollToDemo
         {/* Bottom Bar matching Screenshot 2 */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-white/50">
           <div className="flex items-center gap-2">
-            <span>© 2026 مدى أكاديمي. جميع الحقوق محفوظة.</span>
+            <span>© 2026 مدى. جميع الحقوق محفوظة.</span>
           </div>
 
           <div className="flex items-center gap-4">
