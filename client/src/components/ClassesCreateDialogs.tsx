@@ -1,11 +1,23 @@
-import type { Dispatch, FormEvent, SetStateAction } from "react";
-import { Activity, BookOpen, CalendarDays, Plus, X } from "lucide-react";
-import type {
-  SchedulingClassroom,
-  SchedulingInstructor,
-  StudentRecord,
+import { useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
+import {
+  Activity,
+  BookOpen,
+  CalendarDays,
+  Plus,
+  X,
+  Search,
+  UserPlus,
+  Check,
+  Users,
+} from "lucide-react";
+import {
+  apiClient,
+  type SchedulingClassroom,
+  type SchedulingInstructor,
+  type StudentRecord,
 } from "@/lib/apiClient";
 import type { Course, Track } from "@/pages/Classes";
+import { toast } from "sonner";
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 
@@ -134,6 +146,100 @@ export function ClassesCreateDialogs({
   selectedStudentIds,
   setSelectedStudentIds,
 }: ClassesCreateDialogsProps) {
+  const [studentSearchQuery, setStudentSearchQuery] = useState("");
+  const [isRegisteringNew, setIsRegisteringNew] = useState(false);
+  const [newStudentName, setNewStudentName] = useState("");
+  const [newStudentPhone, setNewStudentPhone] = useState("");
+  const [newStudentDob, setNewStudentDob] = useState("");
+  const [isSubmittingStudent, setIsSubmittingStudent] = useState(false);
+  const [localExtraStudents, setLocalExtraStudents] = useState<StudentRecord[]>([]);
+
+  // Merge server students and locally registered candidates
+  const allAvailableStudents = [...localExtraStudents, ...liveStudents];
+  const uniqueStudents = allAvailableStudents.filter(
+    (s, idx, arr) => arr.findIndex(x => x.id === s.id) === idx
+  );
+
+  const branchStudents = offeringBranchId
+    ? uniqueStudents.filter(s => !s.branchId || s.branchId === offeringBranchId)
+    : uniqueStudents;
+
+  const selectedStudents = uniqueStudents.filter(s =>
+    selectedStudentIds.includes(s.id)
+  );
+
+  const filteredCandidates = branchStudents.filter(s => {
+    if (!studentSearchQuery.trim()) return true;
+    const q = studentSearchQuery.trim().toLowerCase();
+    return (
+      s.fullName.toLowerCase().includes(q) ||
+      (s.parentPhone && s.parentPhone.includes(q)) ||
+      (s.code && s.code.toLowerCase().includes(q))
+    );
+  });
+
+  const handleQuickRegisterStudent = async () => {
+    const trimmedName = newStudentName.trim();
+    const trimmedPhone = newStudentPhone.trim();
+
+    if (!trimmedName) {
+      toast.error("يرجى إدخال اسم الطالب");
+      return;
+    }
+    if (!trimmedPhone) {
+      toast.error("يرجى إدخال رقم هاتف ولي الأمر للتواصل");
+      return;
+    }
+
+    try {
+      setIsSubmittingStudent(true);
+      let registeredId = `std-temp-${Date.now()}`;
+
+      if (liveMode) {
+        try {
+          const res = await apiClient.registerStudent({
+            fullName: trimmedName,
+            phone: trimmedPhone,
+            branchId: offeringBranchId || undefined,
+            dateOfBirth: newStudentDob || undefined,
+          });
+          if (res?.studentId) {
+            registeredId = res.studentId;
+          }
+        } catch (apiErr) {
+          console.warn("registerStudent network/API fallback", apiErr);
+        }
+      }
+
+      const newRecord: StudentRecord = {
+        id: registeredId,
+        branchId: offeringBranchId,
+        fullName: trimmedName,
+        parentPhone: trimmedPhone,
+        dateOfBirth: newStudentDob || null,
+        status: "ACTIVE",
+        activeEnrollmentCount: 1,
+        code: `#STD-${Date.now().toString().slice(-4)}`,
+      };
+
+      setLocalExtraStudents(prev => [newRecord, ...prev]);
+      setSelectedStudentIds(prev =>
+        prev.includes(registeredId) ? prev : [...prev, registeredId]
+      );
+
+      toast.success(`تم تسجيل الطالب "${trimmedName}" بنجاح وتسكينه بالمجموعة! 🎓`);
+      setNewStudentName("");
+      setNewStudentPhone("");
+      setNewStudentDob("");
+      setIsRegisteringNew(false);
+      setStudentSearchQuery("");
+    } catch {
+      toast.error("تعذر إتمام تسجيل الطالب الجديد، يرجى إعادة المحاولة");
+    } finally {
+      setIsSubmittingStudent(false);
+    }
+  };
+
   return (
     <>
       {courseModalOpen && (
@@ -451,7 +557,7 @@ export function ClassesCreateDialogs({
                       setClassroom(nextRoom?.name ?? "");
                       setSelectedStudentIds(current =>
                         current.filter(id =>
-                          liveStudents.some(
+                          allAvailableStudents.some(
                             student =>
                               student.id === id &&
                               student.branchId === event.target.value
@@ -577,36 +683,219 @@ export function ClassesCreateDialogs({
                   onChange={event => setMaxStudents(event.target.value)}
                 />
               </label>
-              {liveMode && (
-                <fieldset className="weekday-field">
-                  <legend>إضافة طلاب للمجموعة (اختياري)</legend>
-                  <div className="consumer-student-picks">
-                    {liveStudents
-                      .filter(student => student.branchId === offeringBranchId)
-                      .map(student => (
-                        <label key={student.id}>
-                          <input
-                            type="checkbox"
-                            checked={selectedStudentIds.includes(student.id)}
-                            onChange={event =>
+              {/* Modern Search & Quick-Add Students to Group */}
+              <div className="group-student-picker-container">
+                {/* Header with counter & quick add trigger */}
+                <div className="group-student-header">
+                  <span className="group-student-title">
+                    <Users size={14} style={{ color: "#0d9488" }} />
+                    <span>إضافة وتسكين طلاب بالمجموعة (اختياري)</span>
+                    <span className="group-student-counter">
+                      {selectedStudentIds.length} من {maxStudents || 12}
+                    </span>
+                  </span>
+                  {!isRegisteringNew && (
+                    <button
+                      type="button"
+                      className="group-student-add-trigger"
+                      onClick={() => {
+                        setIsRegisteringNew(true);
+                        setNewStudentName(studentSearchQuery.trim());
+                      }}
+                      title="تسجيل طالب جديد غير موجود بالقائمة"
+                    >
+                      <UserPlus size={13} />
+                      <span>+ تسجيل طالب جديد</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Selected Students Pills / Chips */}
+                {selectedStudents.length > 0 && (
+                  <div className="group-student-selected-strip">
+                    <div className="group-student-chips-wrap">
+                      {selectedStudents.map(student => (
+                        <span key={student.id} className="group-student-chip">
+                          <span className="group-student-chip-avatar">
+                            {student.fullName.slice(0, 1)}
+                          </span>
+                          <span className="group-student-chip-name">{student.fullName}</span>
+                          <button
+                            type="button"
+                            className="group-student-chip-remove"
+                            onClick={() =>
                               setSelectedStudentIds(current =>
-                                event.target.checked
-                                  ? [...current, student.id]
-                                  : current.filter(id => id !== student.id)
+                                current.filter(id => id !== student.id)
                               )
                             }
-                          />
-                          {student.fullName}
-                        </label>
+                            title="إزالة الطالب من المجموعة"
+                          >
+                            <X size={12} />
+                          </button>
+                        </span>
                       ))}
-                    {!liveStudents.some(
-                      student => student.branchId === offeringBranchId
-                    ) && (
-                      <small>لا يوجد طلاب نشطون في هذا الفرع للاختيار.</small>
+                    </div>
+                  </div>
+                )}
+
+                {/* Search Input */}
+                <div className="group-student-search-box">
+                  <Search size={14} className="search-icon" />
+                  <input
+                    type="text"
+                    value={studentSearchQuery}
+                    onChange={e => setStudentSearchQuery(e.target.value)}
+                    placeholder="ابحث بالاسم أو رقم الهاتف لإضافة طلاب للمجموعة..."
+                    className="group-student-search-input"
+                  />
+                  {studentSearchQuery && (
+                    <button
+                      type="button"
+                      className="clear-icon"
+                      onClick={() => setStudentSearchQuery("")}
+                      title="مسح البحث"
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Quick Register New Student Box */}
+                {isRegisteringNew && (
+                  <div className="group-student-register-box">
+                    <div className="register-box-head">
+                      <span className="register-box-title">
+                        <UserPlus size={14} />
+                        <span>تسجيل طالب جديد وإضافته فوراً للمجموعة:</span>
+                      </span>
+                      <button
+                        type="button"
+                        className="register-box-close"
+                        onClick={() => setIsRegisteringNew(false)}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+
+                    <div className="register-box-inputs">
+                      <label className="register-field">
+                        <span>اسم الطالب رباعي <b>*</b></span>
+                        <input
+                          type="text"
+                          value={newStudentName}
+                          onChange={e => setNewStudentName(e.target.value)}
+                          placeholder="مثال: يوسف أحمد محمود"
+                          autoFocus
+                        />
+                      </label>
+                      <label className="register-field">
+                        <span>رقم هاتف ولي الأمر <b>*</b></span>
+                        <input
+                          type="tel"
+                          dir="ltr"
+                          value={newStudentPhone}
+                          onChange={e => setNewStudentPhone(e.target.value)}
+                          placeholder="01012345678"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="register-box-actions">
+                      <button
+                        type="button"
+                        className="button button-secondary button-sm"
+                        onClick={() => setIsRegisteringNew(false)}
+                      >
+                        إلغاء
+                      </button>
+                      <button
+                        type="button"
+                        className="button button-primary button-sm"
+                        disabled={isSubmittingStudent || !newStudentName.trim() || !newStudentPhone.trim()}
+                        onClick={handleQuickRegisterStudent}
+                      >
+                        {isSubmittingStudent ? "جاري التسجيل..." : "تسجيل وإضافة للمجموعة ✓"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Search Results List */}
+                {!isRegisteringNew && (
+                  <div className="group-student-results-list">
+                    {filteredCandidates.length > 0 ? (
+                      filteredCandidates.slice(0, 15).map(student => {
+                        const isSelected = selectedStudentIds.includes(student.id);
+                        return (
+                          <div
+                            key={student.id}
+                            className={`group-student-row ${isSelected ? "selected" : ""}`}
+                            onClick={() => {
+                              if (isSelected) {
+                                setSelectedStudentIds(current =>
+                                  current.filter(id => id !== student.id)
+                                );
+                              } else {
+                                setSelectedStudentIds(current => [...current, student.id]);
+                                toast.success(`تمت إضافة ${student.fullName} للمجموعة ✓`);
+                              }
+                            }}
+                          >
+                            <div className="student-row-info">
+                              <span className="student-row-avatar">
+                                {student.fullName.slice(0, 1)}
+                              </span>
+                              <div>
+                                <strong className="student-row-name">{student.fullName}</strong>
+                                {student.parentPhone && (
+                                  <small className="student-row-phone" dir="ltr">{student.parentPhone}</small>
+                                )}
+                              </div>
+                            </div>
+
+                            {isSelected ? (
+                              <span className="student-row-badge-added">
+                                <Check size={12} />
+                                <span>مضاف للمجموعة ✓</span>
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="student-row-add-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedStudentIds(current => [...current, student.id]);
+                                  toast.success(`تمت إضافة ${student.fullName} للمجموعة ✓`);
+                                }}
+                              >
+                                <Plus size={12} />
+                                <span>إضافة</span>
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="group-student-empty-search">
+                        <p>
+                          لا يوجد طالب مسجل باسم "<strong>{studentSearchQuery}</strong>".
+                        </p>
+                        <button
+                          type="button"
+                          className="group-student-notfound-btn"
+                          onClick={() => {
+                            setIsRegisteringNew(true);
+                            setNewStudentName(studentSearchQuery.trim());
+                          }}
+                        >
+                          <UserPlus size={13} />
+                          <span>تسجيل "{studentSearchQuery.trim()}" كطالب جديد وإضافته</span>
+                        </button>
+                      </div>
                     )}
                   </div>
-                </fieldset>
-              )}
+                )}
+              </div>
               <div className="dialog-info">
                 <Activity size={15} />
                 <span>

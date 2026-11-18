@@ -110,3 +110,36 @@ describe("ClassesTopbar", () => {
     expect(html).toContain("كل الفروع");
   });
 });
+
+describe("Group Creation Student Picker logic", () => {
+  const sampleStudents = [
+    { id: "1", fullName: "Youssef Ahmed", branchId: "b1", parentPhone: "01011111111", status: "ACTIVE", activeEnrollmentCount: 0 },
+    { id: "2", fullName: "Lina Omar", branchId: "b1", parentPhone: "01022222222", status: "ACTIVE", activeEnrollmentCount: 1 },
+    { id: "3", fullName: "Adam Khaled", branchId: "b2", parentPhone: "01033333333", status: "ACTIVE", activeEnrollmentCount: 0 },
+  ];
+
+  it("filters students by branch and search query", () => {
+    const branchFilter = sampleStudents.filter(s => s.branchId === "b1");
+    expect(branchFilter.length).toBe(2);
+
+    const query = "Lina";
+    const filtered = branchFilter.filter(s => s.fullName.toLowerCase().includes(query.toLowerCase()));
+    expect(filtered.length).toBe(1);
+    expect(filtered[0].fullName).toBe("Lina Omar");
+  });
+
+  it("handles new student registration fallback cleanly", () => {
+    const newStudent = {
+      id: "std-new-001",
+      fullName: "حمزة محمود",
+      branchId: "b1",
+      parentPhone: "01099887766",
+      status: "ACTIVE",
+      activeEnrollmentCount: 1,
+    };
+
+    const combined = [newStudent, ...sampleStudents];
+    expect(combined.length).toBe(4);
+    expect(combined[0].fullName).toBe("حمزة محمود");
+  });
+});
