@@ -45,8 +45,8 @@ interface Plan {
 const PLANS_DATA: Plan[] = [
   {
     id: 'starter',
-    name: 'الانطلاق (Starter)',
-    subtitle: 'للأكاديميات الصغيرة التي تدير فرعاً واحداً وتريد بداية منظمة وبتكلفة مناسبة',
+    name: 'الانطلاق',
+    subtitle: 'للأكاديميات الصغيرة التي تبدأ بفرع واحد وتحتاج أساساً منظماً لإدارة الطلاب والحضور والتحصيل',
     badge: 'للأكاديميات الصغيرة',
     pricing: {
       EGP: {
@@ -66,25 +66,26 @@ const PLANS_DATA: Plan[] = [
       }
     },
     features: [
-      { text: 'حتى 150 طالب نشط', included: true, highlight: true },
-      { text: 'فرع واحد + حتى 4 قاعات تدريسية', included: true },
-      { text: '5 حسابات موظفين ومدربين', included: true },
-      { text: 'رصد الحضور والغياب وكشوف الدرجات', included: true },
-      { text: 'سندات قبض وصرف أساسية للخزينة', included: true },
-      { text: 'تصدير كشوف الطلاب والماليات لـ Excel', included: true },
-      { text: 'بوابة ولي الأمر والطالب التفاعلية', included: false },
-      { text: 'أرشفة إيصالات التحويل البنكي المشفرة', included: false },
-      { text: 'حساب رواتب ونسب المدربين آلياً', included: false },
-      { text: 'تعدد الفروع والربط المالي الموحد', included: false }
+      { text: 'حتى 150 طالباً نشطاً', included: true, highlight: true },
+      { text: 'فرع واحد وحتى 4 قاعات تدريسية', included: true },
+      { text: '5 حسابات للفريق من موظفين ومدربين', included: true },
+      { text: 'إدارة بيانات الطلاب والمجموعات', included: true },
+      { text: 'تسجيل الحضور والغياب والدرجات', included: true },
+      { text: 'سندات قبض وصرف أساسية', included: true },
+      { text: 'تصدير بيانات الطلاب والتقارير إلى Excel', included: true },
+      { text: 'بوابة الطالب وولي الأمر', included: false },
+      { text: 'أرشفة إيصالات التحويلات والمستندات', included: false },
+      { text: 'احتساب رواتب ونسب المدربين آلياً', included: false },
+      { text: 'إدارة أكثر من فرع في حساب موحّد', included: false }
     ],
-    ctaText: 'ابدأ بالانطلاق',
-    ctaSubtext: 'اشتراك مرن للأكاديميات الصغيرة — بدون التزام طويل'
+    ctaText: 'ابدأ بالباقة الأساسية',
+    ctaSubtext: 'اشتراك مرن لفريقك الصغير — وترقية سهلة عند التوسع'
   },
   {
     id: 'growth',
-    name: 'النمو (Growth)',
-    subtitle: 'الخيار الأقوى للأكاديميات المتوسعة التي تبحث عن أتمتة تشغيلية ومالية شاملة',
-    badge: 'الأكثر طلباً — ابدأ هنا',
+    name: 'النمو',
+    subtitle: 'للأكاديميات التي تدير أكثر من فريق أو فرع وتحتاج تشغيلًا موحدًا وقرارات مبنية على بيانات',
+    badge: 'الأكثر طلباً — موصى بها',
     isPopular: true,
     pricing: {
       EGP: {
@@ -104,24 +105,24 @@ const PLANS_DATA: Plan[] = [
       }
     },
     features: [
-      { text: 'حتى 650 طالب نشط', included: true, highlight: true },
-      { text: 'حتى 3 فروع تدريبية في حساب موحد', included: true, highlight: true },
+      { text: 'حتى 650 طالباً نشطاً', included: true, highlight: true },
+      { text: 'حتى 3 فروع في حساب موحّد', included: true, highlight: true },
       { text: 'حسابات موظفين ومدربين غير محدودة', included: true },
-      { text: 'بوابات مستقلة للطلاب وأولياء الأمور (R08 & R09)', included: true, highlight: true },
-      { text: 'دورة اعتماد الإيصالات وسندات التحويل البنكي', included: true, highlight: true },
-      { text: 'حساب رواتب ونسب وساعات المدربين آلياً', included: true },
-      { text: 'منع تضارب المواعيد والقاعات بذكاء', included: true },
-      { text: 'إشعارات آلية بمواعيد الحصص والأقساط المستحقة', included: true },
-      { text: 'جلسة تدريب حية لفريق العمل مع مهندس متخصص', included: true, highlight: true },
-      { text: 'نقل بيانات الطلاب من Excel بمعرفتنا مجاناً', included: true }
+      { text: 'بوابة مستقلة للطالب وولي الأمر', included: true, highlight: true },
+      { text: 'اعتماد وأرشفة الإيصالات والتحويلات', included: true, highlight: true },
+      { text: 'احتساب رواتب ونسب وساعات المدربين آلياً', included: true },
+      { text: 'منع تعارض الجداول والقاعات', included: true },
+      { text: 'إشعارات الحصص والأقساط المستحقة', included: true },
+      { text: 'جلسة تهيئة مباشرة لفريق العمل', included: true, highlight: true },
+      { text: 'نقل بيانات الطلاب من Excel مرة واحدة', included: true }
     ],
-    ctaText: 'ابدأ تجربة النمو المجانية',
-    ctaSubtext: 'تجربة مجانية 14 يوماً بدون بطاقة — تشمل كل المزايا الأساسية'
+    ctaText: 'ابدأ تجربة النمو 14 يوماً',
+    ctaSubtext: 'بدون بطاقة — كل المزايا الأساسية مشمولة خلال التجربة'
   },
   {
     id: 'enterprise',
-    name: 'المؤسسات (Enterprise)',
-    subtitle: 'لسلاسل المعاهد والمؤسسات الكبرى الراغبة في استضافة خاصة ودعم VIP',
+    name: 'المؤسسات',
+    subtitle: 'للشبكات والمؤسسات التي تحتاج فروعاً غير محدودة وربطاً مخصصاً وأعلى مستوى من الدعم والأمان',
     badge: 'للشبكات والمؤسسات',
     pricing: {
       EGP: {
@@ -141,19 +142,19 @@ const PLANS_DATA: Plan[] = [
       }
     },
     features: [
-      { text: 'عدد غير محدود من الطلاب والمدربين', included: true, highlight: true },
-      { text: 'عدد فروع وقاعات غير محدود بكل الصلاحيات', included: true, highlight: true },
-      { text: 'نطاق خاص ودومين باسم أكاديميتك (Custom Domain)', included: true, highlight: true },
-      { text: 'سيرفر وقاعدة بيانات مخصصة معزولة بالكامل', included: true },
-      { text: 'ربط مباشر API مع أنظمة الـ ERP والفوترة الإلكترونية', included: true },
-      { text: 'سجل تدقيق أمني متقدم (Audit Logs & IP Security)', included: true },
-      { text: 'مدير حساب مخصص (Account Manager) ودعم VIP على مدار الساعة', included: true },
-      { text: 'اتفاقية مستوى خدمة رسمية (99.95% SLA) وفواتير ضريبية', included: true },
-      { text: 'نسخ احتياطي مخصص كل ساعة واسترجاع فوري', included: true },
-      { text: 'تخصيص مظهر التقارير والشعار والألوان لهوية الأكاديمية', included: true }
+      { text: 'طلاب ومدربون غير محدودين', included: true, highlight: true },
+      { text: 'فروع وقاعات غير محدودة', included: true, highlight: true },
+      { text: 'نطاق ودومين خاص باسم الأكاديمية', included: true, highlight: true },
+      { text: 'بيئة استضافة مخصصة ومعزولة', included: true },
+      { text: 'ربط API مع أنظمة ERP والفوترة', included: true },
+      { text: 'سجل تدقيق وأمان متقدم', included: true },
+      { text: 'مدير حساب ودعم أولوية', included: true },
+      { text: 'اتفاقية مستوى خدمة وتقارير مخصصة', included: true },
+      { text: 'نسخ احتياطي واسترجاع مخصصان', included: true },
+      { text: 'تخصيص الشعار والألوان والتقارير', included: true }
     ],
-    ctaText: 'تحدث مع مستشار الحلول',
-    ctaSubtext: 'عقود مخصصة وسيرفرات خاصة'
+    ctaText: 'تحدث مع مستشار مدى',
+    ctaSubtext: 'خطة مخصصة حسب حجم الأكاديمية واحتياجاتها'
   }
 ];
 
@@ -186,16 +187,16 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, on
         <div className="text-center max-w-3xl mx-auto mb-12 space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0D9488]/10 border border-[#0D9488]/20 text-xs font-bold text-[#0D9488]">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>تسعير واضح وعادل بدون أي رسوم خفية</span>
+            <span>خطط واضحة لكل مرحلة من مراحل نمو أكاديميتك</span>
           </div>
 
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#14243A] tracking-tight">
-            استثمار يبدأ صغيراً <br />
-            وينمو بنمو أكاديميتك
+            ابدأ بالحجم المناسب <br />
+            وتوسّع بدون إعادة بناء نظامك
           </h2>
 
           <p className="text-base sm:text-lg text-[#14243A]/70 leading-relaxed font-normal">
-            لا توجد مصاريف تثبيت، لا توجد عمولات على عمليات الدفع، ولا توجد قيود مفاجئة. اختر الخطة المناسبة لحجمك الآن ورقّي متى شئت.
+            ادفع مقابل ما تحتاجه اليوم، ثم انتقل إلى إمكانات أوسع عندما تكبر الأكاديمية. الأسعار واضحة، والترقية سهلة، ولا توجد رسوم تأسيس.
           </p>
 
           {/* Currency Selector */}
@@ -242,7 +243,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, on
                 <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
                   isAnnual ? 'bg-white text-[#0D9488]' : 'bg-[#0D9488]/15 text-[#0D9488]'
                 }`}>
-                  وفر شهرين (20%)
+                  وفّر قيمة شهرين (20%)
                 </span>
               </button>
             </div>
@@ -376,9 +377,9 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, on
                 <RotateCcw className="w-5 h-5" />
               </div>
               <div className="space-y-1">
-                <h4 className="text-sm font-bold text-[#14243A]">ضمان استرداد 30 يوماً</h4>
+                <h4 className="text-sm font-bold text-[#14243A]">ابدأ بدون رسوم تأسيس</h4>
                 <p className="text-xs text-[#14243A]/65 leading-relaxed">
-                  إذا لم يلبِّ النظام احتياجات أكاديميتك بالكامل خلال أول شهر، سنعيد لك كامل المبلغ فوراً بدون أي تعقيد.
+                  لا تدفع أي رسوم لإعداد الحساب. ابدأ بالبيانات الأساسية، ثم أضف ما تحتاجه مع نمو فريقك وفروعك.
                 </p>
               </div>
             </div>
@@ -388,9 +389,9 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, on
                 <FileSpreadsheet className="w-5 h-5" />
               </div>
               <div className="space-y-1">
-                <h4 className="text-sm font-bold text-[#14243A]">نقل مجاني للبيانات الحالية</h4>
+                <h4 className="text-sm font-bold text-[#14243A]">مساعدة في نقل البيانات</h4>
                 <p className="text-xs text-[#14243A]/65 leading-relaxed">
-                  فريقنا التقني سيتولى رفع بيانات طلابك ومدربيك من ملفات Excel السابقة مجاناً لتنطلق بدون مجهود.
+                  نقل بيانات الطلاب من Excel متاح ضمن باقة النمو، حتى يبدأ فريقك على نظام مرتب من اليوم الأول.
                 </p>
               </div>
             </div>
@@ -400,9 +401,9 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, on
                 <Headphones className="w-5 h-5" />
               </div>
               <div className="space-y-1">
-                <h4 className="text-sm font-bold text-[#14243A]">تدريب الطاقم ودعم متواصل</h4>
+                <h4 className="text-sm font-bold text-[#14243A]">تهيئة ودعم واضح</h4>
                 <p className="text-xs text-[#14243A]/65 leading-relaxed">
-                  جلسة Onboarding مخصصة لسكرتارية ومحاسبي الأكاديمية مع دعم مستمر عبر الواتساب والمكالمات.
+                  جلسة تهيئة لفريق العمل في باقة النمو، مع قنوات دعم تساعدك على تشغيل النظام بثقة.
                 </p>
               </div>
             </div>
@@ -416,7 +417,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, on
             onClick={() => setShowComparison(!showComparison)}
             className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-[#14243A]/80 hover:text-[#0D9488] py-2 px-4 rounded-xl hover:bg-[#F4F7FA] transition-all"
           >
-            <span>{showComparison ? 'إخفاء جدول المقارنة التفصيلي' : 'عرض جدول مقارنة المزايا الشامل لجميع الباقات'}</span>
+            <span>{showComparison ? 'إخفاء مقارنة الباقات' : 'قارن الباقات بالتفصيل قبل الاختيار'}</span>
             {showComparison ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
         </div>
@@ -428,41 +429,41 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, on
               <thead>
                 <tr className="bg-[#14243A] text-white">
                   <th className="py-4 px-6 text-right font-bold">الميزة والمواصفة</th>
-                  <th className="py-4 px-4 text-center font-bold">الانطلاق (Starter)</th>
-                  <th className="py-4 px-4 text-center font-bold text-teal-300">النمو (Growth) ★</th>
-                  <th className="py-4 px-4 text-center font-bold">المؤسسات (Enterprise)</th>
+                  <th className="py-4 px-4 text-center font-bold">الانطلاق</th>
+                  <th className="py-4 px-4 text-center font-bold text-teal-300">النمو ★</th>
+                  <th className="py-4 px-4 text-center font-bold">المؤسسات</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#14243A]/10 text-[#14243A]/80">
                 <tr>
                   <td className="py-3.5 px-6 font-semibold">عدد الطلاب النشطين المسموح به</td>
-                  <td className="py-3.5 px-4 text-center font-mono">150 طالب</td>
-                  <td className="py-3.5 px-4 text-center font-mono font-bold text-[#0D9488]">650 طالب</td>
+                  <td className="py-3.5 px-4 text-center font-mono">150 طالباً</td>
+                  <td className="py-3.5 px-4 text-center font-mono font-bold text-[#0D9488]">650 طالباً</td>
                   <td className="py-3.5 px-4 text-center font-mono font-bold">غير محدود</td>
                 </tr>
                 <tr className="bg-[#F8FAFC]">
                   <td className="py-3.5 px-6 font-semibold">عدد الفروع المدارة في حساب واحد</td>
-                  <td className="py-3.5 px-4 text-center font-mono">فرع 1</td>
+                  <td className="py-3.5 px-4 text-center font-mono">فرع واحد</td>
                   <td className="py-3.5 px-4 text-center font-mono font-bold text-[#0D9488]">حتى 3 فروع</td>
                   <td className="py-3.5 px-4 text-center font-mono font-bold">غير محدود</td>
                 </tr>
                 <tr>
-                  <td className="py-3.5 px-6 font-semibold">بوابات الطلاب وأولياء الأمور (R08 & R09)</td>
+                  <td className="py-3.5 px-6 font-semibold">بوابات الطالب وولي الأمر</td>
                   <td className="py-3.5 px-4 text-center text-rose-500 font-bold">✕ غير متاحة</td>
-                  <td className="py-3.5 px-4 text-center text-emerald-600 font-bold">✓ كاملة</td>
-                  <td className="py-3.5 px-4 text-center text-emerald-600 font-bold">✓ كاملة مع تطبيق ويب</td>
+                  <td className="py-3.5 px-4 text-center text-emerald-600 font-bold">✓ مشمولة</td>
+                  <td className="py-3.5 px-4 text-center text-emerald-600 font-bold">✓ مشمولة مع تخصيص موسّع</td>
                 </tr>
                 <tr className="bg-[#F8FAFC]">
                   <td className="py-3.5 px-6 font-semibold">أرشفة إيصالات التحويل البنكي وسندات القبض</td>
-                  <td className="py-3.5 px-4 text-center">سندات نصية فقط</td>
+                  <td className="py-3.5 px-4 text-center">سندات أساسية</td>
                   <td className="py-3.5 px-4 text-center text-emerald-600 font-bold">✓ أرشفة مستندات وصور</td>
                   <td className="py-3.5 px-4 text-center text-emerald-600 font-bold">✓ سحابة خاصة معزولة</td>
                 </tr>
                 <tr>
                   <td className="py-3.5 px-6 font-semibold">حساب رواتب وحصص المدربين التلقائي</td>
                   <td className="py-3.5 px-4 text-center text-rose-500 font-bold">✕</td>
-                  <td className="py-3.5 px-4 text-center text-emerald-600 font-bold">✓ مفعل آلياً</td>
-                  <td className="py-3.5 px-4 text-center text-emerald-600 font-bold">✓ مفعل + ربط بنكي</td>
+                  <td className="py-3.5 px-4 text-center text-emerald-600 font-bold">✓ مشمول آلياً</td>
+                  <td className="py-3.5 px-4 text-center text-emerald-600 font-bold">✓ مشمول مع تخصيص</td>
                 </tr>
                 <tr className="bg-[#F8FAFC]">
                   <td className="py-3.5 px-6 font-semibold">تخصيص دومين ونطاق خاص (Custom Domain)</td>
