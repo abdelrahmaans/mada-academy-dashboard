@@ -453,6 +453,7 @@ public static class PlatformAdminEndpoints
                 ["supervision_quality"] = false,
                 ["custom_whatsapp_notifications"] = false,
                 ["beta_features_enabled"] = false,
+                ["nursery_early_childhood"] = false,
             },
             "GROWTH" => new Dictionary<string, bool>
             {
@@ -462,6 +463,7 @@ public static class PlatformAdminEndpoints
                 ["supervision_quality"] = true,
                 ["custom_whatsapp_notifications"] = false,
                 ["beta_features_enabled"] = false,
+                ["nursery_early_childhood"] = false,
             },
             "ENTERPRISE" or "SCALE" => new Dictionary<string, bool>
             {
@@ -471,6 +473,7 @@ public static class PlatformAdminEndpoints
                 ["supervision_quality"] = true,
                 ["custom_whatsapp_notifications"] = true,
                 ["beta_features_enabled"] = false,
+                ["nursery_early_childhood"] = true,
             },
             _ => new Dictionary<string, bool>
             {
@@ -480,6 +483,7 @@ public static class PlatformAdminEndpoints
                 ["supervision_quality"] = false,
                 ["custom_whatsapp_notifications"] = false,
                 ["beta_features_enabled"] = false,
+                ["nursery_early_childhood"] = false,
             }
         };
     }
