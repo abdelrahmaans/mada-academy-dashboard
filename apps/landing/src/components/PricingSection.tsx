@@ -169,12 +169,21 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, on
   const [isAnnual, setIsAnnual] = useState(true);
   const [currency, setCurrency] = useState<Currency>('EGP');
   const [showComparison, setShowComparison] = useState(false);
+  const [expandedPlans, setExpandedPlans] = useState<string[]>([]);
 
   const handleChoosePlan = (planId: string) => {
     if (onSelectPlan) {
       onSelectPlan(planId);
     }
     onScrollToDemo();
+  };
+
+  const togglePlanFeatures = (planId: string) => {
+    setExpandedPlans((current) => (
+      current.includes(planId)
+        ? current.filter((id) => id !== planId)
+        : [...current, planId]
+    ));
   };
 
   return (
@@ -260,6 +269,9 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, on
             const currentPrice = isAnnual ? priceInfo.formatted.annual : priceInfo.formatted.monthly;
             const includedFeatures = plan.features.filter((feature) => feature.included);
             const excludedFeatures = plan.features.filter((feature) => !feature.included);
+            const isExpanded = expandedPlans.includes(plan.id);
+            const visibleFeatures = isExpanded ? includedFeatures : includedFeatures.slice(0, 7);
+            const hiddenFeatureCount = includedFeatures.length - visibleFeatures.length;
 
             return (
               <div
@@ -291,7 +303,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, on
                   {/* Pricing Display */}
                   <div className="py-6 text-right">
                     <div className={`flex items-baseline gap-2 ${plan.customPricing ? 'items-center' : ''}`}>
-                      <span className="text-4xl sm:text-5xl font-black text-[#14243A] font-mono tracking-tight">
+                      <span className={`${plan.customPricing ? 'text-3xl sm:text-4xl leading-tight' : 'text-4xl sm:text-5xl'} font-black text-[#14243A] ${plan.customPricing ? '' : 'font-mono'} tracking-tight`}>
                         {plan.customPricing ? 'حسب الاحتياج' : currentPrice}
                       </span>
                       {!plan.customPricing && (
@@ -321,7 +333,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, on
                       المزايا المتاحة في هذه الباقة:
                     </div>
 
-                    {includedFeatures.map((feat, idx) => (
+                    {visibleFeatures.map((feat, idx) => (
                       <div 
                         key={idx}
                         className={`flex items-start gap-2.5 text-xs sm:text-sm leading-relaxed ${feat.highlight ? 'font-bold text-[#14243A]' : 'text-[#14243A]/85'}`}
@@ -335,20 +347,40 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, on
                       </div>
                     ))}
 
-                    {excludedFeatures.length > 0 && (
+                    {(hiddenFeatureCount > 0 || (isExpanded && excludedFeatures.length > 0)) && (
                       <div className="mt-5 pt-4 border-t border-[#14243A]/10">
-                        <div className="text-[11px] font-bold text-[#14243A]/40 mb-2">
-                          غير متاح حالياً في هذه الباقة:
-                        </div>
-                        <div className="space-y-2">
-                          {excludedFeatures.map((feat, idx) => (
-                            <div key={idx} className="flex items-start gap-2 text-[11px] leading-relaxed text-[#14243A]/40">
-                              <span className="mt-0.5 shrink-0">—</span>
-                              <span>{feat.text}</span>
+                        {hiddenFeatureCount > 0 && !isExpanded && (
+                          <p className="text-[11px] text-[#14243A]/45">
+                            + {hiddenFeatureCount} مزايا إضافية مشمولة في هذه الباقة
+                          </p>
+                        )}
+                        {isExpanded && excludedFeatures.length > 0 && (
+                          <div>
+                            <div className="text-[11px] font-bold text-[#14243A]/45 mb-2">
+                              مزايا متاحة عند الترقية:
                             </div>
-                          ))}
-                        </div>
+                            <div className="space-y-2">
+                              {excludedFeatures.map((feat, idx) => (
+                                <div key={idx} className="flex items-start gap-2 text-[11px] leading-relaxed text-[#14243A]/45">
+                                  <span className="mt-0.5 shrink-0">—</span>
+                                  <span>{feat.text}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
+                    )}
+
+                    {(includedFeatures.length > 7 || excludedFeatures.length > 0) && (
+                      <button
+                        type="button"
+                        onClick={() => togglePlanFeatures(plan.id)}
+                        className="mt-3 text-xs font-bold text-[#0D9488] hover:text-[#0B7D72] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488]/40 rounded-md"
+                        aria-expanded={isExpanded}
+                      >
+                        {isExpanded ? 'إخفاء التفاصيل' : 'عرض كل مزايا الباقة'}
+                      </button>
                     )}
                   </div>
                 </div>
