@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Activity, ArrowLeft, BookOpen, CalendarDays, CheckCircle2, Clock, Eye, LifeBuoy, MapPin, Menu, Receipt, RefreshCw, UserPlus, Users, X } from "lucide-react";
+import { Activity, ArrowLeft, Baby, BookOpen, CalendarDays, CheckCircle2, Clock, Eye, LifeBuoy, MapPin, Menu, Receipt, RefreshCw, UserPlus, Users, X } from "lucide-react";
 import { useLocation } from "wouter";
 import PageHeader from "@/components/PageHeader";
 import QuickActionsBar from "@/components/QuickActionsBar";
@@ -87,6 +87,12 @@ export default function HomeLive({ me }: { me: AuthMe }) {
               label: "الموافقات والقرارات المعلقة",
               icon: <CheckCircle2 size={14} />,
               onClick: () => navigate("/approvals"),
+            },
+            {
+              id: "r02-nursery",
+              label: "متابعة الحضانة والمنهج اليومي للأطفال 👶",
+              icon: <Baby size={14} />,
+              onClick: () => navigate("/nursery-desk"),
             },
             {
               id: "r02-refresh",
