@@ -46,7 +46,7 @@ const PLANS_DATA: Plan[] = [
   {
     id: 'starter',
     name: 'الانطلاق (Starter)',
-    subtitle: 'للمراكز الناشئة والمعلمين المستقلين لبدء التشغيل المنظم فوراً',
+    subtitle: 'للأكاديميات الصغيرة التي تدير فرعاً واحداً وتريد بداية منظمة وبتكلفة مناسبة',
     pricing: {
       EGP: {
         monthly: 950,
@@ -77,7 +77,7 @@ const PLANS_DATA: Plan[] = [
       { text: 'تعدد الفروع والربط المالي الموحد', included: false }
     ],
     ctaText: 'ابدأ بالانطلاق',
-    ctaSubtext: 'تجربة مجانية 14 يوماً بدون بطاقة'
+    ctaSubtext: 'اشتراك مرن للأكاديميات الصغيرة — بدون التزام طويل'
   },
   {
     id: 'growth',
@@ -114,8 +114,8 @@ const PLANS_DATA: Plan[] = [
       { text: 'جلسة تدريب حية لفريق العمل مع مهندس متخصص', included: true, highlight: true },
       { text: 'نقل بيانات الطلاب من Excel بمعرفتنا مجاناً', included: true }
     ],
-    ctaText: 'اختر باقة النمو الأقوى',
-    ctaSubtext: 'شاملة كل البوابات وميزة الفروع'
+    ctaText: 'ابدأ تجربة النمو المجانية',
+    ctaSubtext: 'تجربة مجانية 14 يوماً بدون بطاقة — تشمل كل المزايا الأساسية'
   },
   {
     id: 'enterprise',
@@ -296,6 +296,11 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, on
                     <div className="text-xs text-[#14243A]/50 mt-1.5 font-medium">
                       {isAnnual ? 'يتم سداد الاشتراك سنوياً بخصم شهرين مجاناً' : 'اشتراك شهري مرن، يمكنك الإلغاء في أي وقت'}
                     </div>
+                    {plan.id === 'growth' && (
+                      <div className="inline-flex mt-3 items-center rounded-full bg-[#0D9488]/10 px-3 py-1 text-[11px] font-black text-[#0D9488]">
+                        تجربة مجانية 14 يوماً لباقة النمو
+                      </div>
+                    )}
                   </div>
 
                   {/* Feature List */}
