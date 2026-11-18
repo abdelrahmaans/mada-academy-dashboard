@@ -6,7 +6,8 @@ export type Track =
   | "circuits"
   | "ai"
   | "soft_skills"
-  | "game_dev";
+  | "game_dev"
+  | "early_childhood";
 
 export type CourseStatus = "active" | "on_hold" | "draft" | "archived";
 export type OfferingStatus = "upcoming" | "ongoing" | "completed" | "cancelled";
@@ -55,6 +56,7 @@ export const trackLabels: Record<Track, string> = {
   ai: "ذكاء اصطناعي",
   soft_skills: "مهارات شخصية",
   game_dev: "تطوير ألعاب",
+  early_childhood: "حضانات وطفولة مبكرة",
 };
 
 export const levelLabels = {
@@ -158,6 +160,19 @@ export const seedCourses: Course[] = [
     status: "on_hold",
     description: "إنشاء لعبة ثنائية الأبعاد من الفكرة إلى التجربة.",
   },
+  {
+    id: "CRS-020",
+    name: "برنامج الحضانة والطفولة المبكرة (المنهج التكاملي)",
+    track: "early_childhood",
+    type: "soft",
+    ageGroup: "3–5",
+    level: "beginner",
+    totalSessions: 48,
+    durationHours: 4,
+    basePricePiasters: 150000,
+    status: "active",
+    description: "تنمية المهارات الحركية والمعرفية والسلوكية اليومية للأطفال مع التقييم التكويني المستمر.",
+  },
 ];
 
 export const seedOfferings: Offering[] = [
@@ -247,6 +262,23 @@ export const seedOfferings: Offering[] = [
     maxStudents: 12,
     enrolledStudents: 6,
   },
+  {
+    id: "GRP-045",
+    courseId: "CRS-020",
+    courseName: "فصل النجوم (تمهيدي 3-4 سنوات)",
+    track: "early_childhood",
+    instructor: "مريم حسن",
+    branch: "مدينة نصر",
+    classroom: "قاعة الروضة والأنشطة",
+    startDate: "2026-09-01",
+    schedule: "يومياً من الأحد للخميس · 08:30 ص",
+    days: ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس"],
+    startTime: "08:30",
+    endTime: "13:30",
+    status: "ongoing",
+    maxStudents: 12,
+    enrolledStudents: 10,
+  },
 ];
 
 export const trackIcons: Record<Track, string> = {
@@ -256,6 +288,7 @@ export const trackIcons: Record<Track, string> = {
   ai: "ai",
   soft_skills: "soft",
   game_dev: "games",
+  early_childhood: "childhood",
 };
 
 export const formatArabicTime = (value: string): string => {

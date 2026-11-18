@@ -3,6 +3,7 @@ import {
   Activity,
   AlertCircle,
   Archive,
+  Baby,
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
@@ -10,7 +11,10 @@ import {
   Cloud,
   CreditCard,
   ExternalLink,
+  Heart,
   Loader2,
+  MessageCircle,
+  Moon,
   Plus,
   Printer,
   Receipt,
@@ -18,8 +22,11 @@ import {
   Rocket,
   ShieldCheck,
   Smartphone,
+  Smile,
   Snowflake,
+  Sparkles,
   Star,
+  Utensils,
   Wallet,
   X,
 } from "lucide-react";
@@ -97,6 +104,148 @@ export function ChildOverview({
           <div className="portal-metric-note">{child.invoiceDue}</div>
         </div>
       </div>
+
+      {/* Daily Nursery Digest Card for Early Childhood / Nursery */}
+      <section
+        style={{
+          background: "linear-gradient(135deg, #ffffff, #f0fdfa)",
+          border: "1.5px solid #99f6e4",
+          borderRadius: "16px",
+          padding: "20px",
+          marginBottom: "20px",
+          boxShadow: "0 4px 16px rgba(15, 118, 110, 0.05)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "14px",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "12px",
+                background: "#ccfbf1",
+                color: "#0f766e",
+                display: "grid",
+                placeItems: "center",
+              }}
+            >
+              <Baby size={22} />
+            </span>
+            <div>
+              <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#0f172a" }}>
+                تقرير يوم {child.name} في الحضانة واليوم المدرسي 🌸
+              </h3>
+              <small style={{ color: "#0f766e", fontWeight: 600 }}>
+                اليوم، الأربعاء 18 نوفمبر 2026 · معلمة الفصل: أ. ميار حسني (فصل الفراشات)
+              </small>
+            </div>
+          </div>
+
+          <span
+            style={{
+              padding: "4px 10px",
+              borderRadius: "20px",
+              background: "#dcfce7",
+              color: "#166534",
+              fontSize: "12px",
+              fontWeight: 700,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+            }}
+          >
+            <CheckCircle2 size={13} /> حاضر اليوم · الحرارة 36.7° طبيعية
+          </span>
+        </div>
+
+        {/* 3 Pillars: Mood, Meals, Nap */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: "12px",
+            background: "#ffffff",
+            padding: "12px",
+            borderRadius: "12px",
+            border: "1px solid #e2e8f0",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span style={{ fontSize: "1.4rem" }}>😄</span>
+            <div>
+              <small style={{ display: "block", color: "#64748b", fontSize: "11px", fontWeight: 700 }}>
+                المزاج والنشاط
+              </small>
+              <strong style={{ fontSize: "12.5px", color: "#0f172a" }}>مبتهج وسعيد جداً</strong>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span style={{ fontSize: "1.4rem" }}>🍽️</span>
+            <div>
+              <small style={{ display: "block", color: "#64748b", fontSize: "11px", fontWeight: 700 }}>
+                الوجبة الغذائية
+              </small>
+              <strong style={{ fontSize: "12.5px", color: "#0f172a" }}>أنهى وجبته بالكامل (100%)</strong>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span style={{ fontSize: "1.4rem" }}>💤</span>
+            <div>
+              <small style={{ display: "block", color: "#64748b", fontSize: "11px", fontWeight: 700 }}>
+                القيلولة والراحة
+              </small>
+              <strong style={{ fontSize: "12.5px", color: "#0f172a" }}>قيلولة هادئة (ساعة ونصف)</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Teacher's Observation */}
+        <div
+          style={{
+            background: "#f0fdfa",
+            border: "1px solid #ccfbf1",
+            borderRadius: "10px",
+            padding: "12px 14px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "4px",
+          }}
+        >
+          <span style={{ fontSize: "11.5px", fontWeight: 700, color: "#0f766e" }}>
+            رسالة وملاحظة المعلمة التوجيهية اليوم:
+          </span>
+          <p style={{ margin: 0, fontSize: "12.5px", color: "#134e4a", lineHeight: 1.6 }}>
+            "تفاعل رائع اليوم في حلقة الألوان واستكشاف المكعبات. شارك الألعاب مع أصدقائه بهدوء واستجاب لتعليمات المعلمة عند الترتيب. بطل رائع ونتمنى له يوماً سعيداً!"
+          </p>
+        </div>
+
+        {/* Actions for Parent */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+          <button
+            type="button"
+            className="button button-ghost"
+            style={{ fontSize: "12px", color: "#0f766e", padding: "4px 8px" }}
+            onClick={() => onTab("evaluations")}
+          >
+            <span>عرض كل التقييمات ومصفوفة المهارات 📊</span>
+          </button>
+
+          <button
+            type="button"
+            className="button button-primary"
+            style={{ background: "#0f766e", fontSize: "12px", padding: "6px 14px", display: "inline-flex", alignItems: "center", gap: "5px" }}
+            onClick={() => onTab("invoices")}
+          >
+            <CreditCard size={13} />
+            <span>متابعة الأقساط الشهرية والرسوم 💳</span>
+          </button>
+        </div>
+      </section>
 
       {/* Live Group Leaderboard Podium */}
       <div style={{ marginBottom: "20px" }}>
