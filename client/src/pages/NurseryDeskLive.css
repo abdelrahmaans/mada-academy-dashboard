@@ -1,0 +1,640 @@
+/* ==========================================================================
+   Nursery Desk & Early Childhood Daily Operations — Luxury Mada Styling
+   ========================================================================== */
+
+.nursery-desk-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 18px 24px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  direction: rtl;
+  font-family: inherit;
+  color: #0f172a;
+}
+
+/* Header */
+.nursery-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.nursery-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nursery-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0fdfa;
+  border: 1px solid #ccfbf1;
+  color: #0f766e;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 8px;
+  width: fit-content;
+}
+
+.nursery-title {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.nursery-subtitle {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.nursery-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Filter Controls Toolbar */
+.nursery-toolbar {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+}
+
+.nursery-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.nursery-select-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nursery-select-field span {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.nursery-select-field select {
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 0.85rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.nursery-select-field select:focus {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+  background: #ffffff;
+}
+
+.nursery-date-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f1f5f9;
+  padding: 3px 6px;
+  border-radius: 8px;
+}
+
+.nursery-date-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: #334155;
+  transition: all 0.15s;
+}
+
+.nursery-date-btn:hover {
+  background: #0f766e;
+  color: #ffffff;
+  border-color: #0f766e;
+}
+
+.nursery-date-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1e293b;
+  padding: 0 6px;
+}
+
+/* KPI Highlights */
+.nursery-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.nursery-kpi-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  transition: all 0.2s ease;
+}
+
+.nursery-kpi-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+  transform: translateY(-1px);
+}
+
+.nursery-kpi-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.nursery-kpi-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nursery-kpi-info span {
+  font-size: 0.76rem;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.nursery-kpi-info strong {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.nursery-kpi-info small {
+  font-size: 0.72rem;
+  color: #0f766e;
+  font-weight: 600;
+}
+
+/* Tabs Header */
+.nursery-tabs-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 2px;
+}
+
+.nursery-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  border-radius: 10px 10px 0 0;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.nursery-tab-btn:hover {
+  color: #0f766e;
+  background: #f0fdfa;
+}
+
+.nursery-tab-btn.active {
+  color: #0f766e;
+  background: #ffffff;
+  border-bottom: 3px solid #0f766e;
+}
+
+.nursery-tab-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.nursery-tab-btn.active .nursery-tab-badge {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+/* Children Cards Grid */
+.nursery-children-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 16px;
+}
+
+.nursery-child-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.03);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.nursery-child-card:hover {
+  border-color: #99f6e4;
+  box-shadow: 0 6px 20px rgba(15, 118, 110, 0.07);
+}
+
+.child-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.child-avatar-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.child-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.child-names {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.child-names strong {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.child-names small {
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.child-status-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 3px;
+  border-radius: 8px;
+}
+
+.status-chip-btn {
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.status-chip-btn.active.present {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-chip-btn.active.absent {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Metrics Row inside Child Card */
+.child-metrics-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  background: #f8fafc;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #f1f5f9;
+}
+
+.child-metric-box {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.child-metric-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.child-metric-control {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.child-metric-control select {
+  width: 100%;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  outline: none;
+}
+
+/* Child Note Area */
+.child-note-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.child-note-wrap label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #334155;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.child-note-wrap textarea {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  outline: none;
+  resize: vertical;
+  min-height: 52px;
+  box-sizing: border-box;
+}
+
+.child-note-wrap textarea:focus {
+  border-color: #0f766e;
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.1);
+}
+
+.child-quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.child-chip-btn {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 12px;
+  border: 1px solid #ccfbf1;
+  background: #f0fdfa;
+  color: #0f766e;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.child-chip-btn:hover {
+  background: #0f766e;
+  color: #ffffff;
+}
+
+/* Card Actions */
+.child-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 12px;
+}
+
+.btn-whatsapp-digest {
+  background: #25d366;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+}
+
+.btn-whatsapp-digest:hover {
+  background: #1da851;
+  transform: translateY(-1px);
+}
+
+.btn-child-hub {
+  background: #f8fafc;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s ease;
+}
+
+.btn-child-hub:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+/* Timeline & Schedule View */
+.nursery-schedule-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+}
+
+.schedule-block-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  transition: all 0.15s ease;
+}
+
+.schedule-block-item.is-current {
+  border-color: #0f766e;
+  background: #f0fdfa;
+  box-shadow: 0 4px 14px rgba(15, 118, 110, 0.08);
+}
+
+.schedule-block-item.is-done {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  opacity: 0.85;
+}
+
+.block-time-col {
+  width: 120px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.block-time-col strong {
+  font-size: 0.85rem;
+  color: #0f172a;
+}
+
+.block-time-col small {
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+.block-content-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.block-content-col h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.block-content-col p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.block-badge-status {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.block-badge-status.current {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.block-badge-status.done {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.block-badge-status.upcoming {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* Installments Table in Nursery */
+.nursery-installments-table-wrap {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+}
+
+.nursery-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: right;
+  font-size: 0.85rem;
+}
+
+.nursery-table th {
+  background: #f8fafc;
+  color: #475569;
+  padding: 10px 14px;
+  font-weight: 700;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.nursery-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.nursery-table tr:hover td {
+  background: #f8fafc;
+}
