@@ -129,34 +129,83 @@ export interface FriendlyMetadataEntry {
 }
 
 const METADATA_KEY_LABELS: Record<string, string> = {
+  // Financial
+  totalpiastres: "إجمالي المبلغ",
+  amountpiastres: "المبلغ المالي",
+  amount: "المبلغ",
+  paidpiastres: "المبلغ المسدد",
+  outstandingpiastres: "المبلغ المتبقي المستحق",
+  balancepiastres: "الرصيد المتبقي",
+  discountpiastres: "قيمة الخصم المعتمد",
+  netpiastres: "صافي المبلغ",
+  depositpiastres: "مبلغ الإيداع بالخزينة",
+  countedcashpiastres: "الكاش الفعلي بالدرج",
+  electronicpiastres: "المدفوعات الإلكترونية",
+  differencepiastres: "عجز / زيادة الوردية",
+
+  // Identifiers & Entities
+  studentid: "كود ملف الطالب",
+  studentname: "اسم الطالب",
+  parentid: "كود ولي الأمر",
+  parentname: "اسم ولي الأمر",
+  parentphone: "هاتف ولي الأمر",
+  phone: "رقم الهاتف",
+  branchid: "كود الفرع",
+  branchname: "اسم الفرع",
+  branchcode: "كود الفرع",
+  courseid: "كود البرنامج التدريبي",
+  courseofferingid: "كود المجموعة التدريبية",
+  coursename: "البرنامج التدريبي",
+  invoiceid: "رقم الفاتورة",
+  invoicenumber: "رقم الفاتورة",
+  paymentid: "رقم سند القبض",
+  expenseid: "رقم سند الصرف",
+  shiftid: "كود وردية الخزينة",
+  sessionid: "كود الجلسة التدريبية",
+  memberid: "كود الموظف",
+  userid: "كود المستخدم",
+  rolecode: "الدور الوظيفي",
+  actorid: "كود المنفذ",
+  actorname: "اسم المنفذ",
+
+  // Operations & Statuses
   status: "الحالة الناتجة",
+  outreachstatus: "حالة التواصل والمتابعة",
+  lastcontactnote: "ملاحظات آخر تواصل",
+  reason: "سبب العملية والمبرر الرسمي",
   note: "ملاحظات وتفاصيل الإجراء",
   notes: "ملاحظات",
-  reason: "سبب العملية",
   channel: "قناة التواصل",
-  studentName: "اسم الطالب",
-  parentName: "اسم ولي الأمر",
-  phone: "رقم الهاتف",
-  amount: "المبلغ",
-  amountPiastres: "المبلغ",
-  branchName: "الفرع",
-  branchCode: "كود الفرع",
-  courseName: "البرنامج التدريبي",
-  roleCode: "كود الدور",
-  permissionsCount: "عدد الصلاحيات المحدثة",
-  previousStatus: "الحالة السابقة",
-  newStatus: "الحالة الجديدة",
+  outreachchannel: "طريقة التواصل",
+  risklevel: "مستوى خطورة التسرب",
+  riskfactor: "عامل تقييم الخطورة",
+  recommendedaction: "التوصية المقترحة",
+  consecutiveabsences: "عدد مرات الغياب المتتالي",
+  attendancepercent: "نسبة الحضور والالتزام",
+  maxoverduedays: "أيام تأخر السداد",
+  averagescore: "متوسط تقييم الطالب",
+  permissionscount: "عدد الصلاحيات المحدثة",
+  previousstatus: "الحالة السابقة",
+  newstatus: "الحالة الجديدة",
 };
 
 const STATUS_VALUE_LABELS: Record<string, string> = {
-  contacted: "تم التواصل هاتفياً",
-  pending: "قيد الانتظار",
+  contacted: "تم التواصل والمتابعة",
+  pending: "قيد المتابعة والانتظار",
   completed: "مكتمل بنجاح",
-  approved: "معتمد",
+  approved: "معتمد رسمياً",
   rejected: "مرفوض",
-  active: "نشط",
-  inactive: "غير نشط",
-  resolved: "تم الحل",
+  active: "نشط ومعتمد",
+  inactive: "غير نشط / معلق",
+  resolved: "تم الحل والإغلاق",
+  retained: "تم استبقاء الطالب بنجاح",
+  lost: "اعتذر عن الاستمرار",
+  high: "مؤشر خطر مرتفع ⚠️",
+  medium: "متابعة دورية ⏳",
+  low: "مستقر وآمن ✅",
+  paid: "مسدد بالكامل",
+  partial: "سداد جزئي",
+  overdue: "متأخر عن السداد ⚠️",
 };
 
 /**
@@ -172,7 +221,19 @@ export function parseAuditMetadata(jsonStr?: string | null): FriendlyMetadataEnt
     for (const [rawKey, rawVal] of Object.entries(parsed)) {
       if (rawVal === undefined || rawVal === null || rawVal === "") continue;
 
-      const keyLabel = METADATA_KEY_LABELS[rawKey] ?? rawKey;
+      const lowerKey = rawKey.toLowerCase();
+      let keyLabel = METADATA_KEY_LABELS[lowerKey];
+      if (!keyLabel) {
+        if (lowerKey.endsWith("piastres") || lowerKey.includes("piastre")) {
+          keyLabel = "المبلغ المالي";
+        } else if (lowerKey.endsWith("id") || lowerKey.includes("uuid")) {
+          keyLabel = "معرف السجل";
+        } else {
+          // Turn camelCase or PascalCase into spaced words
+          keyLabel = rawKey.replace(/([A-Z])/g, " $1").trim();
+        }
+      }
+
       let valueDisplay = "";
 
       if (typeof rawVal === "object") {
@@ -183,10 +244,19 @@ export function parseAuditMetadata(jsonStr?: string | null): FriendlyMetadataEnt
         }
       } else {
         const strVal = String(rawVal);
-        if ((rawKey === "amountPiastres" || rawKey === "amount") && typeof rawVal === "number") {
-          valueDisplay = `${(rawVal / 100).toFixed(2)} ج.م`;
+        // Any field with piastres in its name or amount in piastres
+        if (
+          (lowerKey.includes("piastre") || lowerKey.includes("amount") || lowerKey.includes("total")) &&
+          typeof rawVal === "number"
+        ) {
+          const egp = (rawVal / 100).toFixed(2);
+          valueDisplay = `${egp} ج.م`;
+        } else if (lowerKey.endsWith("id") && typeof rawVal === "string" && rawVal.length >= 24) {
+          // Format raw UUIDs to clean user-friendly reference e.g. #0002
+          valueDisplay = formatAuditTargetId(rawVal);
         } else {
-          valueDisplay = STATUS_VALUE_LABELS[strVal] ?? strVal;
+          const lowerVal = strVal.toLowerCase();
+          valueDisplay = STATUS_VALUE_LABELS[lowerVal] ?? STATUS_VALUE_LABELS[strVal] ?? strVal;
         }
       }
 

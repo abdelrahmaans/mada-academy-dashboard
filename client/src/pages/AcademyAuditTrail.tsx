@@ -362,48 +362,20 @@ export default function AcademyAuditTrail() {
                 <div style={{ marginTop: "14px" }}>
                   {(() => {
                     const friendlyEntries = parseAuditMetadata(selectedEvent.metadataJson);
+                    if (friendlyEntries.length === 0) return null;
                     return (
-                      <div className="space-y-3">
-                        {friendlyEntries.length > 0 && (
-                          <div className="audit-detail-card" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                            <span className="audit-detail-label" style={{ color: "#0f766e", marginBottom: "8px", display: "block" }}>
-                              تفاصيل وبيانات العملية:
-                            </span>
-                            <div style={{ display: "grid", gap: "8px" }}>
-                              {friendlyEntries.map((entry, idx) => (
-                                <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12.5px" }}>
-                                  <span style={{ color: "#64748b", fontWeight: 600 }}>{entry.keyLabel}:</span>
-                                  <span style={{ color: "#0f172a", fontWeight: 700 }}>{entry.valueDisplay}</span>
-                                </div>
-                              ))}
+                      <div className="audit-detail-card" style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                        <span className="audit-detail-label" style={{ color: "#0f766e", marginBottom: "8px", display: "block" }}>
+                          تفاصيل وبيانات العملية:
+                        </span>
+                        <div style={{ display: "grid", gap: "8px" }}>
+                          {friendlyEntries.map((entry, idx) => (
+                            <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12.5px" }}>
+                              <span style={{ color: "#64748b", fontWeight: 600 }}>{entry.keyLabel}:</span>
+                              <span style={{ color: "#0f172a", fontWeight: 700 }}>{entry.valueDisplay}</span>
                             </div>
-                          </div>
-                        )}
-                        <details style={{ marginTop: "8px", fontSize: "11px", color: "#64748b" }}>
-                          <summary style={{ cursor: "pointer", fontWeight: 700, padding: "4px 0" }}>
-                            عرض كود البيانات التقنية (JSON)
-                          </summary>
-                          <div className="flex items-center justify-between my-1">
-                            <span className="text-[11px] text-slate-500">Payload JSON:</span>
-                            <button
-                              type="button"
-                              className="audit-btn py-1 px-2 text-xs"
-                              onClick={() => copyMetadata(selectedEvent.metadataJson ?? "")}
-                            >
-                              {copied ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
-                              {copied ? "تم النسخ" : "نسخ JSON"}
-                            </button>
-                          </div>
-                          <pre className="audit-json-box">
-                            {(() => {
-                              try {
-                                return JSON.stringify(JSON.parse(selectedEvent.metadataJson ?? ""), null, 2);
-                              } catch {
-                                return selectedEvent.metadataJson;
-                              }
-                            })()}
-                          </pre>
-                        </details>
+                          ))}
+                        </div>
                       </div>
                     );
                   })()}

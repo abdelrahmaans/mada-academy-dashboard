@@ -211,7 +211,7 @@ export default function RoleSidebar({
     onCloseMobile?.();
   };
 
-  // Group items into primary and operations/modules if applicable
+  // Group items into primary and operations/modules according to role responsibility (SRP)
   const primaryItems = authorizedNavigation.filter((item) => {
     if (effectiveRoleCode === "R08") {
       return ["/family-portal", "/family-portal#attendance", "/family-portal#evaluations"].includes(item.path);
@@ -222,7 +222,19 @@ export default function RoleSidebar({
     if (effectiveRoleCode === "R06") {
       return ["/finance-desk", "/finance-desk#collections", "/finance-desk#expenses"].includes(item.path);
     }
-    return !["/approvals", "/reports", "/competitions"].includes(item.path) && !item.path.includes("#");
+    if (effectiveRoleCode === "R05") {
+      return ["/secretary-desk", "/classes", "/finance-desk"].includes(item.path);
+    }
+    if (effectiveRoleCode === "R01") {
+      return ["/executive-dashboard", "/academy-owner/pnl-retention", "/academy/branches"].includes(item.path);
+    }
+    if (effectiveRoleCode === "R03") {
+      return ["/head-instructors", "/instructor-desk"].includes(item.path);
+    }
+    if (effectiveRoleCode === "R04") {
+      return ["/instructor-desk"].includes(item.path);
+    }
+    return !["/approvals", "/reports", "/competitions", "/team", "/academy/roles", "/academy/audit-trail"].includes(item.path) && !item.path.includes("#");
   });
 
   const secondaryItems = authorizedNavigation.filter((item) => {
@@ -235,28 +247,56 @@ export default function RoleSidebar({
     if (effectiveRoleCode === "R06") {
       return ["/finance-desk#shifts", "/finance-desk#payroll", "/reports"].includes(item.path);
     }
-    return ["/approvals", "/reports", "/competitions"].includes(item.path) || item.path.includes("#");
+    if (effectiveRoleCode === "R05") {
+      return ["/students", "/schedule"].includes(item.path);
+    }
+    if (effectiveRoleCode === "R01") {
+      return ["/academy/roles", "/academy/audit-trail"].includes(item.path);
+    }
+    if (effectiveRoleCode === "R03") {
+      return ["/academic-programs", "/schedule"].includes(item.path);
+    }
+    if (effectiveRoleCode === "R04") {
+      return ["/schedule"].includes(item.path);
+    }
+    return ["/approvals", "/reports", "/competitions", "/team", "/academy/roles", "/academy/audit-trail"].includes(item.path) || item.path.includes("#");
   });
 
   const hasGroups = primaryItems.length > 0 && secondaryItems.length > 0;
 
   const primaryCaption =
     effectiveRoleCode === "R08"
-      ? "المتابعة الأكاديمية"
+      ? "المتابعة الأكاديمية للأبناء"
       : effectiveRoleCode === "R09"
-      ? "المساحة التعليمية"
+      ? "المساحة التعليمية للطالب"
       : effectiveRoleCode === "R06"
-      ? "المالية والتحصيل"
-      : "القائمة الرئيسية";
+      ? "الخزينة والتحصيلات المعتمدة"
+      : effectiveRoleCode === "R05"
+      ? "الاستقبال والتسكين والتحصيل"
+      : effectiveRoleCode === "R03"
+      ? "الإشراف الأكاديمي والتدريب"
+      : effectiveRoleCode === "R04"
+      ? "المهام التدريبية المباشرة"
+      : effectiveRoleCode === "R01"
+      ? "القيادة الاستراتيجية للأكاديمية"
+      : "إدارة عمليات وصفوف الفرع";
 
   const secondaryCaption =
     effectiveRoleCode === "R08"
-      ? "الخدمات والماليات"
+      ? "الرسوم المالية والخدمات"
       : effectiveRoleCode === "R09"
-      ? "الإنجازات والتقدم"
+      ? "لوحة الشرف والإنجازات"
       : effectiveRoleCode === "R06"
-      ? "العمليات والتقارير"
-      : "العمليات والأدوات";
+      ? "الدفاتر المحاسبية والتقارير"
+      : effectiveRoleCode === "R05"
+      ? "الجداول وقاعدة البيانات"
+      : effectiveRoleCode === "R03"
+      ? "المناهج ومتابعة الجداول"
+      : effectiveRoleCode === "R04"
+      ? "الجدول الأسبوعي والتغطيات"
+      : effectiveRoleCode === "R01"
+      ? "الحوكمة والرقابة المعتمدة"
+      : "البطولات والموافقات والقرارات";
 
   return (
     <aside

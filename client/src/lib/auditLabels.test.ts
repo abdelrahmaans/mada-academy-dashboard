@@ -64,6 +64,16 @@ describe("parseAuditMetadata", () => {
     expect(entries).toContainEqual({ keyLabel: "المبلغ", valueDisplay: "123.45 ج.م" });
     expect(entries).toContainEqual({ keyLabel: "ملاحظات", valueDisplay: "a، b" });
   });
+
+  test("humanizes PascalCase TotalPiastres and StudentId UUID into Arabic business values", () => {
+    const json = JSON.stringify({
+      TotalPiastres: 150000,
+      StudentId: "70000000-0000-0000-0000-000000000002",
+    });
+    const entries = parseAuditMetadata(json);
+    expect(entries).toContainEqual({ keyLabel: "إجمالي المبلغ", valueDisplay: "1500.00 ج.م" });
+    expect(entries).toContainEqual({ keyLabel: "كود ملف الطالب", valueDisplay: "#0002" });
+  });
 });
 
 describe("formatFinancialCode", () => {
