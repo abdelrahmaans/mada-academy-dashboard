@@ -2775,6 +2775,39 @@ export const rubricStorage = {
   },
 };
 
+const FEATURES_STORAGE_KEY = "mada_academy_features_v1";
+
+export const featureFlags = {
+  isFeatureEnabled: (featureKey: string, defaultValue = true): boolean => {
+    try {
+      const raw = localStorage.getItem(FEATURES_STORAGE_KEY);
+      if (!raw) return defaultValue;
+      const parsed = JSON.parse(raw);
+      return parsed[featureKey] !== undefined ? Boolean(parsed[featureKey]) : defaultValue;
+    } catch {
+      return defaultValue;
+    }
+  },
+  setFeatureEnabled: (featureKey: string, enabled: boolean) => {
+    try {
+      const raw = localStorage.getItem(FEATURES_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      parsed[featureKey] = enabled;
+      localStorage.setItem(FEATURES_STORAGE_KEY, JSON.stringify(parsed));
+    } catch {
+      // ignore
+    }
+  },
+  getAllFeatures: (): Record<string, boolean> => {
+    try {
+      const raw = localStorage.getItem(FEATURES_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : { nursery_early_childhood: true };
+    } catch {
+      return { nursery_early_childhood: true };
+    }
+  },
+};
+
 export type PlatformTenantExtra = {
   planCode: "starter" | "growth" | "enterprise";
   planName: string;

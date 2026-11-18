@@ -30,6 +30,7 @@ import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { StudentDataHubModal } from "@/components/students/StudentDataHubModal";
 import type { Student } from "@/pages/StudentsTypes";
+import { featureFlags } from "@/lib/apiClient";
 import "./NurseryDeskLive.css";
 
 type CohortAgeGroup = "toddlers" | "pre_k" | "kg";
@@ -233,6 +234,20 @@ export default function NurseryDeskLive() {
   const [activeTab, setActiveTab] = useState<ActiveDeskTab>("roster");
   const [childrenMap, setChildrenMap] = useState<Record<CohortAgeGroup, ChildDailyState[]>>(INITIAL_CHILDREN);
   const [selectedHubStudent, setSelectedHubStudent] = useState<Student | null>(null);
+  const [isFeatureEnabled, setIsFeatureEnabled] = useState(() =>
+    featureFlags.isFeatureEnabled("nursery_early_childhood", true)
+  );
+
+  const handleToggleFeature = () => {
+    const next = !isFeatureEnabled;
+    setIsFeatureEnabled(next);
+    featureFlags.setFeatureEnabled("nursery_early_childhood", next);
+    if (next) {
+      toast.success("تم تفعيل منظومة الحضانة لهذه الأكاديمية بنجاح! 🚀");
+    } else {
+      toast.info("تم تعطيل منظومة الحضانة لهذه الأكاديمية.");
+    }
+  };
 
   const currentChildren = childrenMap[activeCohort];
   const presentCount = currentChildren.filter((c) => c.isPresent).length;
@@ -346,17 +361,61 @@ export default function NurseryDeskLive() {
           <div className="nursery-header-actions">
             <button
               type="button"
-              className="button button-primary"
-              style={{ background: "#0f766e", display: "inline-flex", alignItems: "center", gap: "6px" }}
-              onClick={() => toast.success("تم تحديث وحفظ بيانات أطفال الحضانة بنجاح!")}
+              style={{
+                padding: "8px 14px",
+                borderRadius: "8px",
+                fontSize: "12px",
+                fontWeight: 700,
+                border: isFeatureEnabled ? "1.5px solid #0f766e" : "1.5px solid #cbd5e1",
+                background: isFeatureEnabled ? "#f0fdfa" : "#f8fafc",
+                color: isFeatureEnabled ? "#0f766e" : "#64748b",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+              onClick={handleToggleFeature}
+              title="تحكم الأدمن في تفعيل أو تعطيل ميزة الحضانة للأكاديمية الحالية"
             >
-              <RefreshCw size={15} />
-              <span>تحديث وحفظ اليوم</span>
+              <span>تحكم الأدمن بالميزة: {isFeatureEnabled ? "مفعلة للأكاديمية ✓" : "معطلة للأكاديمية ✕"}</span>
             </button>
+
+            {isFeatureEnabled && (
+              <button
+                type="button"
+                className="button button-primary"
+                style={{ background: "#0f766e", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                onClick={() => toast.success("تم تحديث وحفظ بيانات أطفال الحضانة بنجاح!")}
+              >
+                <RefreshCw size={15} />
+                <span>تحديث وحفظ اليوم</span>
+              </button>
+            )}
           </div>
         </section>
 
-        {/* Toolbar: Cohort Switcher & Date Navigation */}
+        {!isFeatureEnabled ? (
+          <section style={{ background: "#ffffff", border: "1.5px dashed #cbd5e1", borderRadius: "16px", padding: "48px 24px", textAlign: "center", display: "grid", placeItems: "center", gap: "12px", margin: "20px 0" }}>
+            <span style={{ fontSize: "2.5rem" }}>👶</span>
+            <h3 style={{ margin: 0, fontSize: "1.3rem", fontWeight: 800, color: "#1e293b" }}>
+              منظومة الحضانات والطفولة المبكرة ميزة إضافية (Add-on Module)
+            </h3>
+            <p style={{ margin: 0, color: "#64748b", maxWidth: "580px", fontSize: "0.92rem", lineHeight: 1.7 }}>
+              هذه الميزة اختيارية تماماً ويتحكم فيها الأدمن حسب نشاط الأكاديمية. الأكاديميات التي تركز على الروبوتكس أو البرمجة فقط تكون الميزة معطلة لديها لمنع ازدحام النظام، بينما الأكاديميات التي تدير فروع حضانات وطفولة مبكرة يمكن للأدمن تفعيلها لها بضغطة زر.
+            </p>
+            <button
+              type="button"
+              className="button button-primary"
+              style={{ background: "#0f766e", marginTop: "12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+              onClick={handleToggleFeature}
+            >
+              <Sparkles size={16} />
+              <span>تفعيل منظومة الحضانة لهذه الأكاديمية الآن 🚀</span>
+            </button>
+          </section>
+        ) : (
+          <>
+            {/* Toolbar: Cohort Switcher & Date Navigation */}
         <section className="nursery-toolbar">
           <div className="nursery-filter-group">
             <div className="nursery-select-field">
@@ -851,6 +910,8 @@ export default function NurseryDeskLive() {
               </tbody>
             </table>
           </section>
+        )}
+          </>
         )}
       </main>
 
