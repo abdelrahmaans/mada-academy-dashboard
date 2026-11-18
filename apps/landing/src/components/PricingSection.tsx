@@ -176,7 +176,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, on
   };
 
   return (
-    <section id="pricing" className="py-20 lg:py-28 bg-white border-b border-[#14243A]/10 relative overflow-hidden">
+    <section id="pricing" dir="rtl" className="py-20 lg:py-28 bg-white border-b border-[#14243A]/10 relative overflow-hidden">
       
       {/* Background Decorative Rings */}
       <div className="absolute top-0 right-1/2 translate-x-1/2 w-full max-w-7xl h-96 bg-gradient-to-b from-[#0D9488]/5 to-transparent pointer-events-none" />
@@ -262,7 +262,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, on
             return (
               <div
                 key={plan.id}
-                className={`relative rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 ${
+                className={`relative h-full rounded-3xl p-6 sm:p-8 flex flex-col transition-all duration-300 ${
                   plan.isPopular
                     ? 'bg-white border-2 border-[#0D9488] shadow-2xl shadow-[#0D9488]/15 lg:-translate-y-2'
                     : 'bg-[#F8FAFC] border border-[#14243A]/10 shadow-sm hover:shadow-md'
@@ -308,7 +308,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, on
                   </div>
 
                   {/* Feature List */}
-                  <div className="space-y-3.5 py-4 text-right">
+                  <div className="flex-1 space-y-3.5 py-4 text-right">
                     <div className="text-xs font-bold text-[#14243A]/60 uppercase tracking-wider mb-2">
                       المزايا المتاحة في هذه الباقة:
                     </div>
@@ -316,7 +316,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, on
                     {includedFeatures.map((feat, idx) => (
                       <div 
                         key={idx}
-                        className={`flex items-start gap-2.5 text-xs sm:text-sm ${feat.highlight ? 'font-bold text-[#14243A]' : 'text-[#14243A]/85'}`}
+                        className={`flex items-start gap-2.5 text-xs sm:text-sm leading-relaxed ${feat.highlight ? 'font-bold text-[#14243A]' : 'text-[#14243A]/85'}`}
                       >
                         <div className="mt-0.5 shrink-0">
                           <div className="w-4 h-4 rounded-full bg-[#0D9488]/15 text-[#0D9488] flex items-center justify-center">
@@ -334,7 +334,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectPlan, on
                         </div>
                         <div className="space-y-2">
                           {excludedFeatures.map((feat, idx) => (
-                            <div key={idx} className="flex items-start gap-2 text-[11px] text-[#14243A]/35">
+                            <div key={idx} className="flex items-start gap-2 text-[11px] leading-relaxed text-[#14243A]/40">
                               <span className="mt-0.5 shrink-0">—</span>
                               <span>{feat.text}</span>
                             </div>
