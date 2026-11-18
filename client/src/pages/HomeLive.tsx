@@ -6,7 +6,7 @@ import QuickActionsBar from "@/components/QuickActionsBar";
 import { QuickPaymentReceiptModal, QuickSupportTicketModal } from "@/components/QuickActionModals";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
-import { apiClient, type AuthMe, type DashboardSummary } from "@/lib/apiClient";
+import { apiClient, featureFlags, type AuthMe, type DashboardSummary } from "@/lib/apiClient";
 import { sessionStatusLabel } from "@/lib/statusLabels";
 import "./HomeLive.css";
 
@@ -88,12 +88,16 @@ export default function HomeLive({ me }: { me: AuthMe }) {
               icon: <CheckCircle2 size={14} />,
               onClick: () => navigate("/approvals"),
             },
-            {
-              id: "r02-nursery",
-              label: "متابعة الحضانة والمنهج اليومي للأطفال 👶",
-              icon: <Baby size={14} />,
-              onClick: () => navigate("/nursery-desk"),
-            },
+            ...(featureFlags.isFeatureEnabled("nursery_early_childhood", false)
+              ? [
+                  {
+                    id: "r02-nursery",
+                    label: "متابعة الحضانة والمنهج اليومي للأطفال 👶",
+                    icon: <Baby size={14} />,
+                    onClick: () => navigate("/nursery-desk"),
+                  },
+                ]
+              : []),
             {
               id: "r02-refresh",
               label: "تحديث مؤشرات الفرع",

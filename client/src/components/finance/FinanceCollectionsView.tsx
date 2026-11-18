@@ -29,7 +29,7 @@ import {
   X,
 } from "lucide-react";
 import type { Invoice, PaymentMethod } from "@/pages/FinanceDeskTypes";
-import type { FinancePayment } from "@/lib/apiClient";
+import { featureFlags, type FinancePayment } from "@/lib/apiClient";
 import {
   money,
   invoiceStatus,
@@ -586,28 +586,30 @@ export function Collections({
               <CheckCircle size={14} />
               <span>مسددة بالكامل ({paidInvoicesCount})</span>
             </button>
-            <button
-              type="button"
-              onClick={() => setInvoiceTab("installments")}
-              style={{
-                padding: "6px 14px",
-                borderRadius: "20px",
-                fontSize: "0.82rem",
-                fontWeight: 700,
-                border: 0,
-                cursor: "pointer",
-                background: invoiceTab === "installments" ? "#0f766e" : "#ffffff",
-                color: invoiceTab === "installments" ? "#ffffff" : "#475569",
-                boxShadow: invoiceTab === "installments" ? "0 2px 6px rgba(15, 118, 110, 0.25)" : "none",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                transition: "all 0.15s ease",
-              }}
-            >
-              <Baby size={14} />
-              <span>أقساط سنوية وحضانات ({installmentsInvoicesCount})</span>
-            </button>
+            {(featureFlags.isFeatureEnabled("nursery_early_childhood", false) || installmentsInvoicesCount > 0) && (
+              <button
+                type="button"
+                onClick={() => setInvoiceTab("installments")}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "20px",
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  border: 0,
+                  cursor: "pointer",
+                  background: invoiceTab === "installments" ? "#0f766e" : "#ffffff",
+                  color: invoiceTab === "installments" ? "#ffffff" : "#475569",
+                  boxShadow: invoiceTab === "installments" ? "0 2px 6px rgba(15, 118, 110, 0.25)" : "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <Baby size={14} />
+                <span>أقساط سنوية وحضانات ({installmentsInvoicesCount})</span>
+              </button>
+            )}
           </div>
 
           {/* Installments & Annual Contracts Radar Banner */}
