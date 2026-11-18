@@ -60,7 +60,11 @@ export default function HomeLive({ me }: { me: AuthMe }) {
           eyebrow={<span className="eyebrow"><i className="eyebrow-dot" /> ملخص التشغيل · بيانات مباشرة</span>}
           title={`أهلًا، ${displayName}`}
           description="مؤشرات الجلسات والطلاب المسجلة لهذا الفرع فقط."
-          actions={<button className="button button-secondary" onClick={() => setRefreshKey(value => value + 1)} disabled={loading}><RefreshCw size={16} /> تحديث البيانات</button>}
+          actions={
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#64748b" }}>
+              <CalendarDays size={14} /> اليوم · بيانات حية
+            </span>
+          }
         />
         <RoleScopeCard className="home-role-scope-card" compact />
         <QuickActionsBar

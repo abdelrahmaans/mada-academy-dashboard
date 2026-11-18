@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
+  CalendarDays,
   Clock,
   GraduationCap,
   LifeBuoy,
@@ -419,6 +420,9 @@ export default function SecretaryDeskLive() {
           description={`إدارة طلبات الالتحاق، ومتابعات أولياء الأمور، وتسجيل الطلاب الجدد في ${branchName} مباشرة في قاعدة البيانات.`}
           actions={
             <div className="secretary-top-actions">
+              <span className="secretary-desk-date" style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#64748b" }}>
+                <CalendarDays size={14} /> اليوم
+              </span>
               <a
                 href="/lobby-display"
                 target="_blank"
@@ -429,21 +433,6 @@ export default function SecretaryDeskLive() {
               >
                 <Tv size={15} /> شاشة البهو (TV)
               </a>
-              <button
-                type="button"
-                className="button button-secondary"
-                onClick={() => setRefreshKey((v) => v + 1)}
-                disabled={loading}
-              >
-                <RefreshCw size={15} /> تحديث
-              </button>
-              <button
-                type="button"
-                className="button button-primary"
-                onClick={() => setNewLeadModalOpen(true)}
-              >
-                <Plus size={16} /> استفسار جديد
-              </button>
             </div>
           }
         />
@@ -451,13 +440,13 @@ export default function SecretaryDeskLive() {
         <RoleScopeCard className="secretary-scope-card" />
         <QuickActionsBar
           actions={[
-            { id: "r05-qr-checkin", label: "📲 مسح كود الحضور السريع (QR Scan)", icon: <QrCode size={14} />, onClick: () => setCheckInModalOpen(true), tone: "primary" },
-            { id: "r05-whatsapp-broadcast", label: "رسائل واتساب جماعية (المجموعات)", icon: <MessageCircle size={14} />, onClick: () => setBroadcastModalOpen(true) },
-            { id: "r05-new-lead", label: "تسجيل استفسار جديد", icon: <Plus size={14} />, onClick: () => setNewLeadModalOpen(true) },
+            { id: "r05-new-lead", label: "+ تسجيل استفسار جديد", icon: <Plus size={14} />, onClick: () => setNewLeadModalOpen(true), tone: "primary" },
             { id: "r05-payment", label: "تسجيل دفعة اشتراك / إيصال فوري", icon: <Receipt size={14} />, onClick: () => setPaymentModalOpen(true) },
-            { id: "r05-freeze", label: "طلب تجميد اشتراك", icon: <Snowflake size={14} />, onClick: () => setFreezeModalOpen(true) },
             { id: "r05-shift", label: "تقفيل عهدة الوردية", icon: <Wallet size={14} />, onClick: () => setShiftModalOpen(true) },
-            { id: "r05-ticket", label: "تسجيل تذكرة دعم / استفسار للمنصة", icon: <LifeBuoy size={14} />, onClick: () => setTicketModalOpen(true) },
+            { id: "r05-whatsapp-broadcast", label: "رسائل واتساب جماعية للطلاب", icon: <MessageCircle size={14} />, onClick: () => setBroadcastModalOpen(true) },
+            { id: "r05-freeze", label: "طلب تجميد اشتراك", icon: <Snowflake size={14} />, onClick: () => setFreezeModalOpen(true) },
+            { id: "r05-ticket", label: "تسجيل تذكرة دعم للإدارة", icon: <LifeBuoy size={14} />, onClick: () => setTicketModalOpen(true) },
+            { id: "r05-refresh", label: "تحديث ومزامنة البيانات", icon: <RefreshCw size={14} />, onClick: () => setRefreshKey((v) => v + 1) },
           ]}
         />
 

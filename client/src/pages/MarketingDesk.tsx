@@ -215,7 +215,7 @@ export default function MarketingDesk() {
       setLeads(current =>
         current.map(item => (item.id === lead.id ? { ...res, notes: updatedNotes } : item))
       );
-      toast.success(`تم تحديث حالة الـLead إلى: ${STATUS_LABEL[newStatus] || newStatus}`);
+      toast.success(`تم تحديث حالة العميل إلى: ${STATUS_LABEL[newStatus] || newStatus}`);
     } catch (cause) {
       toast.error(cause instanceof Error ? cause.message : "تعذر تحديث الحالة");
     }
@@ -242,7 +242,7 @@ export default function MarketingDesk() {
         ],
         "Mada_Marketing_Leads"
       );
-      toast.success("تم تصدير شيت الـ Leads بنجاح!");
+      toast.success("تم تصدير كشف العملاء بنجاح!");
     } catch (e: any) {
       toast.error(e.message || "تعذر تصدير البيانات");
     }
@@ -279,9 +279,9 @@ export default function MarketingDesk() {
       setPhone("");
       setLeadNotes("");
       setLeadModalOpen(false);
-      toast.success("تم حفظ الـLead بنجاح وربطه بالفرع والنظام!");
+      toast.success("تم تسجيل بيانات العميل بنجاح وربطها بالفرع!");
     } catch (cause) {
-      toast.error(cause instanceof Error ? cause.message : "تعذر إضافة الـLead");
+      toast.error(cause instanceof Error ? cause.message : "تعذر إضافة بيانات العميل");
     } finally {
       setSavingLead(false);
     }
@@ -382,10 +382,10 @@ export default function MarketingDesk() {
             actionsClassName="welcome-actions"
             eyebrow={
               <span className="eyebrow">
-                <i className="eyebrow-dot" /> مسؤول التسويق وإدارة الـLeads · R07
+                <i className="eyebrow-dot" /> مسؤول التسويق واستقطاب الطلاب · R07
               </span>
             }
-            title="إدارة التسويق واستقطاب الطلاب والـLeads"
+            title="إدارة التسويق واستقطاب الطلاب والعملاء"
             description="متابعة مسار العملاء المحتملين وتوزيع الفروع، وأجندة أفكار ومهام المحتوى، ونسب التحويل الفعلية."
             actions={
               <span className="marketing-date">
@@ -396,43 +396,86 @@ export default function MarketingDesk() {
 
           <RoleScopeCard className="marketing-scope-card" />
 
-          {/* Quick Actions Bar */}
-          <QuickActionsBar
-            title="إجراءات التسويق السريعة"
-            actions={[
-              {
-                id: "r07-add-lead",
-                label: "+ تسجيل Lead جديد فوري",
-                icon: <UserPlus size={14} />,
-                onClick: () => setLeadModalOpen(true),
-                tone: "primary",
-              },
-              {
-                id: "r07-add-note",
-                label: "+ إضافة فكرة / نوت محتوى",
-                icon: <Sparkles size={14} />,
-                onClick: () => setContentModalOpen(true),
-              },
-              {
-                id: "r07-ticket-modal",
-                label: "تسجيل تذكرة دعم للإدارة",
-                icon: <LifeBuoy size={14} />,
-                onClick: () => setTicketModalOpen(true),
-              },
-              {
-                id: "r07-export-leads",
-                label: "تصدير شيت الـ Leads (Excel)",
-                icon: <FileDown size={14} />,
-                onClick: () => handleExportLeads(),
-              },
-              {
-                id: "r07-refresh",
-                label: "تحديث ومزامنة البيانات",
-                icon: <RefreshCw size={14} />,
-                onClick: () => void loadMarketing(),
-              },
-            ]}
-          />
+          {/* Quick Actions Bar (Context-aware per active tab - zero duplicates) */}
+          {activeTab === "leads" && (
+            <QuickActionsBar
+              title="إجراءات الاستقطاب والمتابعة السريعة"
+              actions={[
+                {
+                  id: "r07-add-lead",
+                  label: "+ تسجيل عميل محتمل جديد",
+                  icon: <UserPlus size={14} />,
+                  onClick: () => setLeadModalOpen(true),
+                  tone: "primary",
+                },
+                {
+                  id: "r07-export-leads",
+                  label: "تصدير كشف العملاء (Excel)",
+                  icon: <FileDown size={14} />,
+                  onClick: () => handleExportLeads(),
+                },
+                {
+                  id: "r07-ticket-modal",
+                  label: "تسجيل تذكرة دعم للإدارة",
+                  icon: <LifeBuoy size={14} />,
+                  onClick: () => setTicketModalOpen(true),
+                },
+                {
+                  id: "r07-refresh",
+                  label: "تحديث ومزامنة البيانات",
+                  icon: <RefreshCw size={14} />,
+                  onClick: () => void loadMarketing(),
+                },
+              ]}
+            />
+          )}
+
+          {activeTab === "content-notes" && (
+            <QuickActionsBar
+              title="إجراءات المحتوى والمهام السريعة"
+              actions={[
+                {
+                  id: "r07-add-note",
+                  label: "+ إضافة فكرة محتوى جديدة",
+                  icon: <Sparkles size={14} />,
+                  onClick: () => setContentModalOpen(true),
+                  tone: "primary",
+                },
+                {
+                  id: "r07-ticket-modal",
+                  label: "تسجيل تذكرة دعم للإدارة",
+                  icon: <LifeBuoy size={14} />,
+                  onClick: () => setTicketModalOpen(true),
+                },
+                {
+                  id: "r07-refresh",
+                  label: "تحديث ومزامنة البيانات",
+                  icon: <RefreshCw size={14} />,
+                  onClick: () => void loadMarketing(),
+                },
+              ]}
+            />
+          )}
+
+          {activeTab === "campaigns" && (
+            <QuickActionsBar
+              title="إجراءات الحملات الإعلانية"
+              actions={[
+                {
+                  id: "r07-ticket-modal",
+                  label: "تسجيل تذكرة دعم للإدارة",
+                  icon: <LifeBuoy size={14} />,
+                  onClick: () => setTicketModalOpen(true),
+                },
+                {
+                  id: "r07-refresh",
+                  label: "تحديث ومزامنة البيانات",
+                  icon: <RefreshCw size={14} />,
+                  onClick: () => void loadMarketing(),
+                },
+              ]}
+            />
+          )}
 
           {/* Luxury Navigation Tabs */}
           <div className="marketing-nav-tabs" role="tablist">
@@ -442,7 +485,7 @@ export default function MarketingDesk() {
               onClick={() => setActiveTab("leads")}
             >
               <Users size={16} />
-              <span>مسار الـLeads وليدز الفروع</span>
+              <span>مسار متابعة واستقطاب العملاء</span>
               <span className="tab-badge">{visibleLeads.length}</span>
             </button>
 
@@ -452,7 +495,7 @@ export default function MarketingDesk() {
               onClick={() => setActiveTab("content-notes")}
             >
               <CalendarDays size={16} />
-              <span>أجندة المحتوى والمهام (To-Do Notes)</span>
+              <span>أجندة المحتوى والأفكار</span>
               <span className="tab-badge">{content.length}</span>
             </button>
 
@@ -477,7 +520,7 @@ export default function MarketingDesk() {
                     <Users size={24} />
                   </div>
                   <div className="marketing-stat-info">
-                    <span className="stat-label">إجمالي الـLeads</span>
+                    <span className="stat-label">إجمالي العملاء والطلبات</span>
                     <strong className="stat-value">{metrics.total}</strong>
                     <span className="stat-hint">استفسارات واردة عبر كافة القنوات</span>
                   </div>
@@ -596,7 +639,7 @@ export default function MarketingDesk() {
               {/* Leads List */}
               {loading ? (
                 <div style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
-                  جارٍ تحميل وتحديث سجل الـLeads من السيرفر…
+                  جارٍ تحميل وتحديث سجل العملاء من السيرفر…
                 </div>
               ) : visibleLeads.length === 0 ? (
                 <div
@@ -611,10 +654,10 @@ export default function MarketingDesk() {
                 >
                   <Users size={36} color="#94a3b8" style={{ margin: "0 auto 10px" }} />
                   <h4 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#1e293b" }}>
-                    لا توجد Leads مطابقة لهذا البحث أو الفلتر
+                    لا توجد طلبات مطابقة لهذا البحث أو الفلتر
                   </h4>
                   <p style={{ margin: "6px 0 0", fontSize: "0.85rem" }}>
-                    اضغط على "+ تسجيل Lead جديد فوري" لإضافة عميل محتمل جديد وتوجيهه للفرع.
+                    يمكنك الضغط على زر "+ تسجيل عميل محتمل جديد" بأعلى الصفحة لإضافة استفسار جديد وتوجيهه للفرع.
                   </p>
                 </div>
               ) : (
@@ -762,21 +805,31 @@ export default function MarketingDesk() {
               >
                 <div>
                   <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#0f172a" }}>
-                    أجندة المحتوى وحملات الأكاديمية (Content To-Do Notes)
+                    أجندة المحتوى والمنشورات (Content Planner)
                   </h3>
                   <p style={{ margin: "4px 0 0", fontSize: "0.85rem", color: "#64748b" }}>
-                    نوتس تفاعلية لتحديد الأفكار والمنشورات والريلز المطلوبة، ومتابعة ما تم تنفيذه وما هو قيد التنفيذ.
+                    متابعة أفكار المنشورات والفيديوهات والريلز المطلوبة، وما تم تنفيذه وما هو قيد الإعداد.
                   </p>
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <button
-                    type="button"
-                    className="lead-action-btn primary"
-                    onClick={() => setContentModalOpen(true)}
+                  <span
+                    style={{
+                      fontSize: "0.85rem",
+                      fontWeight: 700,
+                      color: "#0f766e",
+                      background: "#f0fdfa",
+                      border: "1px solid #ccfbf1",
+                      padding: "6px 12px",
+                      borderRadius: "8px",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
                   >
-                    <Plus size={16} /> إضافة فكرة / نوت محتوى
-                  </button>
+                    <Sparkles size={14} />
+                    <span>{content.length} أفكار مسجلة</span>
+                  </span>
                 </div>
               </div>
 
@@ -844,10 +897,10 @@ export default function MarketingDesk() {
                 >
                   <Sparkles size={36} color="#94a3b8" style={{ margin: "0 auto 10px" }} />
                   <h4 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#1e293b" }}>
-                    لا توجد نوتس محتوى مسجلة بعد
+                    لا توجد أفكار محتوى مسجلة بعد
                   </h4>
                   <p style={{ margin: "6px 0 0", fontSize: "0.85rem" }}>
-                    اضغط على "+ إضافة فكرة / نوت محتوى" لتدوين أفكار الفيديوهات والمنشورات المطلوبة.
+                    استخدم زر "+ إضافة فكرة محتوى جديدة" بأعلى الصفحة لتدوين الأفكار والمشاريع المطلوب تصويرها.
                   </p>
                 </div>
               ) : (
@@ -1070,7 +1123,7 @@ export default function MarketingDesk() {
                   <UserPlus size={20} />
                 </div>
                 <div>
-                  <h2>تسجيل Lead جديد فوري</h2>
+                  <h2>تسجيل عميل محتمل جديد</h2>
                   <small style={{ color: "#64748b" }}>إضافة بيانات العميل المحتمل وتوجيهه لفرع الأكاديمية</small>
                 </div>
               </div>
@@ -1162,7 +1215,7 @@ export default function MarketingDesk() {
                   إلغاء
                 </button>
                 <button type="submit" disabled={savingLead} className="lead-action-btn primary">
-                  {savingLead ? "جارٍ الحفظ…" : "حفظ الـLead في الفرع"}
+                  {savingLead ? "جارٍ الحفظ…" : "حفظ بيانات العميل بالفرع"}
                 </button>
               </div>
             </form>
@@ -1190,7 +1243,7 @@ export default function MarketingDesk() {
                   <Sparkles size={20} />
                 </div>
                 <div>
-                  <h2>إضافة فكرة / نوت محتوى</h2>
+                  <h2>إضافة فكرة محتوى جديدة</h2>
                   <small style={{ color: "#64748b" }}>تدوين الأفكار والمحتوى المخطط للأكاديمية</small>
                 </div>
               </div>
@@ -1257,7 +1310,7 @@ export default function MarketingDesk() {
                   إلغاء
                 </button>
                 <button type="submit" disabled={savingNote} className="lead-action-btn primary">
-                  {savingNote ? "جارٍ الحفظ…" : "حفظ النوت بالأجندة"}
+                  {savingNote ? "جارٍ الحفظ…" : "حفظ الفكرة بالأجندة"}
                 </button>
               </div>
             </form>

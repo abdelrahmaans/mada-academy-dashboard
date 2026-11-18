@@ -989,46 +989,6 @@ export default function PlatformConsoleLive() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <button
-              type="button"
-              className="pc-live-link"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                height: "32px",
-                padding: "0 10px",
-                fontSize: "11px",
-                color: "#0d9488",
-                borderColor: "#ccfbf1",
-                background: "#f0fdfa",
-              }}
-              disabled
-              onClick={() => setBroadcastModalOpen(true)}
-              title="متوقف حتى ربط مزود إشعارات وتخزين الحالة"
-            >
-              <Megaphone size={14} />
-              <span>بث إشعار عام</span>
-            </button>
-
-            <button
-              type="button"
-              className="pc-live-link"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                height: "32px",
-                padding: "0 10px",
-                fontSize: "11px",
-              }}
-              onClick={exportPlatformCsv}
-              title="تصدير بيانات الأكاديميات والاشتراكات كملف CSV"
-            >
-              <FileSpreadsheet size={14} />
-              <span>تصدير تقرير المنصة</span>
-            </button>
-
             <span className="pc-topbar-date">
               <CalendarDays size={14} />
               {new Intl.DateTimeFormat("ar-EG-u-nu-latn", {

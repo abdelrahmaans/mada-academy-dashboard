@@ -57,7 +57,7 @@ export const AUDIT_ACTION_MAP: Record<string, AuditActionDefinition> = {
   CERTIFICATE_ISSUED: { label: "إصدار شهادة إتمام برنامج معتمدة", tone: "system" },
 
   // Marketing & Platform
-  LEAD_CREATED: { label: "تسجيل عميل محتمل جديد (Lead)", tone: "marketing" },
+  LEAD_CREATED: { label: "تسجيل عميل محتمل جديد", tone: "marketing" },
   LEAD_STATUS_UPDATED: { label: "تحديث حالة متابعة العميل", tone: "marketing" },
   LEAD_CONVERTED: { label: "تحويل العميل إلى طالب مسجل", tone: "marketing" },
   WHATSAPP_BROADCAST_SENT: { label: "إرسال رسائل جماعية للطلاب عبر واتساب", tone: "marketing" },

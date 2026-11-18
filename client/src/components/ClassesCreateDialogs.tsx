@@ -859,18 +859,10 @@ export function ClassesCreateDialogs({
                                 <span>مضاف للمجموعة ✓</span>
                               </span>
                             ) : (
-                              <button
-                                type="button"
-                                className="student-row-add-btn"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedStudentIds(current => [...current, student.id]);
-                                  toast.success(`تمت إضافة ${student.fullName} للمجموعة ✓`);
-                                }}
-                              >
+                              <span className="student-row-add-btn">
                                 <Plus size={12} />
-                                <span>إضافة</span>
-                              </button>
+                                <span>+ إضافة للمجموعة</span>
+                              </span>
                             )}
                           </div>
                         );
@@ -878,7 +870,7 @@ export function ClassesCreateDialogs({
                     ) : (
                       <div className="group-student-empty-search">
                         <p>
-                          لا يوجد طالب مسجل باسم "<strong>{studentSearchQuery}</strong>".
+                          لم يتم العثور على طالب مسجل باسم "<strong>{studentSearchQuery}</strong>".
                         </p>
                         <button
                           type="button"
@@ -889,7 +881,7 @@ export function ClassesCreateDialogs({
                           }}
                         >
                           <UserPlus size={13} />
-                          <span>تسجيل "{studentSearchQuery.trim()}" كطالب جديد وإضافته</span>
+                          <span>تسجيل "{studentSearchQuery.trim()}" كطالب جديد بالفرع وإضافته للمجموعة</span>
                         </button>
                       </div>
                     )}

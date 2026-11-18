@@ -447,14 +447,9 @@ export default function InstructorDeskLive() {
               الكتابة مقتصرة على حصصك المسندة مباشرةً.
             </p>
           </div>
-          <button
-            type="button"
-            className="r04-live-refresh"
-            onClick={() => void loadSessions()}
-            disabled={loading}
-          >
-            <RefreshCw size={15} /> تحديث الجلسات
-          </button>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#64748b" }}>
+            <CalendarDays size={14} /> اليوم · متابعة الحصص
+          </div>
         </header>
         <RoleScopeCard className="r04-live-scope" compact />
         {view === "sessions" && (
