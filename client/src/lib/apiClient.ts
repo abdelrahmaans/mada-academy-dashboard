@@ -2314,7 +2314,7 @@ export type RubricCriterion = {
 
 export type DisciplineRubric = {
   id: string;
-  trackKey: "robotics" | "coding" | "circuits" | "ai" | "soft_skills" | "sports_swimming" | "martial_arts" | "general";
+  trackKey: "robotics" | "coding" | "circuits" | "ai" | "soft_skills" | "sports_swimming" | "martial_arts" | "early_childhood" | "general";
   trackLabel: string;
   title: string;
   description: string;
@@ -2324,6 +2324,8 @@ export type DisciplineRubric = {
   isDefault: boolean;
   updatedAt: string;
   authorName?: string;
+  scope?: "GLOBAL" | "BRANCH";
+  branchId?: string;
 };
 
 const RUBRICS_STORAGE_KEY = "mada_evaluation_rubrics_v1";
@@ -2600,6 +2602,61 @@ const DEFAULT_RUBRICS: DisciplineRubric[] = [
     ],
   },
   {
+    id: "RBR-NURSERY-01",
+    trackKey: "early_childhood",
+    trackLabel: "الحضانات وتنمية مهارات الطفولة المبكرة",
+    title: "نموذج تقييم الطفولة المبكرة وتطور المهارات الحركية والمعرفية",
+    description: "معايير معتمدة لمتابعة التناسق الحركي، الاستكشاف المعرفي، التواصل الاجتماعي، والالتزام بالروتين اليومي للحضانة.",
+    scaleMax: 5,
+    isActive: true,
+    isDefault: true,
+    updatedAt: "2026-11-18T10:00:00Z",
+    authorName: "إدارة التطوير الأكاديمي والطفولة المبكرة",
+    scope: "GLOBAL",
+    criteria: [
+      {
+        id: "crt-601",
+        key: "motor_coordination",
+        label: "التناسق الحركي الدقيق والنشاط اليدوي",
+        category: "PRACTICAL",
+        categoryLabel: "مهارات حركية",
+        maxScore: 5,
+        weightPercent: 30,
+        hint: "الإمساك بالأدوات والمكعبات، التحكم في الرسم والتلوين، التوازن الحركي.",
+      },
+      {
+        id: "crt-602",
+        key: "cognitive_curiosity",
+        label: "الاستكشاف المعرفي والفضول والتركيز",
+        category: "CREATIVE",
+        categoryLabel: "تطور إدراكي",
+        maxScore: 5,
+        weightPercent: 25,
+        hint: "الربط بين الأشكال والألوان، سرعة البديهة والفضول الإيجابي في الأنشطة.",
+      },
+      {
+        id: "crt-603",
+        key: "social_emotional",
+        label: "المشاركة الاجتماعية والتعبير العاطفي",
+        category: "BEHAVIORAL",
+        categoryLabel: "سلوك ومشاركة",
+        maxScore: 5,
+        weightPercent: 25,
+        hint: "مشاركة الألعاب مع الأقران، التعبير عن المشاعر بهدوء، والتعاطف.",
+      },
+      {
+        id: "crt-604",
+        key: "routine_instructions",
+        label: "الاستجابة للتعليمات والروتين اليومي",
+        category: "TECHNICAL",
+        categoryLabel: "انضباط وروتين",
+        maxScore: 5,
+        weightPercent: 20,
+        hint: "اتباع توجيهات المعلمة، ترتيب الأدوات الشخصية، والالتزام بأوقات الوجبات والأنشطة.",
+      },
+    ],
+  },
+  {
     id: "RBR-GEN-01",
     trackKey: "general",
     trackLabel: "التقييم الأكاديمي العام",
@@ -2653,7 +2710,15 @@ export const rubricStorage = {
         localStorage.setItem(RUBRICS_STORAGE_KEY, JSON.stringify(DEFAULT_RUBRICS));
         return DEFAULT_RUBRICS;
       }
-      return JSON.parse(raw);
+      const parsed: DisciplineRubric[] = JSON.parse(raw);
+      // Ensure any newly added default rubrics (like early childhood) are merged
+      const missingDefaults = DEFAULT_RUBRICS.filter(def => !parsed.some(p => p.id === def.id));
+      if (missingDefaults.length > 0) {
+        const merged = [...parsed, ...missingDefaults];
+        localStorage.setItem(RUBRICS_STORAGE_KEY, JSON.stringify(merged));
+        return merged;
+      }
+      return parsed;
     } catch {
       return DEFAULT_RUBRICS;
     }
