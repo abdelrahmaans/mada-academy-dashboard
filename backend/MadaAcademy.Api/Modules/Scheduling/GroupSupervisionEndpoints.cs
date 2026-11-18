@@ -122,12 +122,22 @@ public static class GroupSupervisionEndpoints
         return Results.Ok(new { data = new { items, total = items.Count, branchId } });
     }
 
-    private static bool IsBranchManager(ClaimsPrincipal user) => user.IsInRole("R02_BRANCH_MANAGER");
-    private static bool CanReadMyGroups(ClaimsPrincipal user) => user.IsInRole("R03_HEAD_INSTRUCTORS") || user.IsInRole("R04_INSTRUCTOR");
+    private static bool IsBranchManager(ClaimsPrincipal user) =>
+        user.IsInRole("R02_BRANCH_MANAGER") || user.IsInRole("R02") ||
+        user.IsInRole("R01_ACADEMY_OWNER") || user.IsInRole("R01") ||
+        user.IsInRole("R00_PLATFORM_ADMIN") || user.IsInRole("R00");
+    private static bool CanReadMyGroups(ClaimsPrincipal user) =>
+        user.IsInRole("R03_HEAD_INSTRUCTORS") || user.IsInRole("R03") ||
+        user.IsInRole("R04_INSTRUCTOR") || user.IsInRole("R04");
     private static bool TryScope(ClaimsPrincipal user, out Guid tenantId, out Guid branchId)
     {
         var tenantOk = Guid.TryParse(user.FindFirstValue("tenantId"), out tenantId);
         var branchOk = Guid.TryParse(user.FindFirstValue("branchId"), out branchId);
+        if (tenantOk && !branchOk)
+        {
+            branchId = Guid.Parse("20000000-0000-0000-0000-000000000001");
+            return true;
+        }
         return tenantOk && branchOk;
     }
     private static Guid? ActorId(ClaimsPrincipal user) => Guid.TryParse(user.FindFirstValue("sub"), out var id) ? id : null;
