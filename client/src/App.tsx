@@ -118,7 +118,7 @@ const APP_ROUTES = [
   ["/marketing-desk", () => <Guard roles={["R07_MEDIA_MANAGER"]} permission="marketing.read"><MarketingDesk /></Guard>],
   ["/team", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS"]} anyOfPermissions={["staff.read", "branch.read"]}><Team /></Guard>],
   ["/branch-operations", () => <Guard roles={["R02_BRANCH_MANAGER"]} permission="branch.read"><Redirect to="/schedule" /></Guard>],
-  ["/supervision-assignments", () => <Guard roles={["R02_BRANCH_MANAGER"]} permission="branch.read"><SupervisionAssignments /></Guard>],
+  ["/supervision-assignments", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER"]} anyOfPermissions={["branch.read", "academy.read"]}><SupervisionAssignments /></Guard>],
   ["/approvals", () => <Guard roles={["R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS", "R05_SECRETARY", "R06_ACCOUNTANT"]} anyOfPermissions={["sessions.create", "evaluations.review", "finance.expenses.approve"]}><Approvals /></Guard>],
   ["/reports", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R06_ACCOUNTANT"]} anyOfPermissions={["reports.read", "finance.summary.read"]}><Reports /></Guard>],
   ["/competitions", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS", "R04_INSTRUCTOR", "R05_SECRETARY"]}><Competitions /></Guard>],

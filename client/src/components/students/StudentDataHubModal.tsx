@@ -24,6 +24,10 @@ import {
   ShieldCheck,
   TrendingUp,
   Cpu,
+  Coins,
+  Send,
+  Check,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Student } from "@/pages/StudentsTypes";
@@ -58,6 +62,68 @@ export function StudentDataHubModal({
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [isCertModalOpen, setIsCertModalOpen] = useState(false);
   const [activeCert, setActiveCert] = useState<CertificateData | null>(null);
+  const [installmentPlan, setInstallmentPlan] = useState<"annual_nursery" | "annual_diploma">("annual_nursery");
+  const [paidInstallments, setPaidInstallments] = useState<string[]>(["inst-dp", "inst-1", "inst-2"]);
+  const [childNotes, setChildNotes] = useState<Array<{ id: string; date: string; coach: string; text: string; tag: string }>>([
+    {
+      id: "n-1",
+      date: "18 نوفمبر 2026",
+      coach: "أ. ميار حسني (معلمة الطفولة المبكرة)",
+      text: "متفاعل ومبادر جداً في نشاط الفك والتركيب اليوم، أظهر استكشافاً معرفياً ممتازاً وتواصلاً هادئاً مع زملائه.",
+      tag: "تطور معرفي وحركي 🌟",
+    },
+    {
+      id: "n-2",
+      date: "12 نوفمبر 2026",
+      coach: "أ. ميار حسني",
+      text: "التزام رائع بالروتين اليومي وأوقات الوجبات والأنشطة المشتركة. استجاب للتوجيهات بهدوء وسلاسة.",
+      tag: "سلوك وروتين 🤝",
+    },
+    {
+      id: "n-3",
+      date: "5 نوفمبر 2026",
+      coach: "د. هبة سالم (أخصائية المتابعة)",
+      text: "استجابة سريعة للأوامر اللفظية وثقة متزايدة بالنفس أثناء التحدث أمام زملائه في حلقة الصباح واستعراض أعماله.",
+      tag: "مهارات تواصل 💡",
+    },
+  ]);
+  const [newNoteInput, setNewNoteInput] = useState("");
+
+  const nurseryInstallmentsSchedule = [
+    { id: "inst-dp", name: "المقدم السنوي ورسوم حجز المقعد", amount: 5000, dueDate: "1 سبتمبر 2026", isDownPayment: true },
+    { id: "inst-1", name: "قسط شهر أكتوبر 2026", amount: 1500, dueDate: "1 أكتوبر 2026" },
+    { id: "inst-2", name: "قسط شهر نوفمبر 2026", amount: 1500, dueDate: "1 نوفمبر 2026" },
+    { id: "inst-3", name: "قسط شهر ديسمبر 2026", amount: 1500, dueDate: "1 ديسمبر 2026" },
+    { id: "inst-4", name: "قسط شهر يناير 2027", amount: 1500, dueDate: "1 يناير 2027" },
+    { id: "inst-5", name: "قسط شهر فبراير 2027", amount: 1500, dueDate: "1 فبراير 2027" },
+    { id: "inst-6", name: "قسط شهر مارس 2027", amount: 1500, dueDate: "1 مارس 2027" },
+    { id: "inst-7", name: "قسط شهر أبريل 2027", amount: 1500, dueDate: "1 أبريل 2027" },
+    { id: "inst-8", name: "قسط شهر مايو 2027", amount: 1500, dueDate: "1 مايو 2027" },
+    { id: "inst-9", name: "قسط شهر يونيو 2027", amount: 1500, dueDate: "1 يونيو 2027" },
+    { id: "inst-10", name: "قسط شهر يوليو 2027", amount: 1500, dueDate: "1 يوليو 2027" },
+    { id: "inst-11", name: "قسط شهر أغسطس 2027", amount: 1500, dueDate: "1 أغسطس 2027" },
+  ];
+
+  const totalPlanAmount = nurseryInstallmentsSchedule.reduce((sum, item) => sum + item.amount, 0); // 21,500 ج.م
+  const collectedPlanAmount = nurseryInstallmentsSchedule
+    .filter(item => paidInstallments.includes(item.id))
+    .reduce((sum, item) => sum + item.amount, 0);
+  const remainingPlanAmount = totalPlanAmount - collectedPlanAmount;
+
+  const handlePayInstallment = (item: { id: string; name: string; amount: number }) => {
+    setPaidInstallments(prev => [...prev, item.id]);
+    toast.success(`تم تسجيل سداد (${item.name}) بقيمة ${item.amount.toLocaleString()} ج.م في الخزينة بنجاح!`);
+  };
+
+  const handleSendInstallmentReminder = (instName: string, amount: number, dueDate: string) => {
+    let clean = (student?.parentPhone || "").replace(/\D/g, "");
+    if (clean.startsWith("0")) clean = "2" + clean;
+    if (!clean.startsWith("20") && clean.length === 10) clean = "20" + clean;
+    const msg = encodeURIComponent(
+      `مرحباً ${student?.parentName}، تحية طيبة من أكاديمية مدى 🌸\nنود تذكيركم بموعد استحقاق (${instName}) بقيمة ${amount.toLocaleString()} ج.م والمستحق بتاريخ ${dueDate} الخاص بالطالب/ة *${student?.name}*.\nيمكنكم السداد عبر الخزينة بالفرع أو عبر إنستاباي. شكراً لتعاونكم وثقتكم بنا.`
+    );
+    window.open(`https://web.whatsapp.com/send?phone=${clean}&text=${msg}`, "_blank");
+  };
 
   if (!isOpen || !student) return null;
 
@@ -475,6 +541,157 @@ export function StudentDataHubModal({
                     </table>
                   </div>
                 </div>
+
+                {/* Annual Nursery & Diplomas Installments Section */}
+                <div className="hub-section-box" style={{ border: "1.5px solid #0d9488", background: "#f0fdfa" }}>
+                  <div className="hub-box-head-with-action">
+                    <div>
+                      <h4 className="hub-box-title" style={{ color: "#0f766e" }}>
+                        <Coins size={17} color="#0f766e" />
+                        <span>خطة الاشتراك السنوي ونظام الأقساط الشهرية (Installments Engine):</span>
+                      </h4>
+                      <small style={{ color: "#134e4a", fontSize: "11.5px" }}>
+                        مقدم سنوي لحجز المقعد + أقساط شهرية متتابعة على مدار العام مع تتبع السداد والتذكير عبر واتساب.
+                      </small>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <button
+                        type="button"
+                        style={{
+                          padding: "4px 10px",
+                          borderRadius: "8px",
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          border: installmentPlan === "annual_nursery" ? "1.5px solid #0f766e" : "1px solid #cbd5e1",
+                          background: installmentPlan === "annual_nursery" ? "#0f766e" : "#ffffff",
+                          color: installmentPlan === "annual_nursery" ? "#ffffff" : "#475569",
+                          cursor: "pointer",
+                        }}
+                        onClick={() => setInstallmentPlan("annual_nursery")}
+                      >
+                        حضانة سنوية (12 قسط)
+                      </button>
+                      <button
+                        type="button"
+                        style={{
+                          padding: "4px 10px",
+                          borderRadius: "8px",
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          border: installmentPlan === "annual_diploma" ? "1.5px solid #0f766e" : "1px solid #cbd5e1",
+                          background: installmentPlan === "annual_diploma" ? "#0f766e" : "#ffffff",
+                          color: installmentPlan === "annual_diploma" ? "#ffffff" : "#475569",
+                          cursor: "pointer",
+                        }}
+                        onClick={() => setInstallmentPlan("annual_diploma")}
+                      >
+                        دبلومة روبوتكس سنوية
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="hub-finance-summary" style={{ background: "#ffffff", marginTop: "10px" }}>
+                    <div className="hub-finance-kpi">
+                      <span>إجمالي الاشتراك السنوي:</span>
+                      <strong>{totalPlanAmount.toLocaleString()} ج.م</strong>
+                    </div>
+                    <div className="hub-finance-kpi">
+                      <span>المسدد في الخزينة حتى الآن:</span>
+                      <strong style={{ color: "#16a34a" }}>
+                        {collectedPlanAmount.toLocaleString()} ج.م
+                      </strong>
+                    </div>
+                    <div className="hub-finance-kpi">
+                      <span>المتبقي للأقساط القادمة:</span>
+                      <strong style={{ color: remainingPlanAmount === 0 ? "#16a34a" : "#d97706" }}>
+                        {remainingPlanAmount.toLocaleString()} ج.م
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className="hub-table-wrapper" style={{ background: "#ffffff", marginTop: "10px" }}>
+                    <table className="hub-table">
+                      <thead>
+                        <tr>
+                          <th>الدفعة / القسط</th>
+                          <th>تاريخ الاستحقاق</th>
+                          <th>المبلغ</th>
+                          <th>حالة السداد</th>
+                          <th>إجراءات فورية</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {nurseryInstallmentsSchedule.map(inst => {
+                          const isPaid = paidInstallments.includes(inst.id);
+                          return (
+                            <tr key={inst.id} style={{ background: isPaid ? "#f8fafc" : "#ffffff" }}>
+                              <td>
+                                <strong style={{ color: inst.isDownPayment ? "#0f766e" : "#1e293b" }}>
+                                  {inst.name}
+                                  {inst.isDownPayment && (
+                                    <span style={{ fontSize: "10.5px", marginRight: "6px", color: "#0f766e", background: "#ccfbf1", padding: "2px 6px", borderRadius: "4px" }}>
+                                      دفعة مقدمة
+                                    </span>
+                                  )}
+                                </strong>
+                              </td>
+                              <td dir="ltr" style={{ fontSize: "12px", color: "#64748b" }}>
+                                {inst.dueDate}
+                              </td>
+                              <td>
+                                <strong>{inst.amount.toLocaleString()} ج.م</strong>
+                              </td>
+                              <td>
+                                {isPaid ? (
+                                  <span className="hub-pay-status paid" style={{ fontSize: "11px" }}>
+                                    <CheckCircle2 size={12} /> مسدد بالخزينة ✓
+                                  </span>
+                                ) : (
+                                  <span className="hub-pay-status partial" style={{ fontSize: "11px", color: "#b45309", background: "#fef3c7" }}>
+                                    <Clock size={12} /> مستحق السداد ⏳
+                                  </span>
+                                )}
+                              </td>
+                              <td>
+                                <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                                  {!isPaid ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="hub-action-btn-sm"
+                                        style={{ background: "#0f766e", color: "#ffffff", border: "none" }}
+                                        onClick={() => handlePayInstallment(inst)}
+                                        title="تحصيل القسط في الخزينة وتسجيل سند قبض"
+                                      >
+                                        <CreditCard size={12} />
+                                        <span>سداد الآن</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="hub-action-btn-sm"
+                                        style={{ background: "#25d366", color: "#ffffff", border: "none" }}
+                                        onClick={() => handleSendInstallmentReminder(inst.name, inst.amount, inst.dueDate)}
+                                        title="إرسال رسالة تذكير بالقسط عبر واتساب"
+                                      >
+                                        <MessageCircle size={12} />
+                                        <span>تذكير واتساب</span>
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <span style={{ fontSize: "11px", color: "#16a34a", fontWeight: 600 }}>
+                                      إيصال #{inst.id.slice(-3).toUpperCase()}-2026
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -581,10 +798,188 @@ export function StudentDataHubModal({
                   </div>
                 </div>
 
+                {/* Early Childhood & Developmental Milestones */}
+                <div className="hub-section-box">
+                  <h4 className="hub-box-title">
+                    <Sparkles size={16} color="#0f766e" />
+                    <span>مؤشرات التطور الحركي والمعرفي والاجتماعي للطفل (Early Childhood Milestones):</span>
+                  </h4>
+                  <div className="hub-skills-bars">
+                    <div className="hub-skill-row">
+                      <div className="skill-label-row">
+                        <span>التناسق الحركي الدقيق والأنشطة اليدوية (Fine Motor Coordination):</span>
+                        <strong style={{ color: "#0f766e" }}>88%</strong>
+                      </div>
+                      <div className="skill-bar-track">
+                        <div className="skill-bar-fill" style={{ width: "88%", background: "#0f766e" }} />
+                      </div>
+                    </div>
+
+                    <div className="hub-skill-row">
+                      <div className="skill-label-row">
+                        <span>الاستكشاف المعرفي والفضول والتفكير (Cognitive Curiosity & Logic):</span>
+                        <strong style={{ color: "#2563eb" }}>94%</strong>
+                      </div>
+                      <div className="skill-bar-track">
+                        <div className="skill-bar-fill" style={{ width: "94%", background: "#2563eb" }} />
+                      </div>
+                    </div>
+
+                    <div className="hub-skill-row">
+                      <div className="skill-label-row">
+                        <span>المشاركة الاجتماعية والتعاطف والتواصل (Social & Emotional):</span>
+                        <strong style={{ color: "#d97706" }}>90%</strong>
+                      </div>
+                      <div className="skill-bar-track">
+                        <div className="skill-bar-fill" style={{ width: "90%", background: "#d97706" }} />
+                      </div>
+                    </div>
+
+                    <div className="hub-skill-row">
+                      <div className="skill-label-row">
+                        <span>الاستجابة للتعليمات والروتين اليومي للحضانة (Daily Routine):</span>
+                        <strong style={{ color: "#16a34a" }}>85%</strong>
+                      </div>
+                      <div className="skill-bar-track">
+                        <div className="skill-bar-fill" style={{ width: "85%", background: "#16a34a" }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Individual Child Observations Timeline */}
+                <div className="hub-section-box" style={{ border: "1px solid #ccfbf1", background: "#f0fdfa" }}>
+                  <div className="hub-box-head-with-action">
+                    <h4 className="hub-box-title" style={{ color: "#0f766e" }}>
+                      <FileText size={16} color="#0f766e" />
+                      <span>سجل الملاحظات الفردية لكل طفل (Child Observations Log):</span>
+                    </h4>
+                    <span style={{ fontSize: "11px", color: "#0f766e", fontWeight: 700, background: "#ccfbf1", padding: "2px 8px", borderRadius: "6px" }}>
+                      مربوط ببوابة الأسرة 👨‍👩‍👦
+                    </span>
+                  </div>
+
+                  {/* Add New Observation Box */}
+                  <div style={{ background: "#ffffff", padding: "12px", borderRadius: "10px", border: "1px solid #99f6e4", marginTop: "8px" }}>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#1e293b", marginBottom: "6px" }}>
+                      إضافة ملاحظة توجيهية جديدة للطفل:
+                    </label>
+                    <textarea
+                      rows={2}
+                      style={{
+                        width: "100%",
+                        padding: "8px 10px",
+                        fontSize: "12.5px",
+                        borderRadius: "8px",
+                        border: "1px solid #cbd5e1",
+                        outline: "none",
+                        boxSizing: "border-box",
+                      }}
+                      placeholder="اكتب ملاحظة واضحة ومحددة عن نشاط الطفل وسلوكه اليوم…"
+                      value={newNoteInput}
+                      onChange={e => setNewNoteInput(e.target.value)}
+                    />
+                    
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "6px", flexWrap: "wrap", gap: "6px" }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
+                        {[
+                          { label: "🌟 متفاعل ومبادر", text: "متفاعل ومبادر جداً في الأنشطة واستيعاب المفاهيم اليوم." },
+                          { label: "🤖 أتقن التطبيق", text: "أتقن التطبيق العملي للنشاط والمهام المطلوبة بدقة عالية." },
+                          { label: "🤝 متعاون مع زملائه", text: "متعاون وإيجابي جداً مع زملائه وشارك في نجاح الفريق." },
+                          { label: "🧩 يحتاج دعم حركي", text: "يحتاج لمزيد من الدعم في التناسق الحركي واستخدام الأدوات." },
+                        ].map((chip, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            style={{
+                              background: "#f8fafc",
+                              border: "1px solid #e2e8f0",
+                              borderRadius: "14px",
+                              padding: "2px 8px",
+                              fontSize: "11px",
+                              color: "#475569",
+                              cursor: "pointer",
+                            }}
+                            onClick={() => {
+                              setNewNoteInput(prev => (prev.trim() ? `${prev.trim()}\n• ${chip.text}` : `• ${chip.text}`));
+                            }}
+                          >
+                            {chip.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        style={{
+                          background: "#0f766e",
+                          color: "#ffffff",
+                          border: "none",
+                          borderRadius: "8px",
+                          padding: "6px 14px",
+                          fontSize: "12px",
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "5px",
+                        }}
+                        disabled={!newNoteInput.trim()}
+                        onClick={() => {
+                          if (!newNoteInput.trim()) return;
+                          const newRecord = {
+                            id: `n-${Date.now()}`,
+                            date: "اليوم",
+                            coach: "معلمة الحضانة والمشرف الأكاديمي",
+                            text: newNoteInput.trim(),
+                            tag: "ملاحظة حديثة ⚡",
+                          };
+                          setChildNotes(prev => [newRecord, ...prev]);
+                          setNewNoteInput("");
+                          toast.success("تم تسجيل الملاحظة الفردية وإرسالها لبوابة الأسرة بنجاح!");
+                        }}
+                      >
+                        <Plus size={14} />
+                        <span>حفظ الملاحظة وإرسالها لبوابة الأسرة</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Observations Timeline List */}
+                  <div style={{ display: "grid", gap: "10px", marginTop: "12px" }}>
+                    {childNotes.map(note => (
+                      <div
+                        key={note.id}
+                        style={{
+                          background: "#ffffff",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: "10px",
+                          padding: "12px 14px",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "6px",
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span style={{ fontSize: "11.5px", fontWeight: 700, color: "#0f766e" }}>
+                            {note.coach} · <span style={{ color: "#64748b" }}>{note.date}</span>
+                          </span>
+                          <span style={{ fontSize: "10.5px", fontWeight: 700, background: "#f1f5f9", color: "#334155", padding: "2px 8px", borderRadius: "6px" }}>
+                            {note.tag}
+                          </span>
+                        </div>
+                        <p style={{ margin: 0, fontSize: "12.5px", color: "#334155", lineHeight: 1.6 }}>
+                          {note.text}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="hub-section-box">
                   <h4 className="hub-box-title">
                     <FileText size={16} color="#475569" />
-                    <span>آخر تقرير تقييم من كوتش الأكاديمية:</span>
+                    <span>تقرير الكوتش العام:</span>
                   </h4>
                   <div className="hub-coach-review-box">
                     <p>

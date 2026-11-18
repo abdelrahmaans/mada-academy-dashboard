@@ -100,6 +100,7 @@ export default function InstructorDeskLive() {
   const [earnings, setEarnings] = useState<MyInstructorEarnings | null>(null);
   const [earningsLoading, setEarningsLoading] = useState(true);
   const [rubrics, setRubrics] = useState<DisciplineRubric[]>([]);
+  const [selectedRubricId, setSelectedRubricId] = useState<string | null>(null);
   const [completionModalOpen, setCompletionModalOpen] = useState(false);
   const [substituteModalOpen, setSubstituteModalOpen] = useState(false);
   const [projectModalOpen, setProjectModalOpen] = useState(false);
@@ -714,11 +715,17 @@ export default function InstructorDeskLive() {
                     onScoreChange={setScore}
                     onNotesChange={setNotes}
                     onSaveEvaluation={(submit) => void saveEvaluation(submit)}
+                    availableRubrics={rubrics}
+                    selectedRubricId={selectedRubricId ?? undefined}
+                    onSelectRubric={setSelectedRubricId}
                     activeRubric={
+                      (selectedRubricId ? rubrics.find(r => r.id === selectedRubricId) : null) ??
                       rubrics.find(r => {
                         const title = `${selectedSession?.courseName ?? ""} ${selectedSession?.notes ?? ""}`.toLowerCase();
                         const expectedTrack =
-                          title.includes("سباح") || title.includes("رياض")
+                          title.includes("حضان") || title.includes("طفول") || title.includes("روض") || title.includes("nursery")
+                            ? "early_childhood"
+                            : title.includes("سباح") || title.includes("رياض")
                             ? "sports_swimming"
                             : title.includes("برمج") || title.includes("كود") || title.includes("coding")
                             ? "coding"
