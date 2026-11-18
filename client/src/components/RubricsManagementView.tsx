@@ -30,6 +30,7 @@ const TRACK_OPTIONS: Array<{ key: DisciplineRubric["trackKey"] | "all"; label: s
   { key: "coding", label: "برمجة وتطوير ألعاب" },
   { key: "circuits", label: "دوائر إلكترونية وأنظمة مدمجة" },
   { key: "sports_swimming", label: "سباحة ورياضات مائية" },
+  { key: "early_childhood", label: "الحضانات والطفولة المبكرة" },
   { key: "soft_skills", label: "مهارات قيادية وشخصية" },
   { key: "general", label: "التقييم الأكاديمي العام" },
 ];

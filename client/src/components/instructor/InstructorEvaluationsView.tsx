@@ -23,7 +23,19 @@ export interface InstructorEvaluationsViewProps {
   onNotesChange: (notes: string) => void;
   onSaveEvaluation: (submitForReview: boolean) => void;
   activeRubric?: DisciplineRubric | null;
+  availableRubrics?: DisciplineRubric[];
+  selectedRubricId?: string;
+  onSelectRubric?: (rubricId: string) => void;
 }
+
+const QUICK_NOTES_PRESETS = [
+  { label: "🌟 متفاعل ومبادر", text: "متفاعل ومبادر جداً في الأنشطة واستيعاب المفاهيم اليوم." },
+  { label: "🤖 أتقن التطبيق", text: "أتقن التطبيق العملي للنشاط والمهام المطلوبة بدقة عالية." },
+  { label: "🤝 متعاون مع زملائه", text: "متعاون وإيجابي جداً مع زملائه وشارك في نجاح الفريق." },
+  { label: "💡 فضول واستكشاف", text: "يتمتع بفضول استكشافي رائع وسرعة بديهة في التفكير والتجربة." },
+  { label: "🧩 يحتاج دعم حركي", text: "يحتاج لمزيد من الدعم في التناسق الحركي واستخدام الأدوات." },
+  { label: "🎯 يحتاج تركيز وهدوء", text: "يحتاج لمزيد من الهدوء والتركيز أثناء شرح التعليمات." },
+];
 
 export function InstructorEvaluationsView({
   evaluationLoading,
@@ -40,6 +52,9 @@ export function InstructorEvaluationsView({
   onNotesChange,
   onSaveEvaluation,
   activeRubric,
+  availableRubrics,
+  selectedRubricId,
+  onSelectRubric,
 }: InstructorEvaluationsViewProps) {
   const [criterionScores, setCriterionScores] = useState<Record<string, number>>({});
 
@@ -121,27 +136,58 @@ export function InstructorEvaluationsView({
               gap: "8px",
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-              <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                 <strong style={{ fontSize: "12.5px", color: "#0f172a" }}>
-                  معايير التقييم المعتمدة: {activeRubric.title}
+                  معايير التقييم: {activeRubric.title}
                 </strong>
-                <small style={{ display: "block", color: "#64748b", fontSize: "11px" }}>
+                <small style={{ color: "#64748b", fontSize: "11px" }}>
                   المسار: {activeRubric.trackLabel}
                 </small>
               </div>
-              <button
-                type="button"
-                className="r04-live-primary"
-                style={{ padding: "5px 10px", fontSize: "11px", height: "auto" }}
-                disabled={
-                  selectedEvaluation?.status === "SUBMITTED" ||
-                  selectedEvaluation?.status === "PUBLISHED"
-                }
-                onClick={applyRubricScore}
-              >
-                <Sparkles size={12} /> احتساب النتيجة تلقائيًا
-              </button>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                {availableRubrics && availableRubrics.length > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ fontSize: "11px", color: "#475569", fontWeight: 700 }}>النموذج:</span>
+                    <select
+                      style={{
+                        padding: "4px 8px",
+                        fontSize: "11px",
+                        borderRadius: "6px",
+                        border: "1px solid #cbd5e1",
+                        background: "#ffffff",
+                        color: "#0f172a",
+                      }}
+                      value={activeRubric.id}
+                      disabled={
+                        selectedEvaluation?.status === "SUBMITTED" ||
+                        selectedEvaluation?.status === "PUBLISHED"
+                      }
+                      onChange={e => onSelectRubric?.(e.target.value)}
+                    >
+                      {availableRubrics.map(r => (
+                        <option key={r.id} value={r.id}>
+                          {r.title} ({r.trackLabel})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  className="r04-live-primary"
+                  style={{ padding: "5px 10px", fontSize: "11px", height: "auto" }}
+                  disabled={
+                    selectedEvaluation?.status === "SUBMITTED" ||
+                    selectedEvaluation?.status === "PUBLISHED"
+                  }
+                  onClick={applyRubricScore}
+                >
+                  <Sparkles size={12} /> احتساب النتيجة تلقائيًا
+                </button>
+              </div>
             </div>
             <div style={{ display: "grid", gap: "6px" }}>
               {activeRubric.criteria.map(c => {
@@ -218,17 +264,51 @@ export function InstructorEvaluationsView({
           />
         </label>
         <label>
-          ملاحظة بنّاءة
+          ملاحظة بنّاءة وتوجيه فردي للطالب
           <textarea
-            rows={5}
+            rows={4}
             value={notes}
             disabled={
               selectedEvaluation?.status === "SUBMITTED" ||
               selectedEvaluation?.status === "PUBLISHED"
             }
             onChange={event => onNotesChange(event.target.value)}
-            placeholder="اكتب ما أتقنه الطالب والخطوة التالية المقترحة…"
+            placeholder="اكتب ملاحظة واضحة ومحددة للطالب أو الطفل؛ ستظهر في ملفه وبوابة ولي الأمر…"
           />
+          <div style={{ marginTop: "6px" }}>
+            <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 600, display: "block", marginBottom: "4px" }}>
+              ملاحظات سريعة مقترحة (انقر للإضافة):
+            </span>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
+              {QUICK_NOTES_PRESETS.map((preset, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  style={{
+                    background: "#f0fdfa",
+                    border: "1px solid #99f6e4",
+                    borderRadius: "16px",
+                    padding: "3px 9px",
+                    fontSize: "11px",
+                    color: "#0f766e",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                    transition: "all 0.15s ease",
+                  }}
+                  disabled={
+                    selectedEvaluation?.status === "SUBMITTED" ||
+                    selectedEvaluation?.status === "PUBLISHED"
+                  }
+                  onClick={() => {
+                    const next = notes.trim() ? `${notes.trim()}\n• ${preset.text}` : `• ${preset.text}`;
+                    onNotesChange(next);
+                  }}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </label>
         <div className="r04-live-eval-state">
           الحالة: {evaluationLabel(selectedEvaluation?.status)}

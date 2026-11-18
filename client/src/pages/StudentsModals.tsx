@@ -78,6 +78,10 @@ export function AddStudentModal({
   onSubmit,
   branches,
 }: AddStudentModalProps) {
+  const [billingPlan, setBillingPlan] = useState<"standard" | "annual_nursery" | "annual_diploma">("standard");
+  const [downPayment, setDownPayment] = useState(5000);
+  const [monthlyAmount, setMonthlyAmount] = useState(1500);
+
   React.useEffect(() => {
     if (isOpen) {
       const prev = document.body.style.overflow;
@@ -204,6 +208,91 @@ export function AddStudentModal({
               </select>
             </label>
           </div>
+
+          <div style={{ margin: "14px 0", padding: "12px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px" }}>
+            <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#1e293b", marginBottom: "6px" }}>
+              خطة الاشتراك المالي وسداد الرسوم:
+            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
+              <button
+                type="button"
+                style={{
+                  padding: "6px 8px",
+                  borderRadius: "8px",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  border: billingPlan === "standard" ? "1.5px solid #0f766e" : "1px solid #cbd5e1",
+                  background: billingPlan === "standard" ? "#f0fdfa" : "#ffffff",
+                  color: billingPlan === "standard" ? "#0f766e" : "#475569",
+                  cursor: "pointer",
+                }}
+                onClick={() => setBillingPlan("standard")}
+              >
+                دورة عادية (فوري)
+              </button>
+              <button
+                type="button"
+                style={{
+                  padding: "6px 8px",
+                  borderRadius: "8px",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  border: billingPlan === "annual_nursery" ? "1.5px solid #0f766e" : "1px solid #cbd5e1",
+                  background: billingPlan === "annual_nursery" ? "#f0fdfa" : "#ffffff",
+                  color: billingPlan === "annual_nursery" ? "#0f766e" : "#475569",
+                  cursor: "pointer",
+                }}
+                onClick={() => setBillingPlan("annual_nursery")}
+              >
+                حضانة سنوية (أقساط)
+              </button>
+              <button
+                type="button"
+                style={{
+                  padding: "6px 8px",
+                  borderRadius: "8px",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  border: billingPlan === "annual_diploma" ? "1.5px solid #0f766e" : "1px solid #cbd5e1",
+                  background: billingPlan === "annual_diploma" ? "#f0fdfa" : "#ffffff",
+                  color: billingPlan === "annual_diploma" ? "#0f766e" : "#475569",
+                  cursor: "pointer",
+                }}
+                onClick={() => setBillingPlan("annual_diploma")}
+              >
+                دبلومة سنوية (أقساط)
+              </button>
+            </div>
+
+            {billingPlan !== "standard" && (
+              <div style={{ marginTop: "10px", padding: "10px", background: "#ffffff", borderRadius: "8px", border: "1px dashed #0d9488" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                  <div>
+                    <span style={{ fontSize: "11px", color: "#64748b", display: "block" }}>المقدم السنوي (ج.م):</span>
+                    <input
+                      type="number"
+                      style={{ width: "100%", padding: "4px 8px", fontSize: "12px", borderRadius: "6px", border: "1px solid #cbd5e1", boxSizing: "border-box" }}
+                      value={downPayment}
+                      onChange={e => setDownPayment(Number(e.target.value))}
+                    />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: "11px", color: "#64748b", display: "block" }}>القسط الشهري (ج.م / شهر):</span>
+                    <input
+                      type="number"
+                      style={{ width: "100%", padding: "4px 8px", fontSize: "12px", borderRadius: "6px", border: "1px solid #cbd5e1", boxSizing: "border-box" }}
+                      value={monthlyAmount}
+                      onChange={e => setMonthlyAmount(Number(e.target.value))}
+                    />
+                  </div>
+                </div>
+                <div style={{ marginTop: "8px", fontSize: "11px", color: "#0f766e", fontWeight: 700 }}>
+                  ✓ الإجمالي السنوي: {(downPayment + monthlyAmount * 11).toLocaleString()} ج.م (المقدم + 11 قسط شهري).
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="dialog-info">
             <FileText size={15} />
             <span>
