@@ -2778,7 +2778,7 @@ export const rubricStorage = {
 const FEATURES_STORAGE_KEY = "mada_academy_features_v1";
 
 export const featureFlags = {
-  isFeatureEnabled: (featureKey: string, defaultValue = true): boolean => {
+  isFeatureEnabled: (featureKey: string, defaultValue = false): boolean => {
     try {
       const raw = localStorage.getItem(FEATURES_STORAGE_KEY);
       if (!raw) return defaultValue;
@@ -2801,9 +2801,9 @@ export const featureFlags = {
   getAllFeatures: (): Record<string, boolean> => {
     try {
       const raw = localStorage.getItem(FEATURES_STORAGE_KEY);
-      return raw ? JSON.parse(raw) : { nursery_early_childhood: true };
+      return raw ? JSON.parse(raw) : { nursery_early_childhood: false };
     } catch {
-      return { nursery_early_childhood: true };
+      return { nursery_early_childhood: false };
     }
   },
 };
