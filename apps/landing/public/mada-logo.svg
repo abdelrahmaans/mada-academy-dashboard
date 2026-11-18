@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">مدى</title>
+  <desc id="desc">علامة مدى الهندسية</desc>
+  <defs>
+    <linearGradient id="bg" x1="14" y1="12" x2="112" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1B2F4A"/>
+      <stop offset="1" stop-color="#14243A"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="29" y1="38" x2="98" y2="88" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#45C6B4"/>
+      <stop offset="1" stop-color="#0D9488"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="30" fill="url(#bg)"/>
+  <path d="M27 78.5 58 44l12 13.4-31 34.1L27 78.5Z" fill="url(#teal)"/>
+  <path d="m59 88.5 14-15.3 12 13.2-14 15.4-12-13.3Z" fill="#D49A2D"/>
+  <path d="m77 44 24 26.5-12 13.2-24-26.4L77 44Z" fill="#F7FBFA"/>
+  <path d="M24 96.5h76" stroke="#45C6B4" stroke-width="5" stroke-linecap="round" opacity=".9"/>
+</svg>

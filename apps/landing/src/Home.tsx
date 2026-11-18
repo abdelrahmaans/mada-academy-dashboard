@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { TrustMetrics } from './components/TrustMetrics';
-import { RoleSolutions } from './components/RoleSolutions';
 import { SystemPreview } from './components/SystemPreview';
 import { Capabilities } from './components/Capabilities';
 import { PricingSection } from './components/PricingSection';
@@ -49,10 +48,7 @@ export default function Home() {
         {/* 3. Operational Trust & Metrics Bar (Global Benchmark Standards) */}
         <TrustMetrics />
 
-        {/* 4. Tailored Solutions by Role (Teachworks & TutorBird Benchmark) */}
-        <RoleSolutions />
-
-        {/* 5. Interactive Live System Simulation */}
+        {/* 4. Interactive Live System Simulation */}
         <section id="preview" className="py-16 sm:py-20 bg-gradient-to-b from-[#F4F7FA] to-white border-b border-[#14243A]/10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-3 text-right">
@@ -76,22 +72,22 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 6. Core Capabilities (6 Foundational Pillars) */}
+        {/* 5. Core Capabilities (6 Foundational Pillars) */}
         <Capabilities />
 
-        {/* 7. Transparent Interactive Pricing (TutorBird & Qudrat Benchmark) */}
+        {/* 6. Transparent Interactive Pricing (TutorBird & Qudrat Benchmark) */}
         <PricingSection onScrollToDemo={scrollToDemo} />
 
-        {/* 8. Target Audience */}
+        {/* 7. Target Audience */}
         <Audience />
 
-        {/* 9. Operational Workflow (4-Step Timeline) */}
+        {/* 8. Operational Workflow (4-Step Timeline) */}
         <Workflow />
 
-        {/* 10. Interactive FAQ Accordion */}
+        {/* 9. Interactive FAQ Accordion */}
         <FaqSection />
 
-        {/* 11. Request a Live Demo Form */}
+        {/* 10. Request a Live Demo Form */}
         <DemoForm />
       </main>
 

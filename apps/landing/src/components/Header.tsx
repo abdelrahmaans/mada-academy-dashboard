@@ -18,32 +18,25 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAdminLogin, onScrollToDemo
           <a 
             href="#" 
             className="flex items-center gap-3 group focus-visible:ring-2 focus-visible:ring-[#0D9488] rounded-lg p-1"
-            aria-label="الرئيسية - مدى أكاديمي"
+            aria-label="الرئيسية - مدى"
           >
-            {/* Geometric Brand Icon from screenshots */}
-            <div className="w-10 h-10 rounded-xl bg-[#14243A] flex flex-col items-center justify-center gap-1 shadow-sm group-hover:bg-[#1B2F4A] transition-colors">
-              <span className="w-5 h-1 rounded-full bg-[#0D9488]" />
-              <span className="w-4 h-1 rounded-full bg-white" />
-              <span className="w-3 h-1 rounded-full bg-[#D49A2D]" />
-            </div>
+            <img
+              src="/mada-logo.svg"
+              alt=""
+              className="w-10 h-10 rounded-xl shadow-sm transition-transform group-hover:scale-105"
+            />
             <div className="flex flex-col text-right">
-              <span className="text-lg font-black tracking-tight text-[#14243A] leading-tight">
-                MADA
+              <span className="text-xl font-black tracking-tight text-[#14243A] leading-tight">
+                مدى
               </span>
-              <span className="text-[10px] font-bold tracking-widest text-[#14243A]/70 uppercase">
-                ACADEMY
+              <span className="text-[10px] font-bold tracking-wide text-[#14243A]/60">
+                نظام تشغيل الأكاديميات
               </span>
             </div>
           </a>
 
           {/* Navigation Links - Matching Modern Global Standards */}
           <nav className="hidden lg:flex items-center gap-6 xl:gap-8 text-sm font-semibold text-[#14243A]/80">
-            <a 
-              href="#roles" 
-              className="hover:text-[#0D9488] transition-colors hover:underline underline-offset-8 decoration-[#0D9488] decoration-2"
-            >
-              حلول الأدوار
-            </a>
             <a 
               href="#features" 
               className="hover:text-[#0D9488] transition-colors hover:underline underline-offset-8 decoration-[#0D9488] decoration-2"
@@ -105,13 +98,6 @@ export const Header: React.FC<HeaderProps> = ({ onOpenAdminLogin, onScrollToDemo
       {mobileMenuOpen && (
         <div className="md:hidden border-t border-[#14243A]/10 bg-white/98 backdrop-blur-lg px-5 py-5 space-y-4 shadow-lg">
           <nav className="flex flex-col space-y-3 text-sm font-semibold text-[#14243A]">
-            <a
-              href="#roles"
-              onClick={() => setMobileMenuOpen(false)}
-              className="p-2.5 rounded-lg hover:bg-[#F4F7FA] transition-colors"
-            >
-              حلول الأدوار
-            </a>
             <a
               href="#features"
               onClick={() => setMobileMenuOpen(false)}
