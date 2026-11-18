@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import {
   apiClient,
+  featureFlags,
   type AcademyFeaturesResponse,
   type CustomFeatureAddon,
   type PlatformAcademy,
@@ -30,6 +31,11 @@ const STANDARD_FEATURE_METADATA: Record<
   string,
   { label: string; description: string; icon: string }
 > = {
+  nursery_early_childhood: {
+    label: "منظومة الحضانات والطفولة المبكرة (Early Childhood & Nursery Suite)",
+    description: "مكتب متابعة الحضانة اليومي، فحص الاستقبال، تقارير المزاج والوجبات والقيلولة، ونظام الاشتراكات بالأقساط السنوية.",
+    icon: "👶",
+  },
   gamification_enabled: {
     label: "نظام التلعيب ولوحة شرف الطلاب (Gamification & Leaderboard)",
     description: "نقاط التحديات الإضافية في الحصص، شارات التميز، ولوحة المتصدرين للطلاب وأولياء الأمور.",
@@ -172,6 +178,9 @@ export function AcademyFeaturesModal({
         standardOverrides: overrides,
         customAddons: customAddons,
         reason: reason.trim(),
+      });
+      Object.entries(overrides).forEach(([k, v]) => {
+        featureFlags.setFeatureEnabled(k, v);
       });
       toast.success(`تم تحديث ميزات أكاديمية ${academy.name} وحفظها في سجل التدقيق بنجاح! 🎉`);
       if (onSaved) onSaved();
