@@ -324,7 +324,7 @@ export function ClassesCreateDialogs({
                     value={ageGroup}
                     onChange={event => setAgeGroup(event.target.value)}
                   >
-                    {["4-6", "7-9", "10-12", "13-15", "16-18"].map(age => (
+                    {["1.5-3", "3-4", "4-6", "7-9", "10-12", "13-15", "16-18"].map(age => (
                       <option key={age} value={age}>
                         {age} سنة
                       </option>
