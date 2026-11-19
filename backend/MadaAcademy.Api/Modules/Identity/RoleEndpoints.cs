@@ -43,7 +43,7 @@ public static class RoleEndpoints
         var query = db.Memberships.AsNoTracking()
             .Include(item => item.UserAccount)
             .Include(item => item.Branch)
-            .Where(item => item.TenantId == tenantId && item.Status != "REVOKED" && item.UserAccount != null);
+            .Where(item => item.TenantId == tenantId && item.RoleCode != "R00_PLATFORM_ADMIN" && !item.RoleCode.StartsWith("R00") && item.Status != "REVOKED" && item.UserAccount != null);
 
         if (effectiveBranchId.HasValue)
         {
@@ -296,7 +296,7 @@ public static class RoleEndpoints
         var members = await db.Memberships.AsNoTracking()
             .Include(item => item.UserAccount)
             .Include(item => item.Branch)
-            .Where(item => item.TenantId == tenantId && item.Status != "REVOKED" && item.UserAccount != null)
+            .Where(item => item.TenantId == tenantId && item.RoleCode != "R00_PLATFORM_ADMIN" && !item.RoleCode.StartsWith("R00") && item.Status != "REVOKED" && item.UserAccount != null)
             .OrderBy(item => item.RoleCode)
             .ThenBy(item => item.UserAccount!.DisplayName)
             .ToListAsync(cancellationToken);

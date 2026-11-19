@@ -184,7 +184,7 @@ public static class PlatformAdminEndpoints
         var normalizedSearch = search?.Trim();
         if (normalizedSearch?.Length > 120) return Results.ValidationProblem(new Dictionary<string, string[]> { ["search"] = ["Search text must be 120 characters or less."] });
         var now = DateTimeOffset.UtcNow;
-        var members = await db.Memberships.AsNoTracking().Where(x => x.TenantId == tenantId)
+        var members = await db.Memberships.AsNoTracking().Where(x => x.TenantId == tenantId && x.RoleCode != "R00_PLATFORM_ADMIN" && !x.RoleCode.StartsWith("R00"))
             .Where(x => string.IsNullOrEmpty(normalizedSearch) ||
                 (x.UserAccount!.DisplayName != null && x.UserAccount.DisplayName.Contains(normalizedSearch)) ||
                 (x.UserAccount!.Email != null && x.UserAccount.Email.Contains(normalizedSearch)) ||

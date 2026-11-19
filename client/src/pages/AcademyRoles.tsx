@@ -94,7 +94,17 @@ export default function AcademyRoles() {
       if (roleRes.value.permissionDetails) {
         setPermissionDetails(roleRes.value.permissionDetails);
       }
-      setMembers(memberRes.value.items);
+      const validMembers = memberRes.value.items.filter(
+        (m) => m.roleCode !== "R00_PLATFORM_ADMIN" && !m.roleCode.startsWith("R00")
+      );
+      setMembers(validMembers);
+      if (validMembers.length > 0) {
+        setSelectedMemberId((prev) =>
+          prev && validMembers.some((m) => m.membershipId === prev)
+            ? prev
+            : validMembers[0].membershipId
+        );
+      }
 
       // Initialize drafts for assignable roles
       const initialDrafts: Record<string, string[]> = {};
@@ -128,6 +138,7 @@ export default function AcademyRoles() {
   // Filtered members list
   const filteredMembers = useMemo(() => {
     return members.filter((member) => {
+      if (member.roleCode === "R00_PLATFORM_ADMIN" || member.roleCode.startsWith("R00")) return false;
       const query = memberSearch.trim().toLowerCase();
       const matchSearch =
         !query ||
