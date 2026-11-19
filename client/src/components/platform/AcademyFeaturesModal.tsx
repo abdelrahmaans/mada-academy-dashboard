@@ -193,11 +193,17 @@ export function AcademyFeaturesModal({
   };
 
   return (
-    <div className="pc-live-dialog-backdrop" onClick={onClose} role="presentation">
+    <div
+      className="pc-ticket-detail-modal"
+      role="dialog"
+      aria-modal="true"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div
-        className="pc-live-dialog-card"
-        style={{ maxWidth: "680px", width: "95%", maxHeight: "90vh", overflowY: "auto" }}
-        onClick={(e) => e.stopPropagation()}
+        className="pc-ticket-dialog"
+        style={{ width: "min(720px, 95vw)", maxHeight: "90vh", overflowY: "auto" }}
         dir="rtl"
       >
         <header

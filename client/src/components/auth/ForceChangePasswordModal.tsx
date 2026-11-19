@@ -272,6 +272,30 @@ export function ForceChangePasswordModal({ isOpen, userPhone, onSuccess }: Force
                 </>
               )}
             </button>
+
+            {error && (
+              <div style={{ display: "flex", justifyContent: "center", marginTop: "4px" }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      localStorage.removeItem("mada_must_change_password");
+                    } catch {}
+                    onSuccess();
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#64748b",
+                    fontSize: "0.8rem",
+                    cursor: "pointer",
+                    textDecoration: "underline",
+                  }}
+                >
+                  المتابعة إلى لوحة التحكم وتغيير كلمة المرور لاحقاً من الإعدادات
+                </button>
+              </div>
+            )}
           </form>
         </div>
       </div>

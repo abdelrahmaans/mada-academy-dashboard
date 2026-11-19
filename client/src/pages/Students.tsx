@@ -62,7 +62,11 @@ function StudentPage() {
   const activeRoleCode: RoleCode = userRoleCode || "R02";
   const roleDef = getRoleDefinition(activeRoleCode);
   const branchContext = me?.branchId ? me.branches?.find(b => b.id === me.branchId)?.name : undefined;
-  const [students, setStudents] = useState<Student[]>(apiClient.hasSession() ? [] : initialStudents);
+  const isDemoAcademy = me?.tenantId === "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+  const [students, setStudents] = useState<Student[]>(() => {
+    if (apiClient.hasSession() && !isDemoAcademy) return [];
+    return isDemoAcademy && !apiClient.hasSession() ? initialStudents : [];
+  });
   const [dataMode, setDataMode] = useState<"demo" | "live">(apiClient.hasSession() ? "live" : "demo");
   const [dataLoading, setDataLoading] = useState(apiClient.hasSession());
   const [dataError, setDataError] = useState<string | null>(null);
