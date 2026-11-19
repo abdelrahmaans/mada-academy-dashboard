@@ -36,10 +36,10 @@ public sealed class UserAccount : EntityBase
     public string? DisplayName { get; set; }
     public string? PasswordHash { get; set; }
     public string Status { get; set; } = "INVITED";
-    public bool MustChangePassword { get; set; }
     public DateTimeOffset? LastLoginAt { get; set; }
     public int FailedPasswordAttempts { get; set; }
     public DateTimeOffset? PasswordLockedUntil { get; set; }
+    public bool MustChangePassword { get; set; } = false;
     public ICollection<Membership> Memberships { get; set; } = new List<Membership>();
     public ICollection<Invitation> Invitations { get; set; } = new List<Invitation>();
     public ICollection<RefreshSession> RefreshSessions { get; set; } = new List<RefreshSession>();

@@ -31,6 +31,7 @@ import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { StudentDataHubModal } from "@/components/students/StudentDataHubModal";
 import type { Student } from "@/pages/StudentsTypes";
 import { featureFlags } from "@/lib/apiClient";
+import { useAuth } from "@/contexts/AuthContext";
 import "./NurseryDeskLive.css";
 
 type CohortAgeGroup = "toddlers" | "pre_k" | "kg";
@@ -230,9 +231,18 @@ const SCHEDULE_BLOCKS = [
 ];
 
 export default function NurseryDeskLive() {
+  const { me } = useAuth();
+  const isDemoAcademy = me?.tenantId === "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
   const [activeCohort, setActiveCohort] = useState<CohortAgeGroup>("toddlers");
   const [activeTab, setActiveTab] = useState<ActiveDeskTab>("roster");
-  const [childrenMap, setChildrenMap] = useState<Record<CohortAgeGroup, ChildDailyState[]>>(INITIAL_CHILDREN);
+  const [childrenMap, setChildrenMap] = useState<Record<CohortAgeGroup, ChildDailyState[]>>(() => {
+    if (isDemoAcademy) return INITIAL_CHILDREN;
+    return {
+      toddlers: [],
+      pre_k: [],
+      kg: [],
+    };
+  });
   const [selectedHubStudent, setSelectedHubStudent] = useState<Student | null>(null);
   const [isFeatureEnabled, setIsFeatureEnabled] = useState(() =>
     featureFlags.isFeatureEnabled("nursery_early_childhood", true)
@@ -533,8 +543,29 @@ export default function NurseryDeskLive() {
         {/* TAB 1: Children Daily Roster */}
         {activeTab === "roster" && (
           <section className="nursery-children-grid">
-            {currentChildren.map((child) => (
-              <article key={child.id} className="nursery-child-card">
+            {currentChildren.length === 0 ? (
+              <div
+                style={{
+                  gridColumn: "1 / -1",
+                  textAlign: "center",
+                  padding: "48px 16px",
+                  background: "#ffffff",
+                  borderRadius: "14px",
+                  border: "1px dashed #cbd5e1",
+                  color: "#64748b",
+                }}
+              >
+                <Baby size={42} color="#0f766e" style={{ margin: "0 auto 12px" }} />
+                <h3 style={{ fontSize: "16px", color: "#0f172a", marginBottom: "6px" }}>
+                  لا توجد سجلات أطفال مسجلة في هذا الفصل بعد
+                </h3>
+                <p style={{ fontSize: "13px", maxWidth: "420px", margin: "0 auto 16px" }}>
+                  هذه الأكاديمية مهيأة حديثاً. يمكنك البدء بإضافة الأطفال أو تسكينهم لتفعيل سجل المتابعة اليومي.
+                </p>
+              </div>
+            ) : (
+              currentChildren.map((child) => (
+                <article key={child.id} className="nursery-child-card">
                 <div className="child-card-head">
                   <div className="child-avatar-info">
                     <span className="child-avatar" style={{ background: child.avatarColor }}>
@@ -698,7 +729,7 @@ export default function NurseryDeskLive() {
                   </button>
                 </div>
               </article>
-            ))}
+            )))}
           </section>
         )}
 

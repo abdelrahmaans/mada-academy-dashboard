@@ -21,7 +21,7 @@ export default function ChangePassword() {
     if (newPassword !== confirmation) { setError("تأكيد كلمة السر غير مطابق."); return; }
     setBusy(true); setError(null);
     try {
-      await apiClient.changePassword(currentPassword, newPassword);
+      await apiClient.changePassword(newPassword, currentPassword);
       toast.success("تم تغيير كلمة السر بنجاح. سجّل الدخول بالكلمة الجديدة.");
       await logout();
       navigate("/login");

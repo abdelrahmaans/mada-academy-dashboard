@@ -25,12 +25,12 @@ export default function ProtectedRoute({
 
   useEffect(() => {
     if (!loading && !me) navigate("/login");
-    if (!loading && me?.mustChangePassword && location !== "/change-password") navigate("/change-password", { replace: true });
+    if (!loading && (me?.mustChangePassword || me?.user?.mustChangePassword) && location !== "/change-password") navigate("/change-password", { replace: true });
   }, [loading, me, navigate, location]);
 
   if (loading) return <div className="route-loading">جارٍ التحقق من الجلسة…</div>;
   if (!me) return null;
-  if (me.mustChangePassword && location !== "/change-password") return null;
+  if ((me.mustChangePassword || me.user?.mustChangePassword) && location !== "/change-password") return null;
 
   if (!isRouteAllowed(me, roles, permission, anyOfPermissions)) {
     const normalizedRole = me.role.match(/^R\d+/)?.[0] ?? me.role;

@@ -6,10 +6,10 @@ export type AuthMe = {
   tenantId: string;
   branchId?: string | null;
   scopeLevel: string;
-  mustChangePassword?: boolean;
   permissions?: string[];
-  user?: { id: string; displayName: string | null; email: string | null; phone: string };
-  academy?: { id: string; name: string; slug: string; status: string; planCode: string };
+  mustChangePassword?: boolean;
+  user?: { id: string; displayName: string | null; email: string | null; phone: string; mustChangePassword?: boolean };
+  academy?: { id: string; name: string; slug: string; status: string; planCode: string; featureOverrides?: string };
   branches?: Array<{ id: string; name: string; code: string; status: string }>;
 };
 
@@ -779,7 +779,16 @@ type TokenResponse = {
   expiresIn: number;
 };
 
-const isLocalHost = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+const isLocalHost = typeof window !== "undefined" && (
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1" ||
+  window.location.hostname.startsWith("192.168.") ||
+  window.location.hostname.startsWith("10.") ||
+  window.location.hostname.startsWith("172.") ||
+  window.location.hostname.endsWith(".local") ||
+  window.location.port === "3000" ||
+  window.location.port === "5173"
+);
 const API_BASE = (
   isLocalHost
     ? "http://localhost:5000/api/v1"
@@ -968,7 +977,11 @@ export const apiClient = {
     saveTokens(response);
     return response;
   },
-  changePassword: (currentPassword: string, newPassword: string) => request<void>("/auth/change-password", { method: "POST", body: JSON.stringify({ currentPassword, newPassword }) }),
+  changePassword: (newPassword: string, currentPassword?: string) =>
+    request<{ success: boolean; message: string }>("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ newPassword, ...(currentPassword ? { currentPassword } : {}) }),
+    }),
   sendOtp: (phone: string, accountType: "staff" | "parent" | "student" = "staff") => request<{ expiresAt: string; developmentCode?: string }>("/auth/otp/send", { method: "POST", body: JSON.stringify({ phone, accountType }) }),
   verifyOtp: async (phone: string, code: string, accountType: "staff" | "parent" | "student" = "staff") => {
     const response = await request<TokenResponse>("/auth/otp/verify", { method: "POST", body: JSON.stringify({ phone, code, accountType }) }, false);
@@ -986,6 +999,15 @@ export const apiClient = {
   platformOverview: () => request<PlatformOverview>("/platform/overview"),
   platformAcademies: () => request<PlatformAcademiesResponse>("/platform/academies"),
   platformRoles: () => request<{ items: PlatformRole[] }>("/platform/roles"),
+  deletePlatformAcademy: (tenantId: string, reason?: string) =>
+    request<{ success: boolean; deletedTenantId: string }>(`/platform/academies/${tenantId}`, {
+      method: "DELETE",
+      body: JSON.stringify({ reason: reason || "Manual deletion by Platform Admin" }),
+    }),
+  cleanupTestAcademies: () =>
+    request<{ success: boolean; deletedCount: number }>("/platform/academies/cleanup-test-academies", {
+      method: "POST",
+    }),
   changePlatformAcademyStatus: (tenantId: string, status: "ACTIVE" | "TRIAL" | "SETUP" | "PAUSED", reason: string) => request<{ id: string; status: string; revokedSessions: number }>(`/platform/academies/${tenantId}/status`, { method: "PATCH", body: JSON.stringify({ status, reason }) }),
   changePlatformAcademyPlan: (tenantId: string, planCode: "starter" | "growth" | "enterprise", branchesLimit: number, reason: string) =>
     request<{ tenantId: string; planCode: string; allowedBranches: number }>(`/platform/academies/${tenantId}/plan`, {
@@ -2780,7 +2802,7 @@ export const rubricStorage = {
 const FEATURES_STORAGE_KEY = "mada_academy_features_v1";
 
 export const featureFlags = {
-  isFeatureEnabled: (featureKey: string, defaultValue = true): boolean => {
+  isFeatureEnabled: (featureKey: string, defaultValue = false): boolean => {
     try {
       const raw = localStorage.getItem(FEATURES_STORAGE_KEY);
       if (!raw) return defaultValue;
@@ -2800,12 +2822,19 @@ export const featureFlags = {
       // ignore
     }
   },
+  setAllFeatures: (features: Record<string, boolean>) => {
+    try {
+      localStorage.setItem(FEATURES_STORAGE_KEY, JSON.stringify(features));
+    } catch {
+      // ignore
+    }
+  },
   getAllFeatures: (): Record<string, boolean> => {
     try {
       const raw = localStorage.getItem(FEATURES_STORAGE_KEY);
-      return raw ? JSON.parse(raw) : { nursery_early_childhood: true };
+      return raw ? JSON.parse(raw) : { nursery_early_childhood: false };
     } catch {
-      return { nursery_early_childhood: true };
+      return { nursery_early_childhood: false };
     }
   },
 };

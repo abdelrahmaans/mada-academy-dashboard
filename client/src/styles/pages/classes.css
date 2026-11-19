@@ -255,6 +255,11 @@
   color: #328273;
   background: #e9f6f1;
 }
+.track-childhood {
+  color: #d97706;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+}
 .course-card-actions {
   display: flex;
   align-items: center;
@@ -1334,4 +1339,4 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-
+

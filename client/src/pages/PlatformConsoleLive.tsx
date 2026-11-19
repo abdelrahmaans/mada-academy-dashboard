@@ -171,7 +171,18 @@ export default function PlatformConsoleLive() {
 
   // Convert Lead to Live Academy Modal State
   const [convertLeadModal, setConvertLeadModal] = useState<PlatformDemoLead | null>(null);
-  const [convertForm, setConvertForm] = useState({
+  const [convertForm, setConvertForm] = useState<{
+    name: string;
+    slug: string;
+    planCode: string;
+    branchName: string;
+    branchCode: string;
+    ownerName: string;
+    ownerPhone: string;
+    ownerEmail: string;
+    ownerPassword: string;
+    featureOverrides?: Record<string, boolean>;
+  }>({
     name: "",
     slug: "",
     planCode: "GROWTH",
@@ -181,6 +192,11 @@ export default function PlatformConsoleLive() {
     ownerPhone: "",
     ownerEmail: "",
     ownerPassword: "",
+    featureOverrides: {
+      nursery_early_childhood: false,
+      gamification_enabled: false,
+      guardian_portal: false,
+    },
   });
   const [converting, setConverting] = useState(false);
   const [convertSuccess, setConvertSuccess] = useState<{
@@ -208,6 +224,11 @@ export default function PlatformConsoleLive() {
       ownerPhone: cleanPhone.startsWith("01") ? cleanPhone : lead.phone,
       ownerEmail: lead.email,
       ownerPassword: generatedPassword,
+      featureOverrides: {
+        nursery_early_childhood: false,
+        gamification_enabled: false,
+        guardian_portal: false,
+      },
     });
   };
 
@@ -232,6 +253,18 @@ export default function PlatformConsoleLive() {
         ownerEmail: convertForm.ownerEmail.trim(),
         ownerPassword: convertForm.ownerPassword,
       });
+
+      if (convertForm.featureOverrides && Object.keys(convertForm.featureOverrides).length > 0) {
+        try {
+          await apiClient.updateAcademyFeatures(res.academy.id, {
+            standardOverrides: convertForm.featureOverrides,
+            reason: "Initial features provisioned during academy onboarding",
+          });
+        } catch (featErr) {
+          console.warn("Failed to set initial feature overrides:", featErr);
+        }
+      }
+
       setLeads((prev) => prev.map((l) => (l.id === convertLeadModal.id ? res.lead : l)));
       setConvertSuccess({
         academy: { id: res.academy.id, name: res.academy.name, slug: res.academy.slug },
@@ -347,6 +380,42 @@ export default function PlatformConsoleLive() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "تعذر حفظ التذكرة";
       toast.error(msg);
+    }
+  };
+
+  const handleDeleteAcademy = async (academy: PlatformAcademy) => {
+    if (academy.id === "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa") {
+      toast.error("لا يمكن حذف الأكاديمية النموذجية الأساسية للمنصة.");
+      return;
+    }
+    const confirmed = window.confirm(
+      `هل أنت متأكد من حذف أكاديمية "${academy.name}" وكافة سجلاتها وفروعها ومستخدميها نهائياً من قاعدة البيانات؟ لا يمكن التراجع عن هذا الإجراء.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await apiClient.deletePlatformAcademy(academy.id);
+      toast.success(`تم حذف أكاديمية "${academy.name}" نهائياً من المنصة.`);
+      setAcademies((prev) => prev.filter((a) => a.id !== academy.id));
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "تعذر حذف الأكاديمية.");
+    }
+  };
+
+  const handleCleanupTestAcademies = async () => {
+    const confirmed = window.confirm(
+      "هل أنت متأكد من رغبتك في حذف جميع الأكاديميات التجريبية الإضافية؟ سيتم الإبقاء على الأكاديمية النموذجية الأساسية فقط."
+    );
+    if (!confirmed) return;
+
+    try {
+      const res = await apiClient.cleanupTestAcademies();
+      toast.success(`تم مسح ${res.deletedCount} أكاديمية تجريبية بنجاح! 🧹`);
+      setAcademies((prev) => prev.filter((a) => a.id === "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "تعذر تنظيف الأكاديميات التجريبية.");
     }
   };
 
@@ -1129,6 +1198,8 @@ export default function PlatformConsoleLive() {
               onRequestTenantStatusChange={(academy) => requestTenantStatusChange(academy)}
               onResetOwnerPassword={(academy) => handleResetOwnerPassword(academy)}
               onEmergencyImpersonation={() => toast.error("Super Access متوقف لحين إضافة تفويض خادمي وتدقيق غير قابل للتلاعب.")}
+              onDeleteAcademy={handleDeleteAcademy}
+              onCleanupTestAcademies={handleCleanupTestAcademies}
               ownerResetEnabled={true}
               emergencyAccessEnabled={false}
               paymentRemindersEnabled={false}
@@ -1370,6 +1441,7 @@ export default function PlatformConsoleLive() {
         handleRegeneratePassword={handleRegeneratePassword}
         handleConvertLeadSubmit={handleConvertLeadSubmit}
         handleSendCredentialsWhatsApp={handleSendCredentialsWhatsApp}
+        onOpenFeaturesModal={(academy) => setFeaturesModalAcademy(academy)}
       />
       {featuresModalAcademy && (
         <AcademyFeaturesModal

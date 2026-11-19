@@ -55,8 +55,8 @@ public static class AcademyIdentityEndpoints
             DisplayName = request.Owner.FullName.Trim(),
             AccountType = "staff",
             PasswordHash = passwords.Hash(request.Owner.Password),
-            Status = "ACTIVE",
-            MustChangePassword = true
+            MustChangePassword = true,
+            Status = "ACTIVE"
         };
         var membership = new Membership
         {
@@ -152,7 +152,7 @@ public static class AcademyIdentityEndpoints
                 branchId = membership.BranchId,
                 scopeLevel,
                 permissions = effectivePermissions,
-                user = new { membership.UserAccount.Id, membership.UserAccount.DisplayName, membership.UserAccount.Email, membership.UserAccount.Phone },
+                user = new { membership.UserAccount.Id, membership.UserAccount.DisplayName, membership.UserAccount.Email, membership.UserAccount.Phone, mustChangePassword = membership.UserAccount.MustChangePassword },
                 academy = new { membership.Tenant.Id, membership.Tenant.Name, membership.Tenant.Slug, membership.Tenant.Status, membership.Tenant.PlanCode },
                 branches = accountType == "staff" ? branches : []
             }

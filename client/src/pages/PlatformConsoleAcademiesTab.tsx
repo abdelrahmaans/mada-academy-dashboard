@@ -25,6 +25,8 @@ export interface PlatformConsoleAcademiesTabProps {
   onRequestTenantStatusChange: (academy: PlatformAcademy) => void;
   onResetOwnerPassword: (academy: PlatformAcademy) => void;
   onEmergencyImpersonation: (academy: PlatformAcademy) => void;
+  onDeleteAcademy?: (academy: PlatformAcademy) => void;
+  onCleanupTestAcademies?: () => void;
   ownerResetEnabled: boolean;
   emergencyAccessEnabled: boolean;
   paymentRemindersEnabled: boolean;
@@ -48,6 +50,8 @@ export function PlatformConsoleAcademiesTab({
   onRequestTenantStatusChange,
   onResetOwnerPassword,
   onEmergencyImpersonation,
+  onDeleteAcademy,
+  onCleanupTestAcademies,
   ownerResetEnabled,
   emergencyAccessEnabled,
   paymentRemindersEnabled,
@@ -63,7 +67,7 @@ export function PlatformConsoleAcademiesTab({
             {fmtNumber(enrichedAcademiesCount)} أكاديمية مسجلة؛ إدارة الباقات، الحدود، وحالة الاشتراكات بنقرة واحدة.
           </p>
         </div>
-        <div style={{ display: "flex", gap: "6px" }}>
+        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
           {(["ALL", "ACTIVE", "TRIAL", "PAUSED", "OVERDUE"] as const).map((filter) => (
             <button
               key={filter}
@@ -87,6 +91,28 @@ export function PlatformConsoleAcademiesTab({
                 : "متأخرة عن السداد"}
             </button>
           ))}
+          {onCleanupTestAcademies && (
+            <button
+              type="button"
+              onClick={onCleanupTestAcademies}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "5px",
+                padding: "6px 12px",
+                borderRadius: "8px",
+                border: "1px solid #fecaca",
+                background: "#fff1f2",
+                color: "#e11d48",
+                fontSize: "12px",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+              title="حذف جميع الأكاديميات التجريبية الإضافية والإبقاء على الأكاديمية النموذجية الأساسية فقط"
+            >
+              <span>🗑️ مسح الأكاديميات التجريبية</span>
+            </button>
+          )}
         </div>
       </header>
 
@@ -180,11 +206,11 @@ export function PlatformConsoleAcademiesTab({
                     </button>
                     <button
                       type="button"
-                      style={{ color: "#4f46e5", borderColor: "#c7d2fe", background: "#eef2ff" }}
+                      style={{ color: "#0f766e", borderColor: "#99f6e4", background: "#f0fdfa", fontWeight: 700 }}
                       onClick={() => onOpenFeaturesModal(row)}
-                      title="إدارة ميزات الأكاديمية والـ Feature Flags والتخصيص"
+                      title="إدارة ميزات الأكاديمية والـ Feature Flags (الحضانات، التلعيب، بوابة الأسرة، المالية)"
                     >
-                      ميزات الأكاديمية
+                      ✨ ميزات الأكاديمية
                     </button>
                     {row.status === "TRIAL" && (
                       <button
@@ -232,6 +258,16 @@ export function PlatformConsoleAcademiesTab({
                     >
                       <ShieldAlert size={12} style={{ display: "inline", verticalAlign: "middle", marginLeft: "2px" }} /> فحص طارئ
                     </button>
+                    {row.id !== "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" && onDeleteAcademy && (
+                      <button
+                        type="button"
+                        style={{ color: "#e11d48", borderColor: "#fecaca", background: "#fff1f2", fontWeight: 700 }}
+                        onClick={() => onDeleteAcademy(row)}
+                        title="حذف هذه الأكاديمية وسجلاتها بالكامل من قاعدة البيانات"
+                      >
+                        🗑️ حذف
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

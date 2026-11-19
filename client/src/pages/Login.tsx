@@ -30,13 +30,18 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => { if (!loading && me) navigate(me.mustChangePassword ? "/change-password" : homeForRole(me.role)); }, [loading, me, navigate]);
+  useEffect(() => { if (!loading && me) navigate(me.mustChangePassword || me.user?.mustChangePassword ? "/change-password" : homeForRole(me.role)); }, [loading, me, navigate]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!phone.trim() || !password) { setError("أدخل رقم الهاتف وكلمة المرور."); return; }
     setBusy(true); setError(null);
-    try { await login(phone.trim(), password, accountType); }
+    try {
+      if (password.startsWith("Mada#")) {
+        localStorage.setItem("mada_must_change_password", "true");
+      }
+      await login(phone.trim(), password, accountType);
+    }
     catch (cause) { setError(cause instanceof Error ? cause.message : authError ?? "رقم الهاتف أو كلمة المرور غير صحيحة."); }
     finally { setBusy(false); }
   };

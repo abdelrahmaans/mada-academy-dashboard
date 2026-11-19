@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { QuickSupportTicketModal } from "@/components/QuickActionModals";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   apiClient,
   type ExecutiveActivityItem,
@@ -124,6 +125,7 @@ const DESIGN_BRANCHES_FALLBACK = [
 ];
 
 export default function ExecutiveDashboardLive() {
+  const { me } = useAuth();
   const [branchId, setBranchId] = useState("ALL");
   const [period, setPeriod] = useState<PeriodOffset>(0);
   const [report, setReport] = useState<ExecutiveDashboardReport | null>(null);
@@ -203,65 +205,84 @@ export default function ExecutiveDashboardLive() {
 
   const retry = () => setRetryKey((value) => value + 1);
 
-  // Active branches mapped to the design system pulse rows
+  const isDemoAcademy = me?.tenantId === "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+
+  // Active branches mapped to the design system pulse rows - strictly scoped to actual tenant
   const branchPulseData = useMemo(() => {
-    if (report && report.branches.length >= 3) {
-      return report.branches.map((b, index) => ({
+    if (report && report.branches && report.branches.length > 0) {
+      return report.branches.map((b) => ({
         branchId: b.branchId,
         branchName: b.branchName,
         branchCode: b.branchCode,
-        managerName:
-          index === 0
-            ? "أحمد محمود"
-            : index === 1
-            ? "سارة كمال"
-            : "يوسف عماد",
-        activeStudents: b.activeStudents || (index === 0 ? 248 : index === 1 ? 186 : 121),
+        managerName: (b as { managerName?: string }).managerName || "مدير الفرع",
+        activeStudents: b.activeStudents ?? 0,
         attendancePercent:
-          b.attendancePercent !== null
+          b.attendancePercent !== null && b.attendancePercent !== undefined
             ? Math.round(b.attendancePercent)
-            : index === 0
-            ? 86
-            : index === 1
-            ? 91
-            : 81,
-        collectedPiastres:
-          b.collectedPiastres || (index === 0 ? 12850000 : index === 1 ? 10120000 : 7240000),
-        approvedExpensesPiastres:
-          b.approvedExpensesPiastres || (index === 0 ? 3500000 : index === 1 ? 2800000 : 2400000),
-        netPiastres:
-          b.netPiastres || (index === 0 ? 9350000 : index === 1 ? 7320000 : 4840000),
-        trend: index === 0 ? "+5.6%" : index === 1 ? "+3.1%" : "-2.4%",
-        isPositiveTrend: index !== 2,
+            : 0,
+        collectedPiastres: b.collectedPiastres ?? 0,
+        approvedExpensesPiastres: b.approvedExpensesPiastres ?? 0,
+        netPiastres: b.netPiastres ?? 0,
+        trend: (b as { trend?: string }).trend || "0%",
+        isPositiveTrend: !((b as { trend?: string }).trend?.startsWith("-")),
       }));
     }
-    return DESIGN_BRANCHES_FALLBACK;
-  }, [report]);
 
-  // Aggregate stats
+    if (me?.branches && me.branches.length > 0) {
+      return me.branches.map((b) => ({
+        branchId: b.id,
+        branchName: b.name,
+        branchCode: b.code,
+        managerName: "مدير الفرع",
+        activeStudents: 0,
+        attendancePercent: 0,
+        collectedPiastres: 0,
+        approvedExpensesPiastres: 0,
+        netPiastres: 0,
+        trend: "0%",
+        isPositiveTrend: true,
+      }));
+    }
+
+    if (isDemoAcademy) {
+      return DESIGN_BRANCHES_FALLBACK;
+    }
+
+    return [];
+  }, [report, me?.branches, isDemoAcademy]);
+
+  // Aggregate stats - Strictly reflecting actual tenant data (no static bleed)
   const activeStudentsVal =
-    report?.summary?.activeStudents && report.summary.activeStudents > 0
+    report?.summary?.activeStudents !== undefined && report?.summary?.activeStudents !== null
       ? integer(report.summary.activeStudents)
-      : "555";
+      : isDemoAcademy
+      ? "555"
+      : "0";
 
   const attendanceRateVal =
     report?.summary?.attendancePercent !== null &&
     report?.summary?.attendancePercent !== undefined
       ? `${Math.round(report.summary.attendancePercent)}%`
-      : "86%";
+      : isDemoAcademy
+      ? "86%"
+      : "0%";
 
   const totalCollectedVal =
-    report?.summary?.collectedPiastres && report.summary.collectedPiastres > 0
+    report?.summary?.collectedPiastres !== undefined && report?.summary?.collectedPiastres !== null
       ? money(report.summary.collectedPiastres)
-      : "302,100 ج.م";
+      : isDemoAcademy
+      ? "302,100 ج.م"
+      : "0 ج.م";
 
   const netCollectionsVal =
-    report?.summary?.netPiastres && report.summary.netPiastres > 0
+    report?.summary?.netPiastres !== undefined && report?.summary?.netPiastres !== null
       ? money(report.summary.netPiastres)
-      : "202,400 ج.م";
+      : isDemoAcademy
+      ? "202,400 ج.م"
+      : "0 ج.م";
 
   const exportBoardRollup = () => {
-    const listToExport = report && report.branches.length > 0 ? report.branches : DESIGN_BRANCHES_FALLBACK;
+    const listToExport = branchPulseData.length > 0 ? branchPulseData : [];
     const headers = [
       "الفرع",
       "كود الفرع",
@@ -484,8 +505,10 @@ export default function ExecutiveDashboardLive() {
                   <TrendingUp size={18} />
                 </span>
               </div>
-              <div className="r1-kpi-value">25</div>
-              <div className="r1-kpi-caption">بانتظار التحويل والتسكين</div>
+              <div className="r1-kpi-value">{isDemoAcademy ? "25" : "0"}</div>
+              <div className="r1-kpi-caption">
+                {isDemoAcademy ? "بانتظار التحويل والتسكين" : "لا توجد طلبات معلقة"}
+              </div>
             </article>
           </section>
 
@@ -512,52 +535,63 @@ export default function ExecutiveDashboardLive() {
               </div>
 
               <div className="r1-branch-list">
-                {branchPulseData.map((branch) => (
-                  <article key={branch.branchId} className="r1-branch-row">
-                    <div className="r1-branch-info">
-                      <span className="r1-branch-icon">
-                        <Building2 size={18} />
-                      </span>
-                      <div className="r1-branch-meta">
-                        <strong>{branch.branchName}</strong>
-                        <small>
-                          {branch.managerName} · {branch.activeStudents} طالب
-                        </small>
+                {branchPulseData.length === 0 ? (
+                  <div style={{ padding: "32px 16px", textAlign: "center", color: "#64748b" }}>
+                    <p style={{ fontWeight: 600, color: "#0f172a", marginBottom: "4px" }}>
+                      لا توجد فروع مسجلة بعد
+                    </p>
+                    <p style={{ fontSize: "13px" }}>
+                      قم بإضافة فروع الأكاديمية لمتابعة مؤشرات الحضور والتحصيل التشغيلي.
+                    </p>
+                  </div>
+                ) : (
+                  branchPulseData.map((branch) => (
+                    <article key={branch.branchId} className="r1-branch-row">
+                      <div className="r1-branch-info">
+                        <span className="r1-branch-icon">
+                          <Building2 size={18} />
+                        </span>
+                        <div className="r1-branch-meta">
+                          <strong>{branch.branchName}</strong>
+                          <small>
+                            {branch.managerName} · {branch.activeStudents} طالب
+                          </small>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="r1-branch-attendance">
-                      <div className="r1-branch-att-label">
-                        <span>حضور {branch.attendancePercent}%</span>
+                      <div className="r1-branch-attendance">
+                        <div className="r1-branch-att-label">
+                          <span>حضور {branch.attendancePercent}%</span>
+                        </div>
+                        <div className="r1-progress-track">
+                          <div
+                            className={`r1-progress-bar ${
+                              branch.attendancePercent >= 85
+                                ? "r1-progress-green"
+                                : "r1-progress-amber"
+                            }`}
+                            style={{
+                              width: `${Math.min(100, branch.attendancePercent)}%`,
+                            }}
+                          />
+                        </div>
                       </div>
-                      <div className="r1-progress-track">
-                        <div
-                          className={`r1-progress-bar ${
-                            branch.attendancePercent >= 85
-                              ? "r1-progress-green"
-                              : "r1-progress-amber"
+
+                      <div className="r1-branch-finance">
+                        <span className="r1-branch-rev">
+                          {money(branch.collectedPiastres)}
+                        </span>
+                        <span
+                          className={`r1-trend-badge ${
+                            branch.isPositiveTrend ? "positive" : "negative"
                           }`}
-                          style={{
-                            width: `${Math.min(100, branch.attendancePercent)}%`,
-                          }}
-                        />
+                        >
+                          {branch.trend}
+                        </span>
                       </div>
-                    </div>
-
-                    <div className="r1-branch-finance">
-                      <span className="r1-branch-rev">
-                        {money(branch.collectedPiastres)}
-                      </span>
-                      <span
-                        className={`r1-trend-badge ${
-                          branch.isPositiveTrend ? "positive" : "negative"
-                        }`}
-                      >
-                        {branch.trend}
-                      </span>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  ))
+                )}
               </div>
             </section>
 
@@ -571,52 +605,67 @@ export default function ExecutiveDashboardLive() {
                   <Bell size={18} color="#f59e0b" />
                   <span>قرارات اليوم العاجلة</span>
                 </h2>
-                <span className="r1-panel-counter">4 عناصر</span>
+                <span className="r1-panel-counter">
+                  {isDemoAcademy ? "4 عناصر" : "0 عناصر"}
+                </span>
               </div>
 
-              <div className="r1-alert-list">
-                {/* Alert 1: Urgent Branch Attention */}
-                <article className="r1-alert-card r1-alert-amber">
-                  <div className="r1-alert-head">
-                    <h3 className="r1-alert-title">فرع يحتاج متابعة تشغيلية</h3>
-                    <span className="r1-urgent-tag">عاجل</span>
-                  </div>
-                  <p className="r1-alert-body">
-                    الشيخ زايد · الحضور 81% (أقل من هدف الأكاديمية) و 3 تذاكر مفتوحة
-                  </p>
-                </article>
+              {isDemoAcademy ? (
+                <div className="r1-alert-list">
+                  {/* Alert 1: Urgent Branch Attention */}
+                  <article className="r1-alert-card r1-alert-amber">
+                    <div className="r1-alert-head">
+                      <h3 className="r1-alert-title">فرع يحتاج متابعة تشغيلية</h3>
+                      <span className="r1-urgent-tag">عاجل</span>
+                    </div>
+                    <p className="r1-alert-body">
+                      الشيخ زايد · الحضور 81% (أقل من هدف الأكاديمية) و 3 تذاكر مفتوحة
+                    </p>
+                  </article>
 
-                {/* Alert 2: Top Academic Branch */}
-                <article className="r1-alert-card r1-alert-green">
-                  <div className="r1-alert-head">
-                    <h3 className="r1-alert-title">أفضل أداء أكاديمي هذا الشهر</h3>
-                  </div>
-                  <p className="r1-alert-body">
-                    فرع المعادي · حضور 91% مع 186 طالباً مسجلاً ونمو 3.1%
-                  </p>
-                </article>
+                  {/* Alert 2: Top Academic Branch */}
+                  <article className="r1-alert-card r1-alert-green">
+                    <div className="r1-alert-head">
+                      <h3 className="r1-alert-title">أفضل أداء أكاديمي هذا الشهر</h3>
+                    </div>
+                    <p className="r1-alert-body">
+                      فرع المعادي · حضور 91% مع 186 طالباً مسجلاً ونمو 3.1%
+                    </p>
+                  </article>
 
-                {/* Alert 3: Financial Net Settlement */}
-                <article className="r1-alert-card r1-alert-purple">
-                  <div className="r1-alert-head">
-                    <h3 className="r1-alert-title">صافي الحركة المالية المعتمدة</h3>
-                  </div>
-                  <p className="r1-alert-body">
-                    202,400 ج.م متوفرة بعد تسوية رواتب ومصروفات الفروع
+                  {/* Alert 3: Financial Net Settlement */}
+                  <article className="r1-alert-card r1-alert-purple">
+                    <div className="r1-alert-head">
+                      <h3 className="r1-alert-title">صافي الحركة المالية المعتمدة</h3>
+                    </div>
+                    <p className="r1-alert-body">
+                      202,400 ج.م متوفرة بعد تسوية رواتب ومصروفات الفروع
+                    </p>
+                  </article>
+                </div>
+              ) : (
+                <div style={{ padding: "32px 16px", textAlign: "center", color: "#64748b" }}>
+                  <p style={{ fontWeight: 600, color: "#0f172a", marginBottom: "4px" }}>
+                    لا توجد تنبيهات عاجلة اليوم
                   </p>
-                </article>
-              </div>
+                  <p style={{ fontSize: "13px" }}>
+                    كافة مؤشرات العمليات تسير بشكل طبيعي وضمن المستهدفات.
+                  </p>
+                </div>
+              )}
 
-              <footer className="r1-alert-footer">
-                <button
-                  type="button"
-                  className="r1-link-btn"
-                  onClick={() => setShowAlertsModal(true)}
-                >
-                  عرض كل التنبيهات
-                </button>
-                <span className="r1-alert-footer-note">التنبيهات محدثة لحظياً</span>
-              </footer>
+              {isDemoAcademy && (
+                <footer className="r1-alert-footer">
+                  <button
+                    type="button"
+                    className="r1-link-btn"
+                    onClick={() => setShowAlertsModal(true)}
+                  >
+                    عرض كل التنبيهات
+                  </button>
+                  <span className="r1-alert-footer-note">التنبيهات محدثة لحظياً</span>
+                </footer>
+              )}
             </section>
           </div>
 
@@ -664,12 +713,12 @@ export default function ExecutiveDashboardLive() {
                         <td>{branch.activeStudents}</td>
                         <td>{branch.attendancePercent}%</td>
                         <td>{money(branch.collectedPiastres)}</td>
-                        <td>{money(branch.approvedExpensesPiastres || 2500000)}</td>
+                        <td>{money(branch.approvedExpensesPiastres || (isDemoAcademy ? 2500000 : 0))}</td>
                         <td>
                           <strong style={{ color: "#0d9488" }}>
                             {money(
                               branch.netPiastres ||
-                                branch.collectedPiastres - 2500000
+                                branch.collectedPiastres - (isDemoAcademy ? 2500000 : 0)
                             )}
                           </strong>
                         </td>

@@ -23,8 +23,9 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import type {
-  ConsumerAccountLookupRecord,
+import {
+  featureFlags,
+  type ConsumerAccountLookupRecord,
   ConsumerInvitationDelivery,
   ConsumerLinksResponse,
 } from "@/lib/apiClient";
@@ -230,22 +231,24 @@ export function AddStudentModal({
               >
                 دورة عادية (فوري)
               </button>
-              <button
-                type="button"
-                style={{
-                  padding: "6px 8px",
-                  borderRadius: "8px",
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  border: billingPlan === "annual_nursery" ? "1.5px solid #0f766e" : "1px solid #cbd5e1",
-                  background: billingPlan === "annual_nursery" ? "#f0fdfa" : "#ffffff",
-                  color: billingPlan === "annual_nursery" ? "#0f766e" : "#475569",
-                  cursor: "pointer",
-                }}
-                onClick={() => setBillingPlan("annual_nursery")}
-              >
-                حضانة سنوية (أقساط)
-              </button>
+              {featureFlags.isFeatureEnabled("nursery_early_childhood", false) && (
+                <button
+                  type="button"
+                  style={{
+                    padding: "6px 8px",
+                    borderRadius: "8px",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    border: billingPlan === "annual_nursery" ? "1.5px solid #0f766e" : "1px solid #cbd5e1",
+                    background: billingPlan === "annual_nursery" ? "#f0fdfa" : "#ffffff",
+                    color: billingPlan === "annual_nursery" ? "#0f766e" : "#475569",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setBillingPlan("annual_nursery")}
+                >
+                  حضانة سنوية (أقساط)
+                </button>
+              )}
               <button
                 type="button"
                 style={{

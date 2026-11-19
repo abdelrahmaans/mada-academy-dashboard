@@ -32,6 +32,7 @@ import { getArchivedProjects } from "@/lib/projectArchiveStorage";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   apiClient,
+  featureFlags,
   type AttendanceItem,
   type DisciplineRubric,
   type MySupervisionGroup,
@@ -482,12 +483,18 @@ export default function InstructorDeskLive() {
                 icon: <LifeBuoy size={14} />,
                 onClick: () => setTicketModalOpen(true),
               },
-              {
-                id: "r04-nursery-desk",
-                label: "متابعة أطفال الحضانة والمنهج اليومي 👶",
-                icon: <Baby size={14} />,
-                onClick: () => { window.location.href = "/nursery-desk"; },
-              },
+              ...(featureFlags.isFeatureEnabled("nursery_early_childhood", false)
+                ? [
+                    {
+                      id: "r04-nursery-desk",
+                      label: "متابعة أطفال الحضانة والمنهج اليومي 👶",
+                      icon: <Baby size={14} />,
+                      onClick: () => {
+                        window.location.href = "/nursery-desk";
+                      },
+                    },
+                  ]
+                : []),
               {
                 id: "r04-refresh",
                 label: "تحديث الجلسات",

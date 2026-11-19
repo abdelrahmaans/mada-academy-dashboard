@@ -6,6 +6,7 @@ import { ClassesHeader } from "@/components/classes/ClassesHeader";
 import { ClassesStatsCards } from "@/components/classes/ClassesStatsCards";
 import {
   apiClient,
+  featureFlags,
   waitlistStorage,
   type CourseTemplateRecord,
   type GroupRecord,
@@ -755,7 +756,10 @@ function ClassesPage() {
     setStatusFilter("all");
     setBranchFilter("كل الفروع");
   };
-  const trackOptions = Object.entries(trackLabels) as [Track, string][];
+  const isNurseryActive = featureFlags.isFeatureEnabled("nursery_early_childhood", false);
+  const trackOptions = (Object.entries(trackLabels) as [Track, string][]).filter(
+    ([key]) => key !== "early_childhood" || isNurseryActive
+  );
   const liveBranchNames = Array.from(
     new Set(liveClassrooms.map(room => room.branchName))
   );

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, type FormEvent } from "react";
 import { toast } from "sonner";
 import {
   AlertCircle,
+  Baby,
   Calculator,
   CalendarDays,
   Check,
@@ -15,6 +16,7 @@ import {
   Filter,
   Layers,
   Lock,
+  MessageCircle,
   Plus,
   Printer,
   Receipt,
@@ -27,7 +29,7 @@ import {
   X,
 } from "lucide-react";
 import type { Invoice, PaymentMethod } from "@/pages/FinanceDeskTypes";
-import type { FinancePayment } from "@/lib/apiClient";
+import { featureFlags, type FinancePayment } from "@/lib/apiClient";
 import {
   money,
   invoiceStatus,
@@ -216,7 +218,20 @@ export function Collections({
     }
   }, [showDailyClosing]);
 
-  const [invoiceTab, setInvoiceTab] = useState<"today" | "all" | "unpaid" | "paid">(() => {
+  const isInstallmentInvoice = (inv: Invoice) => {
+    const c = (inv.course || "").toLowerCase();
+    return (
+      c.includes("حضانة") ||
+      c.includes("حضانه") ||
+      c.includes("قسط") ||
+      c.includes("أقساط") ||
+      c.includes("اقساط") ||
+      c.includes("سنوي") ||
+      c.includes("nursery")
+    );
+  };
+
+  const [invoiceTab, setInvoiceTab] = useState<"today" | "all" | "unpaid" | "paid" | "installments">(() => {
     const hasToday = invoices.some(inv => inv.payments?.some(p => (p.receivedOn || p.createdAt?.slice(0, 10)) === todayIso) || inv.due === todayIso);
     return hasToday ? "today" : "all";
   });
@@ -273,6 +288,9 @@ export function Collections({
       if (invoiceTab === "paid") {
         return remaining === 0;
       }
+      if (invoiceTab === "installments") {
+        return isInstallmentInvoice(inv);
+      }
       return true; // "all"
     });
   }, [invoices, invoiceTab, todayIso]);
@@ -288,6 +306,24 @@ export function Collections({
   const paidInvoicesCount = useMemo(() => {
     return invoices.filter(inv => inv.collected >= inv.total).length;
   }, [invoices]);
+
+  const installmentsInvoices = useMemo(() => {
+    return invoices.filter(isInstallmentInvoice);
+  }, [invoices]);
+
+  const installmentsInvoicesCount = installmentsInvoices.length;
+
+  const installmentsTotalValue = useMemo(() => {
+    return installmentsInvoices.reduce((acc, inv) => acc + inv.total, 0);
+  }, [installmentsInvoices]);
+
+  const installmentsTotalCollected = useMemo(() => {
+    return installmentsInvoices.reduce((acc, inv) => acc + inv.collected, 0);
+  }, [installmentsInvoices]);
+
+  const installmentsTotalRemaining = useMemo(() => {
+    return Math.max(0, installmentsTotalValue - installmentsTotalCollected);
+  }, [installmentsTotalValue, installmentsTotalCollected]);
 
   const todayFormatted = new Intl.DateTimeFormat("ar-EG", {
     weekday: "long",
@@ -550,7 +586,81 @@ export function Collections({
               <CheckCircle size={14} />
               <span>مسددة بالكامل ({paidInvoicesCount})</span>
             </button>
+            {(featureFlags.isFeatureEnabled("nursery_early_childhood", false) || installmentsInvoicesCount > 0) && (
+              <button
+                type="button"
+                onClick={() => setInvoiceTab("installments")}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "20px",
+                  fontSize: "0.82rem",
+                  fontWeight: 700,
+                  border: 0,
+                  cursor: "pointer",
+                  background: invoiceTab === "installments" ? "#0f766e" : "#ffffff",
+                  color: invoiceTab === "installments" ? "#ffffff" : "#475569",
+                  boxShadow: invoiceTab === "installments" ? "0 2px 6px rgba(15, 118, 110, 0.25)" : "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <Baby size={14} />
+                <span>أقساط سنوية وحضانات ({installmentsInvoicesCount})</span>
+              </button>
+            )}
           </div>
+
+          {/* Installments & Annual Contracts Radar Banner */}
+          {invoiceTab === "installments" && (
+            <div
+              style={{
+                background: "linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)",
+                border: "1px solid #99f6e4",
+                borderRadius: "14px",
+                padding: "16px 20px",
+                margin: "0 0 16px",
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                gap: "14px",
+                alignItems: "center",
+              }}
+            >
+              <div>
+                <span style={{ fontSize: "0.78rem", color: "#0f766e", fontWeight: 700, display: "block" }}>
+                  عقود الاشتراكات السنوية والحضانات
+                </span>
+                <strong style={{ fontSize: "1.4rem", color: "#134e4a", fontWeight: 800 }}>
+                  {installmentsInvoicesCount} عقود مسجلة
+                </strong>
+              </div>
+              <div>
+                <span style={{ fontSize: "0.78rem", color: "#0f766e", fontWeight: 700, display: "block" }}>
+                  إجمالي قيمة التعاقدات السنوية
+                </span>
+                <strong style={{ fontSize: "1.3rem", color: "#0f172a", fontWeight: 800 }}>
+                  {money(installmentsTotalValue)}
+                </strong>
+              </div>
+              <div>
+                <span style={{ fontSize: "0.78rem", color: "#15803d", fontWeight: 700, display: "block" }}>
+                  إجمالي المحصل (مقدمات + أقساط مسددة)
+                </span>
+                <strong style={{ fontSize: "1.3rem", color: "#166534", fontWeight: 800 }}>
+                  {money(installmentsTotalCollected)}
+                </strong>
+              </div>
+              <div>
+                <span style={{ fontSize: "0.78rem", color: "#b91c1c", fontWeight: 700, display: "block" }}>
+                  الأقساط المتبقية والمستحقة
+                </span>
+                <strong style={{ fontSize: "1.3rem", color: "#991b1b", fontWeight: 800 }}>
+                  {money(installmentsTotalRemaining)}
+                </strong>
+              </div>
+            </div>
+          )}
 
           <div className="finance-invoices-container">
             {filteredInvoicesByTab.length === 0 ? (
@@ -670,6 +780,37 @@ export function Collections({
                             }}
                           >
                             <CreditCard size={13} /> سداد لهذه الفاتورة
+                          </button>
+                        )}
+
+                        {isInstallmentInvoice(invoice) && remaining > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              let clean = ((invoice as any).phone || "01000000000").replace(/\D/g, "");
+                              if (clean.startsWith("0")) clean = "2" + clean;
+                              if (!clean.startsWith("20") && clean.length === 10) clean = "20" + clean;
+                              const msg = encodeURIComponent(
+                                `مرحباً ${invoice.parent}، تحية طيبة من أكاديمية مدى 🌸\nنود تذكيركم بموعد استحقاق قسط (${invoice.course}) بقيمة ${remaining.toLocaleString()} ج.م والمستحق بتاريخ ${invoice.due} الخاص بالطالب/ة *${invoice.student}*.\nيمكنكم السداد عبر الخزينة بالفرع أو عبر إنستاباي. شكراً لتعاونكم وثقتكم بنا.`
+                              );
+                              window.open(`https://web.whatsapp.com/send?phone=${clean}&text=${msg}`, "_blank");
+                            }}
+                            style={{
+                              padding: "5px 10px",
+                              borderRadius: "7px",
+                              fontSize: "0.78rem",
+                              background: "#25d366",
+                              color: "#ffffff",
+                              border: 0,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              fontWeight: 700,
+                            }}
+                            title="إرسال تذكير بموعد القسط لولي الأمر عبر واتساب"
+                          >
+                            <MessageCircle size={13} /> تذكير واتساب
                           </button>
                         )}
 

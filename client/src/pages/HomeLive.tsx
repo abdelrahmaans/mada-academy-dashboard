@@ -6,7 +6,7 @@ import QuickActionsBar from "@/components/QuickActionsBar";
 import { QuickPaymentReceiptModal, QuickSupportTicketModal } from "@/components/QuickActionModals";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
-import { apiClient, type AuthMe, type DashboardSummary } from "@/lib/apiClient";
+import { apiClient, featureFlags, type AuthMe, type DashboardSummary } from "@/lib/apiClient";
 import { sessionStatusLabel } from "@/lib/statusLabels";
 import "./HomeLive.css";
 
@@ -88,12 +88,16 @@ export default function HomeLive({ me }: { me: AuthMe }) {
               icon: <CheckCircle2 size={14} />,
               onClick: () => navigate("/approvals"),
             },
-            {
-              id: "r02-nursery",
-              label: "متابعة الحضانة والمنهج اليومي للأطفال 👶",
-              icon: <Baby size={14} />,
-              onClick: () => navigate("/nursery-desk"),
-            },
+            ...(featureFlags.isFeatureEnabled("nursery_early_childhood", false)
+              ? [
+                  {
+                    id: "r02-nursery",
+                    label: "متابعة الحضانة والمنهج اليومي للأطفال 👶",
+                    icon: <Baby size={14} />,
+                    onClick: () => navigate("/nursery-desk"),
+                  },
+                ]
+              : []),
             {
               id: "r02-refresh",
               label: "تحديث مؤشرات الفرع",
@@ -102,7 +106,7 @@ export default function HomeLive({ me }: { me: AuthMe }) {
             },
           ]}
         />
-        <div className="r02-home-live-source"><Activity size={14} /> المصدر: API الفرع · النطاق مستمد من جلسة المستخدم</div>
+        <div className="r02-home-live-source"><Activity size={14} /> الربط السحابي للفرع نشط ومحدث</div>
 
         {loading && <section className="r02-live-state" role="status"><span className="r02-live-spinner" /> جارٍ تحميل مؤشرات الفرع…</section>}
         {!loading && error && <section className="r02-live-state r02-live-error" role="alert"><strong>تعذر تحميل لوحة الفرع</strong><p>{error}</p><button className="button button-secondary" onClick={() => setRefreshKey(value => value + 1)}><RefreshCw size={15} /> إعادة المحاولة</button></section>}
