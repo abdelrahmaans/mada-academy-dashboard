@@ -6,6 +6,7 @@ export type AuthMe = {
   tenantId: string;
   branchId?: string | null;
   scopeLevel: string;
+  mustChangePassword?: boolean;
   permissions?: string[];
   user?: { id: string; displayName: string | null; email: string | null; phone: string };
   academy?: { id: string; name: string; slug: string; status: string; planCode: string };
@@ -967,6 +968,7 @@ export const apiClient = {
     saveTokens(response);
     return response;
   },
+  changePassword: (currentPassword: string, newPassword: string) => request<void>("/auth/change-password", { method: "POST", body: JSON.stringify({ currentPassword, newPassword }) }),
   sendOtp: (phone: string, accountType: "staff" | "parent" | "student" = "staff") => request<{ expiresAt: string; developmentCode?: string }>("/auth/otp/send", { method: "POST", body: JSON.stringify({ phone, accountType }) }),
   verifyOtp: async (phone: string, code: string, accountType: "staff" | "parent" | "student" = "staff") => {
     const response = await request<TokenResponse>("/auth/otp/verify", { method: "POST", body: JSON.stringify({ phone, code, accountType }) }, false);

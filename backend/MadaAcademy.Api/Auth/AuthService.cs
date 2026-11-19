@@ -71,6 +71,24 @@ public sealed class AuthService(MadaDbContext db, JwtTokenService tokens, OtpCha
         return new PasswordLoginResult(response);
     }
 
+    public async Task<(bool Success, string? ErrorCode)> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword, CancellationToken cancellationToken)
+    {
+        var user = await db.UserAccounts.SingleOrDefaultAsync(x => x.Id == userId && x.Status == "ACTIVE", cancellationToken);
+        if (user is null || !passwords.Verify(currentPassword, user.PasswordHash)) return (false, "CURRENT_PASSWORD_INVALID");
+        if (newPassword.Length < 8) return (false, "PASSWORD_TOO_SHORT");
+        if (currentPassword == newPassword) return (false, "PASSWORD_MUST_CHANGE");
+
+        user.PasswordHash = passwords.Hash(newPassword);
+        user.MustChangePassword = false;
+        user.FailedPasswordAttempts = 0;
+        user.PasswordLockedUntil = null;
+        var now = DateTimeOffset.UtcNow;
+        var sessions = await db.RefreshSessions.Where(x => x.UserAccountId == userId && x.RevokedAt == null).ToListAsync(cancellationToken);
+        foreach (var session in sessions) session.RevokedAt = now;
+        await db.SaveChangesAsync(cancellationToken);
+        return (true, null);
+    }
+
     public async Task<AuthTokenResponse?> RefreshAsync(RefreshRequest request, CancellationToken cancellationToken)
     {
         var hash = JwtTokenService.HashRefreshToken(request.RefreshToken);

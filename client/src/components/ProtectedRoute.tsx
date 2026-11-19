@@ -20,15 +20,17 @@ export default function ProtectedRoute({
   anyOfPermissions,
 }: ProtectedRouteProps) {
   const { me, loading, logout } = useAuth();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     if (!loading && !me) navigate("/login");
-  }, [loading, me, navigate]);
+    if (!loading && me?.mustChangePassword && location !== "/change-password") navigate("/change-password", { replace: true });
+  }, [loading, me, navigate, location]);
 
   if (loading) return <div className="route-loading">جارٍ التحقق من الجلسة…</div>;
   if (!me) return null;
+  if (me.mustChangePassword && location !== "/change-password") return null;
 
   if (!isRouteAllowed(me, roles, permission, anyOfPermissions)) {
     const normalizedRole = me.role.match(/^R\d+/)?.[0] ?? me.role;

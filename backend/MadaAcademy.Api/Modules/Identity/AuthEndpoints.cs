@@ -2,6 +2,7 @@ using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace MadaAcademy.Api.Modules.Identity;
 
@@ -27,6 +28,25 @@ public static class AuthEndpoints
         app.MapPost("/api/v1/auth/logout", async (LogoutRequest request, AuthService auth, CancellationToken cancellationToken) =>
         {
             await auth.LogoutAsync(request, cancellationToken);
+            return Results.NoContent();
+        }).RequireAuthorization();
+
+        app.MapPost("/api/v1/auth/change-password", async (ChangePasswordRequest request, ClaimsPrincipal principal, AuthService auth, CancellationToken cancellationToken) =>
+        {
+            if (!Guid.TryParse(principal.FindFirstValue("sub"), out var userId)) return Results.Unauthorized();
+            if (string.IsNullOrWhiteSpace(request.CurrentPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
+                return Results.ValidationProblem(new Dictionary<string, string[]> { ["password"] = ["Current and new passwords are required."] });
+            var result = await auth.ChangePasswordAsync(userId, request.CurrentPassword, request.NewPassword, cancellationToken);
+            if (!result.Success)
+            {
+                var message = result.ErrorCode switch
+                {
+                    "CURRENT_PASSWORD_INVALID" => "كلمة السر الحالية غير صحيحة.",
+                    "PASSWORD_MUST_CHANGE" => "كلمة السر الجديدة يجب أن تكون مختلفة.",
+                    _ => "كلمة السر الجديدة يجب ألا تقل عن 8 أحرف."
+                };
+                return Results.ValidationProblem(new Dictionary<string, string[]> { ["password"] = [message] });
+            }
             return Results.NoContent();
         }).RequireAuthorization();
 
@@ -86,3 +106,5 @@ public static class AuthEndpoints
         });
     }
 }
+
+public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);

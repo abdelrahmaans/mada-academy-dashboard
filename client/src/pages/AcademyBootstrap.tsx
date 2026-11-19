@@ -20,8 +20,17 @@ const getInitialForm = () => {
   if (typeof window === "undefined") return fallback;
   try {
     const params = new URLSearchParams(window.location.search);
+    if (params.has("password")) {
+      params.delete("password");
+      const query = params.toString();
+      window.history.replaceState({}, document.title, `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`);
+    }
     const storedRaw = sessionStorage.getItem("mada_convert_lead");
     const stored = storedRaw ? JSON.parse(storedRaw) : {};
+    if (stored && typeof stored === "object" && "password" in stored) {
+      delete stored.password;
+      sessionStorage.setItem("mada_convert_lead", JSON.stringify(stored));
+    }
     return {
       name: params.get("name") || stored.academyName || "",
       slug: params.get("slug") || "",
@@ -31,7 +40,7 @@ const getInitialForm = () => {
       ownerName: params.get("owner") || stored.name || "",
       ownerPhone: params.get("phone") || stored.phone || "",
       ownerEmail: params.get("email") || stored.email || "",
-      ownerPassword: params.get("password") || stored.password || "",
+      ownerPassword: "",
     };
   } catch {
     return fallback;
@@ -116,7 +125,7 @@ export default function AcademyBootstrap() {
             <div><small>الفرع الأساسي</small><strong>{created.primaryBranch.name}</strong><span>{created.primaryBranch.code}</span></div>
             <div><small>مسؤول الأكاديمية</small><strong>{created.owner.displayName}</strong><span>{created.owner.phone}</span></div>
           </div>
-          <div className="academy-bootstrap-next-step"><ShieldCheck size={17} /><span><strong>الخطوة التالية:</strong> سجّل دخول مسؤول الأكاديمية برقم الهاتف وكلمة المرور التي تم تعيينها.</span></div>
+          <div className="academy-bootstrap-next-step"><ShieldCheck size={17} /><span><strong>الخطوة التالية:</strong> سجّل دخول مسؤول الأكاديمية بكلمة السر المؤقتة، وسيطلب منه النظام تغييرها قبل الدخول.</span></div>
           <div className="academy-bootstrap-actions">
             <button className="academy-bootstrap-primary" onClick={() => navigate("/platform-console")}><ArrowLeft size={16} /> العودة إلى لوحة المنصة</button>
             <button className="academy-bootstrap-secondary" onClick={() => { setCreated(null); setForm(getInitialForm()); }}>إنشاء أكاديمية أخرى</button>
@@ -151,7 +160,7 @@ export default function AcademyBootstrap() {
           <form onSubmit={submit} className="academy-bootstrap-form">
             <fieldset><legend>بيانات الأكاديمية</legend><div className="academy-bootstrap-fields two"><Field label="اسم الأكاديمية" value={form.name} onChange={value => update("name", value)} placeholder="مثال: أكاديمية مدى" required /><Field label="Slug اختياري" value={form.slug} onChange={value => update("slug", value)} placeholder="mada-academy" dir="ltr" hint="يُستخدم في الرابط الداخلي" /><label><span>الباقة</span><select value={form.planCode} onChange={event => update("planCode", event.target.value)}><option value="STARTER">Starter · بداية</option><option value="GROWTH">Growth · نمو</option><option value="SCALE">Scale · توسع</option></select></label></div></fieldset>
             <fieldset><legend><MapPin size={14} /> الفرع الأساسي</legend><div className="academy-bootstrap-fields two"><Field label="اسم الفرع" value={form.branchName} onChange={value => update("branchName", value)} placeholder="مدينة نصر" required /><Field label="كود الفرع" value={form.branchCode} onChange={value => update("branchCode", value)} placeholder="NASR_CITY" dir="ltr" required /></div></fieldset>
-            <fieldset><legend><UserRound size={14} /> مسؤول الأكاديمية الأول</legend><div className="academy-bootstrap-fields two"><Field label="الاسم بالكامل" value={form.ownerName} onChange={value => update("ownerName", value)} placeholder="أحمد محمود" required /><Field label="البريد الإلكتروني" value={form.ownerEmail} onChange={value => update("ownerEmail", value)} placeholder="owner@academy.com" type="email" dir="ltr" required /><Field label="رقم الهاتف" value={form.ownerPhone} onChange={value => update("ownerPhone", value)} placeholder="01012345678" type="tel" dir="ltr" required /><Field label="كلمة المرور" value={form.ownerPassword} onChange={value => update("ownerPassword", value)} placeholder="8 أحرف على الأقل" type="password" dir="ltr" required /></div><small className="academy-bootstrap-field-note"><Phone size={13} /> سيتم استخدام الرقم وكلمة المرور في تسجيل الدخول بعد إنشاء الأكاديمية.</small></fieldset>
+            <fieldset><legend><UserRound size={14} /> مسؤول الأكاديمية الأول</legend><div className="academy-bootstrap-fields two"><Field label="الاسم بالكامل" value={form.ownerName} onChange={value => update("ownerName", value)} placeholder="أحمد محمود" required /><Field label="البريد الإلكتروني" value={form.ownerEmail} onChange={value => update("ownerEmail", value)} placeholder="owner@academy.com" type="email" dir="ltr" required /><Field label="رقم الهاتف" value={form.ownerPhone} onChange={value => update("ownerPhone", value)} placeholder="01012345678" type="tel" dir="ltr" required /><Field label="كلمة السر المؤقتة" value={form.ownerPassword} onChange={value => update("ownerPassword", value)} placeholder="8 أحرف على الأقل" type="password" dir="ltr" autoComplete="new-password" required /></div><small className="academy-bootstrap-field-note"><Phone size={13} /> تُسلّم هذه الكلمة للمالك للدخول الأول فقط، وسيطلب منه النظام تغييرها فوراً.</small></fieldset>
             <div className="academy-bootstrap-form-footer"><span><ShieldCheck size={14} /> العملية تنشئ Tenant + Branch + Owner + Membership</span><button className="academy-bootstrap-primary" disabled={submitting}>{submitting ? "جارٍ الإنشاء…" : "إنشاء الأكاديمية"}<ChevronLeft size={16} /></button></div>
           </form>
         </section>
@@ -160,8 +169,8 @@ export default function AcademyBootstrap() {
   );
 }
 
-function Field({ label, value, onChange, placeholder, type = "text", dir, required, hint }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; type?: string; dir?: "ltr" | "rtl"; required?: boolean; hint?: string }) {
-  return <label><span>{label}{required && <b> *</b>}</span><input type={type} value={value} dir={dir} placeholder={placeholder} required={required} onChange={event => onChange(event.target.value)} />{hint && <small>{hint}</small>}</label>;
+function Field({ label, value, onChange, placeholder, type = "text", dir, required, hint, autoComplete }: { label: string; value: string; onChange: (value: string) => void; placeholder: string; type?: string; dir?: "ltr" | "rtl"; required?: boolean; hint?: string; autoComplete?: string }) {
+  return <label><span>{label}{required && <b> *</b>}</span><input type={type} value={value} dir={dir} placeholder={placeholder} autoComplete={autoComplete} required={required} onChange={event => onChange(event.target.value)} />{hint && <small>{hint}</small>}</label>;
 }
 function FlowStep({ number, title, active = false }: { number: string; title: string; active?: boolean }) {
   return <div className={active ? "academy-bootstrap-flow-step active" : "academy-bootstrap-flow-step"}><span>{number}</span><strong>{title}</strong></div>;

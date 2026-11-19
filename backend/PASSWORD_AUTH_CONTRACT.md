@@ -31,7 +31,26 @@ A successful response returns the same `accessToken`, `refreshToken`, `tokenType
 - Academy Bootstrap requires an owner password of at least 8 characters.
 - Adding an academy member requires a password of at least 8 characters.
 - Passwords are never stored in plaintext; only a PBKDF2 hash is persisted in `UserAccounts.PasswordHash`.
+- Academy bootstrap and platform owner recovery mark the account with `MustChangePassword=true`. The temporary password is accepted for the first login, then the authenticated user is routed to `POST /api/v1/auth/change-password` before accessing the workspace.
+- Changing the password clears `MustChangePassword` and revokes the user's active refresh sessions; the user signs in again with the new password.
 - Demo seed accounts use `Mada@2026` in development only.
+
+## Temporary password change
+
+```http
+POST /api/v1/auth/change-password
+Authorization: Bearer <temporary-login-access-token>
+Content-Type: application/json
+```
+
+```json
+{
+  "currentPassword": "temporary-password",
+  "newPassword": "private-password"
+}
+```
+
+The temporary password is never accepted from a URL or browser storage payload during academy bootstrap. It is entered in the protected bootstrap form and sent only in the HTTPS request body.
 
 ## Deferred OTP
 

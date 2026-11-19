@@ -34,6 +34,7 @@ const CertificateVerify = lazy(() => import("./pages/CertificateVerify"));
 const WorkspaceHub = lazy(() => import("./pages/WorkspaceHub"));
 const AcademyBootstrap = lazy(() => import("./pages/AcademyBootstrap"));
 const Login = lazy(() => import("./pages/Login"));
+const ChangePassword = lazy(() => import("./pages/ChangePassword"));
 const ConsumerInvitationAccept = lazy(() => import("./pages/ConsumerInvitationAccept"));
 const AcademyRoles = lazy(() => import("./pages/AcademyRoles"));
 const AcademyBranches = lazy(() => import("./pages/AcademyBranches"));
@@ -101,6 +102,7 @@ function SmartRoleHome() {
 
 const APP_ROUTES = [
   ["/login", Login],
+  ["/change-password", () => <Guard><ChangePassword /></Guard>],
   ["/accept-invitation", ConsumerInvitationAccept],
   ["/workspace", () => <Guard><WorkspaceHub /></Guard>],
   ["/platform/academies/new", ProtectedAcademyBootstrap],

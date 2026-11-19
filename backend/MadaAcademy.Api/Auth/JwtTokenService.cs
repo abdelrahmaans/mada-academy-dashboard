@@ -33,7 +33,8 @@ public sealed class JwtTokenService(JwtOptions options)
             new("role", membership.RoleCode),
             new(ClaimTypes.Role, membership.RoleCode),
             new("tenantId", membership.TenantId.ToString()),
-            new("scopeLevel", membership.ScopeLevel)
+            new("scopeLevel", membership.ScopeLevel),
+            new("mustChangePassword", user.MustChangePassword ? "true" : "false")
         };
 
         if (membership.BranchId.HasValue)

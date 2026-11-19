@@ -55,7 +55,8 @@ public static class AcademyIdentityEndpoints
             DisplayName = request.Owner.FullName.Trim(),
             AccountType = "staff",
             PasswordHash = passwords.Hash(request.Owner.Password),
-            Status = "ACTIVE"
+            Status = "ACTIVE",
+            MustChangePassword = true
         };
         var membership = new Membership
         {
@@ -146,6 +147,7 @@ public static class AcademyIdentityEndpoints
                 accountType = membership.UserAccount.AccountType,
                 role = membership.RoleCode,
                 roleLabel = RoleLabels.TryGetValue(membership.RoleCode, out var roleLabel) ? roleLabel : membership.RoleCode,
+                mustChangePassword = membership.UserAccount.MustChangePassword,
                 tenantId,
                 branchId = membership.BranchId,
                 scopeLevel,

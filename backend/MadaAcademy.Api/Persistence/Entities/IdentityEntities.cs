@@ -36,6 +36,7 @@ public sealed class UserAccount : EntityBase
     public string? DisplayName { get; set; }
     public string? PasswordHash { get; set; }
     public string Status { get; set; } = "INVITED";
+    public bool MustChangePassword { get; set; }
     public DateTimeOffset? LastLoginAt { get; set; }
     public int FailedPasswordAttempts { get; set; }
     public DateTimeOffset? PasswordLockedUntil { get; set; }

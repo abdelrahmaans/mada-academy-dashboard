@@ -30,7 +30,7 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => { if (!loading && me) navigate(homeForRole(me.role)); }, [loading, me, navigate]);
+  useEffect(() => { if (!loading && me) navigate(me.mustChangePassword ? "/change-password" : homeForRole(me.role)); }, [loading, me, navigate]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
