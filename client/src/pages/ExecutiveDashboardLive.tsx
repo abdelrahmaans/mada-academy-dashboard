@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { QuickSupportTicketModal } from "@/components/QuickActionModals";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   apiClient,
   type ExecutiveActivityItem,
@@ -124,6 +125,7 @@ const DESIGN_BRANCHES_FALLBACK = [
 ];
 
 export default function ExecutiveDashboardLive() {
+  const { me } = useAuth();
   const [branchId, setBranchId] = useState("ALL");
   const [period, setPeriod] = useState<PeriodOffset>(0);
   const [report, setReport] = useState<ExecutiveDashboardReport | null>(null);
@@ -203,65 +205,84 @@ export default function ExecutiveDashboardLive() {
 
   const retry = () => setRetryKey((value) => value + 1);
 
-  // Active branches mapped to the design system pulse rows
+  const isDemoAcademy = me?.tenantId === "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+
+  // Active branches mapped to the design system pulse rows - strictly scoped to actual tenant
   const branchPulseData = useMemo(() => {
-    if (report && report.branches.length >= 3) {
-      return report.branches.map((b, index) => ({
+    if (report && report.branches && report.branches.length > 0) {
+      return report.branches.map((b) => ({
         branchId: b.branchId,
         branchName: b.branchName,
         branchCode: b.branchCode,
-        managerName:
-          index === 0
-            ? "أحمد محمود"
-            : index === 1
-            ? "سارة كمال"
-            : "يوسف عماد",
-        activeStudents: b.activeStudents || (index === 0 ? 248 : index === 1 ? 186 : 121),
+        managerName: (b as { managerName?: string }).managerName || "مدير الفرع",
+        activeStudents: b.activeStudents ?? 0,
         attendancePercent:
-          b.attendancePercent !== null
+          b.attendancePercent !== null && b.attendancePercent !== undefined
             ? Math.round(b.attendancePercent)
-            : index === 0
-            ? 86
-            : index === 1
-            ? 91
-            : 81,
-        collectedPiastres:
-          b.collectedPiastres || (index === 0 ? 12850000 : index === 1 ? 10120000 : 7240000),
-        approvedExpensesPiastres:
-          b.approvedExpensesPiastres || (index === 0 ? 3500000 : index === 1 ? 2800000 : 2400000),
-        netPiastres:
-          b.netPiastres || (index === 0 ? 9350000 : index === 1 ? 7320000 : 4840000),
-        trend: index === 0 ? "+5.6%" : index === 1 ? "+3.1%" : "-2.4%",
-        isPositiveTrend: index !== 2,
+            : 0,
+        collectedPiastres: b.collectedPiastres ?? 0,
+        approvedExpensesPiastres: b.approvedExpensesPiastres ?? 0,
+        netPiastres: b.netPiastres ?? 0,
+        trend: (b as { trend?: string }).trend || "0%",
+        isPositiveTrend: !((b as { trend?: string }).trend?.startsWith("-")),
       }));
     }
-    return DESIGN_BRANCHES_FALLBACK;
-  }, [report]);
 
-  // Aggregate stats
+    if (me?.branches && me.branches.length > 0) {
+      return me.branches.map((b) => ({
+        branchId: b.id,
+        branchName: b.name,
+        branchCode: b.code,
+        managerName: "مدير الفرع",
+        activeStudents: 0,
+        attendancePercent: 0,
+        collectedPiastres: 0,
+        approvedExpensesPiastres: 0,
+        netPiastres: 0,
+        trend: "0%",
+        isPositiveTrend: true,
+      }));
+    }
+
+    if (isDemoAcademy) {
+      return DESIGN_BRANCHES_FALLBACK;
+    }
+
+    return [];
+  }, [report, me?.branches, isDemoAcademy]);
+
+  // Aggregate stats - Strictly reflecting actual tenant data (no static bleed)
   const activeStudentsVal =
-    report?.summary?.activeStudents && report.summary.activeStudents > 0
+    report?.summary?.activeStudents !== undefined && report?.summary?.activeStudents !== null
       ? integer(report.summary.activeStudents)
-      : "555";
+      : isDemoAcademy
+      ? "555"
+      : "0";
 
   const attendanceRateVal =
     report?.summary?.attendancePercent !== null &&
     report?.summary?.attendancePercent !== undefined
       ? `${Math.round(report.summary.attendancePercent)}%`
-      : "86%";
+      : isDemoAcademy
+      ? "86%"
+      : "0%";
 
   const totalCollectedVal =
-    report?.summary?.collectedPiastres && report.summary.collectedPiastres > 0
+    report?.summary?.collectedPiastres !== undefined && report?.summary?.collectedPiastres !== null
       ? money(report.summary.collectedPiastres)
-      : "302,100 ج.م";
+      : isDemoAcademy
+      ? "302,100 ج.م"
+      : "0 ج.م";
 
   const netCollectionsVal =
-    report?.summary?.netPiastres && report.summary.netPiastres > 0
+    report?.summary?.netPiastres !== undefined && report?.summary?.netPiastres !== null
       ? money(report.summary.netPiastres)
-      : "202,400 ج.م";
+      : isDemoAcademy
+      ? "202,400 ج.م"
+      : "0 ج.م";
 
   const exportBoardRollup = () => {
-    const listToExport = report && report.branches.length > 0 ? report.branches : DESIGN_BRANCHES_FALLBACK;
+    const listToExport = branchPulseData.length > 0 ? branchPulseData : [];
     const headers = [
       "الفرع",
       "كود الفرع",
