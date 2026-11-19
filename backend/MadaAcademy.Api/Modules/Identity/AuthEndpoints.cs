@@ -30,6 +30,28 @@ public static class AuthEndpoints
             return Results.NoContent();
         }).RequireAuthorization();
 
+        app.MapPost("/api/v1/auth/change-password", async (ChangePasswordRequest request, System.Security.Claims.ClaimsPrincipal principal, MadaDbContext db, PasswordHashService passwords, CancellationToken cancellationToken) =>
+        {
+            var sub = principal.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                ?? principal.FindFirst("sub")?.Value;
+            if (!Guid.TryParse(sub, out var userId))
+                return Results.Unauthorized();
+
+            if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 6)
+                return Results.BadRequest(new { error = new { code = "INVALID_PASSWORD", message = "كلمة المرور يجب ألا تقل عن 6 خانات." } });
+
+            var user = await db.UserAccounts.FindAsync([userId], cancellationToken);
+            if (user is null) return Results.NotFound();
+
+            user.PasswordHash = passwords.Hash(request.NewPassword);
+            user.MustChangePassword = false;
+            user.FailedPasswordAttempts = 0;
+            user.PasswordLockedUntil = null;
+            await db.SaveChangesAsync(cancellationToken);
+
+            return Results.Ok(new { data = new { success = true, message = "تم تعيين كلمة المرور الجديدة بنجاح." } });
+        }).RequireAuthorization();
+
         return app;
     }
 
@@ -86,3 +108,5 @@ public static class AuthEndpoints
         });
     }
 }
+
+public sealed record ChangePasswordRequest(string NewPassword);

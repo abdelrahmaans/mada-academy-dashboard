@@ -20,7 +20,7 @@ export default function RoleSurfaceTopbar({ onMenu, scopeLabel = "كل الفر�
     {
       id: "n1",
       title: "نظام الأكاديمية متصل بنجاح",
-      desc: "تم ربط قاعدة بيانات PostgreSQL وتخزين Supabase بالكامل.",
+      desc: "جميع بيانات وسجلات فرعك محدثة ومتزامنة سحابياً بأمان.",
       time: "منذ قليل",
       unread: true,
     },

@@ -44,6 +44,7 @@ export interface PlanUpgradeModalProps {
   planUpgradeReason: string;
   setPlanUpgradeReason: (val: string) => void;
   onSave: (e: React.FormEvent) => void;
+  onOpenFeaturesModal?: (academy: PlatformAcademy) => void;
 }
 
 export function PlanUpgradeModal({
@@ -56,6 +57,7 @@ export function PlanUpgradeModal({
   planUpgradeReason,
   setPlanUpgradeReason,
   onSave,
+  onOpenFeaturesModal,
 }: PlanUpgradeModalProps) {
   if (!academy) return null;
 
@@ -165,6 +167,52 @@ export function PlanUpgradeModal({
               }}
             />
           </label>
+
+
+
+          {onOpenFeaturesModal && (
+            <div
+              style={{
+                background: "#f0fdfa",
+                border: "1px solid #ccfbf1",
+                borderRadius: "10px",
+                padding: "12px 14px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "10px",
+              }}
+            >
+              <div>
+                <strong style={{ fontSize: "12px", color: "#0f766e", display: "block" }}>
+                  ✨ ميزات وإضافات الأكاديمية (Feature Flags)
+                </strong>
+                <small style={{ color: "#115e59", fontSize: "11px" }}>
+                  تفعيل أو تعطيل ميزات الأكاديمية المخصصة (الحضانات، التلعيب، بوابة الأسرة، المالية).
+                </small>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenFeaturesModal(academy);
+                }}
+                style={{
+                  background: "#0f766e",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "8px 12px",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                فتح إدارة الميزات ➔
+              </button>
+            </div>
+          )}
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
             <button
@@ -1507,6 +1555,7 @@ export interface ConvertLeadModalProps {
     ownerPhone: string;
     ownerEmail: string;
     ownerPassword: string;
+    featureOverrides?: Record<string, boolean>;
   };
   setConvertForm: React.Dispatch<
     React.SetStateAction<{
@@ -1519,6 +1568,7 @@ export interface ConvertLeadModalProps {
       ownerPhone: string;
       ownerEmail: string;
       ownerPassword: string;
+      featureOverrides?: Record<string, boolean>;
     }>
   >;
   onRegeneratePassword: () => void;
@@ -1746,6 +1796,83 @@ export function ConvertLeadModal({
                     <option value="SCALE">Scale · توسع ومؤسسات (فروع غير محدودة)</option>
                   </select>
                 </label>
+
+                {/* Feature Addons Selection */}
+                <div style={{ marginTop: "10px", padding: "12px", background: "#f8fafc", borderRadius: "8px", border: "1px dashed #cbd5e1" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+                    <span style={{ fontSize: "14px" }}>✨</span>
+                    <span style={{ fontSize: "12px", fontWeight: 700, color: "#0f766e" }}>
+                      الميزات الإضافية للأكاديمية (Feature Flags)
+                    </span>
+                  </div>
+                  <p style={{ margin: "0 0 10px 0", fontSize: "11px", color: "#64748b", lineHeight: 1.4 }}>
+                    يمكنك تفعيل ميزات خاصة (مثل فيتشر الحضانة) لهذه الأكاديمية فقط مع بقاء الأساس ثابتاً:
+                  </p>
+                  <div style={{ display: "grid", gap: "8px" }}>
+                    <label style={{ display: "flex", alignItems: "flex-start", gap: "8px", cursor: "pointer", fontSize: "12px", color: "#1e293b" }}>
+                      <input
+                        type="checkbox"
+                        checked={!!convertForm.featureOverrides?.nursery_early_childhood}
+                        onChange={(e) =>
+                          setConvertForm((prev) => ({
+                            ...prev,
+                            featureOverrides: {
+                              ...prev.featureOverrides,
+                              nursery_early_childhood: e.target.checked,
+                            },
+                          }))
+                        }
+                        style={{ marginTop: "2px", accentColor: "#0f766e", width: "15px", height: "15px" }}
+                      />
+                      <div>
+                        <strong style={{ color: "#0f766e" }}>👶 منظومة الحضانات والطفولة المبكرة (Nursery Suite)</strong>
+                        <div style={{ fontSize: "11px", color: "#64748b" }}>مكتب المتابعة اليومي، فحص الاستقبال، تقارير المزاج والوجبات والقيلولة، وأقساط الحضانة.</div>
+                      </div>
+                    </label>
+
+                    <label style={{ display: "flex", alignItems: "flex-start", gap: "8px", cursor: "pointer", fontSize: "12px", color: "#1e293b" }}>
+                      <input
+                        type="checkbox"
+                        checked={!!convertForm.featureOverrides?.gamification_enabled}
+                        onChange={(e) =>
+                          setConvertForm((prev) => ({
+                            ...prev,
+                            featureOverrides: {
+                              ...prev.featureOverrides,
+                              gamification_enabled: e.target.checked,
+                            },
+                          }))
+                        }
+                        style={{ marginTop: "2px", accentColor: "#0f766e", width: "15px", height: "15px" }}
+                      />
+                      <div>
+                        <strong>🎮 نظام التلعيب ولوحة الشرف (Gamification)</strong>
+                        <div style={{ fontSize: "11px", color: "#64748b" }}>نقاط التحديات الإضافية في الحصص وشارات التميز للطلاب.</div>
+                      </div>
+                    </label>
+
+                    <label style={{ display: "flex", alignItems: "flex-start", gap: "8px", cursor: "pointer", fontSize: "12px", color: "#1e293b" }}>
+                      <input
+                        type="checkbox"
+                        checked={!!convertForm.featureOverrides?.guardian_portal}
+                        onChange={(e) =>
+                          setConvertForm((prev) => ({
+                            ...prev,
+                            featureOverrides: {
+                              ...prev.featureOverrides,
+                              guardian_portal: e.target.checked,
+                            },
+                          }))
+                        }
+                        style={{ marginTop: "2px", accentColor: "#0f766e", width: "15px", height: "15px" }}
+                      />
+                      <div>
+                        <strong>👨‍👩‍👧 بوابة وتطبيق أولياء الأمور (Guardian Portal)</strong>
+                        <div style={{ fontSize: "11px", color: "#64748b" }}>متابعة الحضور، التقييمات، والأقساط لأولياء الأمور.</div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
               </div>
 
               {/* Fieldset 2: Branch Setup */}
@@ -2015,11 +2142,12 @@ export interface PlatformConsoleModalsContainerProps {
   setConvertLeadModal: (val: PlatformDemoLead | null) => void;
   converting: boolean;
   convertSuccess: { academy: { id: string; name: string; slug: string }; owner: { displayName: string; phone: string; tempPass: string } } | null;
-  convertForm: { name: string; slug: string; planCode: string; branchName: string; branchCode: string; ownerName: string; ownerPhone: string; ownerEmail: string; ownerPassword: string };
-  setConvertForm: React.Dispatch<React.SetStateAction<{ name: string; slug: string; planCode: string; branchName: string; branchCode: string; ownerName: string; ownerPhone: string; ownerEmail: string; ownerPassword: string }>>;
+  convertForm: { name: string; slug: string; planCode: string; branchName: string; branchCode: string; ownerName: string; ownerPhone: string; ownerEmail: string; ownerPassword: string; featureOverrides?: Record<string, boolean> };
+  setConvertForm: React.Dispatch<React.SetStateAction<{ name: string; slug: string; planCode: string; branchName: string; branchCode: string; ownerName: string; ownerPhone: string; ownerEmail: string; ownerPassword: string; featureOverrides?: Record<string, boolean> }>>;
   handleRegeneratePassword: () => void;
   handleConvertLeadSubmit: (e: React.FormEvent) => void;
   handleSendCredentialsWhatsApp: () => void;
+  onOpenFeaturesModal?: (academy: PlatformAcademy) => void;
 }
 
 export function PlatformConsoleModals(props: PlatformConsoleModalsContainerProps) {
@@ -2035,6 +2163,7 @@ export function PlatformConsoleModals(props: PlatformConsoleModalsContainerProps
         planUpgradeReason={props.planUpgradeReason}
         setPlanUpgradeReason={props.setPlanUpgradeReason}
         onSave={props.handleSavePlanUpgrade}
+        onOpenFeaturesModal={props.onOpenFeaturesModal}
       />
 
       <OwnerPasswordModal

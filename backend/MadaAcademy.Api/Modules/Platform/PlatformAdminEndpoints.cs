@@ -714,6 +714,7 @@ public static class PlatformAdminEndpoints
         var owner = ownerMembership.UserAccount;
         var tempPassword = GenerateTempPassword();
         owner.PasswordHash = passwords.Hash(tempPassword);
+        owner.MustChangePassword = true;
         owner.FailedPasswordAttempts = 0;
         owner.PasswordLockedUntil = null;
         if (owner.Status == "INVITED") owner.Status = "ACTIVE";
@@ -928,6 +929,7 @@ public static class PlatformAdminEndpoints
             DisplayName = request.OwnerName.Trim(),
             AccountType = "staff",
             PasswordHash = passwords.Hash(request.OwnerPassword),
+            MustChangePassword = true,
             Status = "ACTIVE"
         };
         var membership = new Membership

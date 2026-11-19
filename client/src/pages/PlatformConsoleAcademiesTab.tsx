@@ -180,11 +180,11 @@ export function PlatformConsoleAcademiesTab({
                     </button>
                     <button
                       type="button"
-                      style={{ color: "#4f46e5", borderColor: "#c7d2fe", background: "#eef2ff" }}
+                      style={{ color: "#0f766e", borderColor: "#99f6e4", background: "#f0fdfa", fontWeight: 700 }}
                       onClick={() => onOpenFeaturesModal(row)}
-                      title="إدارة ميزات الأكاديمية والـ Feature Flags والتخصيص"
+                      title="إدارة ميزات الأكاديمية والـ Feature Flags (الحضانات، التلعيب، بوابة الأسرة، المالية)"
                     >
-                      ميزات الأكاديمية
+                      ✨ ميزات الأكاديمية
                     </button>
                     {row.status === "TRIAL" && (
                       <button

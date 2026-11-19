@@ -36,7 +36,12 @@ export default function Login() {
     event.preventDefault();
     if (!phone.trim() || !password) { setError("أدخل رقم الهاتف وكلمة المرور."); return; }
     setBusy(true); setError(null);
-    try { await login(phone.trim(), password, accountType); }
+    try {
+      if (password.startsWith("Mada#")) {
+        localStorage.setItem("mada_must_change_password", "true");
+      }
+      await login(phone.trim(), password, accountType);
+    }
     catch (cause) { setError(cause instanceof Error ? cause.message : authError ?? "رقم الهاتف أو كلمة المرور غير صحيحة."); }
     finally { setBusy(false); }
   };

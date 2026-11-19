@@ -171,7 +171,18 @@ export default function PlatformConsoleLive() {
 
   // Convert Lead to Live Academy Modal State
   const [convertLeadModal, setConvertLeadModal] = useState<PlatformDemoLead | null>(null);
-  const [convertForm, setConvertForm] = useState({
+  const [convertForm, setConvertForm] = useState<{
+    name: string;
+    slug: string;
+    planCode: string;
+    branchName: string;
+    branchCode: string;
+    ownerName: string;
+    ownerPhone: string;
+    ownerEmail: string;
+    ownerPassword: string;
+    featureOverrides?: Record<string, boolean>;
+  }>({
     name: "",
     slug: "",
     planCode: "GROWTH",
@@ -181,6 +192,11 @@ export default function PlatformConsoleLive() {
     ownerPhone: "",
     ownerEmail: "",
     ownerPassword: "",
+    featureOverrides: {
+      nursery_early_childhood: false,
+      gamification_enabled: false,
+      guardian_portal: false,
+    },
   });
   const [converting, setConverting] = useState(false);
   const [convertSuccess, setConvertSuccess] = useState<{
@@ -208,6 +224,11 @@ export default function PlatformConsoleLive() {
       ownerPhone: cleanPhone.startsWith("01") ? cleanPhone : lead.phone,
       ownerEmail: lead.email,
       ownerPassword: generatedPassword,
+      featureOverrides: {
+        nursery_early_childhood: false,
+        gamification_enabled: false,
+        guardian_portal: false,
+      },
     });
   };
 
@@ -232,6 +253,18 @@ export default function PlatformConsoleLive() {
         ownerEmail: convertForm.ownerEmail.trim(),
         ownerPassword: convertForm.ownerPassword,
       });
+
+      if (convertForm.featureOverrides && Object.keys(convertForm.featureOverrides).length > 0) {
+        try {
+          await apiClient.updateAcademyFeatures(res.academy.id, {
+            standardOverrides: convertForm.featureOverrides,
+            reason: "Initial features provisioned during academy onboarding",
+          });
+        } catch (featErr) {
+          console.warn("Failed to set initial feature overrides:", featErr);
+        }
+      }
+
       setLeads((prev) => prev.map((l) => (l.id === convertLeadModal.id ? res.lead : l)));
       setConvertSuccess({
         academy: { id: res.academy.id, name: res.academy.name, slug: res.academy.slug },
@@ -1370,6 +1403,7 @@ export default function PlatformConsoleLive() {
         handleRegeneratePassword={handleRegeneratePassword}
         handleConvertLeadSubmit={handleConvertLeadSubmit}
         handleSendCredentialsWhatsApp={handleSendCredentialsWhatsApp}
+        onOpenFeaturesModal={(academy) => setFeaturesModalAcademy(academy)}
       />
       {featuresModalAcademy && (
         <AcademyFeaturesModal

@@ -8,6 +8,9 @@ import {
   isValidElement,
 } from "react";
 import { Menu } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { ForceChangePasswordModal } from "@/components/auth/ForceChangePasswordModal";
+import { AcademyWelcomeOnboardingModal } from "@/components/onboarding/AcademyWelcomeOnboardingModal";
 import {
   RoleScopeProvider,
   type RoleCode,
@@ -69,6 +72,49 @@ export default function RoleDashboardShell({
   const [internalMobileNavOpen, setInternalMobileNavOpen] = useState(false);
   const isMobileNavOpen = mobileOpen !== undefined ? mobileOpen : internalMobileNavOpen;
   const roleDefinition = getRoleDefinition(roleCode);
+
+  const { me, reload } = useAuth();
+  const [mustChangePassword, setMustChangePassword] = useState(() => {
+    try {
+      return Boolean(
+        me?.user?.mustChangePassword ||
+        localStorage.getItem("mada_must_change_password") === "true"
+      );
+    } catch {
+      return false;
+    }
+  });
+
+  const isNewAcademy = Boolean(
+    me?.academy?.id &&
+    me?.tenantId !== "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+  );
+
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    try {
+      if (!isNewAcademy) return false;
+      return !localStorage.getItem(`mada_onboarded_${me?.tenantId}`);
+    } catch {
+      return false;
+    }
+  });
+
+  const handlePasswordChanged = async () => {
+    setMustChangePassword(false);
+    await reload?.();
+    if (isNewAcademy && !localStorage.getItem(`mada_onboarded_${me?.tenantId}`)) {
+      setShowOnboarding(true);
+    }
+  };
+
+  const handleCloseOnboarding = () => {
+    if (me?.tenantId) {
+      try {
+        localStorage.setItem(`mada_onboarded_${me.tenantId}`, "true");
+      } catch {}
+    }
+    setShowOnboarding(false);
+  };
 
   const handleOpenMobile = () => {
     setInternalMobileNavOpen(true);
@@ -177,6 +223,16 @@ export default function RoleDashboardShell({
             </>
           )}
           {children}
+          <ForceChangePasswordModal
+            isOpen={mustChangePassword}
+            userPhone={me?.user?.phone}
+            onSuccess={handlePasswordChanged}
+          />
+          <AcademyWelcomeOnboardingModal
+            isOpen={!mustChangePassword && showOnboarding}
+            academyName={me?.academy?.name || tenantName || "أكاديميتك"}
+            onClose={handleCloseOnboarding}
+          />
         </div>
       </RoleShellContext.Provider>
     </RoleScopeProvider>
