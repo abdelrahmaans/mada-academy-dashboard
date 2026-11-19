@@ -19,6 +19,7 @@ import {
   PanelTitle,
   isBranchRole,
   roleLabel,
+  PERMISSION_ARABIC_LABELS,
 } from "@/pages/AcademyRolesTypes";
 
 export function AcademyRolesMembersTab({
@@ -229,7 +230,7 @@ export function AcademyRolesMembersTab({
                     <option value="">اختر الفرع</option>
                     {branches.map((b) => (
                       <option key={b.id} value={b.id}>
-                        {b.name} ({b.code})
+                        {b.name}
                       </option>
                     ))}
                   </select>
@@ -288,8 +289,8 @@ export function AcademyRolesMembersTab({
                   roles.find((r) => r.code === selectedMemberRecord.roleCode)?.permissions ??
                   []
                 ).map((perm) => (
-                  <span key={perm} className="perm-chip">
-                    {perm}
+                  <span key={perm} className="perm-chip" title={perm}>
+                    {PERMISSION_ARABIC_LABELS[perm] ?? perm}
                   </span>
                 ))}
               </div>

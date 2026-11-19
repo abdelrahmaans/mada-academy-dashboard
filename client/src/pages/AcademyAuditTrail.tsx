@@ -204,13 +204,12 @@ export default function AcademyAuditTrail() {
                   <th>العنصر المستهدف</th>
                   <th>السبب والملاحظات</th>
                   <th>التاريخ والتوقيت</th>
-                  <th>التفاصيل</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={5}>
                       <div className="audit-empty-state">
                         <RefreshCw size={24} className="animate-spin text-teal-600" />
                         <span>جارٍ استرجاع سجلات التدقيق والحوكمة…</span>
@@ -219,7 +218,7 @@ export default function AcademyAuditTrail() {
                   </tr>
                 ) : filteredEvents.length === 0 ? (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={5}>
                       <div className="audit-empty-state">
                         <Activity size={32} />
                         <strong>لا توجد أحداث مسجلة تطابق هذه التصفية</strong>
@@ -257,17 +256,6 @@ export default function AcademyAuditTrail() {
                             <Clock size={13} />
                             {formatArabicDate(ev.createdAt)}
                           </div>
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            className="audit-btn"
-                            onClick={() => setSelectedEvent(ev)}
-                            title="عرض السجل الكامل"
-                          >
-                            <Eye size={13} />
-                            عرض
-                          </button>
                         </td>
                       </tr>
                     );

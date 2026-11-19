@@ -5,6 +5,7 @@ import {
   useState,
 } from "react";
 import {
+  Baby,
   Banknote,
   BarChart3,
   BookOpen,
@@ -70,6 +71,7 @@ const ICON_BY_PATH: Record<string, ComponentType<LucideProps>> = {
   "/academy/roles": KeyRound,
   "/academy-owner/pnl-retention": TrendingUp,
   "/academy/audit-trail": ShieldCheck,
+  "/nursery-desk": Baby,
   "/competitions": Trophy,
   "/platform-console": ShieldCheck,
   "/platform/academies/new": Building2,

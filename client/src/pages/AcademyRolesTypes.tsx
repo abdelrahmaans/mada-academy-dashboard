@@ -59,6 +59,40 @@ export function Metric({
   );
 }
 
+export const PERMISSION_ARABIC_LABELS: Record<string, string> = {
+  "students.read": "عرض الطلاب والتسجيلات",
+  "students.create": "إضافة وتعديل الطلاب",
+  "sessions.read": "عرض جميع جلسات الفرع",
+  "sessions.create": "إنشاء وجدولة الجلسات",
+  "sessions.assigned.read": "عرض الجلسات المسندة فقط",
+  "attendance.read": "عرض كشوف الحضور",
+  "attendance.write": "تسجيل الحضور والغياب",
+  "evaluations.write": "رصد التقييمات",
+  "evaluations.review": "مراجعة واعتماد التقييمات",
+  "finance.read": "الاطلاع المالي العام",
+  "finance.summary.read": "ملخص مالي سريع",
+  "invoices.read": "عرض الفواتير والمستحقات",
+  "invoices.create": "إنشاء الفواتير والخصومات",
+  "payments.create": "تسجيل سندات القبض",
+  "payments.evidence.read": "فحص إيصالات الدفع",
+  "payments.evidence.write": "تأكيد إيصالات الدفع",
+  "finance.expenses.read": "عرض المصروفات التشغيلية",
+  "finance.expenses.write": "تسجيل طلب صرف",
+  "finance.expenses.approve": "اعتماد وصرف المصروفات",
+  "marketing.read": "عرض الليدز والحملات",
+  "marketing.write": "إدارة التسويق والمحتوى",
+  "academy.read": "عرض بيانات الأكاديمية",
+  "academy.update": "تعديل إعدادات الأكاديمية",
+  "branch.read": "عرض الفروع",
+  "branch.create": "إنشاء الفروع",
+  "classrooms.manage": "إدارة القاعات والمقاعد",
+  "staff.read": "عرض فريق العمل",
+  "staff.invite": "إضافة أعضاء الفريق",
+  "roles.read": "عرض الصلاحيات",
+  "roles.manage": "تخصيص الصلاحيات",
+  "reports.read": "التقارير التنفيذية",
+};
+
 export function Empty({ text }: { text: string }) {
   return (
     <div className="academy-roles-empty">
