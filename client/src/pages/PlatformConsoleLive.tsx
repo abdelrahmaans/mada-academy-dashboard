@@ -383,6 +383,42 @@ export default function PlatformConsoleLive() {
     }
   };
 
+  const handleDeleteAcademy = async (academy: PlatformAcademy) => {
+    if (academy.id === "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa") {
+      toast.error("لا يمكن حذف الأكاديمية النموذجية الأساسية للمنصة.");
+      return;
+    }
+    const confirmed = window.confirm(
+      `هل أنت متأكد من حذف أكاديمية "${academy.name}" وكافة سجلاتها وفروعها ومستخدميها نهائياً من قاعدة البيانات؟ لا يمكن التراجع عن هذا الإجراء.`
+    );
+    if (!confirmed) return;
+
+    try {
+      await apiClient.deletePlatformAcademy(academy.id);
+      toast.success(`تم حذف أكاديمية "${academy.name}" نهائياً من المنصة.`);
+      setAcademies((prev) => prev.filter((a) => a.id !== academy.id));
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "تعذر حذف الأكاديمية.");
+    }
+  };
+
+  const handleCleanupTestAcademies = async () => {
+    const confirmed = window.confirm(
+      "هل أنت متأكد من رغبتك في حذف جميع الأكاديميات التجريبية الإضافية؟ سيتم الإبقاء على الأكاديمية النموذجية الأساسية فقط."
+    );
+    if (!confirmed) return;
+
+    try {
+      const res = await apiClient.cleanupTestAcademies();
+      toast.success(`تم مسح ${res.deletedCount} أكاديمية تجريبية بنجاح! 🧹`);
+      setAcademies((prev) => prev.filter((a) => a.id === "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "تعذر تنظيف الأكاديميات التجريبية.");
+    }
+  };
+
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
       const matchesFilter = leadFilter === "ALL" || lead.status === leadFilter;
@@ -1162,6 +1198,8 @@ export default function PlatformConsoleLive() {
               onRequestTenantStatusChange={(academy) => requestTenantStatusChange(academy)}
               onResetOwnerPassword={(academy) => handleResetOwnerPassword(academy)}
               onEmergencyImpersonation={() => toast.error("Super Access متوقف لحين إضافة تفويض خادمي وتدقيق غير قابل للتلاعب.")}
+              onDeleteAcademy={handleDeleteAcademy}
+              onCleanupTestAcademies={handleCleanupTestAcademies}
               ownerResetEnabled={true}
               emergencyAccessEnabled={false}
               paymentRemindersEnabled={false}

@@ -778,7 +778,16 @@ type TokenResponse = {
   expiresIn: number;
 };
 
-const isLocalHost = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+const isLocalHost = typeof window !== "undefined" && (
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1" ||
+  window.location.hostname.startsWith("192.168.") ||
+  window.location.hostname.startsWith("10.") ||
+  window.location.hostname.startsWith("172.") ||
+  window.location.hostname.endsWith(".local") ||
+  window.location.port === "3000" ||
+  window.location.port === "5173"
+);
 const API_BASE = (
   isLocalHost
     ? "http://localhost:5000/api/v1"
@@ -989,6 +998,15 @@ export const apiClient = {
   platformOverview: () => request<PlatformOverview>("/platform/overview"),
   platformAcademies: () => request<PlatformAcademiesResponse>("/platform/academies"),
   platformRoles: () => request<{ items: PlatformRole[] }>("/platform/roles"),
+  deletePlatformAcademy: (tenantId: string, reason?: string) =>
+    request<{ success: boolean; deletedTenantId: string }>(`/platform/academies/${tenantId}`, {
+      method: "DELETE",
+      body: JSON.stringify({ reason: reason || "Manual deletion by Platform Admin" }),
+    }),
+  cleanupTestAcademies: () =>
+    request<{ success: boolean; deletedCount: number }>("/platform/academies/cleanup-test-academies", {
+      method: "POST",
+    }),
   changePlatformAcademyStatus: (tenantId: string, status: "ACTIVE" | "TRIAL" | "SETUP" | "PAUSED", reason: string) => request<{ id: string; status: string; revokedSessions: number }>(`/platform/academies/${tenantId}/status`, { method: "PATCH", body: JSON.stringify({ status, reason }) }),
   changePlatformAcademyPlan: (tenantId: string, planCode: "starter" | "growth" | "enterprise", branchesLimit: number, reason: string) =>
     request<{ tenantId: string; planCode: string; allowedBranches: number }>(`/platform/academies/${tenantId}/plan`, {

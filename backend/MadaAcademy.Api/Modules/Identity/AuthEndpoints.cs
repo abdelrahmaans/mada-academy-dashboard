@@ -40,8 +40,8 @@ public static class AuthEndpoints
             if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 6)
                 return Results.BadRequest(new { error = new { code = "INVALID_PASSWORD", message = "كلمة المرور يجب ألا تقل عن 6 خانات." } });
 
-            var user = await db.UserAccounts.FindAsync([userId], cancellationToken);
-            if (user is null) return Results.NotFound();
+            var user = await db.UserAccounts.SingleOrDefaultAsync(x => x.Id == userId, cancellationToken);
+            if (user is null) return Results.NotFound(new { error = new { code = "USER_NOT_FOUND", message = "المستخدم غير موجود." } });
 
             user.PasswordHash = passwords.Hash(request.NewPassword);
             user.MustChangePassword = false;

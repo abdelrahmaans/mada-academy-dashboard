@@ -18,6 +18,8 @@ public static class PlatformAdminEndpoints
         api.MapGet("/overview", GetOverviewAsync);
         api.MapGet("/academies", GetAcademiesAsync);
         api.MapGet("/roles", () => GetPlatformRoles());
+        api.MapDelete("/academies/{tenantId:guid}", DeleteTenantAsync);
+        api.MapPost("/academies/cleanup-test-academies", CleanupTestAcademiesAsync);
         api.MapPatch("/academies/{tenantId:guid}/status", ChangeTenantStatusAsync);
         api.MapPatch("/academies/{tenantId:guid}/plan", ChangeTenantPlanAsync);
         api.MapPost("/academies/{tenantId:guid}/trial/extend", ExtendTenantTrialAsync);
@@ -336,6 +338,96 @@ public static class PlatformAdminEndpoints
         });
         await db.SaveChangesAsync(cancellationToken);
         return Results.Ok(new { data = new { tenantId = tenant.Id, planCode = tenant.PlanCode, allowedBranches } });
+    }
+
+    private static readonly Guid CoreDemoTenantId = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+
+    private static async Task DeleteTenantInternalAsync(MadaDbContext db, Guid tenantId, CancellationToken ct)
+    {
+        if (tenantId == CoreDemoTenantId) return;
+
+        var tenant = await db.Tenants.SingleOrDefaultAsync(x => x.Id == tenantId, ct);
+        if (tenant is null) return;
+
+        // 1. Remove related memberships and non-platform user accounts
+        var memberships = await db.Memberships.Where(x => x.TenantId == tenantId).ToListAsync(ct);
+        var userIds = memberships.Select(m => m.UserAccountId).Distinct().ToList();
+        var usersToDelete = await db.UserAccounts
+            .Where(u => userIds.Contains(u.Id) && u.AccountType != "platform" && !db.Memberships.Any(m => m.UserAccountId == u.Id && m.TenantId != tenantId))
+            .ToListAsync(ct);
+
+        db.Memberships.RemoveRange(memberships);
+        db.UserAccounts.RemoveRange(usersToDelete);
+
+        // 2. Remove students, enrollments, attendance
+        var students = await db.Students.Where(x => x.TenantId == tenantId).ToListAsync(ct);
+        var studentIds = students.Select(s => s.Id).ToList();
+        var enrollments = await db.StudentEnrollments.Where(x => studentIds.Contains(x.StudentId)).ToListAsync(ct);
+        var attendances = await db.SessionAttendances.Where(x => studentIds.Contains(x.StudentId)).ToListAsync(ct);
+        db.SessionAttendances.RemoveRange(attendances);
+        db.StudentEnrollments.RemoveRange(enrollments);
+        db.Students.RemoveRange(students);
+
+        // 3. Remove sessions, offerings, templates, classrooms, kits, branches
+        var sessions = await db.AcademySessions.Where(x => x.TenantId == tenantId).ToListAsync(ct);
+        var offerings = await db.CourseOfferings.Where(x => x.TenantId == tenantId).ToListAsync(ct);
+        var templates = await db.CourseTemplates.Where(x => x.TenantId == tenantId).ToListAsync(ct);
+        var branches = await db.Branches.Where(x => x.TenantId == tenantId).ToListAsync(ct);
+        var branchIds = branches.Select(b => b.Id).ToList();
+        var classrooms = await db.Classrooms.Where(x => branchIds.Contains(x.BranchId)).ToListAsync(ct);
+        var kits = await db.Kits.Where(x => x.TenantId == tenantId).ToListAsync(ct);
+
+        db.AcademySessions.RemoveRange(sessions);
+        db.CourseOfferings.RemoveRange(offerings);
+        db.CourseTemplates.RemoveRange(templates);
+        db.Classrooms.RemoveRange(classrooms);
+        db.Kits.RemoveRange(kits);
+        db.Branches.RemoveRange(branches);
+
+        // 4. Remove finances, payments, overrides, tickets
+        var expenses = await db.Expenses.Where(x => x.TenantId == tenantId).ToListAsync(ct);
+        var payments = await db.PlatformSubscriptionPayments.Where(x => x.TenantId == tenantId).ToListAsync(ct);
+        var overrides = await db.TenantRoleOverrides.Where(x => x.TenantId == tenantId).ToListAsync(ct);
+        var tickets = await db.PlatformSupportTickets.Where(x => x.TenantId == tenantId).ToListAsync(ct);
+        var auditEvents = await db.AuditEvents.Where(x => x.TenantId == tenantId).ToListAsync(ct);
+
+        db.Expenses.RemoveRange(expenses);
+        db.PlatformSubscriptionPayments.RemoveRange(payments);
+        db.TenantRoleOverrides.RemoveRange(overrides);
+        db.PlatformSupportTickets.RemoveRange(tickets);
+        db.AuditEvents.RemoveRange(auditEvents);
+
+        // 5. Remove tenant itself
+        db.Tenants.Remove(tenant);
+        await db.SaveChangesAsync(ct);
+    }
+
+    private static async Task<IResult> DeleteTenantAsync(Guid tenantId, ClaimsPrincipal principal, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        if (tenantId == CoreDemoTenantId)
+            return Results.BadRequest(new { error = new { code = "CANNOT_DELETE_CORE_DEMO", message = "لا يمكن حذف أكاديمية مدى النموذجية الأساسية." } });
+
+        var tenant = await db.Tenants.SingleOrDefaultAsync(x => x.Id == tenantId, cancellationToken);
+        if (tenant is null)
+            return Results.NotFound(new { error = new { code = "TENANT_NOT_FOUND", message = "الأكاديمية غير موجودة." } });
+
+        await DeleteTenantInternalAsync(db, tenantId, cancellationToken);
+        return Results.Ok(new { success = true, deletedTenantId = tenantId });
+    }
+
+    private static async Task<IResult> CleanupTestAcademiesAsync(ClaimsPrincipal principal, MadaDbContext db, CancellationToken cancellationToken)
+    {
+        var testTenants = await db.Tenants
+            .Where(t => t.Id != CoreDemoTenantId)
+            .Select(t => t.Id)
+            .ToListAsync(cancellationToken);
+
+        foreach (var id in testTenants)
+        {
+            await DeleteTenantInternalAsync(db, id, cancellationToken);
+        }
+
+        return Results.Ok(new { success = true, deletedCount = testTenants.Count });
     }
 
     private static async Task<IResult> GetAcademyFeaturesAsync(Guid tenantId, MadaDbContext db, CancellationToken cancellationToken)
