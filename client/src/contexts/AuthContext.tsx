@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { apiClient, clearTokens, type AuthMe } from "@/lib/apiClient";
+import { apiClient, clearTokens, featureFlags, type AuthMe } from "@/lib/apiClient";
 
 type AuthContextValue = {
   me: AuthMe | null;
@@ -26,7 +26,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setLoading(true);
     try {
-      setMe(await apiClient.me());
+      const userMe = await apiClient.me();
+      setMe(userMe);
+      if (userMe?.tenantId) {
+        try {
+          const featRes = await apiClient.getMyFeatures();
+          if (featRes?.features) {
+            featureFlags.setAllFeatures(featRes.features);
+          }
+        } catch {
+          // ignore non-blocking feature load errors
+        }
+      }
       setError(null);
     } catch (cause) {
       clearTokens();
@@ -49,7 +60,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       try {
         await apiClient.login(phone, password, accountType);
-        setMe(await apiClient.me());
+        const userMe = await apiClient.me();
+        setMe(userMe);
+        if (userMe?.tenantId) {
+          try {
+            const featRes = await apiClient.getMyFeatures();
+            if (featRes?.features) {
+              featureFlags.setAllFeatures(featRes.features);
+            }
+          } catch {
+            // ignore non-blocking feature load errors
+          }
+        }
         setError(null);
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : "بيانات الدخول غير صحيحة");

@@ -48,6 +48,7 @@ describe("role navigation scopes", () => {
       "/academy/branches",
       "/academy/roles",
       "/academy/audit-trail",
+      "/nursery-desk",
     ]);
   });
 
@@ -57,6 +58,7 @@ describe("role navigation scopes", () => {
       "/classes",
       "/schedule",
       "/students",
+      "/nursery-desk",
       "/team",
       "/competitions",
       "/approvals",
@@ -75,7 +77,7 @@ describe("role navigation scopes", () => {
       "/reports", "/instructor-desk", "/head-instructors", "/academic-programs", "/academy-owner",
       "/academy-owner/branches", "/academy-owner/tickets", "/academy-owner/reports", "/academy-owner/pnl-retention", "/executive-dashboard",
       "/platform-console", "/platform/academies/new", "/family-portal", "/student-portal", "/academy/branches", "/academy/classrooms",
-      "/academy/roles", "/academy/audit-trail", "/competitions",
+      "/academy/roles", "/academy/audit-trail", "/competitions", "/nursery-desk",
     ]);
 
     for (const definition of Object.values(ROLE_DEFINITIONS)) {

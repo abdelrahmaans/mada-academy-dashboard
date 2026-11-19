@@ -614,12 +614,18 @@ function StudentPage() {
               <span className="student-stat-label">تسجيلات الشهر</span>
               <div>
                 <strong>
-                  {String(Math.max(14, monthCount)).padStart(2, "0")}
+                  {String(isDemoAcademy ? Math.max(14, monthCount) : monthCount).padStart(2, "0")}
                 </strong>
                 <span>تسجيل جديد</span>
               </div>
               <small>
-                <ArrowUpLeft size={13} /> مقارنة بالشهر الماضي
+                {monthCount > 0 || isDemoAcademy ? (
+                  <>
+                    <ArrowUpLeft size={13} /> مقارنة بالشهر الماضي
+                  </>
+                ) : (
+                  <span className="stat-neutral">لا توجد تسجيلات هذا الشهر</span>
+                )}
               </small>
             </article>
             <article className="student-stat">
@@ -980,9 +986,9 @@ function StudentPage() {
                           <span className="empty-search-icon">
                             <Search size={20} />
                           </span>
-                          <strong>ملقيناش نتائج مطابقة</strong>
+                          <strong>لم نجد أي نتائج مطابقة</strong>
                           <small>
-                            جرّب تغير البحث أو الفلاتر عشان تظهر سجلات تانية.
+                            جرّب تعديل مصطلح البحث أو الفلاتر لعرض السجلات.
                           </small>
                           <button className="text-link" onClick={clearFilters}>
                             مسح الفلاتر <X size={13} />

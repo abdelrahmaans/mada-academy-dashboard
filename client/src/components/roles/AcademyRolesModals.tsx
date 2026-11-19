@@ -114,7 +114,7 @@ export function AddMemberModal({
               .filter((r) => r.assignableByAcademyOwner)
               .map((r) => (
                 <option key={r.code} value={r.code}>
-                  {r.label} ({r.code})
+                  {r.label}
                 </option>
               ))}
           </select>
@@ -131,7 +131,7 @@ export function AddMemberModal({
               <option value="">اختر الفرع</option>
               {branches.map((b) => (
                 <option key={b.id} value={b.id}>
-                  {b.name} ({b.code})
+                  {b.name}
                 </option>
               ))}
             </select>

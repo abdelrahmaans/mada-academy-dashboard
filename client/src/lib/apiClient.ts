@@ -2821,6 +2821,13 @@ export const featureFlags = {
       // ignore
     }
   },
+  setAllFeatures: (features: Record<string, boolean>) => {
+    try {
+      localStorage.setItem(FEATURES_STORAGE_KEY, JSON.stringify(features));
+    } catch {
+      // ignore
+    }
+  },
   getAllFeatures: (): Record<string, boolean> => {
     try {
       const raw = localStorage.getItem(FEATURES_STORAGE_KEY);

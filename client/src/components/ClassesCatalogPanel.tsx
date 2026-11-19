@@ -219,7 +219,7 @@ export default function ClassesCatalogPanel({
                 <div className="course-list-heading">
                   <span>{filteredCourses.length} كورس في النتائج</span>
                   <span>
-                    اختار كورس عشان تشوف التفاصيل أو جهّز مجموعة جديدة
+                    اختر دورة تدريبية لعرض التفاصيل أو جهّز مجموعة جديدة
                   </span>
                 </div>
                 {filteredCourses.length ? (

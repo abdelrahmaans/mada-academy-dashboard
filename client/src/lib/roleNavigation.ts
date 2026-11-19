@@ -1,3 +1,4 @@
+import { featureFlags } from "@/lib/apiClient";
 export type {
   RoleCode,
   RoleIdentityKind,
@@ -15,6 +16,7 @@ export type RoleNavigationItem = {
   purpose: string;
   permission?: string;
   anyOfPermissions?: readonly string[] | string[];
+  featureKey?: string;
 };
 
 export type RoleDefinition = {
@@ -60,6 +62,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
       { path: "/academy/branches", label: "إدارة شبكة الفروع وتعيين المديرين", purpose: "branch lifecycle and manager delegation", anyOfPermissions: ["branch.read", "branch.create"] },
       { path: "/academy/roles", label: "حوكمة الأدوار ومصفوفة الصلاحيات", purpose: "members, roles, permissions", anyOfPermissions: ["roles.read", "roles.manage"] },
       { path: "/academy/audit-trail", label: "سجل الرقابة والعمليات المعتمدة", purpose: "academy audit logs and event tracing", permission: "reports.read" },
+      { path: "/nursery-desk", label: "مكتب الحضانات والطفولة المبكرة", purpose: "nursery desk and early childhood cohorts", permission: "academy.read", featureKey: "nursery_early_childhood" },
     ],
   },
   R02: {
@@ -75,6 +78,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
       { path: "/classes", label: "إدارة المجموعات وتجهيز المعامل والحقائب", purpose: "branch groups, courses, rooms, kits readiness, and creating cohorts", permission: "sessions.read" },
       { path: "/schedule", label: "الجدول العام وتوزيع القاعات", purpose: "branch schedule and conflict resolution", permission: "sessions.read" },
       { path: "/students", label: "شؤون واشتراكات طلاب الفرع", purpose: "branch student records, freezes, and waitlists", anyOfPermissions: ["students.read", "students.create"] },
+      { path: "/nursery-desk", label: "مكتب متابعة الحضانة والطفولة المبكرة", purpose: "nursery daily desk and cohorts", permission: "branch.read", featureKey: "nursery_early_childhood" },
       { path: "/team", label: "إدارة الكادر التدريبي والتشغيلي", purpose: "branch staff, instructors, and status", permission: "branch.read" },
       { path: "/competitions", label: "بطولات وتراكات الروبوتكس وأرشيف المشاريع", purpose: "branch competitions, tracks, teams and kits", permission: "branch.read" },
       { path: "/approvals", label: "مركز قرارات الاعتماد والمصروفات", purpose: "substitutions, expenses, and freeze decisions", anyOfPermissions: ["sessions.create", "finance.expenses.approve"] },
@@ -189,6 +193,9 @@ export function isNavigationItemAllowed(
   item: RoleNavigationItem,
   permissions?: readonly string[] | string[]
 ): boolean {
+  if (item.featureKey && !featureFlags.isFeatureEnabled(item.featureKey)) {
+    return false;
+  }
   if (!permissions) return true;
   if (item.permission && !permissions.includes(item.permission)) {
     return false;
