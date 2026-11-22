@@ -30,7 +30,7 @@ function translateNode(node: Node, lang: Language) {
     if (!text || !text.trim()) return;
 
     if (lang === "en") {
-      let current = originalTextMap.get(node) || text;
+      const current = originalTextMap.get(node) || text;
       if (!originalTextMap.has(node)) {
         originalTextMap.set(node, text);
       }

@@ -31,7 +31,7 @@ const HUNDREDS = [
 
 function convertThreeDigits(num: number): string {
   if (num === 0) return "";
-  let parts: string[] = [];
+  const parts: string[] = [];
 
   const h = Math.floor(num / 100);
   const remainder = num % 100;
@@ -67,7 +67,7 @@ export function tafqeet(amount: number): string {
   const pounds = Math.floor(absAmount);
   const piastres = Math.round((absAmount - pounds) * 100);
 
-  let parts: string[] = [];
+  const parts: string[] = [];
 
   // Millions
   const millions = Math.floor(pounds / 1000000);
