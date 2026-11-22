@@ -1,7 +1,7 @@
 const API_BASE = (import.meta.env.VITE_API_URL || "https://academy-dashboard.runasp.net/api/v1").replace(/\/$/, "");
-const rawDashboard = import.meta.env.VITE_DASHBOARD_URL || "https://mada-dashboard-abdelrahmans5s-projects.vercel.app";
+const rawDashboard = import.meta.env.VITE_DASHBOARD_URL || "https://mada-software.vercel.app/login";
 export const DASHBOARD_URL = rawDashboard.includes("/login") ? rawDashboard : `${rawDashboard.replace(/\/$/, "")}/login`;
-export const DASHBOARD_LIVE_DEMO = import.meta.env.VITE_DASHBOARD_LIVE_DEMO || `${rawDashboard.replace(/\/$/, "")}/workspace`;
+export const DASHBOARD_LIVE_DEMO = import.meta.env.VITE_DASHBOARD_LIVE_DEMO || rawDashboard.replace(/\/login$/, "/workspace");
 
 type PublicLeadInput = {
   kind: "demo" | "registration";

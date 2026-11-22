@@ -1,107 +1,76 @@
-import React, { useState } from 'react';
-import { Header } from './components/Header';
-import { Hero } from './components/Hero';
-import { TrustMetrics } from './components/TrustMetrics';
-import { SystemPreview } from './components/SystemPreview';
-import { Capabilities } from './components/Capabilities';
-import { PricingSection } from './components/PricingSection';
-import { Audience } from './components/Audience';
-import { Workflow } from './components/Workflow';
-import { FaqSection } from './components/FaqSection';
-import { DemoForm } from './components/DemoForm';
-import { Footer } from './components/Footer';
-import { AdminLoginModal } from './components/AdminLoginModal';
+import { FormEvent, useMemo, useState } from "react";
+import { ArrowUpRight, Check, ChevronDown, Globe2, LockKeyhole, Menu, Minus, Play, ShieldCheck, Sparkles, X, Zap } from "lucide-react";
+import { submitPublicLead, DASHBOARD_URL } from "./lib/publicApi";
+import { useI18n } from "./i18n";
+
+function scrollToId(id: string) { document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }); }
 
 export default function Home() {
-  const [adminModalOpen, setAdminModalOpen] = useState(false);
+  const { locale, copy, toggleLocale } = useI18n();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [activeRole, setActiveRole] = useState(0);
+  const [activeFaq, setActiveFaq] = useState(0);
+  const [activeView, setActiveView] = useState("overview");
+  const [branch, setBranch] = useState(0);
+  const [formState, setFormState] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [isAnnual, setIsAnnual] = useState(true);
+  const role = copy.roles.items[activeRole];
+  const selectedBranch = copy.preview.branchNames[branch];
+  const branchStats = useMemo(() => branch === 0 ? { students: "555", attendance: "86%", revenue: "$302,100" } : branch === 1 ? { students: "248", attendance: "86%", revenue: "$128,500" } : branch === 2 ? { students: "186", attendance: "91%", revenue: "$101,200" } : { students: "121", attendance: "81%", revenue: "$72,400" }, [branch]);
+  const closeMobile = () => setMobileOpen(false);
+  const go = (id: string) => { closeMobile(); scrollToId(id); };
 
-  const scrollToDemo = () => {
-    const el = document.getElementById('demo-request');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const name = String(form.get("name") || "").trim();
+    const academyName = String(form.get("academyName") || "").trim();
+    const email = String(form.get("email") || "").trim();
+    const phone = String(form.get("phone") || "").trim();
+    if (!name || !academyName || !email.includes("@") || phone.length < 8) { setFormState("error"); return; }
+    setFormState("loading");
+    try {
+      await submitPublicLead({ kind: "demo", name, academyName, email, phone, branchCount: String(form.get("branchCount") || "1"), operationalNeed: String(form.get("need") || "") });
+      setFormState("success");
+    } catch { setFormState("error"); }
+  }
 
-  const scrollToPreview = () => {
-    const el = document.getElementById('preview');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
+  return <div className="min-h-screen bg-[#F8FAFC] text-[#14243A]">
+    <header className="sticky top-0 z-40 border-b border-[#14243A]/10 bg-white/90 backdrop-blur-xl">
+      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <a href="#top" className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#14243A] text-lg font-black text-white">م</div><div><div className="text-xl font-black tracking-tight">{copy.brand}</div><div className="hidden text-[10px] font-semibold text-[#14243A]/55 sm:block">{copy.brandTagline}</div></div></a>
+        <nav className="hidden items-center gap-7 text-sm font-semibold lg:flex">{[["overview", copy.nav.overview], ["roles", copy.nav.roles], ["features", copy.nav.features], ["pricing", copy.nav.pricing], ["faq", copy.nav.faq]].map(([id, label]) => <a key={id} href={`#${id}`} className="transition-colors hover:text-[#0D9488]">{label}</a>)}</nav>
+        <div className="hidden items-center gap-2 sm:flex"><button onClick={toggleLocale} className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-[#14243A]/70 transition hover:bg-[#F4F7FA] hover:text-[#14243A]"><Globe2 className="h-4 w-4" />{copy.switchTo}</button><a href={DASHBOARD_URL} className="inline-flex items-center gap-2 rounded-xl bg-[#0D9488] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#0B7D72]">{copy.headerCta}<ArrowUpRight className="h-4 w-4" /></a></div>
+        <button className="rounded-xl p-2 lg:hidden" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Menu">{mobileOpen ? <X /> : <Menu />}</button>
+      </div>
+      {mobileOpen && <div className="border-t border-[#14243A]/10 bg-white px-4 py-4 lg:hidden"><nav className="flex flex-col gap-1">{[["overview", copy.nav.overview], ["roles", copy.nav.roles], ["features", copy.nav.features], ["pricing", copy.nav.pricing], ["faq", copy.nav.faq]].map(([id, label]) => <a key={id} href={`#${id}`} onClick={closeMobile} className="rounded-xl px-3 py-3 font-semibold hover:bg-[#F4F7FA]">{label}</a>)}<div className="mt-2 flex gap-2 border-t border-[#14243A]/10 pt-3"><button onClick={toggleLocale} className="flex-1 rounded-xl border border-[#14243A]/15 py-3 text-sm font-bold">{copy.switchTo}</button><a href={DASHBOARD_URL} className="flex-1 rounded-xl bg-[#0D9488] py-3 text-center text-sm font-bold text-white">{copy.headerCta}</a></div></nav></div>}
+    </header>
 
-  return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#14243A] selection:bg-[#0D9488]/20 selection:text-[#0D9488]">
-      {/* 1. Header Navigation */}
-      <Header 
-        onOpenAdminLogin={() => setAdminModalOpen(true)}
-        onScrollToDemo={scrollToDemo}
-      />
+    <main id="top">
+      <section id="overview" className="relative overflow-hidden border-b border-[#14243A]/10 bg-gradient-to-b from-[#F4F7FA] via-white to-[#F4F7FA] py-16 sm:py-24 lg:py-28"><div className="pointer-events-none absolute -right-24 top-20 h-96 w-96 rounded-full bg-[#0D9488]/10 blur-3xl" /><div className="pointer-events-none absolute -left-24 bottom-0 h-96 w-96 rounded-full bg-[#14243A]/5 blur-3xl" /><div className="relative mx-auto grid max-w-7xl items-center gap-14 px-4 sm:px-6 lg:grid-cols-12 lg:px-8"><div className="lg:col-span-7"><div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#0D9488]/20 bg-[#0D9488]/10 px-3.5 py-1.5 text-xs font-black uppercase tracking-wider text-[#0D9488]"><span className="h-2 w-2 animate-pulse rounded-full bg-[#0D9488]" />{copy.hero.eyebrow}</div><h1 className="max-w-3xl text-4xl font-black leading-[1.08] tracking-tight sm:text-6xl lg:text-[70px]">{copy.hero.title}</h1><p className="mt-7 max-w-2xl text-base leading-relaxed text-[#14243A]/70 sm:text-xl">{copy.hero.body}</p><div className="mt-9 flex flex-wrap items-center gap-3"><button onClick={() => go("demo-request")} className="inline-flex items-center gap-2 rounded-xl bg-[#0D9488] px-6 py-3.5 text-sm font-black text-white shadow-lg shadow-[#0D9488]/20 transition hover:-translate-y-0.5 hover:bg-[#0B7D72]"><Play className="h-4 w-4 fill-current" />{copy.hero.primary}</button><button onClick={() => go("features")} className="inline-flex items-center gap-2 rounded-xl border border-[#14243A]/15 bg-white px-6 py-3.5 text-sm font-bold transition hover:border-[#0D9488]/40 hover:bg-[#F4F7FA]">{copy.hero.secondary}<ArrowUpRight className="h-4 w-4 text-[#0D9488]" /></button><a href={DASHBOARD_URL} className="inline-flex items-center gap-2 px-2 py-3 text-sm font-bold text-[#14243A]/70 hover:text-[#0D9488]">{copy.hero.login}<ArrowUpRight className="h-4 w-4" /></a></div><div className="mt-10 flex flex-wrap gap-x-7 gap-y-2 border-t border-[#14243A]/10 pt-6 text-xs font-semibold text-[#14243A]/65"><span className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#0D9488]" />{copy.hero.note}</span><span className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#0D9488]" />{copy.hero.note2}</span></div></div><div className="relative lg:col-span-5"><div className="rounded-[2rem] border border-[#14243A]/10 bg-white p-5 shadow-2xl sm:p-7"><div className="flex items-center justify-between border-b border-[#14243A]/10 pb-5"><div className="flex items-center gap-2 text-xs font-bold text-[#0D9488]"><span className="h-2 w-2 rounded-full bg-[#0D9488]" />{copy.hero.live}</div><div className="flex items-center gap-2 text-sm font-black"><span>{copy.hero.dashboard}</span><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#14243A]/5"><Sparkles className="h-4 w-4 text-[#0D9488]" /></div></div></div><div className="my-6 grid grid-cols-2 gap-3"><Stat label={copy.hero.students} value="2,482" trend="+12%" /><Stat label={copy.hero.collected} value="92%" trend="On track" accent /></div><div className="space-y-2"><div className="h-2 overflow-hidden rounded-full bg-[#14243A]/10"><div className="h-full w-3/4 rounded-full bg-gradient-to-r from-[#14243A] to-[#0D9488]" /></div><div className="flex justify-between text-[11px] text-[#14243A]/55"><span>{copy.hero.next}</span><span className="font-bold text-[#0D9488]">75%</span></div></div></div><div className="absolute -bottom-5 -left-3 rounded-2xl border border-[#14243A]/10 bg-white p-4 shadow-xl"><div className="text-[10px] text-[#14243A]/55">{copy.hero.next}</div><div className="text-sm font-black">{copy.hero.branch}</div></div></div></div></section>
 
-      {/* Main Page Flow */}
-      <main>
-        {/* 2. Hero Section */}
-        <Hero 
-          onScrollToDemo={scrollToDemo}
-          onScrollToPreview={scrollToPreview}
-        />
+      <section className="bg-[#14243A] py-10 text-white"><div className="mx-auto grid max-w-7xl grid-cols-2 gap-4 px-4 sm:px-6 lg:grid-cols-4 lg:gap-6 lg:px-8">{copy.metrics.map(([value, title, body]) => <div key={title} className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-6"><div className="font-mono text-3xl font-black text-teal-300 sm:text-4xl">{value}</div><div className="mt-2 text-sm font-bold">{title}</div><div className="mt-1 text-xs leading-relaxed text-white/55">{body}</div></div>)}</div></section>
 
-        {/* 3. Operational Trust & Metrics Bar (Global Benchmark Standards) */}
-        <TrustMetrics />
+      <section id="roles" className="border-b border-[#14243A]/10 bg-[#F4F7FA] py-20 lg:py-28"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><SectionIntro eyebrow={copy.roles.eyebrow} title={copy.roles.title} body={copy.roles.body} /><div className="mt-12 grid gap-8 lg:grid-cols-12"><div className="flex gap-2 overflow-x-auto pb-2 lg:col-span-4 lg:block lg:space-y-2">{copy.roles.items.map(([label], i) => <button key={label} onClick={() => setActiveRole(i)} className={`flex shrink-0 items-center gap-3 rounded-xl px-4 py-3 text-start text-sm font-bold transition lg:w-full ${i === activeRole ? "bg-[#14243A] text-white shadow-lg" : "bg-white text-[#14243A]/65 hover:text-[#14243A]"}`}><span className={`flex h-7 w-7 items-center justify-center rounded-lg text-xs ${i === activeRole ? "bg-[#0D9488] text-white" : "bg-[#14243A]/5"}`}>{i + 1}</span>{label}</button>)}</div><div className="rounded-3xl border border-[#14243A]/10 bg-white p-7 shadow-xl sm:p-10 lg:col-span-8"><div className="flex items-start gap-4"><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#0D9488]/10 text-[#0D9488]"><Zap className="h-6 w-6" /></div><div><div className="text-xs font-black uppercase tracking-wider text-[#0D9488]">{role[0]}</div><h3 className="mt-1 text-2xl font-black sm:text-3xl">{role[1]}</h3></div></div><p className="mt-7 max-w-2xl text-base leading-relaxed text-[#14243A]/70">{role[2]}</p><div className="mt-8 grid gap-3 sm:grid-cols-3"><MiniCard label={locale === "ar" ? "وضوح أعلى" : "More clarity"} /><MiniCard label={locale === "ar" ? "عمل أسرع" : "Faster work"} /><MiniCard label={locale === "ar" ? "نطاق آمن" : "Safer scope"} /></div></div></div></div></section>
 
-        {/* 4. Interactive Live System Simulation */}
-        <section id="preview" className="py-16 sm:py-20 bg-gradient-to-b from-[#F4F7FA] to-white border-b border-[#14243A]/10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-3 text-right">
-              <div>
-                <div className="flex items-center gap-2 text-xs font-bold text-[#0D9488] mb-2">
-                  <span className="w-2 h-2 rounded-full bg-[#0D9488] animate-ping" />
-                  <span>محاكاة تفاعلية حية بدون تسجيل</span>
-                  <span aria-hidden="true" className="text-[#14243A]/30">·</span>
-                  <span className="font-en text-[#14243A]/60">LIVE OS SIMULATION</span>
-                </div>
-                <h2 className="text-2xl sm:text-4xl font-black text-[#14243A]">
-                  واجهة التشغيل اليومية للأكاديمية
-                </h2>
-              </div>
-              <p className="text-xs sm:text-sm text-[#14243A]/60 font-medium max-w-md">
-                جرّب بنفسك التبديل بين الفروع، منظور الأدوار، وتحديث كشوف الحضور والتقييمات والسندات المالية
-              </p>
-            </div>
+      <section id="preview" className="border-b border-[#14243A]/10 bg-white py-20 lg:py-28"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><div className="mb-10 flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="mb-3 text-xs font-black uppercase tracking-wider text-[#0D9488]">{copy.preview.eyebrow}</p><h2 className="max-w-2xl text-3xl font-black tracking-tight sm:text-5xl">{copy.preview.title}</h2></div><p className="max-w-md text-sm leading-relaxed text-[#14243A]/65">{copy.preview.body}</p></div><div className="overflow-hidden rounded-3xl border border-[#14243A]/15 bg-white shadow-2xl"><div className="flex flex-wrap items-center justify-between gap-3 bg-[#0B1522] px-4 py-3 text-xs text-white"><div className="flex gap-1.5"><i className="h-3 w-3 rounded-full bg-rose-400/80" /><i className="h-3 w-3 rounded-full bg-amber-400/80" /><i className="h-3 w-3 rounded-full bg-emerald-400/80" /></div><div className="hidden rounded-full bg-white/10 px-5 py-1.5 font-mono text-[10px] text-white/65 sm:block">app.mada-software.com / executive</div><a href={DASHBOARD_URL} className="inline-flex items-center gap-1 rounded-lg bg-[#0D9488] px-3 py-1.5 font-bold">{copy.preview.open}<ArrowUpRight className="h-3.5 w-3.5" /></a></div><div className="grid min-h-[360px] lg:grid-cols-[220px_1fr]"><aside className="bg-[#0B1522] p-4 text-white"><div className="mb-7 flex items-center justify-between border-b border-white/10 pb-5"><div><div className="font-black">{copy.brand} <span className="ml-1 rounded bg-[#0D9488] px-1.5 py-0.5 text-[9px]">R01</span></div><div className="mt-1 text-[10px] text-white/50">{copy.preview.overview}</div></div><span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" /></div><div className="space-y-1">{[["overview", copy.preview.overview], ["branches", copy.preview.branches], ["finance", copy.preview.finance], ["alerts", copy.preview.alerts]].map(([id, label]) => <button key={id} onClick={() => setActiveView(id)} className={`w-full rounded-xl px-3 py-2.5 text-start text-xs font-bold ${activeView === id ? "bg-[#0D9488] text-white" : "text-white/60 hover:bg-white/5 hover:text-white"}`}>{label}</button>)}</div></aside><div className="bg-[#F4F7FA] p-5 sm:p-8"><div className="mb-7 flex flex-wrap items-center justify-between gap-3 border-b border-[#14243A]/10 pb-5"><div><div className="text-xs font-bold text-[#14243A]/50">{copy.preview.overview}</div><h3 className="mt-1 text-xl font-black">{selectedBranch}</h3></div><select value={branch} onChange={(e) => setBranch(Number(e.target.value))} className="rounded-xl border border-[#14243A]/10 bg-white px-3 py-2 text-xs font-bold"><option value={0}>{copy.preview.branchNames[0]}</option><option value={1}>{copy.preview.branchNames[1]}</option><option value={2}>{copy.preview.branchNames[2]}</option><option value={3}>{copy.preview.branchNames[3]}</option></select></div><div className="grid gap-3 sm:grid-cols-3"><DashboardStat label={copy.preview.total} value={branchStats.students} /><DashboardStat label={copy.preview.attendance} value={branchStats.attendance} accent /><DashboardStat label={copy.preview.revenue} value={branchStats.revenue} /></div><div className="mt-6 grid gap-3 sm:grid-cols-2"><div className="rounded-2xl bg-white p-4"><div className="mb-3 flex justify-between text-xs font-bold"><span>{copy.preview.branches}</span><span className="text-[#0D9488]">{copy.preview.status}</span></div><div className="space-y-3">{copy.preview.branchNames.slice(1).map((name, i) => <div key={name} className="flex items-center justify-between text-xs"><span>{name}</span><span className="font-mono text-[#14243A]/55">{["86%", "91%", "81%"][i]}</span></div>)}</div></div><div className="rounded-2xl bg-white p-4"><div className="mb-3 text-xs font-bold">{copy.preview.finance}</div><div className="h-24 rounded-xl bg-gradient-to-t from-[#0D9488]/20 to-transparent p-3"><div className="flex h-full items-end gap-2">{[35, 50, 44, 68, 58, 82, 75].map((h, i) => <div key={i} className="flex-1 rounded-t bg-[#0D9488]" style={{ height: `${h}%`, opacity: 0.45 + i / 20 }} />)}</div></div></div></div></div></div></div></div></section>
 
-            <SystemPreview />
-          </div>
-        </section>
+      <section id="features" className="border-b border-[#14243A]/10 bg-[#F4F7FA] py-20 lg:py-28"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><SectionIntro eyebrow={copy.features.eyebrow} title={copy.features.title} body={copy.features.body} align="start" /><div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">{copy.features.items.map(([title, body], i) => <div key={title} className="group rounded-2xl border border-[#14243A]/10 bg-white p-7 transition hover:-translate-y-1 hover:border-[#0D9488]/30 hover:shadow-xl"><div className="mb-8 flex items-center justify-between"><span className="font-mono text-xs font-black text-[#14243A]/30 group-hover:text-[#0D9488]">0{i + 1}</span><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F4F7FA] text-[#0D9488]"><Sparkles className="h-5 w-5" /></div></div><h3 className="text-lg font-black">{title}</h3><p className="mt-3 text-sm leading-relaxed text-[#14243A]/65">{body}</p><div className="mt-7 flex items-center gap-2 text-xs font-bold text-[#0D9488]"><Check className="h-4 w-4" />{locale === "ar" ? "مصمم للتشغيل اليومي" : "Built for the operating day"}</div></div>)}</div></div></section>
 
-        {/* 5. Core Capabilities (6 Foundational Pillars) */}
-        <Capabilities />
+      <section id="pricing" className="border-b border-[#14243A]/10 bg-white py-20 lg:py-28"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><SectionIntro eyebrow={copy.pricing.eyebrow} title={copy.pricing.title} body={copy.pricing.body} /><div className="mt-8 flex w-fit mx-auto rounded-2xl border border-[#14243A]/10 bg-[#F4F7FA] p-1.5"><button onClick={() => setIsAnnual(false)} className={`rounded-xl px-5 py-2.5 text-sm font-bold ${!isAnnual ? "bg-white shadow-sm" : "text-[#14243A]/55"}`}>{copy.pricing.monthly}</button><button onClick={() => setIsAnnual(true)} className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold ${isAnnual ? "bg-[#0D9488] text-white shadow-sm" : "text-[#14243A]/55"}`}>{copy.pricing.annual}<span className="rounded-full bg-white px-2 py-0.5 text-[10px] text-[#0D9488]">{copy.pricing.save}</span></button></div><div className="mt-12 grid gap-6 lg:grid-cols-3">{copy.pricing.plans.map(([name, desc, price, features], i) => <div key={name} className={`relative flex flex-col rounded-3xl p-7 ${i === 1 ? "border-2 border-[#0D9488] bg-white shadow-2xl shadow-[#0D9488]/10 lg:-translate-y-2" : "border border-[#14243A]/10 bg-[#F8FAFC]"}`}>{i === 1 && <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#0D9488] px-4 py-1 text-[10px] font-black text-white">{locale === "ar" ? "الأكثر طلباً" : "MOST POPULAR"}</span>}<div className="border-b border-[#14243A]/10 pb-6"><h3 className="text-2xl font-black">{name}</h3><p className="mt-2 min-h-10 text-sm leading-relaxed text-[#14243A]/60">{desc}</p></div><div className="py-6 text-3xl font-black">{price}<span className="ml-2 text-sm font-bold text-[#14243A]/50">{price !== "Custom" && price !== "مخصص" ? copy.pricing.perMonth : ""}</span></div><ul className="flex-1 space-y-3 text-sm">{features.map((feature) => <li key={feature} className="flex items-start gap-2.5"><Check className="mt-0.5 h-4 w-4 shrink-0 text-[#0D9488]" /><span>{feature}</span></li>)}</ul><button onClick={() => go("demo-request")} className={`mt-8 w-full rounded-xl px-4 py-3 text-sm font-black transition ${i === 1 ? "bg-[#0D9488] text-white hover:bg-[#0B7D72]" : "border border-[#14243A]/15 bg-white hover:border-[#0D9488]/40"}`}>{copy.pricing.choose}</button></div>)}</div></div></section>
 
-        {/* 6. Transparent Interactive Pricing (TutorBird & Qudrat Benchmark) */}
-        <PricingSection onScrollToDemo={scrollToDemo} />
+      <section className="border-b border-[#14243A]/10 bg-[#F4F7FA] py-20 lg:py-28"><div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8"><SectionIntro eyebrow={copy.workflow.eyebrow} title={copy.workflow.title} /><div className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">{copy.workflow.steps.map(([num, title, body]) => <div key={num} className="text-center"><div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full border-2 border-[#0D9488]/30 bg-white font-mono text-xl font-black text-[#0D9488] shadow-sm">{num}</div><h3 className="font-black">{title}</h3><p className="mt-2 text-sm leading-relaxed text-[#14243A]/65">{body}</p></div>)}</div></div></section>
 
-        {/* 7. Target Audience */}
-        <Audience />
+      <section id="faq" className="border-b border-[#14243A]/10 bg-white py-20 lg:py-28"><div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8"><SectionIntro eyebrow={copy.faq.eyebrow} title={copy.faq.title} /><div className="mt-12 space-y-3">{copy.faq.items.map(([question, answer], i) => <div key={question} className={`overflow-hidden rounded-2xl border ${activeFaq === i ? "border-[#0D9488]/40 shadow-sm" : "border-[#14243A]/10"}`}><button onClick={() => setActiveFaq(activeFaq === i ? -1 : i)} className="flex w-full items-center justify-between gap-4 p-5 text-start font-bold"><span>{question}</span><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${activeFaq === i ? "bg-[#0D9488] text-white" : "bg-[#14243A]/5"}`}>{activeFaq === i ? <Minus className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}</span></button>{activeFaq === i && <p className="border-t border-[#14243A]/10 px-5 pb-5 pt-4 text-sm leading-relaxed text-[#14243A]/65">{answer}</p>}</div>)}</div><a href="https://wa.me/201016629737" target="_blank" rel="noreferrer" className="mt-8 block rounded-2xl bg-[#F4F7FA] p-5 text-center text-sm font-bold text-[#0D9488] hover:bg-[#0D9488]/10">{copy.faq.contact} <ArrowUpRight className="ml-1 inline h-4 w-4" /></a></div></section>
 
-        {/* 8. Operational Workflow (4-Step Timeline) */}
-        <Workflow />
+      <section id="demo-request" className="border-b border-[#14243A]/10 bg-[#F4F7FA] py-20 lg:py-28"><div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8"><SectionIntro eyebrow={copy.demo.eyebrow} title={copy.demo.title} body={copy.demo.body} />{formState === "success" ? <div className="mx-auto mt-10 max-w-xl rounded-3xl border border-[#0D9488]/20 bg-white p-10 text-center shadow-xl"><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#0D9488]/10 text-[#0D9488]"><Check className="h-8 w-8" /></div><h3 className="mt-5 text-2xl font-black">{copy.demo.success}</h3><p className="mt-2 text-sm text-[#14243A]/65">{copy.demo.successBody}</p><button onClick={() => setFormState("idle")} className="mt-6 rounded-xl border border-[#14243A]/15 px-5 py-3 text-sm font-bold">{copy.demo.reset}</button></div> : <form onSubmit={handleSubmit} className="mx-auto mt-10 grid max-w-3xl gap-5 rounded-3xl border border-[#14243A]/10 bg-white p-6 shadow-xl sm:grid-cols-2 sm:p-10">{[["name", copy.demo.name, "text"], ["academyName", copy.demo.academy, "text"], ["email", copy.demo.email, "email"], ["phone", copy.demo.phone, "tel"]].map(([id, label, type]) => <label key={id} className="text-sm font-bold">{label}<input name={id} type={type} required placeholder={label} className="mt-2 w-full rounded-xl border border-[#14243A]/15 bg-white px-4 py-3 text-sm font-normal outline-none transition focus:border-[#0D9488] focus:ring-2 focus:ring-[#0D9488]/15" /></label>)}<label className="text-sm font-bold">{copy.demo.branches}<select name="branchCount" className="mt-2 w-full rounded-xl border border-[#14243A]/15 bg-white px-4 py-3 text-sm font-normal outline-none focus:border-[#0D9488]">{copy.demo.branchOptions.map((x) => <option key={x}>{x}</option>)}</select></label><label className="text-sm font-bold">{copy.demo.need}<select name="need" className="mt-2 w-full rounded-xl border border-[#14243A]/15 bg-white px-4 py-3 text-sm font-normal outline-none focus:border-[#0D9488]">{copy.demo.needOptions.map((x) => <option key={x}>{x}</option>)}</select></label>{formState === "error" && <p className="sm:col-span-2 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{copy.demo.error}</p>}<div className="sm:col-span-2"><button type="submit" disabled={formState === "loading"} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#0D9488] px-6 py-4 text-base font-black text-white shadow-lg shadow-[#0D9488]/20 transition hover:bg-[#0B7D72] disabled:opacity-60">{formState === "loading" ? copy.demo.sending : copy.demo.submit}<ArrowUpRight className="h-5 w-5" /></button><p className="mt-3 flex items-center justify-center gap-2 text-center text-xs text-[#14243A]/50"><LockKeyhole className="h-3.5 w-3.5" />{copy.demo.privacy}</p></div></form>}</div></section>
+    </main>
 
-        {/* 9. Interactive FAQ Accordion */}
-        <FaqSection />
-
-        {/* 10. Request a Live Demo Form */}
-        <DemoForm />
-      </main>
-
-      {/* 12. Institutional Footer */}
-      <Footer 
-        onOpenAdminLogin={() => setAdminModalOpen(true)}
-        onScrollToDemo={scrollToDemo}
-      />
-
-      {/* 13. Supervisor / Admin Login Modal */}
-      <AdminLoginModal 
-        isOpen={adminModalOpen}
-        onClose={() => setAdminModalOpen(false)}
-      />
-    </div>
-  );
+    <footer className="bg-[#0B1522] py-14 text-white"><div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 md:grid-cols-3 lg:px-8"><div><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0D9488] font-black">م</div><span className="text-xl font-black">{copy.brand}</span></div><p className="mt-5 max-w-sm text-sm leading-relaxed text-white/55">{copy.footer.body}</p></div><div><h4 className="font-bold">{copy.footer.product}</h4><div className="mt-4 space-y-3 text-sm text-white/60"><a href="#features" className="block hover:text-white">{copy.nav.features}</a><a href="#pricing" className="block hover:text-white">{copy.nav.pricing}</a><a href={DASHBOARD_URL} className="block hover:text-white">{copy.footer.login}</a></div></div><div><h4 className="font-bold">{copy.footer.contact}</h4><div className="mt-4 space-y-3 text-sm text-white/60"><a href="#demo-request" className="block hover:text-white">{copy.footer.demo}</a><a href="mailto:info@madaacademy.com" className="block hover:text-white">info@madaacademy.com</a><span className="block">+966 5X XXX XXXX</span></div></div></div><div className="mx-auto mt-12 flex max-w-7xl flex-col justify-between gap-3 border-t border-white/10 px-4 pt-7 text-xs text-white/40 sm:flex-row sm:px-6 lg:px-8"><span>{copy.footer.rights}</span><span>MADA ACADEMY OPERATIONS OS</span></div></footer>
+  </div>;
 }
+
+function Stat({ label, value, trend, accent = false }: { label: string; value: string; trend: string; accent?: boolean }) { return <div className="rounded-2xl bg-[#F8FAFC] p-4"><div className="text-xs font-semibold text-[#14243A]/60">{label}</div><div className="mt-2 text-2xl font-black tracking-tight">{value}</div><div className={`mt-2 inline-block rounded-md px-2 py-1 text-[10px] font-bold ${accent ? "bg-amber-100 text-amber-700" : "bg-[#0D9488]/10 text-[#0D9488]"}`}>{trend}</div></div>; }
+function DashboardStat({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) { return <div className="rounded-2xl bg-white p-4"><div className="text-xs text-[#14243A]/55">{label}</div><div className={`mt-2 text-2xl font-black ${accent ? "text-[#0D9488]" : ""}`}>{value}</div></div>; }
+function MiniCard({ label }: { label: string }) { return <div className="rounded-xl border border-[#14243A]/10 bg-[#F8FAFC] p-3 text-xs font-bold"><Check className="mb-2 h-4 w-4 text-[#0D9488]" />{label}</div>; }
+function SectionIntro({ eyebrow, title, body, align = "center" }: { eyebrow: string; title: string; body?: string; align?: "center" | "start" }) { return <div className={`${align === "center" ? "mx-auto text-center" : "text-start"} max-w-3xl`}><p className="mb-3 text-xs font-black uppercase tracking-wider text-[#0D9488]">{eyebrow}</p><h2 className="text-3xl font-black leading-tight tracking-tight sm:text-5xl">{title}</h2>{body && <p className="mt-5 text-base leading-relaxed text-[#14243A]/65 sm:text-lg">{body}</p>}</div>; }
