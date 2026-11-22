@@ -25,6 +25,7 @@ const LanguageContext = createContext<LanguageContextType>({
 });
 
 const originalTextMap = new WeakMap<Node, string>();
+const HAS_ARABIC_RE = /[\u0600-\u06FF]/;
 
 function translateNode(node: Node, lang: Language) {
   if (node.nodeType === Node.TEXT_NODE) {
@@ -32,11 +33,12 @@ function translateNode(node: Node, lang: Language) {
     if (!text || !text.trim()) return;
 
     if (lang === "en") {
-      const current = originalTextMap.get(node) || text;
-      if (!originalTextMap.has(node)) {
+      // Only cache as original Arabic if the text actually contains Arabic characters
+      if (HAS_ARABIC_RE.test(text) && !originalTextMap.has(node)) {
         originalTextMap.set(node, text);
       }
 
+      const current = originalTextMap.get(node) || text;
       let modified = current;
       for (const [ar, en] of SORTED_ARABIC_PHRASES) {
         if (modified.includes(ar)) {
@@ -48,21 +50,30 @@ function translateNode(node: Node, lang: Language) {
       }
     } else {
       // Switch back to Arabic
+      // 1. Check originalTextMap FIRST!
       const original = originalTextMap.get(node);
-      if (original && node.nodeValue !== original) {
-        node.nodeValue = original;
-      } else {
-        // Fallback reverse-translate using pre-sorted English phrases
-        const current = node.nodeValue || "";
-        let modified = current;
-        for (const [en, ar] of SORTED_ENGLISH_PHRASES) {
-          if (modified.includes(en)) {
-            modified = modified.split(en).join(ar);
-          }
+      if (original && HAS_ARABIC_RE.test(original)) {
+        if (node.nodeValue !== original) {
+          node.nodeValue = original;
         }
-        if (modified !== current) {
-          node.nodeValue = modified;
+        return;
+      }
+
+      // 2. If node already contains only Arabic or has no English letters, do nothing
+      if (!node.nodeValue || !/[a-zA-Z]/.test(node.nodeValue)) {
+        return;
+      }
+
+      // 3. Fallback reverse-translate using pre-sorted English phrases
+      const current = node.nodeValue;
+      let modified = current;
+      for (const [en, ar] of SORTED_ENGLISH_PHRASES) {
+        if (modified.includes(en)) {
+          modified = modified.split(en).join(ar);
         }
+      }
+      if (modified !== current) {
+        node.nodeValue = modified;
       }
     }
   } else if (node.nodeType === Node.ELEMENT_NODE) {
@@ -76,18 +87,21 @@ function translateNode(node: Node, lang: Language) {
       const input = el as HTMLInputElement;
       if (input.placeholder) {
         if (lang === "en") {
-          const orig = input.getAttribute("data-orig-placeholder") || input.placeholder;
-          if (!input.hasAttribute("data-orig-placeholder")) {
-            input.setAttribute("data-orig-placeholder", orig);
+          if (HAS_ARABIC_RE.test(input.placeholder) && !input.hasAttribute("data-orig-placeholder")) {
+            input.setAttribute("data-orig-placeholder", input.placeholder);
           }
+          const orig = input.getAttribute("data-orig-placeholder") || input.placeholder;
           let modified = orig;
           for (const [ar, en] of SORTED_ARABIC_PHRASES) {
             if (modified.includes(ar)) modified = modified.split(ar).join(en);
           }
           input.placeholder = modified;
         } else {
+          if (input.placeholder && HAS_ARABIC_RE.test(input.placeholder)) {
+            return;
+          }
           const orig = input.getAttribute("data-orig-placeholder");
-          if (orig) {
+          if (orig && HAS_ARABIC_RE.test(orig)) {
             input.placeholder = orig;
           } else {
             let p = input.placeholder;

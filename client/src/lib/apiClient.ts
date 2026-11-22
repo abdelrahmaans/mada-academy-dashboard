@@ -988,6 +988,27 @@ export interface CertificateVerification {
   issuedAt: string;
 }
 
+function safeBtoa(str: string): string {
+  try {
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p1) => String.fromCharCode(parseInt(p1, 16))));
+  } catch {
+    return btoa(str.replace(/[^\x00-\x7F]/g, ""));
+  }
+}
+
+function safeAtob(str: string): string {
+  try {
+    const binary = atob(str);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return new TextDecoder().decode(bytes);
+  } catch {
+    return atob(str);
+  }
+}
+
 export const apiClient = {
   baseUrl: API_BASE,
   getToken: () => accessToken,
@@ -1013,8 +1034,8 @@ export const apiClient = {
           password === "Mada@2026" ||
           password === "Mada#2026";
         if (isMatch) {
-          const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-          const payload = btoa(
+          const header = safeBtoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+          const payload = safeBtoa(
             JSON.stringify({
               sub: storedAccount.id,
               phone: storedAccount.phone,
@@ -1099,7 +1120,7 @@ export const apiClient = {
         try {
           const parts = accessToken.split(".");
           if (parts.length === 3) {
-            const data = JSON.parse(atob(parts[1]));
+            const data = JSON.parse(safeAtob(parts[1]));
             if (data.tenantId && data.role === "R01_ACADEMY_OWNER") {
               const branches = getStoredBranches(data.tenantId);
               const branch = branches[0] || {
