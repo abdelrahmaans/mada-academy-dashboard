@@ -1,8 +1,10 @@
 import { Bell, CheckCheck, MapPin, Menu, Search, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { useRoleShell } from "./RoleDashboardShell";
 import RoleDateBadge from "./RoleDateBadge";
+import LanguageToggle from "./LanguageToggle";
 
 type Props = { onMenu?: () => void; scopeLabel?: string; roleLabel?: string };
 
@@ -10,9 +12,13 @@ export default function RoleSurfaceTopbar({ onMenu, scopeLabel = "كل الفر�
   const [query, setQuery] = useState("");
   const [notifOpen, setNotifOpen] = useState(false);
   const { me } = useAuth();
+  const { t } = useLanguage();
   const shell = useRoleShell();
-  const userName = me?.user?.displayName || "المستخدم";
+  const userName = me?.user?.displayName || (t("topbar.user_profile") || "المستخدم");
   const userInitials = userName.slice(0, 2);
+
+  const displayScope = t(scopeLabel);
+  const displayRole = t(roleLabel);
 
   const handleOpenMenu = onMenu ?? shell.openMobileNav;
 
@@ -53,14 +59,15 @@ export default function RoleSurfaceTopbar({ onMenu, scopeLabel = "كل الفر�
         >
           <Menu size={20} />
         </button>
-        <div className="branch-select assigned-branch" aria-label={`النطاق: ${scopeLabel}`}><span className="branch-icon"><MapPin size={17} /></span><span>{scopeLabel}</span></div>
-        <label className="top-search"><Search size={18} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="إبحث عن فرع أو مسار..." aria-label="البحث داخل مساحة الأكاديمية" /><kbd>⌘ K</kbd></label>
+        <div className="branch-select assigned-branch" aria-label={`${t("topbar.all_branches")}: ${displayScope}`}><span className="branch-icon"><MapPin size={17} /></span><span>{displayScope}</span></div>
+        <label className="top-search"><Search size={18} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder={t("topbar.search_placeholder") || "إبحث عن فرع أو مسار..."} aria-label="البحث داخل مساحة الأكاديمية" /><kbd>⌘ K</kbd></label>
       </div>
       <div className="topbar-left" style={{ position: "relative" }}>
         <RoleDateBadge />
+        <LanguageToggle variant="topbar" />
         <button
           className="icon-button notification-button"
-          aria-label="الإشعارات"
+          aria-label={t("topbar.notifications") || "الإشعارات"}
           onClick={() => setNotifOpen(prev => !prev)}
         >
           {unreadCount > 0 && <span className="notification-dot" />}
@@ -125,8 +132,8 @@ export default function RoleSurfaceTopbar({ onMenu, scopeLabel = "كل الفر�
         )}
 
         <span className="topbar-divider" />
-        <div className="profile-button" aria-label="ملف المستخدم">
-          <span className="profile-copy"><strong>{userName}</strong><small>{roleLabel}</small></span>
+        <div className="profile-button" aria-label={t("topbar.user_profile") || "ملف المستخدم"}>
+          <span className="profile-copy"><strong>{userName}</strong><small>{displayRole}</small></span>
           <span className="profile-avatar">{userInitials}</span>
         </div>
       </div>

@@ -26,6 +26,7 @@ import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   apiClient,
   type AuthMe,
@@ -62,6 +63,7 @@ const ROLE_CODE_BY_ROLE: Record<string, RoleCode> = {
 
 export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
   const { me: authMe } = useAuth();
+  const { lang, dir, t } = useLanguage();
   const me = propMe || authMe;
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("TOURNAMENTS");
@@ -489,7 +491,7 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
       onCloseMobile={() => setMobileNavOpen(false)}
       demo={false}
     >
-      <main className="main-panel comp-main-panel" dir="rtl">
+      <main className="main-panel comp-main-panel" dir={dir}>
         {/* Topbar */}
         <RoleSurfaceTopbar
           roleLabel={me?.roleLabel ?? roleDefinition.label}
@@ -507,11 +509,11 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
           <div className="comp-header-content">
             <div className="comp-header-eyebrow">
               <Trophy size={14} />
-              <span>المسار التنافسي والبطولات · تجهيز وتأهيل الفرق للمسابقات</span>
+              <span>{lang === "en" ? "Competitive Track & Robotics Leagues" : "المسار التنافسي والبطولات · تجهيز وتأهيل الفرق للمسابقات"}</span>
             </div>
-            <h1 className="comp-header-title">البطولات ومشاريع الفرق</h1>
+            <h1 className="comp-header-title">{t("comp.title")}</h1>
             <p className="comp-header-description">
-              دليل المسابقات والفعاليات الرسمية، تشكيل فرق الأكاديمية وإدارة معسكرات التدريب (Bootcamp)، وتوثيق الإنجازات في لوحة الشرف وأرشيف المشاريع.
+              {t("comp.description")}
             </p>
           </div>
           <div className="comp-header-actions">
@@ -520,10 +522,10 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
               className="comp-header-btn-refresh"
               onClick={() => void loadData()}
               disabled={refreshing}
-              title="تحديث البيانات"
+              title={t("comp.refresh_btn")}
             >
               <RefreshCw size={14} className={refreshing ? "spin" : ""} />
-              <span>تحديث البيانات</span>
+              <span>{t("comp.refresh_btn")}</span>
             </button>
             <button
               type="button"
@@ -531,7 +533,7 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
               onClick={() => setShowProjectModal(true)}
             >
               <Archive size={15} />
-              <span>توثيق مشروع للأرشيف</span>
+              <span>{t("comp.archive_btn")}</span>
             </button>
             <button
               type="button"
@@ -539,7 +541,7 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
               onClick={() => setShowCompModal(true)}
             >
               <Plus size={16} />
-              <span>+ إدراج بطولة جديدة</span>
+              <span>{t("comp.add_btn")}</span>
             </button>
           </div>
         </header>
@@ -548,8 +550,8 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
         <div className="comp-stats-ribbon">
           <div className="comp-stat-card">
             <div className="comp-stat-meta">
-              <span>البطولات المعتمدة</span>
-              <strong>{competitions.length} بطولة</strong>
+              <span>{t("comp.kpi_tournaments")}</span>
+              <strong>{competitions.length} {t("comp.unit_tournament")}</strong>
             </div>
             <div className="comp-stat-icon comp-stat-icon-amber">
               <Trophy size={20} />
@@ -557,8 +559,8 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
           </div>
           <div className="comp-stat-card">
             <div className="comp-stat-meta">
-              <span>الفرق التنافسية</span>
-              <strong>{teams.length} فريق</strong>
+              <span>{t("comp.kpi_teams")}</span>
+              <strong>{teams.length} {t("comp.unit_team")}</strong>
             </div>
             <div className="comp-stat-icon comp-stat-icon-teal">
               <Users size={20} />
@@ -566,8 +568,8 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
           </div>
           <div className="comp-stat-card">
             <div className="comp-stat-meta">
-              <span>معسكرات التدريب (Bootcamp)</span>
-              <strong>{teams.filter(t => t.status === "BOOTCAMP").length} فريق نشط</strong>
+              <span>{t("comp.kpi_bootcamp")}</span>
+              <strong>{teams.filter(t => t.status === "BOOTCAMP").length} {t("comp.unit_active_team")}</strong>
             </div>
             <div className="comp-stat-icon comp-stat-icon-purple">
               <Rocket size={20} />
@@ -575,8 +577,8 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
           </div>
           <div className="comp-stat-card">
             <div className="comp-stat-meta">
-              <span>أوسمة لوحة الشرف</span>
-              <strong>{hallOfFame.length} تكريم</strong>
+              <span>{t("comp.kpi_hof")}</span>
+              <strong>{hallOfFame.length} {t("comp.unit_award")}</strong>
             </div>
             <div className="comp-stat-icon comp-stat-icon-blue">
               <Medal size={20} />
@@ -592,7 +594,7 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
             onClick={() => setActiveTab("TOURNAMENTS")}
           >
             <Compass size={15} />
-            <span>دليل البطولات</span>
+            <span>{t("comp.tournaments_tab")}</span>
             <span className="comp-tab-pill">{competitions.length}</span>
           </button>
           <button
@@ -601,7 +603,7 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
             onClick={() => setActiveTab("TEAMS")}
           >
             <Users size={15} />
-            <span>فرق ومعسكرات الأكاديمية</span>
+            <span>{t("comp.teams_tab")}</span>
             <span className="comp-tab-pill">{teams.length}</span>
           </button>
           <button
@@ -610,7 +612,7 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
             onClick={() => setActiveTab("HALL_OF_FAME")}
           >
             <Sparkles size={15} color="#d97706" />
-            <span>لوحة الشرف الذهبية</span>
+            <span>{t("comp.hof_tab")}</span>
             <span className="comp-tab-pill">{hallOfFame.length}</span>
           </button>
           <button
@@ -619,7 +621,7 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
             onClick={() => setActiveTab("PROJECTS_ARCHIVE")}
           >
             <Archive size={15} color="#0f766e" />
-            <span>أرشيف المشاريع (Drive)</span>
+            <span>{t("comp.archive_tab")}</span>
             <span className="comp-tab-pill">{archiveProjectsCount}</span>
           </button>
         </div>

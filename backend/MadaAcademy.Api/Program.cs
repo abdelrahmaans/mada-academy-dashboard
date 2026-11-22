@@ -26,6 +26,13 @@ var trustedProxyAddresses = LoadTrustedProxyAddresses(builder.Configuration);
 
 builder.Services.AddProblemDetails();
 builder.Services.AddHealthChecks();
+var supportedCultures = new[] { "ar-EG", "ar", "en-US", "en" };
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    options.SetDefaultCulture("ar-EG");
+    options.AddSupportedCultures(supportedCultures);
+    options.AddSupportedUICultures(supportedCultures);
+});
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -118,6 +125,7 @@ if (IsEnabled("MADA_APPLY_MIGRATIONS") || seedDemoData)
 }
 
 app.UseExceptionHandler();
+app.UseRequestLocalization();
 app.UseForwardedHeaders();
 app.UseCors();
 app.UseRateLimiter();
