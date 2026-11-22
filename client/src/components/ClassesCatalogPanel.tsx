@@ -302,15 +302,17 @@ export default function ClassesCatalogPanel({
                     ))}
                   </div>
                 ) : (
-                  <div className="classes-empty">
-                    <span>
-                      <Search size={19} />
-                    </span>
-                    <strong>مفيش كورسات مطابقة</strong>
-                    <small>جرّب تغير البحث أو اختيارات الفلترة.</small>
-                    <button className="text-link" onClick={clearFilters}>
-                      مسح الفلاتر
-                    </button>
+                  <div className="classes-empty-state-wrap">
+                    <div className="classes-empty">
+                      <span>
+                        <Search size={22} />
+                      </span>
+                      <strong>لا توجد كورسات مطابقة</strong>
+                      <small>جرّب تغيير كلمة البحث أو خيارات التصفية.</small>
+                      <button type="button" className="text-link" onClick={clearFilters}>
+                        إعادة تعيين الفلاتر
+                      </button>
+                    </div>
                   </div>
                 )}
               </>
@@ -353,21 +355,41 @@ export default function ClassesCatalogPanel({
                   )}
                 </div>
 
-                <div className="groups-table-wrap">
-                  <table className="groups-table">
-                    <thead>
-                      <tr>
-                        <th>المجموعة / الكورس</th>
-                        <th>المدرب</th>
-                        <th>الفرع والمعمل</th>
-                        <th>الجدول الأسبوعي</th>
-                        <th>المقاعد</th>
-                        <th>الحالة</th>
-                        <th aria-label="تفاصيل" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredOfferings.map(offering => (
+                {!filteredOfferings.length ? (
+                  <div className="classes-empty-state-wrap">
+                    <div className="classes-empty">
+                      <span>
+                        <Search size={22} />
+                      </span>
+                      <strong>لا توجد مجموعات مطابقة</strong>
+                      <small>
+                        غيّر خيارات الفلترة أو ابحث باسم المدرب أو الكورس.
+                      </small>
+                      <button
+                        type="button"
+                        className="text-link"
+                        onClick={clearFilters}
+                      >
+                        إعادة تعيين الفلاتر
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="groups-table-wrap">
+                    <table className="groups-table">
+                      <thead>
+                        <tr>
+                          <th>المجموعة / الكورس</th>
+                          <th>المدرب</th>
+                          <th>الفرع والمعمل</th>
+                          <th>الجدول الأسبوعي</th>
+                          <th>المقاعد</th>
+                          <th>الحالة</th>
+                          <th aria-label="تفاصيل" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredOfferings.map(offering => (
                         <tr
                           key={offering.id}
                           onClick={() => setSelectedOffering(offering)}
@@ -463,30 +485,10 @@ export default function ClassesCatalogPanel({
                           </td>
                         </tr>
                       ))}
-                      {!filteredOfferings.length && (
-                        <tr>
-                          <td colSpan={7}>
-                            <div className="classes-empty">
-                              <span>
-                                <Search size={19} />
-                              </span>
-                              <strong>مفيش مجموعات مطابقة</strong>
-                              <small>
-                                غيّر الفلترة أو ابحث باسم المدرب أو الكورس.
-                              </small>
-                              <button
-                                className="text-link"
-                                onClick={clearFilters}
-                              >
-                                مسح الفلاتر
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
                     </tbody>
                   </table>
                 </div>
+              )}
                 <div className="groups-footer">
                   <span>
                     عرض <b>{filteredOfferings.length}</b> مجموعات · {liveMode ? "السعة والإشغال من الخادم" : "السعة والإشغال من بيانات العينة"}
