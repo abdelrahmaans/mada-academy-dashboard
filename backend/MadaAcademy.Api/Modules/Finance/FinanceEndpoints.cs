@@ -1,5 +1,6 @@
 using System.Data;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text;
 using MadaAcademy.Api.Auth;
@@ -385,17 +386,29 @@ public static class FinanceEndpoints
     private static async Task<IResult> HandlePaymentGatewayWebhookAsync(PaymentGatewayWebhookRequest request, HttpContext context, MadaDbContext db, IConfiguration configuration, CancellationToken cancellationToken)
     {
         var configuredSecret = configuration["PaymentGateway:WebhookSecret"];
-        if (!string.IsNullOrWhiteSpace(configuredSecret))
-        {
-            var providedSecret = context.Request.Headers["X-Webhook-Secret"].FirstOrDefault();
-            if (!string.Equals(configuredSecret, providedSecret, StringComparison.Ordinal))
-                return Forbidden("WEBHOOK_SIGNATURE_INVALID");
-        }
+        if (string.IsNullOrWhiteSpace(configuredSecret))
+            return Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "WEBHOOK_NOT_CONFIGURED", extensions: new Dictionary<string, object?> { ["code"] = "WEBHOOK_NOT_CONFIGURED" });
 
-        if (request.InvoiceId == Guid.Empty || string.IsNullOrWhiteSpace(request.TransactionReference))
-            return Validation("webhook", "invoiceId and transactionReference are required.");
+        if (request.InvoiceId == Guid.Empty || string.IsNullOrWhiteSpace(request.TransactionReference) || string.IsNullOrWhiteSpace(request.ProviderEventId))
+            return Validation("webhook", "invoiceId, transactionReference, and providerEventId are required.");
 
         var eventType = request.EventType?.Trim().ToLowerInvariant() ?? "payment.succeeded";
+        var currency = request.Currency?.Trim().ToUpperInvariant() ?? "EGP";
+        if (currency != "EGP")
+            return Validation("currency", "Only EGP payments are supported.");
+        var providerEventId = request.ProviderEventId.Trim();
+        var canonicalPayload = string.Join("|", request.InvoiceId, request.AmountPiastres, request.TransactionReference.Trim(), providerEventId, currency, eventType);
+        var expectedSignature = Convert.ToHexString(HMACSHA256.HashData(
+            Encoding.UTF8.GetBytes(configuredSecret),
+            Encoding.UTF8.GetBytes(canonicalPayload))).ToLowerInvariant();
+        var providedSignature = context.Request.Headers["X-Webhook-Signature"].FirstOrDefault()?.Trim();
+        if (providedSignature?.StartsWith("sha256=", StringComparison.OrdinalIgnoreCase) == true)
+            providedSignature = providedSignature["sha256=".Length..];
+        if (string.IsNullOrWhiteSpace(providedSignature) ||
+            !CryptographicOperations.FixedTimeEquals(
+                Encoding.ASCII.GetBytes(expectedSignature),
+                Encoding.ASCII.GetBytes(providedSignature.ToLowerInvariant())))
+            return Forbidden("WEBHOOK_SIGNATURE_INVALID");
         if (eventType != "payment.succeeded")
         {
             return Results.Ok(new { data = new { received = true, status = "IGNORED", eventType } });
@@ -404,7 +417,7 @@ public static class FinanceEndpoints
         if (request.AmountPiastres <= 0)
             return Validation("amountPiastres", "amountPiastres must be positive.");
 
-        var idempotencyKey = $"gw:{request.TransactionReference.Trim()}";
+        var idempotencyKey = $"gw:{providerEventId}";
         var existingPayment = await db.PaymentTransactions.AsNoTracking()
             .FirstOrDefaultAsync(x => x.IdempotencyKey == idempotencyKey, cancellationToken);
         if (existingPayment is not null)
@@ -1303,4 +1316,4 @@ public sealed record ApproveInstructorPayrollRequest(string? Month, Guid? Branch
 public sealed record PayInstructorPayrollRequest(string? Month, Guid? BranchId = null, string PaymentMethod = "INSTAPAY", string? PaymentReference = null, string? Notes = null);
 public sealed record ConsumerCheckoutRequest(string? Method = "CARD", int? AmountPiastres = null);
 public sealed record ConfirmConsumerCheckoutRequest(string? CheckoutSessionId = null, string? Method = "CARD", int? AmountPiastres = null, string? GatewayReference = null, string? Note = null, string? IdempotencyKey = null);
-public sealed record PaymentGatewayWebhookRequest(Guid InvoiceId, int AmountPiastres, string TransactionReference, string? Method = "CARD", string? EventType = "payment.succeeded", string? Note = null);
+public sealed record PaymentGatewayWebhookRequest(Guid InvoiceId, int AmountPiastres, string TransactionReference, string? Method = "CARD", string? EventType = "payment.succeeded", string? Note = null, string? ProviderEventId = null, string? Currency = "EGP");

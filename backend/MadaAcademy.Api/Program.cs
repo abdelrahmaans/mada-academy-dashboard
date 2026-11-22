@@ -122,6 +122,35 @@ app.UseForwardedHeaders();
 app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();
+app.Use(async (context, next) =>
+{
+    var mustChangePassword = context.User.FindFirst("mustChangePassword")?.Value;
+    var path = context.Request.Path.Value ?? string.Empty;
+    var allowedTemporaryPasswordPaths =
+        path.Equals("/api/v1/me", StringComparison.OrdinalIgnoreCase) ||
+        path.Equals("/api/v1/auth/change-password", StringComparison.OrdinalIgnoreCase) ||
+        path.Equals("/api/v1/auth/logout", StringComparison.OrdinalIgnoreCase) ||
+        path.Equals("/api/v1/auth/refresh", StringComparison.OrdinalIgnoreCase);
+
+    if (context.User.Identity?.IsAuthenticated == true &&
+        string.Equals(mustChangePassword, "true", StringComparison.OrdinalIgnoreCase) &&
+        !allowedTemporaryPasswordPaths)
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        context.Response.ContentType = "application/problem+json";
+        await context.Response.WriteAsJsonAsync(new
+        {
+            type = "https://httpstatuses.com/403",
+            title = "PASSWORD_CHANGE_REQUIRED",
+            status = StatusCodes.Status403Forbidden,
+            code = "PASSWORD_CHANGE_REQUIRED",
+            detail = "يجب تغيير كلمة المرور المؤقتة قبل استخدام النظام."
+        });
+        return;
+    }
+
+    await next();
+});
 app.UseAuthorization();
 app.MapHealthChecks("/api/v1/health");
 app.MapMadaAcademyIdentityEndpoints();

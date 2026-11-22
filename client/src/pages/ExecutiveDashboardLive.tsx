@@ -21,7 +21,6 @@ import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { QuickSupportTicketModal } from "@/components/QuickActionModals";
-import { useAuth } from "@/contexts/AuthContext";
 import {
   apiClient,
   type ExecutiveActivityItem,
@@ -75,57 +74,7 @@ function occurredAt(value: string) {
   }).format(new Date(value));
 }
 
-// Target demo branches matching the design system screenshot if server has few branches
-const DESIGN_BRANCHES_FALLBACK = [
-  {
-    branchId: "b-nasr-city",
-    branchName: "مدينة نصر",
-    branchCode: "NC-01",
-    managerName: "أحمد محمود",
-    activeStudents: 248,
-    attendancePercent: 86,
-    collectedPiastres: 12850000,
-    approvedExpensesPiastres: 3500000,
-    netPiastres: 9350000,
-    sessions: 42,
-    completedSessions: 38,
-    trend: "+5.6%",
-    isPositiveTrend: true,
-  },
-  {
-    branchId: "b-maadi",
-    branchName: "المعادي",
-    branchCode: "MD-02",
-    managerName: "سارة كمال",
-    activeStudents: 186,
-    attendancePercent: 91,
-    collectedPiastres: 10120000,
-    approvedExpensesPiastres: 2800000,
-    netPiastres: 7320000,
-    sessions: 34,
-    completedSessions: 32,
-    trend: "+3.1%",
-    isPositiveTrend: true,
-  },
-  {
-    branchId: "b-zayed",
-    branchName: "الشيخ زايد",
-    branchCode: "ZY-03",
-    managerName: "يوسف عماد",
-    activeStudents: 121,
-    attendancePercent: 81,
-    collectedPiastres: 7240000,
-    approvedExpensesPiastres: 2400000,
-    netPiastres: 4840000,
-    sessions: 24,
-    completedSessions: 20,
-    trend: "-2.4%",
-    isPositiveTrend: false,
-  },
-];
-
 export default function ExecutiveDashboardLive() {
-  const { me } = useAuth();
   const [branchId, setBranchId] = useState("ALL");
   const [period, setPeriod] = useState<PeriodOffset>(0);
   const [report, setReport] = useState<ExecutiveDashboardReport | null>(null);
@@ -138,7 +87,6 @@ export default function ExecutiveDashboardLive() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const [showFullTable, setShowFullTable] = useState(false);
-  const [showAlertsModal, setShowAlertsModal] = useState(false);
 
   const range = useMemo(() => periodRange(period), [period]);
 
@@ -205,9 +153,7 @@ export default function ExecutiveDashboardLive() {
 
   const retry = () => setRetryKey((value) => value + 1);
 
-  const isDemoAcademy = me?.tenantId === "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
-
-  // Active branches mapped to the design system pulse rows - strictly scoped to actual tenant
+  // Live data only: unavailable reports must never be replaced by design/demo values.
   const branchPulseData = useMemo(() => {
     if (report && report.branches && report.branches.length > 0) {
       return report.branches.map((b) => ({
@@ -228,58 +174,30 @@ export default function ExecutiveDashboardLive() {
       }));
     }
 
-    if (me?.branches && me.branches.length > 0) {
-      return me.branches.map((b) => ({
-        branchId: b.id,
-        branchName: b.name,
-        branchCode: b.code,
-        managerName: "مدير الفرع",
-        activeStudents: 0,
-        attendancePercent: 0,
-        collectedPiastres: 0,
-        approvedExpensesPiastres: 0,
-        netPiastres: 0,
-        trend: "0%",
-        isPositiveTrend: true,
-      }));
-    }
-
-    if (isDemoAcademy) {
-      return DESIGN_BRANCHES_FALLBACK;
-    }
-
     return [];
-  }, [report, me?.branches, isDemoAcademy]);
+  }, [report]);
 
-  // Aggregate stats - Strictly reflecting actual tenant data (no static bleed)
+  // Aggregate stats come only from the server response.
   const activeStudentsVal =
     report?.summary?.activeStudents !== undefined && report?.summary?.activeStudents !== null
       ? integer(report.summary.activeStudents)
-      : isDemoAcademy
-      ? "555"
-      : "0";
+      : "—";
 
   const attendanceRateVal =
     report?.summary?.attendancePercent !== null &&
     report?.summary?.attendancePercent !== undefined
       ? `${Math.round(report.summary.attendancePercent)}%`
-      : isDemoAcademy
-      ? "86%"
-      : "0%";
+      : "—";
 
   const totalCollectedVal =
     report?.summary?.collectedPiastres !== undefined && report?.summary?.collectedPiastres !== null
       ? money(report.summary.collectedPiastres)
-      : isDemoAcademy
-      ? "302,100 ج.م"
-      : "0 ج.م";
+      : "—";
 
   const netCollectionsVal =
     report?.summary?.netPiastres !== undefined && report?.summary?.netPiastres !== null
       ? money(report.summary.netPiastres)
-      : isDemoAcademy
-      ? "202,400 ج.م"
-      : "0 ج.م";
+      : "—";
 
   const exportBoardRollup = () => {
     const listToExport = branchPulseData.length > 0 ? branchPulseData : [];
@@ -505,9 +423,9 @@ export default function ExecutiveDashboardLive() {
                   <TrendingUp size={18} />
                 </span>
               </div>
-              <div className="r1-kpi-value">{isDemoAcademy ? "25" : "0"}</div>
+              <div className="r1-kpi-value">—</div>
               <div className="r1-kpi-caption">
-                {isDemoAcademy ? "بانتظار التحويل والتسكين" : "لا توجد طلبات معلقة"}
+                بيانات العملاء المحتملين غير متاحة في هذا التقرير
               </div>
             </article>
           </section>
@@ -606,66 +524,20 @@ export default function ExecutiveDashboardLive() {
                   <span>قرارات اليوم العاجلة</span>
                 </h2>
                 <span className="r1-panel-counter">
-                  {isDemoAcademy ? "4 عناصر" : "0 عناصر"}
+                  {activity.length} عناصر
                 </span>
               </div>
-
-              {isDemoAcademy ? (
-                <div className="r1-alert-list">
-                  {/* Alert 1: Urgent Branch Attention */}
-                  <article className="r1-alert-card r1-alert-amber">
-                    <div className="r1-alert-head">
-                      <h3 className="r1-alert-title">فرع يحتاج متابعة تشغيلية</h3>
-                      <span className="r1-urgent-tag">عاجل</span>
-                    </div>
-                    <p className="r1-alert-body">
-                      الشيخ زايد · الحضور 81% (أقل من هدف الأكاديمية) و 3 تذاكر مفتوحة
-                    </p>
-                  </article>
-
-                  {/* Alert 2: Top Academic Branch */}
-                  <article className="r1-alert-card r1-alert-green">
-                    <div className="r1-alert-head">
-                      <h3 className="r1-alert-title">أفضل أداء أكاديمي هذا الشهر</h3>
-                    </div>
-                    <p className="r1-alert-body">
-                      فرع المعادي · حضور 91% مع 186 طالباً مسجلاً ونمو 3.1%
-                    </p>
-                  </article>
-
-                  {/* Alert 3: Financial Net Settlement */}
-                  <article className="r1-alert-card r1-alert-purple">
-                    <div className="r1-alert-head">
-                      <h3 className="r1-alert-title">صافي الحركة المالية المعتمدة</h3>
-                    </div>
-                    <p className="r1-alert-body">
-                      202,400 ج.م متوفرة بعد تسوية رواتب ومصروفات الفروع
-                    </p>
-                  </article>
-                </div>
-              ) : (
-                <div style={{ padding: "32px 16px", textAlign: "center", color: "#64748b" }}>
-                  <p style={{ fontWeight: 600, color: "#0f172a", marginBottom: "4px" }}>
-                    لا توجد تنبيهات عاجلة اليوم
-                  </p>
-                  <p style={{ fontSize: "13px" }}>
-                    كافة مؤشرات العمليات تسير بشكل طبيعي وضمن المستهدفات.
-                  </p>
-                </div>
-              )}
-
-              {isDemoAcademy && (
-                <footer className="r1-alert-footer">
-                  <button
-                    type="button"
-                    className="r1-link-btn"
-                    onClick={() => setShowAlertsModal(true)}
-                  >
-                    عرض كل التنبيهات
-                  </button>
-                  <span className="r1-alert-footer-note">التنبيهات محدثة لحظياً</span>
-                </footer>
-              )}
+              <div style={{ padding: "32px 16px", textAlign: "center", color: "#64748b" }}>
+                {activityError ? (
+                  <p>{activityError}</p>
+                ) : activityLoading ? (
+                  <p>جارٍ تحميل التنبيهات الفعلية…</p>
+                ) : activity.length === 0 ? (
+                  <p>لا توجد تنبيهات أو قرارات مسجلة في الفترة المحددة.</p>
+                ) : (
+                  <p>تم تحميل {activity.length} عناصر فعلية من سجل النشاط.</p>
+                )}
+              </div>
             </section>
           </div>
 
@@ -713,13 +585,10 @@ export default function ExecutiveDashboardLive() {
                         <td>{branch.activeStudents}</td>
                         <td>{branch.attendancePercent}%</td>
                         <td>{money(branch.collectedPiastres)}</td>
-                        <td>{money(branch.approvedExpensesPiastres || (isDemoAcademy ? 2500000 : 0))}</td>
+                        <td>{money(branch.approvedExpensesPiastres)}</td>
                         <td>
                           <strong style={{ color: "#0d9488" }}>
-                            {money(
-                              branch.netPiastres ||
-                                branch.collectedPiastres - (isDemoAcademy ? 2500000 : 0)
-                            )}
+                            {money(branch.netPiastres)}
                           </strong>
                         </td>
                       </tr>
@@ -800,89 +669,6 @@ export default function ExecutiveDashboardLive() {
         roleLabel="الإدارة التنفيذية · R01"
       />
 
-      {/* All Alerts Modal */}
-      {showAlertsModal && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9999,
-            background: "rgba(15, 23, 42, 0.4)",
-            display: "grid",
-            placeItems: "center",
-            padding: "16px",
-          }}
-          onClick={() => setShowAlertsModal(false)}
-        >
-          <div
-            style={{
-              background: "#ffffff",
-              borderRadius: "20px",
-              padding: "24px",
-              maxWidth: "540px",
-              width: "100%",
-              direction: "rtl",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: "16px",
-              }}
-            >
-              <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 800 }}>
-                كافة التنبيهات والقرارات التشغيلية
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowAlertsModal(false)}
-                style={{
-                  background: "transparent",
-                  border: 0,
-                  color: "#64748b",
-                  cursor: "pointer",
-                  fontWeight: 700,
-                }}
-              >
-                ✕
-              </button>
-            </div>
-            <div style={{ display: "grid", gap: "10px" }}>
-              <div className="r1-alert-card r1-alert-amber">
-                <div className="r1-alert-head">
-                  <h4 className="r1-alert-title">فرع يحتاج متابعة تشغيلية</h4>
-                  <span className="r1-urgent-tag">عاجل</span>
-                </div>
-                <p className="r1-alert-body">
-                  الشيخ زايد · الحضور 81% (أقل من هدف الأكاديمية) و 3 تذاكر مفتوحة
-                </p>
-              </div>
-              <div className="r1-alert-card r1-alert-green">
-                <div className="r1-alert-head">
-                  <h4 className="r1-alert-title">أفضل أداء أكاديمي هذا الشهر</h4>
-                </div>
-                <p className="r1-alert-body">
-                  فرع المعادي · حضور 91% مع 186 طالباً مسجلاً ونمو 3.1%
-                </p>
-              </div>
-              <div className="r1-alert-card r1-alert-purple">
-                <div className="r1-alert-head">
-                  <h4 className="r1-alert-title">صافي الحركة المالية المعتمدة</h4>
-                </div>
-                <p className="r1-alert-body">
-                  202,400 ج.م متوفرة بعد تسوية رواتب ومصروفات الفروع
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </RoleDashboardShell>
   );
 }
