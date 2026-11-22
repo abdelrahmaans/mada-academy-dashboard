@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import NotFound from "@/pages/NotFound";
-import { lazy, Suspense, useEffect, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, type ReactNode, type ComponentType } from "react";
 import { Redirect, Route, Switch, Router as WouterRouter } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -11,38 +11,58 @@ import { useAuth } from "./contexts/AuthContext";
 import { ROLE_DEFINITIONS } from "./lib/roleNavigation";
 import { subscribeApiErrors } from "./lib/apiClient";
 
-const Home = lazy(() => import("./pages/Home"));
-const Students = lazy(() => import("./pages/Students"));
-const Classes = lazy(() => import("./pages/Classes"));
-const Schedule = lazy(() => import("./pages/Schedule"));
-const SecretaryDesk = lazy(() => import("./pages/SecretaryDesk"));
-const FinanceDesk = lazy(() => import("./pages/FinanceDesk"));
-const MarketingDesk = lazy(() => import("./pages/MarketingDesk"));
-const Team = lazy(() => import("./pages/Team"));
-const SupervisionAssignments = lazy(() => import("./pages/SupervisionAssignments"));
-const Approvals = lazy(() => import("./pages/Approvals"));
-const Reports = lazy(() => import("./pages/Reports"));
-const InstructorDesk = lazy(() => import("./pages/InstructorDesk"));
-const HeadInstructors = lazy(() => import("./pages/HeadInstructors"));
-const AcademicPrograms = lazy(() => import("./pages/AcademicPrograms"));
-const AcademyOwner = lazy(() => import("./pages/AcademyOwner"));
-const ExecutiveDashboard = lazy(() => import("./pages/ExecutiveDashboard"));
-const PlatformConsole = lazy(() => import("./pages/PlatformConsole"));
-const FamilyPortal = lazy(() => import("./pages/FamilyPortal"));
-const StudentPortal = lazy(() => import("./pages/StudentPortal"));
-const CertificateVerify = lazy(() => import("./pages/CertificateVerify"));
-const WorkspaceHub = lazy(() => import("./pages/WorkspaceHub"));
-const AcademyBootstrap = lazy(() => import("./pages/AcademyBootstrap"));
-const Login = lazy(() => import("./pages/Login"));
-const ChangePassword = lazy(() => import("./pages/ChangePassword"));
-const ConsumerInvitationAccept = lazy(() => import("./pages/ConsumerInvitationAccept"));
-const AcademyRoles = lazy(() => import("./pages/AcademyRoles"));
-const AcademyBranches = lazy(() => import("./pages/AcademyBranches"));
-const AcademyClassrooms = lazy(() => import("./pages/AcademyClassrooms"));
-const AcademyAuditTrail = lazy(() => import("./pages/AcademyAuditTrail"));
-const Competitions = lazy(() => import("./pages/CompetitionsLive"));
-const NurseryDesk = lazy(() => import("./pages/NurseryDeskLive"));
-const LobbyDisplay = lazy(() => import("./pages/LobbyDisplay"));
+function lazyWithRetry<T extends ComponentType<any>>(
+  factory: () => Promise<{ default: T }>
+) {
+  return lazy(async () => {
+    const hasRefreshed = sessionStorage.getItem("mada_chunk_refreshed") === "true";
+    try {
+      const mod = await factory();
+      sessionStorage.setItem("mada_chunk_refreshed", "false");
+      return mod;
+    } catch (error) {
+      if (!hasRefreshed) {
+        sessionStorage.setItem("mada_chunk_refreshed", "true");
+        window.location.reload();
+        return { default: (() => null) as unknown as T };
+      }
+      throw error;
+    }
+  });
+}
+
+const Home = lazyWithRetry(() => import("./pages/Home"));
+const Students = lazyWithRetry(() => import("./pages/Students"));
+const Classes = lazyWithRetry(() => import("./pages/Classes"));
+const Schedule = lazyWithRetry(() => import("./pages/Schedule"));
+const SecretaryDesk = lazyWithRetry(() => import("./pages/SecretaryDesk"));
+const FinanceDesk = lazyWithRetry(() => import("./pages/FinanceDesk"));
+const MarketingDesk = lazyWithRetry(() => import("./pages/MarketingDesk"));
+const Team = lazyWithRetry(() => import("./pages/Team"));
+const SupervisionAssignments = lazyWithRetry(() => import("./pages/SupervisionAssignments"));
+const Approvals = lazyWithRetry(() => import("./pages/Approvals"));
+const Reports = lazyWithRetry(() => import("./pages/Reports"));
+const InstructorDesk = lazyWithRetry(() => import("./pages/InstructorDesk"));
+const HeadInstructors = lazyWithRetry(() => import("./pages/HeadInstructors"));
+const AcademicPrograms = lazyWithRetry(() => import("./pages/AcademicPrograms"));
+const AcademyOwner = lazyWithRetry(() => import("./pages/AcademyOwner"));
+const ExecutiveDashboard = lazyWithRetry(() => import("./pages/ExecutiveDashboard"));
+const PlatformConsole = lazyWithRetry(() => import("./pages/PlatformConsole"));
+const FamilyPortal = lazyWithRetry(() => import("./pages/FamilyPortal"));
+const StudentPortal = lazyWithRetry(() => import("./pages/StudentPortal"));
+const CertificateVerify = lazyWithRetry(() => import("./pages/CertificateVerify"));
+const WorkspaceHub = lazyWithRetry(() => import("./pages/WorkspaceHub"));
+const AcademyBootstrap = lazyWithRetry(() => import("./pages/AcademyBootstrap"));
+const Login = lazyWithRetry(() => import("./pages/Login"));
+const ChangePassword = lazyWithRetry(() => import("./pages/ChangePassword"));
+const ConsumerInvitationAccept = lazyWithRetry(() => import("./pages/ConsumerInvitationAccept"));
+const AcademyRoles = lazyWithRetry(() => import("./pages/AcademyRoles"));
+const AcademyBranches = lazyWithRetry(() => import("./pages/AcademyBranches"));
+const AcademyClassrooms = lazyWithRetry(() => import("./pages/AcademyClassrooms"));
+const AcademyAuditTrail = lazyWithRetry(() => import("./pages/AcademyAuditTrail"));
+const Competitions = lazyWithRetry(() => import("./pages/CompetitionsLive"));
+const NurseryDesk = lazyWithRetry(() => import("./pages/NurseryDeskLive"));
+const LobbyDisplay = lazyWithRetry(() => import("./pages/LobbyDisplay"));
 
 function FinanceRedirect() {
   return <Redirect to="/finance-desk" />;

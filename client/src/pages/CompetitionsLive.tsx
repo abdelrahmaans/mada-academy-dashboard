@@ -350,6 +350,7 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
 
   return (
     <RoleDashboardShell
+      className="app-shell comp-live-shell"
       roleCode={roleCode}
       roleLabel={me?.roleLabel ?? roleDefinition.label}
       scopeLevel={roleDefinition.scopeLevel}
@@ -360,7 +361,7 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
       onCloseMobile={() => setMobileNavOpen(false)}
       demo={false}
     >
-      <div className="comp-workspace" dir="rtl">
+      <main className="main-panel comp-main-panel" dir="rtl">
         {/* Topbar */}
         <RoleSurfaceTopbar
           roleLabel={me?.roleLabel ?? roleDefinition.label}
@@ -368,9 +369,10 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
           onMenu={() => setMobileNavOpen(true)}
         />
 
-        <div className="comp-scope-container">
-          <RoleScopeCard compact />
-        </div>
+        <div className="workspace comp-workspace">
+          <div className="comp-scope-container">
+            <RoleScopeCard compact />
+          </div>
 
         {/* Hero Banner */}
         <div className="comp-hero-banner">
@@ -505,26 +507,12 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
         {/* TAB 1: TOURNAMENTS */}
         {activeTab === "TOURNAMENTS" && (
           <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-              <div>
-                <h2 style={{ fontSize: "16px", fontWeight: "700", margin: 0, color: "#0f172a" }}>
-                  دليل المسابقات والفعاليات الرسمية
-                </h2>
-                <small style={{ color: "#64748b" }}>
-                  اختر أي بطولة لاستعراض فرقها وإدارة معسكرات التدريب الخاصة بها
-                </small>
+            <div className="comp-section-header">
+              <div className="comp-section-info">
+                <h2>دليل المسابقات والفعاليات الرسمية</h2>
+                <small>اختر أي بطولة لاستعراض فرقها وإدارة معسكرات التدريب الخاصة بها</small>
               </div>
-              <span
-                style={{
-                  fontSize: "12px",
-                  fontWeight: "700",
-                  color: "#0d9488",
-                  background: "#f0fdfa",
-                  padding: "4px 12px",
-                  borderRadius: "20px",
-                  border: "1px solid #ccfbf1",
-                }}
-              >
+              <span className="comp-section-badge">
                 {competitions.length} بطولات مدرجة
               </span>
             </div>
@@ -834,16 +822,19 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
         {/* TAB 3: HALL OF FAME */}
         {activeTab === "HALL_OF_FAME" && (
           <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <div>
-                <h2 style={{ fontSize: "17px", fontWeight: "800", margin: 0, color: "#0f172a", display: "flex", alignItems: "center", gap: "8px" }}>
+            <div className="comp-section-header">
+              <div className="comp-section-info">
+                <h2 style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <Sparkles size={20} color="#d97706" />
-                  لوحة الشرف والإنجازات الذهبية (Hall of Fame)
+                  <span>لوحة الشرف والإنجازات الذهبية (Hall of Fame)</span>
                 </h2>
-                <small style={{ color: "#64748b" }}>
+                <small>
                   سجل التتويج التاريخي لفرق الأكاديمية والجوائز التخصصية للمشاركة والتسويق وفخر الأهالي
                 </small>
               </div>
+              <span className="comp-section-badge comp-section-badge-gold">
+                {hallOfFame.length} تكريم موثق
+              </span>
             </div>
 
             {hallOfFame.length === 0 ? (
@@ -1067,7 +1058,8 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
             void loadData();
           }}
         />
-      </div>
+        </div>
+      </main>
     </RoleDashboardShell>
   );
 }
