@@ -16,6 +16,17 @@ if (analyticsEndpoint && analyticsWebsiteId) {
   document.head.appendChild(script);
 }
 
+// Auto-recover if a new build was deployed to Vercel and old chunks are missing
+window.addEventListener("vite:preloadError", (event) => {
+  event.preventDefault();
+  const key = "mada_chunk_reload";
+  const lastReload = Number(sessionStorage.getItem(key) || 0);
+  if (Date.now() - lastReload > 8000) {
+    sessionStorage.setItem(key, String(Date.now()));
+    window.location.reload();
+  }
+});
+
 const rootEl = document.getElementById("root");
 if (!rootEl) {
   throw new Error("Root element '#root' not found");
