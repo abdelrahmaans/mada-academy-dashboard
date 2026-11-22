@@ -68,7 +68,7 @@ export function AcademyWelcomeOnboardingModal({
           background: "#ffffff",
           borderRadius: "20px",
           width: "100%",
-          maxWidth: "560px",
+          maxWidth: "580px",
           boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
           border: "1px solid #e2e8f0",
           overflow: "hidden",
@@ -177,27 +177,41 @@ export function AcademyWelcomeOnboardingModal({
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            gap: "16px",
+            flexWrap: "wrap",
           }}
         >
-          <span style={{ fontSize: "0.8rem", color: "#64748b" }}>
+          <span style={{ fontSize: "0.82rem", color: "#64748b", lineHeight: 1.5, flex: "1 1 200px" }}>
             يمكنك الوصول لكافة الشاشات من القائمة الجانبية في أي وقت.
           </span>
           <button
             type="button"
             onClick={onClose}
             style={{
-              padding: "10px 20px",
-              borderRadius: "10px",
-              background: "#0f766e",
+              padding: "10px 22px",
+              borderRadius: "12px",
+              background: "linear-gradient(135deg, #0f766e 0%, #0d9488 100%)",
               color: "#ffffff",
               border: "none",
               fontWeight: 700,
-              fontSize: "0.9rem",
+              fontSize: "0.92rem",
               cursor: "pointer",
               display: "inline-flex",
               alignItems: "center",
-              gap: "6px",
-              boxShadow: "0 4px 12px rgba(15, 118, 110, 0.25)",
+              justifyContent: "center",
+              gap: "8px",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+              boxShadow: "0 4px 14px rgba(15, 118, 110, 0.28)",
+              transition: "transform 0.15s ease, box-shadow 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-1px)";
+              e.currentTarget.style.boxShadow = "0 6px 18px rgba(15, 118, 110, 0.35)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "none";
+              e.currentTarget.style.boxShadow = "0 4px 14px rgba(15, 118, 110, 0.28)";
             }}
           >
             <span>ابدأ استكشاف الأكاديمية</span>
