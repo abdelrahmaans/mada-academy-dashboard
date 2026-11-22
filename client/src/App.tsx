@@ -184,7 +184,10 @@ function ApiFeedbackBridge() {
   useEffect(() => subscribeApiErrors(({ error, path }) => {
     if (path.startsWith("/auth/") || path.startsWith("/consumer-invitations/")) return;
     if (error.status === 0) {
-      toast.error("تعذر الاتصال بالخادم. تأكد من تشغيل الـ Backend (pnpm backend:dev).", { id: "mada-api-offline" });
+      const isMutation = path.includes("/create") || path.includes("/update") || path.includes("/delete") || path.includes("/approve") || path.includes("/reject") || path.includes("/handover");
+      if (isMutation) {
+        toast.error("تعذر الاتصال بالخادم. يرجى التحقق من الاتصال بالشبكة.", { id: "mada-api-offline" });
+      }
     } else if (error.status === 401) {
       toast.error("انتهت جلسة الدخول، سجّل الدخول مرة أخرى.", { id: "mada-session-expired" });
     } else if (error.status === 403) {

@@ -807,10 +807,11 @@ const isLocalHost = typeof window !== "undefined" && (
   window.location.port === "3000" ||
   window.location.port === "5173"
 );
-const API_BASE = (
+const REMOTE_API_BASE = (import.meta.env.VITE_API_URL || "https://academy-dashboard.runasp.net/api/v1").replace(/\/$/, "");
+let API_BASE = (
   isLocalHost
     ? "http://localhost:5000/api/v1"
-    : (import.meta.env.VITE_API_URL || "https://academy-dashboard.runasp.net/api/v1")
+    : REMOTE_API_BASE
 ).replace(/\/$/, "");
 const ACCESS_KEY = "mada.accessToken";
 const REFRESH_KEY = "mada.refreshToken";
@@ -856,11 +857,31 @@ export function clearTokens() {
 export async function refreshAccessToken(): Promise<boolean> {
   const refreshToken = safeStorage.getItem(REFRESH_KEY);
   if (!refreshToken) return false;
-  const response = await fetch(`${API_BASE}/auth/refresh`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ refreshToken }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/auth/refresh`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
+  } catch {
+    if (API_BASE !== REMOTE_API_BASE) {
+      try {
+        response = await fetch(`${REMOTE_API_BASE}/auth/refresh`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ refreshToken }),
+        });
+        API_BASE = REMOTE_API_BASE;
+      } catch {
+        clearTokens();
+        return false;
+      }
+    } else {
+      clearTokens();
+      return false;
+    }
+  }
   if (!response.ok) {
     clearTokens();
     return false;
@@ -880,13 +901,28 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
   try {
     response = await fetch(`${API_BASE}${path}`, { ...init, headers });
   } catch (cause) {
-    if (retry && API_BASE.startsWith("https://") && (method === "GET" || path === "/auth/login")) {
-      await new Promise(resolve => setTimeout(resolve, 1200));
-      return request<T>(path, init, false);
+    if (API_BASE !== REMOTE_API_BASE) {
+      try {
+        response = await fetch(`${REMOTE_API_BASE}${path}`, { ...init, headers });
+        API_BASE = REMOTE_API_BASE;
+      } catch (remoteCause) {
+        if (retry && (method === "GET" || path === "/auth/login")) {
+          await new Promise(resolve => setTimeout(resolve, 1200));
+          return request<T>(path, init, false);
+        }
+        const error = new ApiRequestError(remoteCause instanceof Error ? remoteCause.message : "Network request failed", 0);
+        emitApiError({ error, path, method });
+        throw error;
+      }
+    } else {
+      if (retry && API_BASE.startsWith("https://") && (method === "GET" || path === "/auth/login")) {
+        await new Promise(resolve => setTimeout(resolve, 1200));
+        return request<T>(path, init, false);
+      }
+      const error = new ApiRequestError(cause instanceof Error ? cause.message : "Network request failed", 0);
+      emitApiError({ error, path, method });
+      throw error;
     }
-    const error = new ApiRequestError(cause instanceof Error ? cause.message : "Network request failed", 0);
-    emitApiError({ error, path, method });
-    throw error;
   }
   if (response.status === 401 && retry && await refreshAccessToken()) return request<T>(path, init, false);
   if (!response.ok) {
