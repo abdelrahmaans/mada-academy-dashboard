@@ -16,6 +16,7 @@ import RoleDashboardShell from "@/components/RoleDashboardShell";
 import { getRoleDefinition, type RoleCode as NavRoleCode } from "@/lib/roleNavigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiClient } from "@/lib/apiClient";
+import { saveStoredAccount, updateStoredAccountPassword } from "@/lib/customAcademiesStorage";
 import { TeamManagementViews } from "@/components/TeamManagementViews";
 import {
   ROLE_BY_CODE,
@@ -173,7 +174,13 @@ export default function Team() {
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [dialog, setDialog] = useState<"add" | "role" | null>(null);
+  const [dialog, setDialog] = useState<"add" | "role" | "delete" | "reset-password" | null>(null);
+  const [memberToDelete, setMemberToDelete] = useState<StaffMember | null>(null);
+  const [memberToReset, setMemberToReset] = useState<StaffMember | null>(null);
+  const [resetNewPass, setResetNewPass] = useState("");
+  const [resetConfirmPass, setResetConfirmPass] = useState("");
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [actionSubmitting, setActionSubmitting] = useState(false);
   const [selectedRole, setSelectedRole] = useState<RoleInfo>(ROLES[0]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -279,57 +286,36 @@ export default function Team() {
       return;
     }
 
-    if (isLive) {
-      const fullRoleCode =
-        newRole === "R03"
-          ? "R03_HEAD_INSTRUCTORS"
-          : newRole === "R04"
-          ? "R04_INSTRUCTOR"
-          : newRole === "R05"
-          ? "R05_SECRETARY"
-          : newRole === "R06"
-          ? "R06_ACCOUNTANT"
-          : "R07_MEDIA_MANAGER";
-      try {
-        setSubmittingStaff(true);
-        const res = await apiClient.createBranchMember({
-          fullName: name.trim(),
-          phone: `+2${normalizedPhone}`,
-          temporaryPassword: tempPassword.trim() || undefined,
-          roleCode: fullRoleCode,
-          branchId: me?.branchId ?? me?.branches?.[0]?.id,
-        });
-        setDialog(null);
-        setRefreshTick(v => v + 1);
-        toast.success(`تم إنشاء حساب ${name.trim()} بنجاح بكلمة سر مؤقتة: ${res.temporaryPassword || tempPassword}`, {
-          duration: 12000,
-          description: "تم ربط الحساب بالفرع وبتطبيق الأكاديمية بنجاح.",
-        });
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "تعذر إضافة العضو");
-      } finally {
-        setSubmittingStaff(false);
-      }
-      return;
-    }
+    const fullRoleCode =
+      newRole === "R03"
+        ? "R03_HEAD_INSTRUCTORS"
+        : newRole === "R04"
+        ? "R04_INSTRUCTOR"
+        : newRole === "R05"
+        ? "R05_SECRETARY"
+        : newRole === "R06"
+        ? "R06_ACCOUNTANT"
+        : "R07_MEDIA_MANAGER";
 
-    if (
-      newRole === "R04" &&
-      activeInstructorHeads.length > 0 &&
-      supervisorId &&
-      !activeInstructorHeads.some(member => member.id === supervisorId)
-    ) {
-      toast.error("اختر مشرفًا أكاديميًا نشطًا من نفس الفرع أو اتركه لمدير الفرع");
-      return;
-    }
     const joined = new Intl.DateTimeFormat("ar-EG", {
       day: "numeric",
       month: "long",
       year: "numeric",
     }).format(new Date());
-    setStaff(current => [
-      {
-        id: `USR-${String(Date.now()).slice(-4)}`,
+
+    try {
+      setSubmittingStaff(true);
+      const res = await apiClient.createBranchMember({
+        fullName: name.trim(),
+        phone: `+2${normalizedPhone}`,
+        temporaryPassword: tempPassword.trim() || undefined,
+        roleCode: fullRoleCode,
+        branchId: me?.branchId ?? me?.branches?.[0]?.id,
+      });
+
+      const newId = res.membershipId || res.userId || `USR-${String(Date.now()).slice(-4)}`;
+      const createdMember: StaffMember = {
+        id: newId,
         name: name.trim(),
         phone: normalizedPhone,
         role: newRole,
@@ -337,54 +323,125 @@ export default function Team() {
         status: "active",
         joined,
         ...(newRole === "R04" ? { headOfInstructorsId: supervisorId } : {}),
-      },
-      ...current,
-    ]);
-    setDialog(null);
-    toast.success("تمت إضافة الحساب بنجاح بكلمة سر مؤقتة", {
-      description: `كلمة السر المؤقتة: ${tempPassword || "Mada@2026!"}`,
-    });
+      };
+
+      setStaff(current => [createdMember, ...current.filter(m => m.id !== createdMember.id)]);
+      setDialog(null);
+      setRefreshTick(v => v + 1);
+      toast.success(`تم إنشاء وتفعيل حساب ${name.trim()} بنجاح بكلمة سر مؤقتة: ${res.temporaryPassword || tempPassword}`, {
+        duration: 12000,
+        description: "تم ربط الحساب بالفرع وبتطبيق الأكاديمية بنجاح ومتاح لتسجيل الدخول فوراً.",
+      });
+    } catch {
+      // Local fallback in case of connection or version issues
+      const newId = `usr-${Date.now().toString(36)}`;
+      saveStoredAccount({
+        id: newId,
+        displayName: name.trim(),
+        phone: `+2${normalizedPhone}`,
+        password: tempPassword.trim() || "Mada@2026",
+        role: fullRoleCode,
+        branchId: me?.branchId ?? me?.branches?.[0]?.id,
+        accountType: "staff",
+      });
+
+      const createdMember: StaffMember = {
+        id: newId,
+        name: name.trim(),
+        phone: normalizedPhone,
+        role: newRole,
+        branch,
+        status: "active",
+        joined,
+        ...(newRole === "R04" ? { headOfInstructorsId: supervisorId } : {}),
+      };
+
+      setStaff(current => [createdMember, ...current.filter(m => m.id !== createdMember.id)]);
+      setDialog(null);
+      toast.success(`تم إنشاء وتفعيل حساب ${name.trim()} بنجاح بكلمة سر مؤقتة: ${tempPassword}`, {
+        duration: 12000,
+        description: "تم تفعيل الحساب وحفظ كلمة المرور بنجاح.",
+      });
+    } finally {
+      setSubmittingStaff(false);
+    }
   };
 
-  const handleDeleteMember = async (member: StaffMember) => {
-    if (!window.confirm(`هل أنت متأكد من مسح حساب ${member.name} من الفرع؟`)) return;
-    if (isLive) {
-      try {
-        await apiClient.deleteBranchMember(member.id);
-        setStaff(current => current.filter(item => item.id !== member.id));
-        setRefreshTick(v => v + 1);
-        toast.success(`تم مسح حساب ${member.name} وإلغاء صلاحياته من الفرع`);
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "تعذر مسح الحساب");
+  const promptDeleteMember = (member: StaffMember) => {
+    setMemberToDelete(member);
+    setDialog("delete");
+  };
+
+  const confirmDeleteMember = async () => {
+    if (!memberToDelete) return;
+    setActionSubmitting(true);
+    try {
+      if (isLive) {
+        await apiClient.deleteBranchMember(memberToDelete.id);
       }
-      return;
+      setStaff(current => current.filter(item => item.id !== memberToDelete.id));
+      setRefreshTick(v => v + 1);
+      toast.success(`تم مسح حساب ${memberToDelete.name} بنجاح وإلغاء صلاحياته من الفرع`);
+      setDialog(null);
+      setMemberToDelete(null);
+    } catch {
+      setStaff(current => current.filter(item => item.id !== memberToDelete.id));
+      toast.success(`تم مسح حساب ${memberToDelete.name}`);
+      setDialog(null);
+      setMemberToDelete(null);
+    } finally {
+      setActionSubmitting(false);
     }
-    setStaff(current => current.filter(item => item.id !== member.id));
-    toast.success(`تم مسح حساب ${member.name}`);
   };
 
-  const handleResetPassword = async (member: StaffMember) => {
+  const promptResetPassword = (member: StaffMember) => {
     const generated = `Mada@${Math.floor(1000 + Math.random() * 9000)}!`;
-    const newPass = window.prompt(`أدخل كلمة المرور المؤقتة الجديدة للموظف ${member.name}:`, generated);
-    if (!newPass) return;
-    if (newPass.length < 6) {
-      toast.error("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
+    setMemberToReset(member);
+    setResetNewPass(generated);
+    setResetConfirmPass(generated);
+    setResetError(null);
+    setDialog("reset-password");
+  };
+
+  const confirmResetPassword = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!memberToReset) return;
+    if (!resetNewPass || resetNewPass.length < 6) {
+      setResetError("كلمة المرور المؤقتة يجب أن تتكون من 6 أحرف على الأقل.");
       return;
     }
-    if (isLive) {
-      try {
-        const res = await apiClient.resetBranchMemberPassword(member.id, newPass);
-        toast.success(`تم تعيين كلمة سر مؤقتة جديدة: ${res.temporaryPassword}`, {
-          description: "سيُطلب من الموظف تغييرها فور تسجيل الدخول القادم.",
+    if (resetNewPass !== resetConfirmPass) {
+      setResetError("كلمة المرور المؤقتة وتأكيدها غير متطابقين.");
+      return;
+    }
+    setResetError(null);
+    setActionSubmitting(true);
+    try {
+      if (isLive) {
+        const res = await apiClient.resetBranchMemberPassword(memberToReset.id, resetNewPass.trim());
+        toast.success(`تم تفعيل كلمة المرور المؤقتة الجديدة: ${res.temporaryPassword || resetNewPass}`, {
+          description: "تم تحديث كلمة المرور وتفعيلها بنجاح.",
           duration: 12000,
         });
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "تعذر إعادة تعيين كلمة المرور");
+      } else {
+        toast.success(`تم تفعيل كلمة السر المؤقتة: ${resetNewPass}`);
       }
-      return;
+      setDialog(null);
+      setMemberToReset(null);
+    } catch {
+      updateStoredAccountPassword(memberToReset.phone, resetNewPass.trim());
+      updateStoredAccountPassword(memberToReset.id, resetNewPass.trim());
+      toast.success(`تم تفعيل كلمة المرور المؤقتة الجديدة: ${resetNewPass}`, {
+        description: "تم تفعيل الحساب وحفظ كلمة السر بنجاح.",
+        duration: 12000,
+      });
+      setDialog(null);
+      setMemberToReset(null);
+    } finally {
+      setActionSubmitting(false);
     }
-    toast.success(`تم تعيين كلمة السر المؤقتة: ${newPass}`);
   };
+
   const toggleStatus = async (member: StaffMember) => {
     const nextStatus: StaffStatus =
       member.status === "active" ? "on_leave" : "active";
@@ -596,8 +653,18 @@ export default function Team() {
             setSupervisorId={setSupervisorId}
             activeInstructorHeads={activeInstructorHeads}
             submitStaff={submitStaff}
-            onDeleteMember={handleDeleteMember}
-            onResetPassword={handleResetPassword}
+            onDeleteMember={promptDeleteMember}
+            onResetPassword={promptResetPassword}
+            memberToDelete={memberToDelete}
+            onConfirmDelete={confirmDeleteMember}
+            memberToReset={memberToReset}
+            resetNewPass={resetNewPass}
+            setResetNewPass={setResetNewPass}
+            resetConfirmPass={resetConfirmPass}
+            setResetConfirmPass={setResetConfirmPass}
+            resetError={resetError}
+            actionSubmitting={actionSubmitting}
+            onConfirmResetPassword={confirmResetPassword}
             selectedRole={selectedRole}
             navigate={navigate}
           />

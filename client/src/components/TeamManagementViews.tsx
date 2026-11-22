@@ -48,8 +48,8 @@ export type TeamManagementViewsProps = {
   statusFilter: string;
   setStatusFilter: (value: string) => void;
   toggleStatus: (member: StaffMember) => void;
-  dialog: "add" | "role" | null;
-  setDialog: Setter<"add" | "role" | null>;
+  dialog: "add" | "role" | "delete" | "reset-password" | null;
+  setDialog: Setter<"add" | "role" | "delete" | "reset-password" | null>;
   name: string;
   setName: Setter<string>;
   phone: string;
@@ -65,6 +65,16 @@ export type TeamManagementViewsProps = {
   submitStaff: (event: FormEvent<HTMLFormElement>) => void;
   onDeleteMember?: (member: StaffMember) => void;
   onResetPassword?: (member: StaffMember) => void;
+  memberToDelete?: StaffMember | null;
+  onConfirmDelete?: () => void;
+  memberToReset?: StaffMember | null;
+  resetNewPass?: string;
+  setResetNewPass?: Setter<string>;
+  resetConfirmPass?: string;
+  setResetConfirmPass?: Setter<string>;
+  resetError?: string | null;
+  actionSubmitting?: boolean;
+  onConfirmResetPassword?: (event: FormEvent<HTMLFormElement>) => void;
   selectedRole: RoleInfo;
   navigate: (path: string) => void;
 };
@@ -102,11 +112,22 @@ export function TeamManagementViews({
   submitStaff,
   onDeleteMember,
   onResetPassword,
+  memberToDelete,
+  onConfirmDelete,
+  memberToReset,
+  resetNewPass = "",
+  setResetNewPass,
+  resetConfirmPass = "",
+  setResetConfirmPass,
+  resetError,
+  actionSubmitting = false,
+  onConfirmResetPassword,
   selectedRole,
   navigate,
 }: TeamManagementViewsProps) {
   const [selectedMember, setSelectedMember] = useState<StaffMember | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showResetPass, setShowResetPass] = useState(false);
 
   return (
     <>
@@ -565,6 +586,222 @@ export function TeamManagementViews({
                 <button type="submit" className="button button-primary" disabled={submittingStaff}>
                   {submittingStaff ? <RefreshCw size={16} className="animate-spin" /> : <UserPlus size={16} />}
                   <span>{submittingStaff ? "جارٍ إنشاء الحساب..." : "إنشاء وتفعيل الحساب"}</span>
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+      {dialog === "delete" && memberToDelete && (
+        <div
+          className="dialog-overlay"
+          role="presentation"
+          onMouseDown={event => {
+            if (event.target === event.currentTarget) setDialog(null);
+          }}
+        >
+          <section
+            className="dialog-card team-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-dialog-title"
+            style={{ maxWidth: "460px" }}
+          >
+            <button
+              className="dialog-close"
+              aria-label="إغلاق"
+              onClick={() => setDialog(null)}
+            >
+              <X size={17} />
+            </button>
+            <div className="team-dialog-icon" style={{ background: "#fff1f2", color: "#e11d48", borderColor: "#fecdd3" }}>
+              <Trash2 size={22} />
+            </div>
+            <div className="team-dialog-heading">
+              <h2 id="delete-dialog-title" style={{ color: "#9f1239" }}>تأكيد مسح حساب الموظف</h2>
+              <p>هل أنت متأكد من مسح حساب هذا العضو وإلغاء صلاحياته من الفرع؟</p>
+            </div>
+
+            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "14px 16px", margin: "14px 0" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                <span style={{ fontSize: "14px", fontWeight: 700, color: "#0f172a" }}>{memberToDelete.name}</span>
+                <span className="team-role-chip" style={{ fontSize: "11px" }}>
+                  {ROLE_BY_CODE[memberToDelete.role].name}
+                </span>
+              </div>
+              <div style={{ fontSize: "12px", color: "#64748b", display: "flex", gap: "12px" }}>
+                <span dir="ltr">📱 {memberToDelete.phone}</span>
+                <span>🏢 {memberToDelete.branch}</span>
+              </div>
+            </div>
+
+            <div className="dialog-info" style={{ background: "#fff1f2", color: "#9f1239", border: "1px solid #fecdd3", margin: "0 0 16px" }}>
+              <AlertCircle size={16} color="#e11d48" />
+              <span>
+                سيتم إيقاف صلاحيات الدخول لهذا الحساب وحذفه من قائمة فريق الفرع فور التأكيد.
+              </span>
+            </div>
+
+            <div className="dialog-actions">
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() => setDialog(null)}
+                disabled={actionSubmitting}
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                className="button"
+                style={{
+                  background: "#e11d48",
+                  color: "#ffffff",
+                  border: 0,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "8px 18px",
+                  borderRadius: "8px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+                onClick={onConfirmDelete}
+                disabled={actionSubmitting}
+              >
+                {actionSubmitting ? <RefreshCw size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                <span>{actionSubmitting ? "جارٍ المسح..." : "تأكيد مسح الحساب"}</span>
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+      {dialog === "reset-password" && memberToReset && (
+        <div
+          className="dialog-overlay"
+          role="presentation"
+          onMouseDown={event => {
+            if (event.target === event.currentTarget) setDialog(null);
+          }}
+        >
+          <section
+            className="dialog-card team-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reset-dialog-title"
+            style={{ maxWidth: "480px" }}
+          >
+            <button
+              className="dialog-close"
+              aria-label="إغلاق"
+              onClick={() => setDialog(null)}
+            >
+              <X size={17} />
+            </button>
+            <div className="team-dialog-icon" style={{ background: "#fffbeb", color: "#b45309", borderColor: "#fde68a" }}>
+              <KeyRound size={22} />
+            </div>
+            <div className="team-dialog-heading">
+              <h2 id="reset-dialog-title">تعيين وتفعيل كلمة سر مؤقتة</h2>
+              <p>تعيين كلمة سر مؤقتة جديدة للموظف {memberToReset.name} ({ROLE_BY_CODE[memberToReset.role].name}).</p>
+            </div>
+
+            {resetError && (
+              <div style={{ background: "#fef2f2", color: "#b91c1c", border: "1px solid #fecaca", padding: "8px 12px", borderRadius: "8px", fontSize: "12px", marginBottom: "12px" }}>
+                {resetError}
+              </div>
+            )}
+
+            <form className="finance-form" onSubmit={onConfirmResetPassword}>
+              <label>
+                <span>كلمة المرور المؤقتة الجديدة <b>*</b></span>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <div style={{ position: "relative", flex: 1 }}>
+                    <input
+                      type={showResetPass ? "text" : "password"}
+                      dir="ltr"
+                      value={resetNewPass}
+                      onChange={e => setResetNewPass?.(e.target.value)}
+                      placeholder="أدخل كلمة مرور مؤقتة (مثال: Mada@2026!)"
+                      required
+                      style={{ paddingLeft: "36px" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowResetPass(p => !p)}
+                      style={{
+                        position: "absolute",
+                        left: "10px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        color: "#64748b",
+                        cursor: "pointer",
+                      }}
+                      title={showResetPass ? "إخفاء" : "إظهار"}
+                    >
+                      {showResetPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className="button button-secondary"
+                    style={{ whiteSpace: "nowrap", padding: "8px 12px", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                    onClick={() => {
+                      const generated = `Mada@${Math.floor(1000 + Math.random() * 9000)}!`;
+                      setResetNewPass?.(generated);
+                      setResetConfirmPass?.(generated);
+                      setShowResetPass(true);
+                      toast.info(`تم توليد كلمة سر مؤقتة: ${generated}`);
+                    }}
+                  >
+                    <KeyRound size={14} />
+                    <span>توليد تلقائي</span>
+                  </button>
+                </div>
+              </label>
+
+              <label>
+                <span>تأكيد كلمة المرور المؤقتة <b>*</b></span>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showResetPass ? "text" : "password"}
+                    dir="ltr"
+                    value={resetConfirmPass}
+                    onChange={e => setResetConfirmPass?.(e.target.value)}
+                    placeholder="أعد إدخال نفس كلمة المرور للتأكيد"
+                    required
+                  />
+                </div>
+                <small style={{ color: "#64748b", display: "block", marginTop: "4px" }}>
+                  التأكيد يضمن صحة كلمة السر وتفعيلها فوراً للحساب وإنهاء الجلسات السابقة.
+                </small>
+              </label>
+
+              <div className="dialog-info" style={{ background: "#f0fdfa", color: "#0f766e", border: "1px solid #ccfbf1", margin: "10px 0 16px" }}>
+                <ShieldCheck size={16} color="#0d9488" />
+                <span>
+                  بالضغط على "تأكيد وتفعيل"، سيتم تفعيل كلمة المرور فوراً وطلب تغييرها من الموظف عند أول تسجيل دخول.
+                </span>
+              </div>
+
+              <div className="dialog-actions">
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  onClick={() => setDialog(null)}
+                  disabled={actionSubmitting}
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  className="button button-primary"
+                  disabled={actionSubmitting}
+                >
+                  {actionSubmitting ? <RefreshCw size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                  <span>{actionSubmitting ? "جارٍ التفعيل..." : "تأكيد وتفعيل كلمة السر"}</span>
                 </button>
               </div>
             </form>
