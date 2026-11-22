@@ -872,6 +872,8 @@ export async function refreshAccessToken(): Promise<boolean> {
 async function request<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
   const headers = new Headers(init.headers);
   headers.set("content-type", "application/json");
+  const currentLang = typeof window !== "undefined" ? (localStorage.getItem("mada_lang") || "ar") : "ar";
+  headers.set("accept-language", currentLang === "en" ? "en-US,en;q=0.9" : "ar-EG,ar;q=0.9,en;q=0.8");
   if (accessToken) headers.set("authorization", `Bearer ${accessToken}`);
   const method = (init.method ?? "GET").toUpperCase();
   let response: Response;

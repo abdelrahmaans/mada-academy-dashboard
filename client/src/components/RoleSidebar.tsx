@@ -39,11 +39,13 @@ import {
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { getAuthorizedNavigation, getRoleDefinition } from "@/lib/roleNavigation";
 import type { RoleCode } from "@/contexts/RoleScopeContext";
 import SessionLogoutButton from "./SessionLogoutButton";
 import SettingsModal from "./SettingsModal";
 import { ContactSupportModal } from "./ContactSupportModal";
+import LanguageToggle from "./LanguageToggle";
 
 const ICON_BY_PATH: Record<string, ComponentType<LucideProps>> = {
   "/": LayoutDashboard,
@@ -160,10 +162,11 @@ export default function RoleSidebar({
     [effectiveRoleCode, me?.permissions]
   );
   const AvatarIcon = ROLE_AVATAR_ICONS[effectiveRoleCode] ?? GraduationCap;
+  const { lang, t } = useLanguage();
 
-  const resolvedTenantName = me?.academy?.name ?? tenantName ?? "أكاديمية مدى";
-  const resolvedRoleLabel = me?.roleLabel ?? roleLabel ?? roleDef.label;
-  const resolvedScope = branchName ?? scopeLabel ?? roleDef.defaultScopeLabel;
+  const resolvedTenantName = me?.academy?.name ?? tenantName ?? (lang === "en" ? "Mada Academy" : "أكاديمية مدى");
+  const resolvedRoleLabel = t(me?.roleLabel ?? roleLabel ?? roleDef.label);
+  const resolvedScope = t(branchName ?? scopeLabel ?? roleDef.defaultScopeLabel);
 
   const [currentHash, setCurrentHash] = useState(() => (typeof window !== "undefined" ? window.location.hash : ""));
 
@@ -333,8 +336,8 @@ export default function RoleSidebar({
 
       {hasGroups ? (
         <>
-          <div className="nav-caption">{primaryCaption}</div>
-          <nav className="primary-nav" aria-label={primaryCaption}>
+          <div className="nav-caption">{t(primaryCaption)}</div>
+          <nav className="primary-nav" aria-label={t(primaryCaption)}>
             {primaryItems.map((item) => {
               const Icon = ICON_BY_PATH[item.path] ?? LayoutDashboard;
               const active = isItemActive(item.path);
@@ -347,14 +350,14 @@ export default function RoleSidebar({
                   onClick={() => handleNavigate(item.path)}
                 >
                   <Icon size={19} />
-                  <span>{item.label}</span>
+                  <span>{t(item.label)}</span>
                 </button>
               );
             })}
           </nav>
 
-          <div className="nav-caption nav-caption-spaced">{secondaryCaption}</div>
-          <nav className="primary-nav" aria-label={secondaryCaption}>
+          <div className="nav-caption nav-caption-spaced">{t(secondaryCaption)}</div>
+          <nav className="primary-nav" aria-label={t(secondaryCaption)}>
             {secondaryItems.map((item) => {
               const Icon = ICON_BY_PATH[item.path] ?? LayoutDashboard;
               const active = isItemActive(item.path);
@@ -367,7 +370,7 @@ export default function RoleSidebar({
                   onClick={() => handleNavigate(item.path)}
                 >
                   <Icon size={19} />
-                  <span>{item.label}</span>
+                  <span>{t(item.label)}</span>
                 </button>
               );
             })}
@@ -375,8 +378,8 @@ export default function RoleSidebar({
         </>
       ) : (
         <>
-          <div className="nav-caption">القائمة الرئيسية</div>
-          <nav className="primary-nav" aria-label="القائمة الرئيسية">
+          <div className="nav-caption">{t("القائمة الرئيسية")}</div>
+          <nav className="primary-nav" aria-label={t("القائمة الرئيسية")}>
             {authorizedNavigation.map((item) => {
               const Icon = ICON_BY_PATH[item.path] ?? LayoutDashboard;
               const active = isItemActive(item.path);
@@ -389,7 +392,7 @@ export default function RoleSidebar({
                   onClick={() => handleNavigate(item.path)}
                 >
                   <Icon size={19} />
-                  <span>{item.label}</span>
+                  <span>{t(item.label)}</span>
                 </button>
               );
             })}
@@ -399,13 +402,17 @@ export default function RoleSidebar({
 
       <div className="sidebar-spacer" />
 
+      <div style={{ padding: "0 12px 10px" }}>
+        <LanguageToggle variant="sidebar" />
+      </div>
+
       <div className="sidebar-help" role="note">
         <span className="help-icon">
           <CircleHelp size={18} />
         </span>
         <div>
-          <strong>محتاج مساعدة؟</strong>
-          <span>مركز الدعم والإرشادات</span>
+          <strong>{lang === "en" ? "Need help?" : "محتاج مساعدة؟"}</strong>
+          <span>{lang === "en" ? "Support Center & Guides" : "مركز الدعم والإرشادات"}</span>
         </div>
         <ChevronLeft size={16} />
       </div>
@@ -419,10 +426,10 @@ export default function RoleSidebar({
             setSupportModalOpen(true);
             onCloseMobile?.();
           }}
-          aria-label="فتح الدعم الفني وطلب مقابلة"
+          aria-label={t("topbar.help") || "فتح الدعم الفني"}
         >
           <Headphones size={19} />
-          <span>الدعم والاجتماعات</span>
+          <span>{t("topbar.help") || "الدعم والاجتماعات"}</span>
         </button>
         <button
           type="button"
@@ -431,16 +438,16 @@ export default function RoleSidebar({
             setSettingsOpen(true);
             onCloseMobile?.();
           }}
-          aria-label="فتح الإعدادات"
+          aria-label={t("topbar.settings") || "فتح الإعدادات"}
         >
           <Settings size={19} />
-          <span>الإعدادات</span>
+          <span>{t("topbar.settings") || "الإعدادات"}</span>
         </button>
         <SessionLogoutButton className="nav-link" iconSize={19} />
       </div>
 
       <div className="sidebar-version">
-        مدى لإدارة الأكاديميات <span>{effectiveRoleCode}</span>
+        {lang === "en" ? "Mada Academy Operations" : "مدى لإدارة الأكاديميات"} <span>{effectiveRoleCode}</span>
       </div>
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
