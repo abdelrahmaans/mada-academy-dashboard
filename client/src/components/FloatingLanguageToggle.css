@@ -1,0 +1,77 @@
+.mada-floating-lang-wrap {
+  position: fixed;
+  bottom: 22px;
+  inset-inline-end: 24px;
+  z-index: 99999;
+  pointer-events: auto;
+}
+
+.mada-floating-lang-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #ffffff;
+  color: #0f172a;
+  border: 1.5px solid #0d9488;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.22), 0 2px 6px rgba(15, 23, 42, 0.08);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.mada-floating-lang-btn:hover {
+  background: #0d9488;
+  color: #ffffff;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 6px 20px rgba(13, 148, 136, 0.35);
+}
+
+.mada-floating-lang-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.mada-floating-lang-icon {
+  color: #0d9488;
+  transition: transform 0.25s ease, color 0.2s ease;
+}
+
+.mada-floating-lang-btn:hover .mada-floating-lang-icon {
+  color: #ffffff;
+  transform: rotate(35deg);
+}
+
+.mada-floating-lang-label {
+  letter-spacing: -0.01em;
+}
+
+.mada-floating-lang-badge {
+  font-size: 10px;
+  font-weight: 800;
+  background: #f0fdfa;
+  color: #0d9488;
+  border: 1px solid #ccfbf1;
+  padding: 1px 6px;
+  border-radius: 999px;
+  transition: all 0.2s ease;
+}
+
+.mada-floating-lang-btn:hover .mada-floating-lang-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+@media (max-width: 640px) {
+  .mada-floating-lang-wrap {
+    bottom: 14px;
+    inset-inline-end: 14px;
+  }
+  .mada-floating-lang-btn {
+    padding: 7px 12px;
+    font-size: 12px;
+  }
+}

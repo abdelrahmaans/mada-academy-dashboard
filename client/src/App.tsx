@@ -10,6 +10,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { useAuth } from "./contexts/AuthContext";
 import { ROLE_DEFINITIONS } from "./lib/roleNavigation";
 import { subscribeApiErrors } from "./lib/apiClient";
+import FloatingLanguageToggle from "./components/FloatingLanguageToggle";
 
 function lazyWithRetry<T extends ComponentType<any>>(
   factory: () => Promise<{ default: T }>
