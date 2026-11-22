@@ -8,9 +8,14 @@ import {
   CheckCircle2,
   ChevronLeft,
   Clock3,
+  Eye,
+  EyeOff,
   GraduationCap,
+  KeyRound,
+  RefreshCw,
   Search,
   ShieldCheck,
+  Trash2,
   UserPlus,
   UserCog,
   Users,
@@ -49,12 +54,17 @@ export type TeamManagementViewsProps = {
   setName: Setter<string>;
   phone: string;
   setPhone: Setter<string>;
+  tempPassword?: string;
+  setTempPassword?: Setter<string>;
+  submittingStaff?: boolean;
   newRole: RoleCode;
   setNewRole: (value: RoleCode) => void;
   supervisorId: string;
   setSupervisorId: Setter<string>;
   activeInstructorHeads: StaffMember[];
   submitStaff: (event: FormEvent<HTMLFormElement>) => void;
+  onDeleteMember?: (member: StaffMember) => void;
+  onResetPassword?: (member: StaffMember) => void;
   selectedRole: RoleInfo;
   navigate: (path: string) => void;
 };
@@ -81,16 +91,22 @@ export function TeamManagementViews({
   setName,
   phone,
   setPhone,
+  tempPassword = "",
+  setTempPassword,
+  submittingStaff = false,
   newRole,
   setNewRole,
   supervisorId,
   setSupervisorId,
   activeInstructorHeads,
   submitStaff,
+  onDeleteMember,
+  onResetPassword,
   selectedRole,
   navigate,
 }: TeamManagementViewsProps) {
   const [selectedMember, setSelectedMember] = useState<StaffMember | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <>
@@ -276,6 +292,44 @@ export function TeamManagementViews({
                           >
                             {member.status === "active" ? "إيقاف الحساب" : "تفعيل الحساب"}
                           </button>
+                          {onResetPassword && (
+                            <button
+                              type="button"
+                              className="team-row-action"
+                              style={{
+                                background: "#fffbeb",
+                                color: "#b45309",
+                                borderColor: "#fde68a",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
+                              onClick={() => onResetPassword(member)}
+                              title="إعادة تعيين كلمة مرور مؤقتة للعضو"
+                            >
+                              <KeyRound size={12} />
+                              <span>كلمة سر</span>
+                            </button>
+                          )}
+                          {onDeleteMember && (
+                            <button
+                              type="button"
+                              className="team-row-action"
+                              style={{
+                                background: "#fff1f2",
+                                color: "#e11d48",
+                                borderColor: "#fecdd3",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
+                              onClick={() => onDeleteMember(member)}
+                              title="مسح حساب العضو من الفرع"
+                            >
+                              <Trash2 size={12} />
+                              <span>مسح</span>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -350,8 +404,8 @@ export function TeamManagementViews({
               <UserPlus size={20} />
             </div>
             <div className="team-dialog-heading">
-              <h2 id="team-dialog-title">إضافة حساب موظف</h2>
-              <p>أضف بيانات عضو جديد إلى قائمة الفريق التجريبية.</p>
+              <h2 id="team-dialog-title">إضافة حساب موظف للفرع</h2>
+              <p>إنشاء حساب معتمد لأحد أعضاء الفريق وتعيين كلمة المرور المؤقتة للدخول.</p>
             </div>
             <form className="finance-form" onSubmit={submitStaff}>
               <label>
@@ -361,6 +415,7 @@ export function TeamManagementViews({
                   value={name}
                   onChange={event => setName(event.target.value)}
                   placeholder="مثال: مريم أحمد حسن"
+                  required
                 />
               </label>
               <label>
@@ -371,7 +426,60 @@ export function TeamManagementViews({
                   value={phone}
                   onChange={event => setPhone(event.target.value)}
                   placeholder="01xxxxxxxxx"
+                  required
                 />
+              </label>
+              <label>
+                <span>كلمة المرور المؤقتة للحساب <b>*</b></span>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <div style={{ position: "relative", flex: 1 }}>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      dir="ltr"
+                      value={tempPassword}
+                      onChange={event => setTempPassword?.(event.target.value)}
+                      placeholder="أدخل كلمة مرور مؤقتة (مثال: Mada@2026!)"
+                      required
+                      style={{ paddingLeft: "36px" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(p => !p)}
+                      style={{
+                        position: "absolute",
+                        left: "10px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "none",
+                        border: "none",
+                        color: "#64748b",
+                        cursor: "pointer",
+                        display: "grid",
+                        placeItems: "center",
+                      }}
+                      title={showPassword ? "إخفاء" : "إظهار"}
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className="button button-secondary"
+                    style={{ whiteSpace: "nowrap", padding: "8px 12px", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                    onClick={() => {
+                      const generated = `Mada@${Math.floor(1000 + Math.random() * 9000)}!`;
+                      setTempPassword?.(generated);
+                      setShowPassword(true);
+                      toast.info(`تم توليد كلمة سر مؤقتة: ${generated}`);
+                    }}
+                  >
+                    <KeyRound size={14} />
+                    <span>توليد تلقائي</span>
+                  </button>
+                </div>
+                <small style={{ color: "#64748b", display: "block", marginTop: "4px" }}>
+                  سيُطلب من الموظف تغيير كلمة المرور فور أول تسجيل دخول.
+                </small>
               </label>
               <div className="finance-form-row">
                 <label>
@@ -439,10 +547,10 @@ export function TeamManagementViews({
                   </small>
                 </div>
               </div>
-              <div className="dialog-info">
-                <AlertCircle size={15} />
+              <div className="dialog-info" style={{ background: "#f0fdfa", color: "#0f766e", border: "1px solid #ccfbf1" }}>
+                <ShieldCheck size={16} color="#0d9488" />
                 <span>
-                  لن يتم إنشاء حساب دخول حقيقي أو إرسال OTP من هذه المعاينة.
+                  الحساب يُنشأ مباشرة في قاعدة بيانات الفرع، ويسمع فوراً لدى مالك الأكاديمية (Academy Owner) في سجل الحسابات والحوكمة.
                 </span>
               </div>
               <div className="dialog-actions">
@@ -450,11 +558,13 @@ export function TeamManagementViews({
                   type="button"
                   className="button button-secondary"
                   onClick={() => setDialog(null)}
+                  disabled={submittingStaff}
                 >
                   إلغاء
                 </button>
-                <button type="submit" className="button button-primary">
-                  <Check size={16} /> إضافة للعرض
+                <button type="submit" className="button button-primary" disabled={submittingStaff}>
+                  {submittingStaff ? <RefreshCw size={16} className="animate-spin" /> : <UserPlus size={16} />}
+                  <span>{submittingStaff ? "جارٍ إنشاء الحساب..." : "إنشاء وتفعيل الحساب"}</span>
                 </button>
               </div>
             </form>
@@ -707,29 +817,81 @@ export function TeamManagementViews({
                     ? "الحساب نشط حالياً وله وصول للفرع."
                     : "الحساب موقوف / مجمد مؤقتاً ولا يمكنه تسجيل الدخول."}
                 </span>
-                <button
-                  type="button"
-                  style={{
-                    padding: "6px 14px",
-                    borderRadius: "8px",
-                    border: "none",
-                    fontWeight: 700,
-                    fontSize: "12px",
-                    cursor: "pointer",
-                    background: selectedMember.status === "active" ? "#dc2626" : "#0d9488",
-                    color: "#ffffff",
-                    whiteSpace: "nowrap",
-                  }}
-                  onClick={() => {
-                    toggleStatus(selectedMember);
-                    setSelectedMember({
-                      ...selectedMember,
-                      status: selectedMember.status === "active" ? "on_leave" : "active",
-                    });
-                  }}
-                >
-                  {selectedMember.status === "active" ? "إيقاف الحساب الآن" : "إعادة تفعيل الحساب"}
-                </button>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: "8px",
+                      border: "none",
+                      fontWeight: 700,
+                      fontSize: "12px",
+                      cursor: "pointer",
+                      background: selectedMember.status === "active" ? "#dc2626" : "#0d9488",
+                      color: "#ffffff",
+                      whiteSpace: "nowrap",
+                    }}
+                    onClick={() => {
+                      toggleStatus(selectedMember);
+                      setSelectedMember({
+                        ...selectedMember,
+                        status: selectedMember.status === "active" ? "on_leave" : "active",
+                      });
+                    }}
+                  >
+                    {selectedMember.status === "active" ? "إيقاف الحساب الآن" : "إعادة تفعيل الحساب"}
+                  </button>
+                  {onResetPassword && (
+                    <button
+                      type="button"
+                      style={{
+                        padding: "6px 14px",
+                        borderRadius: "8px",
+                        border: "1px solid #fde68a",
+                        fontWeight: 700,
+                        fontSize: "12px",
+                        cursor: "pointer",
+                        background: "#fffbeb",
+                        color: "#b45309",
+                        whiteSpace: "nowrap",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                      }}
+                      onClick={() => onResetPassword(selectedMember)}
+                    >
+                      <KeyRound size={13} />
+                      <span>تعيين كلمة سر مؤقتة</span>
+                    </button>
+                  )}
+                  {onDeleteMember && (
+                    <button
+                      type="button"
+                      style={{
+                        padding: "6px 14px",
+                        borderRadius: "8px",
+                        border: "1px solid #fecdd3",
+                        fontWeight: 700,
+                        fontSize: "12px",
+                        cursor: "pointer",
+                        background: "#fff1f2",
+                        color: "#e11d48",
+                        whiteSpace: "nowrap",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "5px",
+                      }}
+                      onClick={() => {
+                        const target = selectedMember;
+                        setSelectedMember(null);
+                        onDeleteMember(target);
+                      }}
+                    >
+                      <Trash2 size={13} />
+                      <span>مسح الحساب</span>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 

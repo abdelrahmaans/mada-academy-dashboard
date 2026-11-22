@@ -415,6 +415,13 @@
 .team-dialog {
   max-height: min(90vh, 720px);
   overflow-y: auto;
+  position: relative;
+}
+.team-dialog .dialog-close {
+  inset-inline-end: 16px !important;
+  inset-inline-start: auto !important;
+  inset-block-start: 16px !important;
+  z-index: 20;
 }
 .team-dialog-icon {
   width: 42px;

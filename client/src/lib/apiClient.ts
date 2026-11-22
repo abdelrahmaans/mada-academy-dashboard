@@ -1487,8 +1487,14 @@ export const apiClient = {
   markNotificationRead: (notificationId: string) => request<void>(`/scheduling/notifications/${notificationId}/read`, { method: "POST" }),
   academyMembers: () => request<AcademyMembersResponse>("/academy/members"),
   branchTeam: (branchId?: string) => request<BranchTeamResponse>(`/academy/branch-team${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`),
+  createBranchMember: (input: { fullName: string; phone: string; email?: string; temporaryPassword?: string; roleCode: string; branchId?: string }) =>
+    request<{ membershipId: string; userId: string; name: string; phone: string; email: string; roleCode: string; roleLabel: string; status: string; temporaryPassword?: string }>("/academy/branch-team", { method: "POST", body: JSON.stringify(input) }),
   changeBranchMemberStatus: (membershipId: string, status: "ACTIVE" | "SUSPENDED") =>
     request<{ membershipId: string; status: string; userStatus: string }>(`/academy/branch-team/${membershipId}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
+  deleteBranchMember: (membershipId: string) =>
+    request<{ success: boolean; membershipId: string }>(`/academy/branch-team/${membershipId}`, { method: "DELETE" }),
+  resetBranchMemberPassword: (membershipId: string, temporaryPassword?: string) =>
+    request<{ membershipId: string; temporaryPassword: string; mustChangePassword: boolean }>(`/academy/branch-team/${membershipId}/reset-password`, { method: "POST", body: JSON.stringify({ temporaryPassword }) }),
   addAcademyMember: (input: { fullName: string; email: string; phone: string; password: string; roleCode: string; branchId?: string }) =>
     request<AcademyMember>("/academy/members", { method: "POST", body: JSON.stringify(input) }),
   changeAcademyMemberRole: (membershipId: string, input: { roleCode: string; branchId?: string }) =>
