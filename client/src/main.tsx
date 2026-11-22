@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { AuthProvider } from "./contexts/AuthContext";
+import { LanguageProvider } from "./contexts/LanguageContext";
 import "./index.css";
 import "./components/RoleDateBadge.css";
 import "./components/MadaTheme.css";
@@ -48,4 +49,10 @@ if (!rootEl) {
   throw new Error("Root element '#root' not found");
 }
 
-createRoot(rootEl).render(<AuthProvider><App /></AuthProvider>);
+createRoot(rootEl).render(
+  <LanguageProvider>
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  </LanguageProvider>
+);

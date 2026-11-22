@@ -1,5 +1,6 @@
 import React from "react";
 import { CalendarDays } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import "./RoleDateBadge.css";
 
 interface RoleDateBadgeProps {
@@ -10,16 +11,17 @@ interface RoleDateBadgeProps {
   suffix?: React.ReactNode;
 }
 
-export function formatSystemDate(date: Date = new Date()): string {
+export function formatSystemDate(date: Date = new Date(), lang: "ar" | "en" = "ar"): string {
   try {
-    return new Intl.DateTimeFormat("ar-EG-u-nu-latn", {
+    const locale = lang === "en" ? "en-US" : "ar-EG-u-nu-latn";
+    return new Intl.DateTimeFormat(locale, {
       weekday: "long",
       day: "numeric",
       month: "long",
       year: "numeric",
     }).format(date);
   } catch {
-    return date.toLocaleDateString("ar-EG", {
+    return date.toLocaleDateString(lang === "en" ? "en-US" : "ar-EG", {
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -35,14 +37,15 @@ export default function RoleDateBadge({
   prefix,
   suffix,
 }: RoleDateBadgeProps) {
-  const formattedDate = formatSystemDate();
+  const { lang, t } = useLanguage();
+  const formattedDate = formatSystemDate(new Date(), lang);
 
   return (
     <span
       className={`role-date-badge ${hideOnMobile ? "hide-mobile" : ""} ${className}`.trim()}
       style={style}
       title={formattedDate}
-      aria-label={`تاريخ اليوم: ${formattedDate}`}
+      aria-label={`${lang === "en" ? "Today's Date" : "تاريخ اليوم"}: ${formattedDate}`}
     >
       {prefix}
       <CalendarDays size={14} aria-hidden="true" />
