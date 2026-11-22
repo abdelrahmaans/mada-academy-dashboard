@@ -26,7 +26,6 @@ export interface PlatformConsoleAcademiesTabProps {
   onResetOwnerPassword: (academy: PlatformAcademy) => void;
   onEmergencyImpersonation: (academy: PlatformAcademy) => void;
   onDeleteAcademy?: (academy: PlatformAcademy) => void;
-  onCleanupTestAcademies?: () => void;
   ownerResetEnabled: boolean;
   emergencyAccessEnabled: boolean;
   paymentRemindersEnabled: boolean;
@@ -51,7 +50,6 @@ export function PlatformConsoleAcademiesTab({
   onResetOwnerPassword,
   onEmergencyImpersonation,
   onDeleteAcademy,
-  onCleanupTestAcademies,
   ownerResetEnabled,
   emergencyAccessEnabled,
   paymentRemindersEnabled,
@@ -91,28 +89,6 @@ export function PlatformConsoleAcademiesTab({
                 : "متأخرة عن السداد"}
             </button>
           ))}
-          {onCleanupTestAcademies && (
-            <button
-              type="button"
-              onClick={onCleanupTestAcademies}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "5px",
-                padding: "6px 12px",
-                borderRadius: "8px",
-                border: "1px solid #fecaca",
-                background: "#fff1f2",
-                color: "#e11d48",
-                fontSize: "12px",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-              title="حذف جميع الأكاديميات التجريبية الإضافية والإبقاء على الأكاديمية النموذجية الأساسية فقط"
-            >
-              <span>🗑️ مسح الأكاديميات التجريبية</span>
-            </button>
-          )}
         </div>
       </header>
 
