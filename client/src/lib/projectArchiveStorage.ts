@@ -23,7 +23,13 @@ export type ProjectArchiveItem = {
   status: "SUBMITTED" | "APPROVED" | "SHOWCASED";
 };
 
-const STORAGE_KEY = "mada_academy_projects_archive_v1";
+const DEFAULT_TENANT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+const STORAGE_PREFIX = "mada_academy_projects_archive_";
+
+function getStorageKey(tenantId?: string): string {
+  const tid = tenantId || DEFAULT_TENANT_ID;
+  return `${STORAGE_PREFIX}${tid}`;
+}
 
 const INITIAL_PROJECTS: ProjectArchiveItem[] = [
   {
@@ -92,7 +98,7 @@ const INITIAL_PROJECTS: ProjectArchiveItem[] = [
   },
 ];
 
-let memoryStore: ProjectArchiveItem[] | null = null;
+const memoryStores: Record<string, ProjectArchiveItem[]> = {};
 
 function getStore(): Storage | null {
   if (typeof window !== "undefined" && window.localStorage) {
@@ -101,40 +107,56 @@ function getStore(): Storage | null {
   return null;
 }
 
-export function resetProjectArchiveMemoryStore() {
-  memoryStore = null;
+export function resetProjectArchiveMemoryStore(tenantId?: string) {
+  const key = getStorageKey(tenantId);
+  delete memoryStores[key];
   const store = getStore();
   if (store) {
-    store.removeItem(STORAGE_KEY);
+    store.removeItem(key);
   }
 }
 
-export function getArchivedProjects(): ProjectArchiveItem[] {
+export function getArchivedProjects(tenantId?: string, branchId?: string): ProjectArchiveItem[] {
+  const key = getStorageKey(tenantId);
+  const isDefaultDemo = !tenantId || tenantId === DEFAULT_TENANT_ID || tenantId === "demo";
+  const defaultItems = isDefaultDemo ? INITIAL_PROJECTS : [];
+
   const store = getStore();
+  let list: ProjectArchiveItem[];
+
   if (!store) {
-    if (!memoryStore) {
-      memoryStore = [...INITIAL_PROJECTS];
+    if (!memoryStores[key]) {
+      memoryStores[key] = [...defaultItems];
     }
-    return memoryStore;
+    list = memoryStores[key];
+  } else {
+    try {
+      const raw = store.getItem(key);
+      if (!raw) {
+        if (isDefaultDemo) {
+          store.setItem(key, JSON.stringify(defaultItems));
+        }
+        list = defaultItems;
+      } else {
+        const parsed = JSON.parse(raw);
+        list = Array.isArray(parsed) ? parsed : defaultItems;
+      }
+    } catch {
+      list = defaultItems;
+    }
   }
 
-  try {
-    const raw = store.getItem(STORAGE_KEY);
-    if (!raw) {
-      store.setItem(STORAGE_KEY, JSON.stringify(INITIAL_PROJECTS));
-      return INITIAL_PROJECTS;
-    }
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : INITIAL_PROJECTS;
-  } catch {
-    return INITIAL_PROJECTS;
+  if (branchId && branchId !== "ALL") {
+    return list.filter((p) => !p.branchId || p.branchId === branchId);
   }
+  return list;
 }
 
 export function saveArchivedProject(
-  input: Omit<ProjectArchiveItem, "id" | "submittedAt" | "status"> & { status?: ProjectArchiveItem["status"] }
+  input: Omit<ProjectArchiveItem, "id" | "submittedAt" | "status"> & { status?: ProjectArchiveItem["status"] },
+  tenantId?: string
 ): ProjectArchiveItem {
-  const current = getArchivedProjects();
+  const current = getArchivedProjects(tenantId);
   const newProject: ProjectArchiveItem = {
     ...input,
     id: `proj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -143,21 +165,21 @@ export function saveArchivedProject(
   };
 
   const updated = [newProject, ...current];
+  const key = getStorageKey(tenantId);
   const store = getStore();
   if (store) {
     try {
-      store.setItem(STORAGE_KEY, JSON.stringify(updated));
+      store.setItem(key, JSON.stringify(updated));
     } catch {
       // ignore
     }
-  } else {
-    memoryStore = updated;
   }
+  memoryStores[key] = updated;
   return newProject;
 }
 
-export function getStudentProjects(studentIdOrName: string): ProjectArchiveItem[] {
-  const all = getArchivedProjects();
+export function getStudentProjects(studentIdOrName: string, tenantId?: string): ProjectArchiveItem[] {
+  const all = getArchivedProjects(tenantId);
   const needle = studentIdOrName.trim().toLowerCase();
   if (!needle) return [];
 

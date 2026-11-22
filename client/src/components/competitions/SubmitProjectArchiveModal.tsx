@@ -24,6 +24,7 @@ type Props = {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (project: ProjectArchiveItem) => void;
+  tenantId?: string;
   defaultBranchName?: string;
   defaultBranchId?: string;
   defaultCoachName?: string;
@@ -36,8 +37,9 @@ export function SubmitProjectArchiveModal({
   isOpen,
   onClose,
   onSuccess,
-  defaultBranchName = "مدينة نصر",
-  defaultBranchId = "branch-cairo-nasr",
+  tenantId,
+  defaultBranchName = "الفرع الرئيسي",
+  defaultBranchId = "branch-main",
   defaultCoachName = "كوتش الأكاديمية",
   defaultCoachRole = "المدرب المعتمد",
   competitionsList = [],
@@ -136,7 +138,7 @@ export function SubmitProjectArchiveModal({
         students: selectedStudents,
         award: award.trim() || undefined,
         status: "APPROVED",
-      });
+      }, tenantId);
 
       toast.success("تم توثيق ورفع المشروع في أرشيف الأكاديمية بنجاح 🚀", {
         description: `تم إسناد ${selectedStudents.length} طلاب وسماع المشروع في إنجازاتهم.`,
