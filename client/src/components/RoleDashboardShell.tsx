@@ -77,6 +77,7 @@ export default function RoleDashboardShell({
   const [mustChangePassword, setMustChangePassword] = useState(() => {
     try {
       return Boolean(
+        me?.mustChangePassword ||
         me?.user?.mustChangePassword ||
         localStorage.getItem("mada_must_change_password") === "true"
       );

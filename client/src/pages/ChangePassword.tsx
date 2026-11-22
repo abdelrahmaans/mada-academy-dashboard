@@ -23,6 +23,9 @@ export default function ChangePassword() {
     try {
       await apiClient.changePassword(newPassword, currentPassword);
       toast.success("تم تغيير كلمة السر بنجاح. سجّل الدخول بالكلمة الجديدة.");
+      try {
+        localStorage.removeItem("mada_must_change_password");
+      } catch {}
       await logout();
       navigate("/login");
     } catch (cause) {
