@@ -75,6 +75,8 @@ export const approvalsStorage = {
       correctionCurrentAmount?: number;
       correctionProposedAmount?: number;
       correctionInvoice?: string;
+      tenantId?: string;
+      branchId?: string;
     },
     tenantId?: string
   ): ApprovalItem {
@@ -88,6 +90,8 @@ export const approvalsStorage = {
     const newItem: ApprovalItem = {
       id: `APR-${Date.now().toString().slice(-4)}`,
       branch: branchId || "الفرع المصرح",
+      branchId: data.branchId,
+      tenantId: data.tenantId || tenantId,
       status: "pending",
       submittedAt: `اليوم · ${timeFormatted}`,
       submittedAtSort: now.toISOString(),
