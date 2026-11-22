@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using MadaAcademy.Api.Auth;
 using System.Text.RegularExpressions;
 using MadaAcademy.Api.Persistence;
@@ -52,7 +53,9 @@ public static class BranchEndpoints
         if (branch is null) return Results.NotFound(new { error = new { code = "BRANCH_NOT_FOUND", message = "الفرع غير موجود داخل الأكاديمية." } });
         var code = request.Code.Trim().ToUpperInvariant();
         if (await db.Branches.AnyAsync(item => item.TenantId == tenantId && item.Code == code && item.Id != branchId, cancellationToken)) return Conflict("BRANCH_CODE_EXISTS", "كود الفرع مستخدم بالفعل داخل الأكاديمية.");
+        var before = new { branch.Name, branch.Code, branch.Status };
         branch.Name = request.Name.Trim(); branch.Code = code;
+        db.AuditEvents.Add(new AuditEvent { ActorUserId = Actor(principal), TenantId = tenantId, Action = "BRANCH_UPDATED", TargetType = "BRANCH", TargetId = branch.Id.ToString(), MetadataJson = JsonSerializer.Serialize(new { before, after = new { branch.Name, branch.Code, branch.Status } }) });
         await db.SaveChangesAsync(cancellationToken);
         return Results.Ok(new { data = new { branch.Id, branch.TenantId, branch.Name, branch.Code, branch.Status } });
     }
@@ -63,7 +66,9 @@ public static class BranchEndpoints
         if (request.Status is not ("ACTIVE" or "INACTIVE")) return Results.ValidationProblem(new Dictionary<string, string[]> { ["status"] = ["Status must be ACTIVE or INACTIVE."] });
         var branch = await db.Branches.SingleOrDefaultAsync(item => item.Id == branchId && item.TenantId == tenantId, cancellationToken);
         if (branch is null) return Results.NotFound(new { error = new { code = "BRANCH_NOT_FOUND", message = "الفرع غير موجود داخل الأكاديمية." } });
+        var before = new { branch.Name, branch.Code, branch.Status };
         branch.Status = request.Status;
+        db.AuditEvents.Add(new AuditEvent { ActorUserId = Actor(principal), TenantId = tenantId, Action = "BRANCH_STATUS_CHANGED", TargetType = "BRANCH", TargetId = branch.Id.ToString(), MetadataJson = JsonSerializer.Serialize(new { before, after = new { branch.Name, branch.Code, branch.Status } }) });
         await db.SaveChangesAsync(cancellationToken);
         return Results.Ok(new { data = new { branch.Id, branch.Status } });
     }

@@ -82,7 +82,14 @@ public static class AcademyIdentityEndpoints
         db.Add(owner);
         db.Add(membership);
         db.Add(audit);
-        await db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception)
+        {
+            return MapBootstrapConflict(exception);
+        }
 
         return Results.Created($"/api/v1/academy/{tenant.Id}", new
         {
@@ -189,6 +196,20 @@ public static class AcademyIdentityEndpoints
     {
         var cleaned = Regex.Replace(value.Trim().ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
         return string.IsNullOrWhiteSpace(cleaned) ? $"academy-{Guid.NewGuid().ToString("N")[..6]}" : cleaned;
+    }
+
+    private static IResult MapBootstrapConflict(DbUpdateException exception)
+    {
+        var details = exception.InnerException?.Message ?? exception.Message;
+        if (details.Contains("IX_Tenants_Slug", StringComparison.OrdinalIgnoreCase))
+            return Results.Conflict(new { error = new { code = "ACADEMY_SLUG_EXISTS", message = "اسم الأكاديمية أو الرابط مستخدم بالفعل." } });
+        if (details.Contains("IX_UserAccounts_Email", StringComparison.OrdinalIgnoreCase))
+            return Results.Conflict(new { error = new { code = "OWNER_EMAIL_EXISTS", message = "البريد الإلكتروني للمالك مستخدم بالفعل." } });
+        if (details.Contains("IX_UserAccounts_Phone_AccountType", StringComparison.OrdinalIgnoreCase))
+            return Results.Conflict(new { error = new { code = "OWNER_PHONE_EXISTS", message = "رقم هاتف المالك مستخدم بالفعل." } });
+        if (details.Contains("IX_Branches_TenantId_Code", StringComparison.OrdinalIgnoreCase))
+            return Results.Conflict(new { error = new { code = "BRANCH_CODE_EXISTS", message = "كود الفرع الأساسي مستخدم بالفعل داخل الأكاديمية." } });
+        return Results.Conflict(new { error = new { code = "ACADEMY_CREATE_CONFLICT", message = "تعذر إنشاء الأكاديمية لأن البيانات أصبحت مستخدمة في عملية أخرى. راجع البيانات وحاول مرة أخرى." } });
     }
 
     private static readonly Dictionary<string, string> RoleLabels = new()

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
@@ -61,7 +62,9 @@ public static class ClassroomEndpoints
         if (!ownsBranch) return Results.NotFound(new { error = new { code = "CLASSROOM_NOT_FOUND", message = "القاعة غير موجودة داخل الأكاديمية." } });
         var name = request.Name.Trim();
         if (await db.Classrooms.AnyAsync(item => item.BranchId == classroom.BranchId && item.Name == name && item.Id != classroomId, cancellationToken)) return Conflict("CLASSROOM_NAME_EXISTS", "اسم القاعة مستخدم بالفعل داخل هذا الفرع.");
+        var before = new { classroom.Name, classroom.Capacity, classroom.Status };
         classroom.Name = name; classroom.Capacity = request.Capacity;
+        db.AuditEvents.Add(new AuditEvent { ActorUserId = Actor(principal), TenantId = tenantId, BranchId = classroom.BranchId, Action = "CLASSROOM_UPDATED", TargetType = "CLASSROOM", TargetId = classroom.Id.ToString(), MetadataJson = JsonSerializer.Serialize(new { before, after = new { classroom.Name, classroom.Capacity, classroom.Status } }) });
         await db.SaveChangesAsync(cancellationToken);
         return Results.Ok(new { data = new { classroom.Id, classroom.BranchId, classroom.Name, classroom.Capacity, classroom.Status, classroom.UpdatedAt } });
     }
@@ -73,7 +76,9 @@ public static class ClassroomEndpoints
         if (!AllowedStatuses.Contains(status, StringComparer.Ordinal)) return Results.ValidationProblem(new Dictionary<string, string[]> { ["status"] = ["الحالة يجب أن تكون AVAILABLE أو MAINTENANCE أو INACTIVE."] });
         var classroom = await db.Classrooms.SingleOrDefaultAsync(item => item.Id == classroomId, cancellationToken);
         if (classroom is null || !await db.Branches.AnyAsync(branch => branch.Id == classroom.BranchId && branch.TenantId == tenantId, cancellationToken)) return Results.NotFound(new { error = new { code = "CLASSROOM_NOT_FOUND", message = "القاعة غير موجودة داخل الأكاديمية." } });
+        var before = new { classroom.Name, classroom.Capacity, classroom.Status };
         classroom.Status = status;
+        db.AuditEvents.Add(new AuditEvent { ActorUserId = Actor(principal), TenantId = tenantId, BranchId = classroom.BranchId, Action = "CLASSROOM_STATUS_CHANGED", TargetType = "CLASSROOM", TargetId = classroom.Id.ToString(), MetadataJson = JsonSerializer.Serialize(new { before, after = new { classroom.Name, classroom.Capacity, classroom.Status } }) });
         await db.SaveChangesAsync(cancellationToken);
         return Results.Ok(new { data = new { classroom.Id, classroom.Status, classroom.UpdatedAt } });
     }

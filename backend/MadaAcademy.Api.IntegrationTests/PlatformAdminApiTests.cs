@@ -258,6 +258,37 @@ public sealed class PlatformAdminApiTests
     }
 
     [Fact]
+    public async Task PlatformAdmin_CannotBootstrapDuplicateSlugAndGetsConflictCode()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        using var client = factory.CreateClient();
+        var platformAdmin = await TestData.CreateAccountAsync(factory, "R00_PLATFORM_ADMIN");
+        TestData.Authenticate(client, await TestData.LoginAsync(client, platformAdmin));
+        var request = new
+        {
+            name = "أكاديمية التكرار",
+            slug = "duplicate-academy",
+            planCode = "STARTER",
+            primaryBranch = new { name = "الفرع الرئيسي", code = "MAIN" },
+            owner = new { fullName = "مالك أول", phone = "01077770001", email = "duplicate-one@test.local", password = "OwnerPassword2026!" }
+        };
+
+        Assert.Equal(HttpStatusCode.Created, (await client.PostAsJsonAsync("/api/v1/platform/academies", request)).StatusCode);
+        var duplicate = await client.PostAsJsonAsync("/api/v1/platform/academies", new
+        {
+            request.name,
+            request.slug,
+            request.planCode,
+            request.primaryBranch,
+            owner = new { fullName = "مالك ثان", phone = "01077770002", email = "duplicate-two@test.local", password = "OwnerPassword2026!" }
+        });
+
+        Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
+        var body = await duplicate.Content.ReadAsStringAsync();
+        Assert.Contains("ACADEMY_SLUG_EXISTS", body, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task PlatformAdmin_CanReactivatePausedAcademyAndBothTransitionsAreAudited()
     {
         using var factory = new TestApiFactory(useInMemory: true);

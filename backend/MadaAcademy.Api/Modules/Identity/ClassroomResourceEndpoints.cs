@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using MadaAcademy.Api.Auth;
 using MadaAcademy.Api.Persistence;
 using MadaAcademy.Api.Persistence.Entities;
@@ -39,6 +40,7 @@ public static class ClassroomResourceEndpoints
         if (await db.ClassroomResources.AnyAsync(item => item.ClassroomId == classroomId && item.Kind == kind && item.Name == name, cancellationToken)) return Conflict("RESOURCE_EXISTS", "هذا المورد موجود بالفعل داخل القاعة.");
         var resource = new ClassroomResource { ClassroomId = classroomId, Kind = kind, Name = name, Quantity = request.Quantity, Status = request.Status.Trim().ToUpperInvariant(), Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim() };
         db.ClassroomResources.Add(resource);
+        db.AuditEvents.Add(new AuditEvent { ActorUserId = Actor(principal), TenantId = TenantId(principal), BranchId = owned.BranchId, Action = "CLASSROOM_RESOURCE_CREATED", TargetType = "CLASSROOM_RESOURCE", TargetId = resource.Id.ToString(), MetadataJson = JsonSerializer.Serialize(new { after = resource }) });
         await db.SaveChangesAsync(cancellationToken);
         return Results.Created($"/api/v1/academy/classrooms/{classroomId}/resources/{resource.Id}", new { data = resource });
     }
@@ -53,7 +55,9 @@ public static class ClassroomResourceEndpoints
         if (validation is not null) return validation;
         var kind = request.Kind.Trim().ToUpperInvariant(); var name = request.Name.Trim();
         if (await db.ClassroomResources.AnyAsync(item => item.ClassroomId == classroomId && item.Kind == kind && item.Name == name && item.Id != resourceId, cancellationToken)) return Conflict("RESOURCE_EXISTS", "هذا المورد موجود بالفعل داخل القاعة.");
+        var before = new { resource.Kind, resource.Name, resource.Quantity, resource.Status, resource.Notes };
         resource.Kind = kind; resource.Name = name; resource.Quantity = request.Quantity; resource.Status = request.Status.Trim().ToUpperInvariant(); resource.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
+        db.AuditEvents.Add(new AuditEvent { ActorUserId = Actor(principal), TenantId = TenantId(principal), BranchId = owned.BranchId, Action = "CLASSROOM_RESOURCE_UPDATED", TargetType = "CLASSROOM_RESOURCE", TargetId = resource.Id.ToString(), MetadataJson = JsonSerializer.Serialize(new { before, after = new { resource.Kind, resource.Name, resource.Quantity, resource.Status, resource.Notes } }) });
         await db.SaveChangesAsync(cancellationToken);
         return Results.Ok(new { data = resource });
     }
@@ -64,7 +68,10 @@ public static class ClassroomResourceEndpoints
         if (owned is null) return NotFound();
         var resource = await db.ClassroomResources.SingleOrDefaultAsync(item => item.Id == resourceId && item.ClassroomId == classroomId, cancellationToken);
         if (resource is null) return NotFound();
-        db.ClassroomResources.Remove(resource); await db.SaveChangesAsync(cancellationToken); return Results.NoContent();
+        var before = new { resource.Kind, resource.Name, resource.Quantity, resource.Status, resource.Notes };
+        db.ClassroomResources.Remove(resource);
+        db.AuditEvents.Add(new AuditEvent { ActorUserId = Actor(principal), TenantId = TenantId(principal), BranchId = owned.BranchId, Action = "CLASSROOM_RESOURCE_DELETED", TargetType = "CLASSROOM_RESOURCE", TargetId = resource.Id.ToString(), MetadataJson = JsonSerializer.Serialize(new { before, after = (object?)null }) });
+        await db.SaveChangesAsync(cancellationToken); return Results.NoContent();
     }
 
     private static IResult? Validate(ClassroomResourceRequest request)
@@ -85,6 +92,8 @@ public static class ClassroomResourceEndpoints
     }
     private static IResult NotFound() => Results.NotFound(new { error = new { code = "CLASSROOM_NOT_FOUND", message = "القاعة غير موجودة داخل الأكاديمية." } });
     private static IResult Conflict(string code, string message) => Results.Conflict(new { error = new { code, message } });
+    private static Guid? Actor(ClaimsPrincipal principal) => Guid.TryParse(principal.FindFirstValue("sub"), out var id) ? id : null;
+    private static Guid? TenantId(ClaimsPrincipal principal) => Guid.TryParse(principal.FindFirstValue("tenantId"), out var id) ? id : null;
 }
 
 public sealed record ClassroomResourceRequest(string Kind, string Name, int Quantity, string Status, string? Notes);

@@ -45,6 +45,11 @@ export const AUDIT_ACTION_MAP: Record<string, AuditActionDefinition> = {
   BRANCH_UPDATED: { label: "تحديث بيانات الفرع", tone: "system" },
   BRANCH_STATUS_CHANGED: { label: "تغيير حالة تشغيل الفرع", tone: "system" },
   CLASSROOM_CREATED: { label: "إنشاء قاعة دراسية جديدة", tone: "system" },
+  CLASSROOM_UPDATED: { label: "تحديث بيانات القاعة الدراسية", tone: "system" },
+  CLASSROOM_STATUS_CHANGED: { label: "تغيير حالة تشغيل القاعة", tone: "system" },
+  CLASSROOM_RESOURCE_CREATED: { label: "إضافة مورد إلى القاعة", tone: "system" },
+  CLASSROOM_RESOURCE_UPDATED: { label: "تحديث مورد القاعة", tone: "system" },
+  CLASSROOM_RESOURCE_DELETED: { label: "حذف مورد من القاعة", tone: "system" },
   SUPERVISION_ASSIGNMENT_GRANTED: { label: "إسناد إشراف أكاديمي", tone: "system" },
   SUPERVISION_ASSIGNMENT_REVOKED: { label: "إلغاء إشراف أكاديمي", tone: "system" },
   SESSION_COMPLETED: { label: "إتمام جلسة تدريبية وتسجيل الحضور", tone: "system" },
@@ -72,6 +77,7 @@ export const AUDIT_TARGET_TYPE_MAP: Record<string, string> = {
   ROLE: "الدور الوظيفي",
   BRANCH: "الفرع",
   CLASSROOM: "القاعة الدراسية",
+  CLASSROOM_RESOURCE: "مورد القاعة",
   INVOICE: "فاتورة مالية",
   PAYMENT: "سند قبض",
   EXPENSE: "سند صرف",
@@ -336,5 +342,4 @@ export function formatFinancialCode(
 
   return str;
 }
-
 
