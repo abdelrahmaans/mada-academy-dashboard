@@ -80,7 +80,6 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [hubComp, setHubComp] = useState<CompetitionSummaryItem | null>(null);
   const [showPostCompModal, setShowPostCompModal] = useState(false);
-  const [archiveProjectsCount, setArchiveProjectsCount] = useState(() => getArchivedProjects().length);
 
   const [activeTeamForMember, setActiveTeamForMember] = useState<CompetitionTeamItem | null>(null);
   const [activeTeamForAward, setActiveTeamForAward] = useState<CompetitionTeamItem | null>(null);
@@ -131,6 +130,12 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
   const roleCode = ROLE_CODE_BY_ROLE[me?.role ?? ""] ?? (me?.role?.startsWith("R01") ? "R01" : "R02");
   const roleDefinition = getRoleDefinition(roleCode);
 
+  const tenantId = me?.academy?.id || me?.tenantId || "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+  const branchId = me?.branchId || me?.branches?.[0]?.id;
+  const branchName = me?.branches?.[0]?.name || "الفرع الرئيسي";
+
+  const [archiveProjectsCount, setArchiveProjectsCount] = useState(() => getArchivedProjects(tenantId, branchId).length);
+
   const isOwner = me?.role === "R01_ACADEMY_OWNER" || Boolean(me?.role?.startsWith("R01"));
   const isBranchManager = me?.role === "R02_BRANCH_MANAGER";
   const isInstructor = me?.role === "R04_INSTRUCTOR" || me?.role === "R03_HEAD_INSTRUCTORS";
@@ -140,10 +145,43 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
       setRefreshing(true);
       setError(null);
 
-      const [compsRes, hofRes] = await Promise.all([
-        apiClient.competitions(),
-        apiClient.hallOfFame()
-      ]);
+      const localCompKey = `mada_competitions_${tenantId}`;
+      const localHofKey = `mada_hof_${tenantId}`;
+
+      let compsRes: CompetitionSummaryItem[] = [];
+      try {
+        compsRes = await apiClient.competitions();
+      } catch {
+        compsRes = [];
+      }
+
+      // Merge tenant local backup
+      try {
+        const cached = localStorage.getItem(localCompKey);
+        if (cached) {
+          const parsed: CompetitionSummaryItem[] = JSON.parse(cached);
+          const serverIds = new Set(compsRes.map(c => c.id));
+          const extras = parsed.filter(p => !serverIds.has(p.id));
+          compsRes = [...extras, ...compsRes];
+        }
+      } catch {}
+
+      let hofRes: HallOfFameCardItem[] = [];
+      try {
+        hofRes = await apiClient.hallOfFame();
+      } catch {
+        hofRes = [];
+      }
+
+      try {
+        const cachedHof = localStorage.getItem(localHofKey);
+        if (cachedHof) {
+          const parsedHof: HallOfFameCardItem[] = JSON.parse(cachedHof);
+          const serverHofIds = new Set(hofRes.map(h => h.id));
+          const extrasHof = parsedHof.filter(p => !serverHofIds.has(p.id));
+          hofRes = [...extrasHof, ...hofRes];
+        }
+      } catch {}
 
       setCompetitions(compsRes);
       setHallOfFame(hofRes);
@@ -151,23 +189,75 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
       const compId = selectedCompId || (compsRes.length > 0 ? compsRes[0].id : null);
       if (compId) {
         setSelectedCompId(compId);
-        const teamsRes = await apiClient.competitionTeams(compId);
+        let teamsRes: CompetitionTeamItem[] = [];
+        try {
+          teamsRes = await apiClient.competitionTeams(compId);
+        } catch {
+          teamsRes = [];
+        }
+        try {
+          const cachedTeams = localStorage.getItem(`mada_teams_${compId}`);
+          if (cachedTeams) {
+            const parsedTeams: CompetitionTeamItem[] = JSON.parse(cachedTeams);
+            const serverTeamIds = new Set(teamsRes.map(t => t.id));
+            const extrasTeams = parsedTeams.filter(t => !serverTeamIds.has(t.id));
+            teamsRes = [...extrasTeams, ...teamsRes];
+          }
+        } catch {}
         setTeams(teamsRes);
+      } else {
+        setTeams([]);
       }
 
-      // Load students for selector
+      // Load dynamic coaches from branch team or academy members
       try {
-        const studRes = await apiClient.listStudents();
-        setStudentsList((studRes.items || []).map((s: StudentRecord) => ({ id: s.id, fullName: s.fullName })));
-      } catch {
-        // Fallback
-      }
+        let coaches: Array<{ id: string; fullName: string }> = [];
+        if (branchId) {
+          const teamRes = await apiClient.branchTeam(branchId).catch(() => null);
+          if (teamRes?.items && teamRes.items.length > 0) {
+            coaches = teamRes.items
+              .filter(m => ["R03", "R04", "R02"].some(code => m.roleCode.startsWith(code)))
+              .map(m => ({
+                id: m.userId || m.membershipId,
+                fullName: `${m.name} (${m.roleCode.startsWith("R03") ? "رئيس مدربين" : m.roleCode.startsWith("R02") ? "مدير فرع" : "مدرب"})`,
+              }));
+          }
+        }
+        if (coaches.length === 0) {
+          const membersRes = await apiClient.academyMembers().catch(() => null);
+          if (membersRes?.items && membersRes.items.length > 0) {
+            coaches = membersRes.items
+              .filter(m => ["R03", "R04", "R02"].some(code => m.roleCode.startsWith(code)))
+              .map(m => ({
+                id: m.userId || m.membershipId,
+                fullName: `${m.name} (${m.roleCode.startsWith("R03") ? "رئيس مدربين" : m.roleCode.startsWith("R02") ? "مدير فرع" : "مدرب"})`,
+              }));
+          }
+        }
+        if (coaches.length === 0 && me?.user?.displayName) {
+          coaches = [{ id: me.user.id || "current-coach", fullName: `${me.user.displayName} (المدرب المعتمد)` }];
+        }
+        if (coaches.length > 0) {
+          setCoachesList(coaches);
+          setTeamCoachId(prev => prev || coaches[0].id);
+        }
+      } catch {}
+
+      // Load real students
+      try {
+        const studRes = await apiClient.listStudents().catch(() => null);
+        if (studRes?.items && studRes.items.length > 0) {
+          setStudentsList(studRes.items.map((s: StudentRecord) => ({ id: s.id, fullName: s.fullName })));
+        }
+      } catch {}
+
+      setArchiveProjectsCount(getArchivedProjects(tenantId, branchId).length);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "تعذر تحميل بيانات البطولات");
     } finally {
       setRefreshing(false);
     }
-  }, [selectedCompId]);
+  }, [tenantId, branchId, selectedCompId, me?.user?.displayName, me?.user?.id]);
 
   useEffect(() => {
     void loadData();
@@ -190,7 +280,7 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
       return;
     }
     try {
-      await apiClient.createCompetition({
+      const created = await apiClient.createCompetition({
         name: newCompName.trim(),
         organizer: newCompOrganizer.trim(),
         track: newCompTrack,
@@ -198,6 +288,30 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
         location: newCompLocation.trim() || undefined,
         eventDate: newCompEventDate || undefined,
       });
+
+      // Backup into tenant storage
+      try {
+        const localCompKey = `mada_competitions_${tenantId}`;
+        const current = JSON.parse(localStorage.getItem(localCompKey) || "[]");
+        const summaryItem: CompetitionSummaryItem = {
+          id: created.id,
+          name: created.name,
+          organizer: created.organizer,
+          season: created.season,
+          track: created.track,
+          ageMin: created.ageMin,
+          ageMax: created.ageMax,
+          registrationDeadline: created.registrationDeadline,
+          eventDate: created.eventDate,
+          location: created.location,
+          status: created.status,
+          teamsCount: 0,
+          awardsCount: 0,
+          createdAt: new Date().toISOString(),
+        };
+        localStorage.setItem(localCompKey, JSON.stringify([summaryItem, ...current]));
+      } catch {}
+
       toast.success("تم إدراج البطولة بنجاح في جدول الأكاديمية!");
       setShowCompModal(false);
       setNewCompName("");
@@ -250,6 +364,13 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
         bootcampStartDate: teamBootcampDate || new Date().toISOString().slice(0, 10),
         installments: teamInstallments,
       };
+
+      // Backup into local storage
+      try {
+        const teamKey = `mada_teams_${selectedCompId}`;
+        const currentTeams = JSON.parse(localStorage.getItem(teamKey) || "[]");
+        localStorage.setItem(teamKey, JSON.stringify([enrichedTeam, ...currentTeams.filter((t: any) => t.id !== enrichedTeam.id)]));
+      } catch {}
 
       setTeams((prev) => [enrichedTeam, ...prev.filter((t) => t.id !== res.id)]);
       toast.success("تم تشكيل الفريق واعتماد معسكر التدريب المكثف (Bootcamp) بنجاح!");
@@ -338,6 +459,13 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
         photosJson: null,
       };
 
+      // Backup into local storage for Hall of Fame
+      try {
+        const localHofKey = `mada_hof_${tenantId}`;
+        const currentHof = JSON.parse(localStorage.getItem(localHofKey) || "[]");
+        localStorage.setItem(localHofKey, JSON.stringify([newAwardCard, ...currentHof]));
+      } catch {}
+
       setHallOfFame((prev) => [newAwardCard, ...prev]);
       toast.success("مبروك! تم تتويج الفريق وتوثيق الإنجاز في لوحة الشرف 🏆");
       setShowAwardModal(false);
@@ -374,57 +502,57 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
             <RoleScopeCard compact />
           </div>
 
-        {/* Hero Banner */}
-        <div className="comp-hero-banner">
-          <div className="comp-hero-text">
-            <div className="comp-hero-badge">
-              <Trophy size={14} color="#f59e0b" />
-              <span>مسار التميز والابتكار التنافسي</span>
+        {/* Header Section */}
+        <header className="comp-page-header">
+          <div className="comp-header-content">
+            <div className="comp-header-eyebrow">
+              <Trophy size={14} />
+              <span>المسار التنافسي والبطولات · تجهيز وتأهيل الفرق للمسابقات</span>
             </div>
-            <h1>معسكرات البطولات ولوحة الشرف (Hall of Fame)</h1>
-            <p>
-              ربط مباشر بين تدريب الطلاب على الحقائب المتقدمة وتجهيز فرق الأكاديمية للمسابقات
-              المحلية والدولية، مع توثيق إنجازات وتكريمات أبطال الأكاديمية ونشرها في لوحة الشرف.
+            <h1 className="comp-header-title">البطولات ومشاريع الفرق</h1>
+            <p className="comp-header-description">
+              دليل المسابقات والفعاليات الرسمية، تشكيل فرق الأكاديمية وإدارة معسكرات التدريب (Bootcamp)، وتوثيق الإنجازات في لوحة الشرف وأرشيف المشاريع.
             </p>
           </div>
-          <div className="comp-hero-actions">
+          <div className="comp-header-actions">
             <button
               type="button"
-              className="comp-btn-cta"
-              onClick={() => setShowCompModal(true)}
-            >
-              <Plus size={16} />
-              <span>إدراج بطولة جديدة</span>
-            </button>
-            <button
-              type="button"
-              className="comp-btn-secondary"
-              onClick={() => setShowProjectModal(true)}
-            >
-              <Archive size={15} />
-              <span>توثيق مشروع للأرشيف (Drive)</span>
-            </button>
-            <button
-              type="button"
-              className="comp-btn-refresh"
+              className="comp-header-btn-refresh"
               onClick={() => void loadData()}
               disabled={refreshing}
+              title="تحديث البيانات"
             >
               <RefreshCw size={14} className={refreshing ? "spin" : ""} />
               <span>تحديث البيانات</span>
             </button>
+            <button
+              type="button"
+              className="comp-header-btn-secondary"
+              onClick={() => setShowProjectModal(true)}
+            >
+              <Archive size={15} />
+              <span>توثيق مشروع للأرشيف</span>
+            </button>
+            <button
+              type="button"
+              className="comp-header-btn-primary"
+              onClick={() => setShowCompModal(true)}
+            >
+              <Plus size={16} />
+              <span>+ إدراج بطولة جديدة</span>
+            </button>
           </div>
-        </div>
+        </header>
 
         {/* Stats Ribbon */}
         <div className="comp-stats-ribbon">
           <div className="comp-stat-card">
             <div className="comp-stat-meta">
-              <span>البطولات المسجلة</span>
+              <span>البطولات المعتمدة</span>
               <strong>{competitions.length} بطولة</strong>
             </div>
             <div className="comp-stat-icon comp-stat-icon-amber">
-              <Trophy size={22} />
+              <Trophy size={20} />
             </div>
           </div>
           <div className="comp-stat-card">
@@ -433,16 +561,7 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
               <strong>{teams.length} فريق</strong>
             </div>
             <div className="comp-stat-icon comp-stat-icon-teal">
-              <Users size={22} />
-            </div>
-          </div>
-          <div className="comp-stat-card">
-            <div className="comp-stat-meta">
-              <span>أوسمة لوحة الشرف</span>
-              <strong>{hallOfFame.length} تكريم</strong>
-            </div>
-            <div className="comp-stat-icon comp-stat-icon-blue">
-              <Medal size={22} />
+              <Users size={20} />
             </div>
           </div>
           <div className="comp-stat-card">
@@ -451,7 +570,16 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
               <strong>{teams.filter(t => t.status === "BOOTCAMP").length} فريق نشط</strong>
             </div>
             <div className="comp-stat-icon comp-stat-icon-purple">
-              <Rocket size={22} />
+              <Rocket size={20} />
+            </div>
+          </div>
+          <div className="comp-stat-card">
+            <div className="comp-stat-meta">
+              <span>أوسمة لوحة الشرف</span>
+              <strong>{hallOfFame.length} تكريم</strong>
+            </div>
+            <div className="comp-stat-icon comp-stat-icon-blue">
+              <Medal size={20} />
             </div>
           </div>
         </div>
@@ -463,8 +591,8 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
             className={`comp-tab-btn ${activeTab === "TOURNAMENTS" ? "active" : ""}`}
             onClick={() => setActiveTab("TOURNAMENTS")}
           >
-            <Compass size={16} />
-            <span>البطولات والمسابقات الرسمية</span>
+            <Compass size={15} />
+            <span>دليل البطولات</span>
             <span className="comp-tab-pill">{competitions.length}</span>
           </button>
           <button
@@ -472,8 +600,8 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
             className={`comp-tab-btn ${activeTab === "TEAMS" ? "active" : ""}`}
             onClick={() => setActiveTab("TEAMS")}
           >
-            <Users size={16} />
-            <span>فرق الأكاديمية ومعسكرات التدريب</span>
+            <Users size={15} />
+            <span>فرق ومعسكرات الأكاديمية</span>
             <span className="comp-tab-pill">{teams.length}</span>
           </button>
           <button
@@ -481,8 +609,8 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
             className={`comp-tab-btn ${activeTab === "HALL_OF_FAME" ? "active" : ""}`}
             onClick={() => setActiveTab("HALL_OF_FAME")}
           >
-            <Sparkles size={16} color="#d97706" />
-            <span>لوحة الشرف الذهبية (Hall of Fame)</span>
+            <Sparkles size={15} color="#d97706" />
+            <span>لوحة الشرف الذهبية</span>
             <span className="comp-tab-pill">{hallOfFame.length}</span>
           </button>
           <button
@@ -490,8 +618,8 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
             className={`comp-tab-btn ${activeTab === "PROJECTS_ARCHIVE" ? "active" : ""}`}
             onClick={() => setActiveTab("PROJECTS_ARCHIVE")}
           >
-            <Archive size={16} color="#0f766e" />
-            <span>أرشيف مشاريع الفرق والمسابقات (Drive)</span>
+            <Archive size={15} color="#0f766e" />
+            <span>أرشيف المشاريع (Drive)</span>
             <span className="comp-tab-pill">{archiveProjectsCount}</span>
           </button>
         </div>
@@ -944,6 +1072,8 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
           <ProjectArchiveTabView
             onOpenSubmitModal={() => setShowProjectModal(true)}
             canSubmit={true}
+            tenantId={tenantId}
+            branchId={branchId}
           />
         )}
 
@@ -1028,10 +1158,11 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
           isOpen={showProjectModal}
           onClose={() => setShowProjectModal(false)}
           onSuccess={() => {
-            setArchiveProjectsCount(getArchivedProjects().length);
+            setArchiveProjectsCount(getArchivedProjects(tenantId, branchId).length);
           }}
-          defaultBranchName={me?.branches?.[0]?.name || "الفرع الرئيسي"}
-          defaultBranchId={me?.branches?.[0]?.id || "branch-main"}
+          tenantId={tenantId}
+          defaultBranchName={branchName}
+          defaultBranchId={branchId || "branch-main"}
           defaultCoachName={me?.user?.displayName || "كوتش الأكاديمية"}
           defaultCoachRole={roleDefinition.label}
           competitionsList={competitions.map((c) => ({ id: c.id, name: c.name }))}

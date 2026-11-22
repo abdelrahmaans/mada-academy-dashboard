@@ -24,13 +24,19 @@ import {
 type Props = {
   onOpenSubmitModal: () => void;
   canSubmit?: boolean;
+  tenantId?: string;
+  branchId?: string;
 };
 
-export function ProjectArchiveTabView({ onOpenSubmitModal, canSubmit = true }: Props) {
-  const [projects, setProjects] = useState<ProjectArchiveItem[]>(() => getArchivedProjects());
+export function ProjectArchiveTabView({ onOpenSubmitModal, canSubmit = true, tenantId, branchId }: Props) {
+  const [projects, setProjects] = useState<ProjectArchiveItem[]>(() => getArchivedProjects(tenantId, branchId));
   const [searchQuery, setSearchQuery] = useState("");
   const [branchFilter, setBranchFilter] = useState("ALL");
   const [competitionFilter, setCompetitionFilter] = useState("ALL");
+
+  React.useEffect(() => {
+    setProjects(getArchivedProjects(tenantId, branchId));
+  }, [tenantId, branchId]);
 
   const filteredProjects = useMemo(() => {
     return projects.filter((p) => {
