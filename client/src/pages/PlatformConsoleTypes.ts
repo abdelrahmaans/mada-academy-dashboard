@@ -35,12 +35,12 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { id: "overview",  label: "لوحة التحكم والتنبيهات", icon: LayoutDashboard },
-  { id: "academies", label: "سجل الأكاديميات والباقات", icon: Building2 },
-  { id: "leads",     label: "طلبات المعاينة (Leads)", icon: Sparkles },
-  { id: "billing",   label: "التحصيل والاشتراكات", icon: CreditCard },
-  { id: "support",   label: "التذاكر والاقتراحات", icon: LifeBuoy },
-  { id: "system",    label: "الخوادم وسجل التدقيق", icon: ShieldCheck },
+  { id: "overview",  label: "لوحة التحكم", icon: LayoutDashboard },
+  { id: "academies", label: "الأكاديميات", icon: Building2 },
+  { id: "leads",     label: "طلبات الانضمام", icon: Sparkles },
+  { id: "billing",   label: "الاشتراكات والفوترة", icon: CreditCard },
+  { id: "support",   label: "تذاكر الدعم", icon: LifeBuoy },
+  { id: "system",    label: "الخوادم والرقابة", icon: ShieldCheck },
 ];
 
 // ─── Support Ticket types ──────────────────────────────────────────────────────

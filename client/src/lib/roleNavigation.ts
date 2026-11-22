@@ -44,8 +44,8 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     homePath: "/platform-console",
     backPath: "/platform-console",
     navigation: [
-      { path: "/platform-console", label: "مركز حوكمة وإدارة الأكاديميات (Tenants)", purpose: "tenants, plans, support", permission: "platform.read" },
-      { path: "/platform/academies/new", label: "تهيئة وتشغيل أكاديمية جديدة", purpose: "bootstrap new academy", permission: "platform.read" },
+      { path: "/platform-console", label: "إدارة الأكاديميات", purpose: "tenants, plans, support", permission: "platform.read" },
+      { path: "/platform/academies/new", label: "إنشاء أكاديمية جديدة", purpose: "bootstrap new academy", permission: "platform.read" },
     ],
   },
   R01: {
@@ -57,12 +57,12 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     homePath: "/executive-dashboard",
     backPath: "/executive-dashboard",
     navigation: [
-      { path: "/executive-dashboard", label: "لوحة القيادة الاستراتيجية ومقارنة الفروع", purpose: "academy rollup and branch comparison", permission: "academy.read" },
-      { path: "/academy-owner/pnl-retention", label: "تحليلات الربحية ورادار استبقاء الطلاب", purpose: "multi-unit pnl and student retention analytics", permission: "reports.read" },
-      { path: "/academy/branches", label: "إدارة شبكة الفروع وتعيين المديرين", purpose: "branch lifecycle and manager delegation", anyOfPermissions: ["branch.read", "branch.create"] },
-      { path: "/academy/roles", label: "حوكمة الأدوار ومصفوفة الصلاحيات", purpose: "members, roles, permissions", anyOfPermissions: ["roles.read", "roles.manage"] },
-      { path: "/academy/audit-trail", label: "سجل الرقابة والعمليات المعتمدة", purpose: "academy audit logs and event tracing", permission: "reports.read" },
-      { path: "/nursery-desk", label: "مكتب الحضانات والطفولة المبكرة", purpose: "nursery desk and early childhood cohorts", permission: "academy.read", featureKey: "nursery_early_childhood" },
+      { path: "/executive-dashboard", label: "لوحة القيادة", purpose: "academy rollup and branch comparison", permission: "academy.read" },
+      { path: "/academy-owner/pnl-retention", label: "الأرباح والتحليلات", purpose: "multi-unit pnl and student retention analytics", permission: "reports.read" },
+      { path: "/academy/branches", label: "إدارة الفروع", purpose: "branch lifecycle and manager delegation", anyOfPermissions: ["branch.read", "branch.create"] },
+      { path: "/academy/roles", label: "فريق العمل والصلاحيات", purpose: "members, roles, permissions", anyOfPermissions: ["roles.read", "roles.manage"] },
+      { path: "/academy/audit-trail", label: "سجل العمليات والرقابة", purpose: "academy audit logs and event tracing", permission: "reports.read" },
+      { path: "/nursery-desk", label: "الحضانة والطفولة المبكرة", purpose: "nursery desk and early childhood cohorts", permission: "academy.read", featureKey: "nursery_early_childhood" },
     ],
   },
   R02: {
@@ -74,14 +74,14 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     homePath: "/",
     backPath: "/",
     navigation: [
-      { path: "/", label: "غرفة عمليات الفرع والقرارات اليومية", purpose: "daily branch decisions and operations", permission: "branch.read" },
-      { path: "/classes", label: "إدارة المجموعات وتجهيز المعامل والحقائب", purpose: "branch groups, courses, rooms, kits readiness, and creating cohorts", permission: "sessions.read" },
-      { path: "/schedule", label: "الجدول العام وتوزيع القاعات", purpose: "branch schedule and conflict resolution", permission: "sessions.read" },
-      { path: "/students", label: "شؤون واشتراكات طلاب الفرع", purpose: "branch student records, freezes, and waitlists", anyOfPermissions: ["students.read", "students.create"] },
-      { path: "/nursery-desk", label: "مكتب متابعة الحضانة والطفولة المبكرة", purpose: "nursery daily desk and cohorts", permission: "branch.read", featureKey: "nursery_early_childhood" },
-      { path: "/team", label: "إدارة الكادر التدريبي والتشغيلي", purpose: "branch staff, instructors, and status", permission: "branch.read" },
-      { path: "/competitions", label: "بطولات وتراكات الروبوتكس وأرشيف المشاريع", purpose: "branch competitions, tracks, teams and kits", permission: "branch.read" },
-      { path: "/approvals", label: "مركز قرارات الاعتماد والمصروفات", purpose: "substitutions, expenses, and freeze decisions", anyOfPermissions: ["sessions.create", "finance.expenses.approve"] },
+      { path: "/", label: "الرئيسية", purpose: "daily branch decisions and operations", permission: "branch.read" },
+      { path: "/classes", label: "المجموعات والكورسات", purpose: "branch groups, courses, rooms, kits readiness, and creating cohorts", permission: "sessions.read" },
+      { path: "/schedule", label: "جدول الحصص والقاعات", purpose: "branch schedule and conflict resolution", permission: "sessions.read" },
+      { path: "/students", label: "الطلاب والاشتراكات", purpose: "branch student records, freezes, and waitlists", anyOfPermissions: ["students.read", "students.create"] },
+      { path: "/nursery-desk", label: "الحضانة والطفولة المبكرة", purpose: "nursery daily desk and cohorts", permission: "branch.read", featureKey: "nursery_early_childhood" },
+      { path: "/team", label: "فريق العمل", purpose: "branch staff, instructors, and status", permission: "branch.read" },
+      { path: "/competitions", label: "البطولات والمشاريع", purpose: "branch competitions, tracks, teams and kits", permission: "branch.read" },
+      { path: "/approvals", label: "الموافقات والمصروفات", purpose: "substitutions, expenses, and freeze decisions", anyOfPermissions: ["sessions.create", "finance.expenses.approve"] },
     ],
   },
   R03: {
@@ -93,10 +93,10 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     homePath: "/head-instructors",
     backPath: "/head-instructors",
     navigation: [
-      { path: "/head-instructors", label: "الإشراف الأكاديمي ومراجعة التقييمات", purpose: "evaluation review and supervised groups", permission: "branch.read" },
-      { path: "/instructor-desk", label: "حصصي التدريبية المباشرة", purpose: "instructor teaching desk, attendance, and student evaluations", permission: "sessions.assigned.read" },
-      { path: "/academic-programs", label: "مناهج الروبوتكس والحقائب التعليمية", purpose: "curriculum and progress review", permission: "branch.read" },
-      { path: "/schedule", label: "متابعة جداول وتغطيات المدربين", purpose: "sessions in supervision scope", permission: "sessions.read" },
+      { path: "/head-instructors", label: "الإشراف والتقييمات", purpose: "evaluation review and supervised groups", permission: "branch.read" },
+      { path: "/instructor-desk", label: "حصصي المباشرة", purpose: "instructor teaching desk, attendance, and student evaluations", permission: "sessions.assigned.read" },
+      { path: "/academic-programs", label: "المناهج والحقائب", purpose: "curriculum and progress review", permission: "branch.read" },
+      { path: "/schedule", label: "جداول المدربين", purpose: "sessions in supervision scope", permission: "sessions.read" },
     ],
   },
   R04: {
@@ -108,8 +108,8 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     homePath: "/instructor-desk",
     backPath: "/instructor-desk",
     navigation: [
-      { path: "/instructor-desk", label: "مكتبي التدريبي وتحضير الحصص والتقييم", purpose: "today, attendance, evaluation", anyOfPermissions: ["sessions.assigned.read", "attendance.write", "evaluations.write"] },
-      { path: "/schedule", label: "جدولي الأسبوعي وطلب تغطية بديل", purpose: "assigned session schedule", permission: "sessions.assigned.read" },
+      { path: "/instructor-desk", label: "حصصي والتقييم", purpose: "today, attendance, evaluation", anyOfPermissions: ["sessions.assigned.read", "attendance.write", "evaluations.write"] },
+      { path: "/schedule", label: "جدول الحصص", purpose: "assigned session schedule", permission: "sessions.assigned.read" },
     ],
   },
   R05: {
@@ -121,11 +121,11 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     homePath: "/secretary-desk",
     backPath: "/secretary-desk",
     navigation: [
-      { path: "/secretary-desk", label: "مكتب الاستقبال ومتابعة طلبات التسجيل (Leads)", purpose: "lead to enrollment", permission: "branch.read" },
-      { path: "/classes", label: "شواغر وتسكين مجموعات الفرع", purpose: "view active groups, enroll students, and create cohorts", anyOfPermissions: ["sessions.read", "branch.read"] },
-      { path: "/finance-desk", label: "تحصيل الاشتراكات وإيصالات الاستقبال", purpose: "branch-scoped collections and payments", anyOfPermissions: ["invoices.read", "invoices.create", "payments.create", "payments.evidence.read"] },
-      { path: "/students", label: "قاعدة بيانات طلاب وأولياء أمور الفرع", purpose: "branch operational records", anyOfPermissions: ["students.read", "students.create"] },
-      { path: "/schedule", label: "مواعيد الحصص الشاغرة والقاعات المتاحة", purpose: "enrollment availability", permission: "sessions.read" },
+      { path: "/secretary-desk", label: "الاستقبال والعملاء", purpose: "lead to enrollment", permission: "branch.read" },
+      { path: "/classes", label: "المجموعات والشواغر", purpose: "view active groups, enroll students, and create cohorts", anyOfPermissions: ["sessions.read", "branch.read"] },
+      { path: "/finance-desk", label: "التحصيل والخزينة", purpose: "branch-scoped collections and payments", anyOfPermissions: ["invoices.read", "invoices.create", "payments.create", "payments.evidence.read"] },
+      { path: "/students", label: "الطلاب وأولياء الأمور", purpose: "branch operational records", anyOfPermissions: ["students.read", "students.create"] },
+      { path: "/schedule", label: "جدول القاعات", purpose: "enrollment availability", permission: "sessions.read" },
     ],
   },
   R06: {
@@ -137,12 +137,12 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     homePath: "/finance-desk",
     backPath: "/finance-desk",
     navigation: [
-      { path: "/finance-desk", label: "المركز المالي والخزينة المعتمدة", purpose: "collections, expenses, reports", anyOfPermissions: ["finance.read", "invoices.read", "payments.create", "finance.expenses.read"] },
-      { path: "/finance-desk#collections", label: "إدارة الفواتير وسندات القبض", purpose: "invoices and collections", anyOfPermissions: ["invoices.read", "payments.create"] },
-      { path: "/finance-desk#expenses", label: "سندات واعتماد مصروفات التشغيل", purpose: "manage expenses", anyOfPermissions: ["finance.expenses.read", "finance.expenses.create"] },
-      { path: "/finance-desk#shifts", label: "جرد ومطابقة ورديات الكاش اليومية", purpose: "shifts cash handover", permission: "finance.read" },
-      { path: "/finance-desk#payroll", label: "مسيرات مستحقات وأجور المدربين", purpose: "trainer payroll calculation", permission: "finance.read" },
-      { path: "/reports", label: "التقارير المالية ودفتر الأستاذ العام", purpose: "finance and operational read-only reports", permission: "reports.read" },
+      { path: "/finance-desk", label: "المركز المالي", purpose: "collections, expenses, reports", anyOfPermissions: ["finance.read", "invoices.read", "payments.create", "finance.expenses.read"] },
+      { path: "/finance-desk#collections", label: "الفواتير وسندات القبض", purpose: "invoices and collections", anyOfPermissions: ["invoices.read", "payments.create"] },
+      { path: "/finance-desk#expenses", label: "المصروفات", purpose: "manage expenses", anyOfPermissions: ["finance.expenses.read", "finance.expenses.create"] },
+      { path: "/finance-desk#shifts", label: "ورديات الكاش", purpose: "shifts cash handover", permission: "finance.read" },
+      { path: "/finance-desk#payroll", label: "أجور المدربين", purpose: "trainer payroll calculation", permission: "finance.read" },
+      { path: "/reports", label: "التقارير المالية", purpose: "finance and operational read-only reports", permission: "reports.read" },
     ],
   },
   R07: {
@@ -154,7 +154,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     homePath: "/marketing-desk",
     backPath: "/marketing-desk",
     navigation: [
-      { path: "/marketing-desk", label: "مركز الحملات وقمع العملاء المحتملين (Leads)", purpose: "campaigns, content, leads", permission: "marketing.read" },
+      { path: "/marketing-desk", label: "التسويق والعملاء المحتملين", purpose: "campaigns, content, leads", permission: "marketing.read" },
     ],
   },
   R08: {
@@ -166,11 +166,11 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     homePath: "/family-portal",
     backPath: "/family-portal",
     navigation: [
-      { path: "/family-portal", label: "لوحة متابعة الأبناء الأكاديمية", purpose: "children, overview", permission: "consumer.students.read" },
-      { path: "/family-portal#attendance", label: "سجل حضور وانتظام الأبناء", purpose: "attendance records", permission: "consumer.students.read" },
-      { path: "/family-portal#evaluations", label: "تقارير المدرب والتقييمات الدورية", purpose: "evaluations", permission: "consumer.students.read" },
-      { path: "/family-portal#invoices", label: "سداد الأقساط والرسوم الدراسية", purpose: "invoices, payments", permission: "consumer.students.read" },
-      { path: "/family-portal#freeze", label: "طلب تجميد أو حصة تعويضية", purpose: "freeze, makeup credits", permission: "consumer.students.read" },
+      { path: "/family-portal", label: "الرئيسية", purpose: "children, overview", permission: "consumer.students.read" },
+      { path: "/family-portal#attendance", label: "سجل الحضور", purpose: "attendance records", permission: "consumer.students.read" },
+      { path: "/family-portal#evaluations", label: "التقييمات والتقارير", purpose: "evaluations", permission: "consumer.students.read" },
+      { path: "/family-portal#invoices", label: "الاشتراكات والمدفوعات", purpose: "invoices, payments", permission: "consumer.students.read" },
+      { path: "/family-portal#freeze", label: "الطلبات والتعويضات", purpose: "freeze, makeup credits", permission: "consumer.students.read" },
     ],
   },
   R09: {
@@ -182,9 +182,9 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     homePath: "/student-portal",
     backPath: "/student-portal",
     navigation: [
-      { path: "/student-portal", label: "رحلتي التعليمية في الروبوتكس", purpose: "learning path, overview", permission: "consumer.self.read" },
-      { path: "/student-portal#sessions", label: "مواعيد ورش العمل وجلساتي", purpose: "sessions schedule", permission: "consumer.self.read" },
-      { path: "/student-portal#progress", label: "لوحة الشرف والشهادات والأوسمة", purpose: "progress, achievements", permission: "consumer.self.read" },
+      { path: "/student-portal", label: "الرئيسية", purpose: "learning path, overview", permission: "consumer.self.read" },
+      { path: "/student-portal#sessions", label: "حصصي وجدولي", purpose: "sessions schedule", permission: "consumer.self.read" },
+      { path: "/student-portal#progress", label: "إنجازاتي وشهاداتي", purpose: "progress, achievements", permission: "consumer.self.read" },
     ],
   },
 };

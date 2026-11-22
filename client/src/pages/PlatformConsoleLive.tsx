@@ -955,7 +955,7 @@ export default function PlatformConsoleLive() {
           </button>
         </div>
 
-        <div className="nav-caption">إدارة المنصة والعمليات</div>
+        <div className="nav-caption">إدارة المنصة</div>
         <nav className="primary-nav" aria-label="مساحة مسؤول المنصة">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
