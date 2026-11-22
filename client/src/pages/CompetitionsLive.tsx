@@ -368,36 +368,27 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
           onMenu={() => setMobileNavOpen(true)}
         />
 
-        <RoleScopeCard />
+        <div className="comp-scope-container">
+          <RoleScopeCard compact />
+        </div>
 
         {/* Hero Banner */}
         <div className="comp-hero-banner">
           <div className="comp-hero-text">
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-              <Trophy size={20} color="#f59e0b" />
-              <span style={{ fontSize: "12px", fontWeight: "700", color: "#fcd34d", textTransform: "uppercase" }}>
-                مسار التميز والابتكار التنافسي
-              </span>
+            <div className="comp-hero-badge">
+              <Trophy size={14} color="#f59e0b" />
+              <span>مسار التميز والابتكار التنافسي</span>
             </div>
-            <h1>معسكرات البطولات ولوحة الشرف الذهبية (Hall of Fame)</h1>
+            <h1>معسكرات البطولات ولوحة الشرف (Hall of Fame)</h1>
             <p>
-              ربط مباشر بين تدريب الطلاب على الحقائب المتقدمة (EV3, SPIKE, Arduino, AI) وتجهيز فرق الأكاديمية
-              للمنافسة الوطنية والدولية، مع توثيق إنجازات وجوائز أبطال الأكاديمية ونشرها في لوحة الشرف.
+              ربط مباشر بين تدريب الطلاب على الحقائب المتقدمة وتجهيز فرق الأكاديمية للمسابقات
+              المحلية والدولية، مع توثيق إنجازات وتكريمات أبطال الأكاديمية ونشرها في لوحة الشرف.
             </p>
           </div>
           <div className="comp-hero-actions">
             <button
               type="button"
-              className="comp-btn-primary"
-              onClick={() => setShowProjectModal(true)}
-              style={{ background: "#0f766e" }}
-            >
-              <Archive size={16} />
-              <span>توثيق مشروع للأرشيف (Drive)</span>
-            </button>
-            <button
-              type="button"
-              className="comp-btn-secondary"
+              className="comp-btn-cta"
               onClick={() => setShowCompModal(true)}
             >
               <Plus size={16} />
@@ -406,10 +397,18 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
             <button
               type="button"
               className="comp-btn-secondary"
+              onClick={() => setShowProjectModal(true)}
+            >
+              <Archive size={15} />
+              <span>توثيق مشروع للأرشيف (Drive)</span>
+            </button>
+            <button
+              type="button"
+              className="comp-btn-refresh"
               onClick={() => void loadData()}
               disabled={refreshing}
             >
-              <RefreshCw size={15} className={refreshing ? "spin" : ""} />
+              <RefreshCw size={14} className={refreshing ? "spin" : ""} />
               <span>تحديث البيانات</span>
             </button>
           </div>
@@ -418,39 +417,39 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
         {/* Stats Ribbon */}
         <div className="comp-stats-ribbon">
           <div className="comp-stat-card">
-            <div className="comp-stat-icon comp-stat-icon-amber">
-              <Trophy size={22} />
-            </div>
             <div className="comp-stat-meta">
               <span>البطولات المسجلة</span>
               <strong>{competitions.length} بطولة</strong>
             </div>
+            <div className="comp-stat-icon comp-stat-icon-amber">
+              <Trophy size={22} />
+            </div>
           </div>
           <div className="comp-stat-card">
-            <div className="comp-stat-icon comp-stat-icon-teal">
-              <Users size={22} />
-            </div>
             <div className="comp-stat-meta">
               <span>الفرق التنافسية</span>
               <strong>{teams.length} فريق</strong>
             </div>
+            <div className="comp-stat-icon comp-stat-icon-teal">
+              <Users size={22} />
+            </div>
           </div>
           <div className="comp-stat-card">
-            <div className="comp-stat-icon comp-stat-icon-blue">
-              <Medal size={22} />
-            </div>
             <div className="comp-stat-meta">
               <span>أوسمة لوحة الشرف</span>
               <strong>{hallOfFame.length} تكريم</strong>
             </div>
+            <div className="comp-stat-icon comp-stat-icon-blue">
+              <Medal size={22} />
+            </div>
           </div>
           <div className="comp-stat-card">
-            <div className="comp-stat-icon comp-stat-icon-purple">
-              <Rocket size={22} />
-            </div>
             <div className="comp-stat-meta">
               <span>معسكرات التدريب (Bootcamp)</span>
               <strong>{teams.filter(t => t.status === "BOOTCAMP").length} فريق نشط</strong>
+            </div>
+            <div className="comp-stat-icon comp-stat-icon-purple">
+              <Rocket size={22} />
             </div>
           </div>
         </div>
@@ -531,9 +530,22 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
             </div>
 
             {competitions.length === 0 ? (
-              <div className="reports-live-state">
-                <Trophy size={36} color="#cbd5e1" />
-                <p>لا توجد بطولات مسجلة حاليًا. انقر على "إدراج بطولة جديدة" للبدء.</p>
+              <div className="comp-empty-state">
+                <div className="comp-empty-icon amber">
+                  <Trophy size={32} />
+                </div>
+                <h3>لا توجد بطولات أو مسابقات مسجلة حاليًا</h3>
+                <p>
+                  ابدأ بإدراج بطولات أو فعاليات تنافسية معتمدة لربط فرق الأكاديمية ومعسكرات التدريب وتوثيق الإنجازات.
+                </p>
+                <button
+                  type="button"
+                  className="comp-empty-action"
+                  onClick={() => setShowCompModal(true)}
+                >
+                  <Plus size={16} />
+                  <span>إدراج بطولة جديدة الآن</span>
+                </button>
               </div>
             ) : (
               <div className="comp-cards-grid">
@@ -673,29 +685,21 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
             </div>
 
             {teams.length === 0 ? (
-              <div
-                className="reports-live-state"
-                style={{
-                  background: "#fff",
-                  borderRadius: "14px",
-                  padding: "40px",
-                  border: "1px dashed #cbd5e1",
-                }}
-              >
-                <Users size={42} color="#0d9488" />
-                <h4 style={{ margin: "10px 0 4px 0", color: "#0f172a" }}>
-                  لا توجد فرق مسجلة في هذه البطولة بعد
-                </h4>
-                <p style={{ color: "#64748b", margin: "0 0 16px 0" }}>
+              <div className="comp-empty-state">
+                <div className="comp-empty-icon">
+                  <Users size={32} />
+                </div>
+                <h3>لا توجد فرق مسجلة في هذه البطولة بعد</h3>
+                <p>
                   اضغط على زر "تشكيل فريق ومعسكر جديد" لتحديد اسم الفريق، المشروع، المدرب، والحقيبة
                   المستخدمة.
                 </p>
                 <button
                   type="button"
-                  className="comp-btn-primary"
+                  className="comp-empty-action"
                   onClick={() => setShowTeamModal(true)}
                 >
-                  <Plus size={15} />
+                  <Plus size={16} />
                   <span>بدء تشكيل الفريق الآن</span>
                 </button>
               </div>
@@ -843,9 +847,30 @@ export default function CompetitionsLive({ me: propMe }: { me?: AuthMe } = {}) {
             </div>
 
             {hallOfFame.length === 0 ? (
-              <div className="reports-live-state">
-                <Trophy size={42} color="#f59e0b" />
-                <p>لم تُسجل أي جوائز في لوحة الشرف بعد. عندما يفوز أي فريق يمكنك توثيق الإنجاز من تبويب الفرق.</p>
+              <div className="comp-empty-state">
+                <div className="comp-empty-icon amber">
+                  <Sparkles size={32} />
+                </div>
+                <h3>لوحة الشرف الذهبية خالية حتى الآن</h3>
+                <p>
+                  لم تُسجل أي جوائز أو أوسمة تتويج بعد. عندما يفوز أي فريق يمكنك توثيق المركز والجائزة وتكريم الطلاب هنا.
+                </p>
+                <button
+                  type="button"
+                  className="comp-empty-action"
+                  style={{ background: "linear-gradient(135deg, #d97706 0%, #b45309 100%)" }}
+                  onClick={() => {
+                    if (teams.length > 0) {
+                      setActiveTeamForAward(teams[0]);
+                      setShowAwardModal(true);
+                    } else {
+                      setActiveTab("TEAMS");
+                    }
+                  }}
+                >
+                  <Trophy size={16} />
+                  <span>{teams.length > 0 ? "توثيق تكريم جديد" : "الانتقال لتشكيل الفرق أولاً"}</span>
+                </button>
               </div>
             ) : (
               <div className="hof-cards-grid">
