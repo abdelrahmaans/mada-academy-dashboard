@@ -21,7 +21,11 @@ export default function ChangePassword() {
     if (newPassword !== confirmation) { setError("تأكيد كلمة السر غير مطابق."); return; }
     setBusy(true); setError(null);
     try {
-      await apiClient.changePassword(newPassword, currentPassword);
+      await apiClient.changePassword(
+        newPassword,
+        currentPassword,
+        me?.user?.phone || me?.tenantId
+      );
       toast.success("تم تغيير كلمة السر بنجاح. سجّل الدخول بالكلمة الجديدة.");
       try {
         localStorage.removeItem("mada_must_change_password");
