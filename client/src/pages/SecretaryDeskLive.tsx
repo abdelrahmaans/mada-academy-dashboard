@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
+  Calendar,
   CalendarDays,
   Clock,
   GraduationCap,
+  Layers,
   LifeBuoy,
   MessageCircle,
   PhoneCall,
@@ -61,7 +63,6 @@ import { SecretaryShiftsTab } from "./SecretaryShiftsTab";
 import { SecretaryPulseTab } from "./SecretaryPulseTab";
 import { SecretaryGroupsTab } from "./SecretaryGroupsTab";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
-import { Calendar, Layers } from "lucide-react";
 import "./SecretaryDeskLive.css";
 
 export default function SecretaryDeskLive() {

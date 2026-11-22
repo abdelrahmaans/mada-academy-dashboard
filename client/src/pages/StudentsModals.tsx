@@ -26,8 +26,8 @@ import { toast } from "sonner";
 import {
   featureFlags,
   type ConsumerAccountLookupRecord,
-  ConsumerInvitationDelivery,
-  ConsumerLinksResponse,
+  type ConsumerInvitationDelivery,
+  type ConsumerLinksResponse,
 } from "@/lib/apiClient";
 import {
   type Student,
