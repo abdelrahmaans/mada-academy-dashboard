@@ -177,6 +177,8 @@ export default function Team() {
   const [selectedRole, setSelectedRole] = useState<RoleInfo>(ROLES[0]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [tempPassword, setTempPassword] = useState("");
+  const [submittingStaff, setSubmittingStaff] = useState(false);
   const [newRole, setNewRole] = useState<StaffMember["role"]>("R04");
   const [supervisorId, setSupervisorId] = useState("");
 
@@ -260,6 +262,7 @@ export default function Team() {
   const openAddDialog = () => {
     setName("");
     setPhone("");
+    setTempPassword(`Mada@${Math.floor(1000 + Math.random() * 9000)}!`);
     setNewRole("R04");
     setSupervisorId(activeInstructorHeads[0]?.id ?? "");
     setDialog("add");
@@ -288,20 +291,24 @@ export default function Team() {
           ? "R06_ACCOUNTANT"
           : "R07_MEDIA_MANAGER";
       try {
-        const slug = normalizedPhone.slice(-6);
-        await apiClient.addAcademyMember({
+        setSubmittingStaff(true);
+        const res = await apiClient.createBranchMember({
           fullName: name.trim(),
-          email: `staff.${slug}@mada.demo`,
           phone: `+2${normalizedPhone}`,
-          password: "Mada@2026",
+          temporaryPassword: tempPassword.trim() || undefined,
           roleCode: fullRoleCode,
           branchId: me?.branchId ?? me?.branches?.[0]?.id,
         });
         setDialog(null);
         setRefreshTick(v => v + 1);
-        toast.success("تم إنشاء حساب العضو وتفعيله في قاعدة البيانات");
+        toast.success(`تم إنشاء حساب ${name.trim()} بنجاح بكلمة سر مؤقتة: ${res.temporaryPassword || tempPassword}`, {
+          duration: 12000,
+          description: "تم ربط الحساب بالفرع وبتطبيق الأكاديمية بنجاح.",
+        });
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "تعذر إضافة العضو");
+      } finally {
+        setSubmittingStaff(false);
       }
       return;
     }
@@ -334,9 +341,49 @@ export default function Team() {
       ...current,
     ]);
     setDialog(null);
-    toast.success("تمت إضافة الحساب إلى بيانات العرض المحلية", {
-      description: "لم يتم إرسال OTP أو إنشاء حساب دخول حقيقي.",
+    toast.success("تمت إضافة الحساب بنجاح بكلمة سر مؤقتة", {
+      description: `كلمة السر المؤقتة: ${tempPassword || "Mada@2026!"}`,
     });
+  };
+
+  const handleDeleteMember = async (member: StaffMember) => {
+    if (!window.confirm(`هل أنت متأكد من مسح حساب ${member.name} من الفرع؟`)) return;
+    if (isLive) {
+      try {
+        await apiClient.deleteBranchMember(member.id);
+        setStaff(current => current.filter(item => item.id !== member.id));
+        setRefreshTick(v => v + 1);
+        toast.success(`تم مسح حساب ${member.name} وإلغاء صلاحياته من الفرع`);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "تعذر مسح الحساب");
+      }
+      return;
+    }
+    setStaff(current => current.filter(item => item.id !== member.id));
+    toast.success(`تم مسح حساب ${member.name}`);
+  };
+
+  const handleResetPassword = async (member: StaffMember) => {
+    const generated = `Mada@${Math.floor(1000 + Math.random() * 9000)}!`;
+    const newPass = window.prompt(`أدخل كلمة المرور المؤقتة الجديدة للموظف ${member.name}:`, generated);
+    if (!newPass) return;
+    if (newPass.length < 6) {
+      toast.error("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
+      return;
+    }
+    if (isLive) {
+      try {
+        const res = await apiClient.resetBranchMemberPassword(member.id, newPass);
+        toast.success(`تم تعيين كلمة سر مؤقتة جديدة: ${res.temporaryPassword}`, {
+          description: "سيُطلب من الموظف تغييرها فور تسجيل الدخول القادم.",
+          duration: 12000,
+        });
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "تعذر إعادة تعيين كلمة المرور");
+      }
+      return;
+    }
+    toast.success(`تم تعيين كلمة السر المؤقتة: ${newPass}`);
   };
   const toggleStatus = async (member: StaffMember) => {
     const nextStatus: StaffStatus =
@@ -540,12 +587,17 @@ export default function Team() {
             setName={setName}
             phone={phone}
             setPhone={setPhone}
+            tempPassword={tempPassword}
+            setTempPassword={setTempPassword}
+            submittingStaff={submittingStaff}
             newRole={newRole}
             setNewRole={value => setNewRole(value as typeof newRole)}
             supervisorId={supervisorId}
             setSupervisorId={setSupervisorId}
             activeInstructorHeads={activeInstructorHeads}
             submitStaff={submitStaff}
+            onDeleteMember={handleDeleteMember}
+            onResetPassword={handleResetPassword}
             selectedRole={selectedRole}
             navigate={navigate}
           />
