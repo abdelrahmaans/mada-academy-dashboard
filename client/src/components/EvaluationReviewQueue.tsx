@@ -62,18 +62,13 @@ export default function EvaluationReviewQueue() {
       .listEvaluationReviews()
       .then((response) => {
         if (!cancelled) {
-          if (response.items && response.items.length > 0) {
-            setItems(response.items);
-          } else {
-            setItems(SAMPLE_REVIEWS);
-          }
+          setItems(response.items || []);
           setError(null);
         }
       })
       .catch((reason) => {
         if (!cancelled) {
-          // Fallback to sample items for clear presentation
-          setItems(SAMPLE_REVIEWS);
+          setItems([]);
           setError(null);
         }
       })

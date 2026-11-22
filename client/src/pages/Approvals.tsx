@@ -10,6 +10,7 @@ import {
   FileText,
   MapPin,
   Menu,
+  Plus,
   Search,
   ShieldCheck,
   UserCheck,
@@ -29,6 +30,8 @@ import ApprovalQueueTabs from "@/components/ApprovalQueueTabs";
 import AuditTimeline, { type AuditEvent } from "@/components/AuditTimeline";
 import DecisionDialog from "@/components/DecisionDialog";
 import { BranchSubstituteModal } from "@/components/BranchSubstituteModal";
+import { CreateApprovalModal } from "@/components/CreateApprovalModal";
+import { approvalsStorage } from "@/lib/approvalsStorage";
 import NotificationCenter, {
   type NotificationItem,
 } from "@/components/NotificationCenter";
@@ -79,13 +82,18 @@ export {
 export default function Approvals() {
   const [, navigate] = useLocation();
   const { me } = useAuth();
+  const tenantId = me?.academy?.id || me?.tenantId || "default";
+  const branch =
+    me?.branches?.find((item) => item.id === me.branchId)?.name ??
+    me?.branches?.[0]?.name ??
+    "الفرع المصرح";
   const [liveMode, setLiveMode] = useState(() => apiClient.hasSession());
   const [loading, setLoading] = useState(() => apiClient.hasSession());
-  const [requests, setRequests] = useState<ApprovalItem[]>(() => apiClient.hasSession() ? [] : INITIAL_REQUESTS);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [requests, setRequests] = useState<ApprovalItem[]>(() => {
+    return approvalsStorage.load(branch, tenantId);
+  });
   const [loadError, setLoadError] = useState<string | null>(null);
-  const branch = liveMode
-    ? me?.branches?.find(item => item.id === me.branchId)?.name ?? me?.branches?.[0]?.name ?? "الفرع المصرح"
-    : "مدينة نصر";
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState<QueueTab>("all");
@@ -96,18 +104,19 @@ export default function Approvals() {
   const [selected, setSelected] = useState<ApprovalItem | null>(null);
   const [decisionNote, setDecisionNote] = useState("");
   const [expenseRejectionMode, setExpenseRejectionMode] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>(() => apiClient.hasSession() ? [] : INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [reloadKey, setReloadKey] = useState(0);
   const [substituteSession, setSubstituteSession] = useState<SessionRecord | null>(null);
   const canApproveSelected =
     selected?.kind === "substitute" ? Boolean(selected.proposedInstructorId) : selected?.kind !== "discount" || (selected.discountValue ?? 0) <= BRANCH_MANAGER_DISCOUNT_LIMIT;
 
   useEffect(() => {
+    const localRequests = approvalsStorage.load(branch, tenantId);
     if (!apiClient.hasSession()) {
       setLiveMode(false);
       setLoading(false);
-      setRequests(INITIAL_REQUESTS);
-      setNotifications(INITIAL_NOTIFICATIONS);
+      setRequests(localRequests);
+      setNotifications([]);
       return;
     }
     setLiveMode(true);
@@ -122,7 +131,7 @@ export default function Approvals() {
       apiClient.listEvaluationReviews(),
     ]).then(([approvalResult, notificationResult, correctionResult, expenseResult, freezeResult, evaluationResult]) => {
       if (approvalResult.status === "rejected") {
-        setRequests([]);
+        setRequests(localRequests);
         setNotifications([]);
         const cause = approvalResult.reason;
         setLoadError(cause instanceof Error ? cause.message : "تعذر تحميل الموافقات التشغيلية من الخادم.");
@@ -145,7 +154,12 @@ export default function Approvals() {
       const evaluations = evaluationResult.status === "fulfilled"
         ? evaluationResult.value.items.map(evaluationReviewFromApi)
         : [];
-      setRequests([...supported.map(approvalFromApi), ...corrections, ...expenses, ...freezes, ...evaluations]);
+
+      const serverItems = [...supported.map(approvalFromApi), ...corrections, ...expenses, ...freezes, ...evaluations];
+      const serverIds = new Set(serverItems.map((i) => i.id));
+      const uniqueLocal = localRequests.filter((i) => !serverIds.has(i.id));
+
+      setRequests([...uniqueLocal, ...serverItems]);
       setNotifications(notifications);
 
       const optionalFailure = [notificationResult, correctionResult, expenseResult].find(result => result.status === "rejected");
@@ -155,10 +169,18 @@ export default function Approvals() {
     }).finally(() => {
       setLoading(false);
     });
-  }, [me?.role, reloadKey]);
+  }, [me?.role, reloadKey, branch, tenantId]);
+
+  const handleCreateRequest = (data: Parameters<typeof approvalsStorage.createRequest>[1]) => {
+    const created = approvalsStorage.createRequest(branch, data, tenantId);
+    setRequests((current) => [created, ...current]);
+    toast.success("تم إرسال طلب المراجعة بنجاح", {
+      description: `رقم الطلب: ${created.id} وهو متاح الآن في قائمة المراجعة.`,
+    });
+  };
 
   const branchRequests = useMemo(
-    () => liveMode ? requests : requests.filter(item => item.branch === branch),
+    () => liveMode ? requests : requests.filter(item => !item.branch || item.branch === branch || item.branch === "الفرع المصرح"),
     [requests, branch, liveMode]
   );
   const visibleRequests = useMemo(() => {
@@ -321,6 +343,10 @@ export default function Approvals() {
       dateStyle: "medium",
       timeStyle: "short",
     }).format(decidedAtDate);
+    const actor = me?.user?.displayName || "مدير الفرع";
+
+    approvalsStorage.decideRequest(branch, id, status, decisionNote.trim(), actor, tenantId);
+
     setRequests(current =>
       current.map(item =>
         item.id === id
@@ -329,7 +355,7 @@ export default function Approvals() {
               status,
               decidedAt,
               decidedAtSort: decidedAtDate.getTime(),
-              decidedBy: "أحمد محمود · مدير الفرع",
+              decidedBy: actor,
               decisionNote: decisionNote.trim() || undefined,
             }
           : item
@@ -340,11 +366,8 @@ export default function Approvals() {
     setExpenseRejectionMode(false);
     toast.success(
       status === "approved"
-        ? "تمت الموافقة في بيانات العرض"
-        : "تم الرفض في بيانات العرض",
-      {
-        description: "هذا القرار محلي ولا يتم حفظه على خادم.",
-      }
+        ? "تم اعتماد الطلب بنجاح"
+        : "تم رفض الطلب بنجاح"
     );
   };
   const downloadCsv = () => {
@@ -469,6 +492,15 @@ export default function Approvals() {
               <p>{liveMode ? "راجع طلبات الجلسات وطلبات البديل ضمن نطاق صلاحيتك." : `راجع طلبات الخصم وتغيير مدرب الحصة قبل اعتمادها لفرع ${branch}.`}</p>
             </div>
             <div className="welcome-actions">
+              <button
+                type="button"
+                className="button button-primary"
+                onClick={() => setShowCreateModal(true)}
+                style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+              >
+                <Plus size={16} />
+                <span>إنشاء طلب اعتماد</span>
+              </button>
               <button className="button button-secondary" onClick={downloadCsv}>
                 <ArrowDownToLine size={17} /> تصدير القائمة
               </button>
@@ -580,9 +612,26 @@ export default function Approvals() {
                   <p>الطلبات المرسلة إلى مدير الفرع</p>
                 </div>
               </div>
-              <span className="team-table-total">
-                {visibleRequests.length} طلب
-              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <button
+                  type="button"
+                  className="button button-primary"
+                  onClick={() => setShowCreateModal(true)}
+                  style={{
+                    padding: "6px 14px",
+                    fontSize: "12.5px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "5px",
+                  }}
+                >
+                  <Plus size={15} />
+                  <span>طلب جديد</span>
+                </button>
+                <span className="team-table-total">
+                  {visibleRequests.length} طلب
+                </span>
+              </div>
             </div>
             <div className="approval-controls">
               <ApprovalQueueTabs
@@ -698,18 +747,38 @@ export default function Approvals() {
               </div>
             ) : (
               <div className="team-empty approval-empty">
-                <Search size={20} />
-                <strong>مفيش طلبات مطابقة</strong>
-                <span>جرّب نوع طلب مختلف أو ابحث بكلمة أقصر.</span>
-                <button
-                  className="text-link"
-                  onClick={() => {
-                    setQuery("");
-                    setTab("all");
-                  }}
-                >
-                  مسح البحث والفلاتر
-                </button>
+                <Search size={22} color="#0d9488" />
+                <strong>
+                  {branchRequests.length === 0
+                    ? "لا توجد طلبات معلقة بانتظار المراجعة"
+                    : "لا توجد طلبات مطابقة"}
+                </strong>
+                <span>
+                  {branchRequests.length === 0
+                    ? "يمكنك إنشاء طلب اعتماد أو مراجعة جديد لبدء دورة الموافقات في هذا الفرع."
+                    : "جرّب تغيير البحث أو الفلاتر لتظهر السجلات."}
+                </span>
+                {branchRequests.length === 0 ? (
+                  <button
+                    type="button"
+                    className="button button-primary"
+                    onClick={() => setShowCreateModal(true)}
+                    style={{ marginTop: "10px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  >
+                    <Plus size={15} />
+                    <span>إنشاء أول طلب اعتماد</span>
+                  </button>
+                ) : (
+                  <button
+                    className="text-link"
+                    onClick={() => {
+                      setQuery("");
+                      setTab("all");
+                    }}
+                  >
+                    مسح البحث والفلاتر
+                  </button>
+                )}
               </div>
             )}
             <div className="team-table-footer">
@@ -810,6 +879,14 @@ export default function Approvals() {
           }}
         />
       )}
+
+      <CreateApprovalModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        branchName={branch}
+        defaultRequestedBy={me?.user?.displayName || "السكرتارية / المحاسبة"}
+        onSubmit={handleCreateRequest}
+      />
     </RoleDashboardShell>
   );
 }
