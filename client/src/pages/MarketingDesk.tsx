@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
+import RoleDateBadge from "@/components/RoleDateBadge";
 import PageHeader from "@/components/PageHeader";
 import QuickActionsBar from "@/components/QuickActionsBar";
 import { QuickSupportTicketModal } from "@/components/QuickActionModals";
@@ -388,9 +389,7 @@ export default function MarketingDesk() {
             title="إدارة التسويق واستقطاب الطلاب والعملاء"
             description="متابعة مسار العملاء المحتملين وتوزيع الفروع، وأجندة أفكار ومهام المحتوى، ونسب التحويل الفعلية."
             actions={
-              <span className="marketing-date">
-                <CalendarDays size={14} /> اليوم · {branchId ? branchName(branchId) : "نطاق الأكاديمية"}
-              </span>
+              <RoleDateBadge hideOnMobile={false} />
             }
           />
 

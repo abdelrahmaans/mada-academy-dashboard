@@ -8,6 +8,7 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
+import RoleDateBadge from "@/components/RoleDateBadge";
 import PageHeader from "@/components/PageHeader";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import SecretaryDeskLive from "./SecretaryDeskLive";
@@ -144,9 +145,7 @@ function SecretaryDeskPreview() {
             title={VIEW_TITLES[view]}
             description={VIEW_COPY[view]}
             actions={
-              <span className="secretary-desk-date">
-                <CalendarDays size={14} /> السبت 26 سبتمبر 2026
-              </span>
+              <RoleDateBadge hideOnMobile={false} />
             }
           />
           <RoleScopeCard className="secretary-desk-scope-card" />

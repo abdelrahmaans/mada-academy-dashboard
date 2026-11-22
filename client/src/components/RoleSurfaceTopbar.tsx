@@ -2,6 +2,7 @@ import { Bell, CheckCheck, MapPin, Menu, Search, Sparkles, X } from "lucide-reac
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRoleShell } from "./RoleDashboardShell";
+import RoleDateBadge from "./RoleDateBadge";
 
 type Props = { onMenu?: () => void; scopeLabel?: string; roleLabel?: string };
 
@@ -56,6 +57,7 @@ export default function RoleSurfaceTopbar({ onMenu, scopeLabel = "كل الفر�
         <label className="top-search"><Search size={18} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="إبحث عن فرع أو مسار..." aria-label="البحث داخل مساحة الأكاديمية" /><kbd>⌘ K</kbd></label>
       </div>
       <div className="topbar-left" style={{ position: "relative" }}>
+        <RoleDateBadge />
         <button
           className="icon-button notification-button"
           aria-label="الإشعارات"

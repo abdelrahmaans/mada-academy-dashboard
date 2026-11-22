@@ -1,6 +1,7 @@
 import React from "react";
 import { Bell, ChevronDown, MapPin, Menu, Search, Users } from "lucide-react";
 import { toast } from "sonner";
+import RoleDateBadge from "@/components/RoleDateBadge";
 
 export interface ClassesTopbarProps {
   onOpenMobileNav: () => void;
@@ -95,6 +96,7 @@ export function ClassesTopbar({
         </label>
       </div>
       <div className="topbar-left">
+        <RoleDateBadge />
         <button
           className="icon-button notification-button"
           aria-label="الإشعارات"

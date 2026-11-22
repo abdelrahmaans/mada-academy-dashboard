@@ -28,6 +28,7 @@ import {
 import { toast } from "sonner";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
+import { formatSystemDate } from "@/components/RoleDateBadge";
 import { StudentDataHubModal } from "@/components/students/StudentDataHubModal";
 import type { Student } from "@/pages/StudentsTypes";
 import { featureFlags } from "@/lib/apiClient";
@@ -447,8 +448,8 @@ export default function NurseryDeskLive() {
                 <ChevronRight size={15} />
               </button>
               <span className="nursery-date-label">
-                <CalendarDays size={14} style={{ display: "inline", marginLeft: "4px", verticalAlign: "middle" }} />
-                اليوم، الأربعاء 18 نوفمبر 2026
+                <CalendarDays size={14} style={{ display: "inline-block", marginLeft: "4px", verticalAlign: "middle" }} />
+                اليوم، {formatSystemDate()}
               </span>
               <button type="button" className="nursery-date-btn" title="اليوم التالي">
                 <ChevronLeft size={15} />

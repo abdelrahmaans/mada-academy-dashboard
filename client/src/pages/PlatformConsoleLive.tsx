@@ -22,6 +22,7 @@ import { useLocation } from "wouter";
 import PageHeader from "@/components/PageHeader";
 import QuickActionsBar from "@/components/QuickActionsBar";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
+import RoleDateBadge from "@/components/RoleDateBadge";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import SessionLogoutButton from "@/components/SessionLogoutButton";
 import SettingsModal from "@/components/SettingsModal";
@@ -1045,15 +1046,7 @@ export default function PlatformConsoleLive() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span className="pc-topbar-date">
-              <CalendarDays size={14} />
-              {new Intl.DateTimeFormat("ar-EG-u-nu-latn", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              }).format(new Date())}
-            </span>
+            <RoleDateBadge hideOnMobile={false} />
           </div>
         </header>
 

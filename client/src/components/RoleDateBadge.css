@@ -1,0 +1,64 @@
+.role-date-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  flex-direction: row !important;
+  gap: 7px !important;
+  padding: 5px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  color: #475569;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap !important;
+  line-height: 1;
+  user-select: none;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  transition: all 0.15s ease-in-out;
+}
+
+.role-date-badge:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.role-date-badge svg {
+  flex-shrink: 0 !important;
+  color: #0d9488 !important;
+  width: 14px !important;
+  height: 14px !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+  margin: 0 !important;
+}
+
+/* Also protect any custom date classes across all roles */
+.pc-topbar-date,
+.instructor-desk-date,
+.secretary-desk-date,
+.marketing-date,
+.nursery-date-label {
+  display: inline-flex !important;
+  align-items: center !important;
+  flex-direction: row !important;
+  gap: 6px !important;
+  white-space: nowrap !important;
+  line-height: 1.2 !important;
+}
+
+.pc-topbar-date svg,
+.instructor-desk-date svg,
+.secretary-desk-date svg,
+.marketing-date svg,
+.nursery-date-label svg {
+  flex-shrink: 0 !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
+@media (max-width: 768px) {
+  .role-date-badge.hide-mobile {
+    display: none !important;
+  }
+}

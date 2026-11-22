@@ -5,6 +5,7 @@ import PageHeader from "@/components/PageHeader";
 import QuickActionsBar from "@/components/QuickActionsBar";
 import { QuickPaymentReceiptModal, QuickSupportTicketModal } from "@/components/QuickActionModals";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
+import RoleDateBadge from "@/components/RoleDateBadge";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import { apiClient, featureFlags, type AuthMe, type DashboardSummary } from "@/lib/apiClient";
 import { sessionStatusLabel } from "@/lib/statusLabels";
@@ -61,9 +62,7 @@ export default function HomeLive({ me }: { me: AuthMe }) {
           title={`أهلًا، ${displayName}`}
           description="مؤشرات الجلسات والطلاب المسجلة لهذا الفرع فقط."
           actions={
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#64748b" }}>
-              <CalendarDays size={14} /> اليوم · بيانات حية
-            </span>
+            <RoleDateBadge hideOnMobile={false} />
           }
         />
         <RoleScopeCard className="home-role-scope-card" compact />

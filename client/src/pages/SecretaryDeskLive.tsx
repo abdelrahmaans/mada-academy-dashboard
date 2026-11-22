@@ -25,6 +25,7 @@ import { QuickPaymentReceiptModal, QuickSupportTicketModal } from "@/components/
 import { ReceptionCheckInModal } from "@/components/ReceptionCheckInModal";
 import { WhatsAppBroadcastModal } from "@/components/WhatsAppBroadcastModal";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
+import RoleDateBadge from "@/components/RoleDateBadge";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -420,9 +421,7 @@ export default function SecretaryDeskLive() {
           description={`إدارة طلبات الالتحاق، ومتابعات أولياء الأمور، وتسجيل الطلاب الجدد في ${branchName} مباشرة في قاعدة البيانات.`}
           actions={
             <div className="secretary-top-actions">
-              <span className="secretary-desk-date" style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#64748b" }}>
-                <CalendarDays size={14} /> اليوم
-              </span>
+              <RoleDateBadge hideOnMobile={false} />
               <a
                 href="/lobby-display"
                 target="_blank"

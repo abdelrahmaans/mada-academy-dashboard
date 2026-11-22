@@ -19,6 +19,7 @@ import EvaluationReviewQueue from "@/components/EvaluationReviewQueue";
 import QuickActionsBar from "@/components/QuickActionsBar";
 import { QuickSupportTicketModal } from "@/components/QuickActionModals";
 import RoleDashboardShell from "@/components/RoleDashboardShell";
+import RoleDateBadge from "@/components/RoleDateBadge";
 import RoleScopeCard from "@/components/RoleScopeCard";
 import RoleSurfaceTopbar from "@/components/RoleSurfaceTopbar";
 import { InstructorSessionsView } from "@/components/instructor/InstructorSessionsView";
@@ -450,9 +451,7 @@ export default function InstructorDeskLive() {
               الكتابة مقتصرة على حصصك المسندة مباشرةً.
             </p>
           </div>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#64748b" }}>
-            <CalendarDays size={14} /> اليوم · متابعة الحصص
-          </div>
+          <RoleDateBadge hideOnMobile={false} />
         </header>
         <RoleScopeCard className="r04-live-scope" compact />
         {view === "sessions" && (
