@@ -1,30 +1,32 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
-  AlertCircle,
-  Armchair,
-  Award,
-  Box,
-  Building2,
-  CheckCircle,
-  CheckCircle2,
-  Cpu,
-  GraduationCap,
   Layers,
-  MapPin,
-  Monitor,
-  Plus,
-  Rocket,
-  Search,
-  Settings,
-  ShieldAlert,
-  Sparkles,
+  Building2,
+  Box,
+  GraduationCap,
   Trophy,
-  Users,
-  Wrench,
-  Zap,
+  CheckCircle2,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Course, Offering } from "@/pages/ClassesTypes";
+import { useAuth } from "@/contexts/AuthContext";
+import { readinessStorage } from "@/lib/readinessStorage";
+import type {
+  BranchReadinessState,
+  ReadinessCheckItem,
+  ReadinessCompetition,
+  ReadinessKit,
+  ReadinessRoom,
+} from "./readiness/types";
+import { ReadinessHeroRibbon } from "./readiness/ReadinessHeroRibbon";
+import { ReadinessRoomsSection } from "./readiness/ReadinessRoomsSection";
+import { ReadinessKitsSection } from "./readiness/ReadinessKitsSection";
+import { ReadinessCompetitionsSection } from "./readiness/ReadinessCompetitionsSection";
+import { ReadinessChecklistSection } from "./readiness/ReadinessChecklistSection";
+import { RoomModal } from "./readiness/RoomModal";
+import { KitModal } from "./readiness/KitModal";
+import { CompetitionModal } from "./readiness/CompetitionModal";
 import { KitInventoryDetailsModal, type KitItem } from "./KitInventoryDetailsModal";
 
 interface BranchReadinessTabProps {
@@ -35,6 +37,8 @@ interface BranchReadinessTabProps {
   onOpenCreateGroupModal: () => void;
 }
 
+type SectionKey = "ALL" | "ROOMS" | "KITS" | "COURSES" | "COMPETITIONS" | "CHECKLIST";
+
 export function BranchReadinessTab({
   branchName,
   courses,
@@ -42,227 +46,136 @@ export function BranchReadinessTab({
   onOpenCreateGroupForCourse,
   onOpenCreateGroupModal,
 }: BranchReadinessTabProps) {
-  const [activeSection, setActiveSection] = useState<"ALL" | "ROOMS" | "KITS" | "COURSES" | "COMPETITIONS">("ALL");
-  const [selectedKit, setSelectedKit] = useState<KitItem | null>(null);
+  const { me } = useAuth();
+  const tenantId = me?.academy?.id || "default";
 
-  // Sample real data for Branch Facilities & Rooms
-  const roomsData = [
-    {
-      id: "room-1",
-      name: "معمل الروبوتكس والذكاء الاصطناعي 1",
-      type: "معمل عتاد وروبوتكس",
-      capacity: 12,
-      activeGroupsCount: offerings.filter(o => o.classroom.includes("1") || o.classroom.includes("معمل 1")).length || 2,
-      equipment: ["12 جهاز لابتوب Core i7", "شاشة تفاعلية 65 بوصة", "طاولة حلبة WRO الرسمية", "وحدات شحن متزامنة"],
-      status: "AVAILABLE",
-      notes: "جاهز تماماً للتشغيل ولا توجد أعطال في أجهزة اللابتوب.",
-    },
-    {
-      id: "room-2",
-      name: "قاعة البرمجة وتطوير الألعاب 2",
-      type: "قاعة برمجيات وحواسيب",
-      capacity: 15,
-      activeGroupsCount: offerings.filter(o => o.classroom.includes("2") || o.classroom.includes("قاعة 2")).length || 1,
-      equipment: ["15 محطة عمل متصلة بالإنترنت", "جهاز بروجيكتور تفاعلي", "سيرفر تدريب محلي", "سبورة بيضاء ذكية"],
-      status: "AVAILABLE",
-      notes: "تم تحديث بيئات عمل بايثون وVS Code في كافة الأجهزة.",
-    },
-    {
-      id: "room-3",
-      name: "معمل الإلكترونيات والمبتكر الصغير 3",
-      type: "معمل دوائر وتجارب",
-      capacity: 10,
-      activeGroupsCount: offerings.filter(o => o.classroom.includes("3") || o.classroom.includes("معمل 3")).length || 1,
-      equipment: ["محطات تغذية باور سبلاي آمنة", "أجهزة راسم إشارة Oscilloscope", "طابعة ثلاثية الأبعاد 3D Printer", "أدوات قياس ديجيتال"],
-      status: "AVAILABLE",
-      notes: "محطات الأمان معتمدة ومطابقة لمواصفات تدريب الأطفال.",
-    },
-  ];
+  // Dynamic state loaded per branch and tenant
+  const [readinessState, setReadinessState] = useState<BranchReadinessState>(() =>
+    readinessStorage.load(branchName, tenantId)
+  );
 
-  // Educational Kits & Hardware Inventory
-  const kitsData = [
-    {
-      id: "kit-1",
-      name: "حقائب LEGO Education SPIKE Prime",
-      track: "روبوتكس ومسابقات",
-      totalQuantity: 14,
-      readyQuantity: 12,
-      maintenanceQuantity: 2,
-      supportsStudents: "24 طالباً (طالبان / حقيبة)",
-      status: "READY",
-      notes: "الحقائب مراجعة ومحدثة بآخر فيرموير. حقيبتان تخضعان لفحص حساس الألوان.",
-    },
-    {
-      id: "kit-2",
-      name: "أطقم Arduino Uno & Sensors Advanced",
-      track: "دوائر إلكترونية و IoT",
-      totalQuantity: 20,
-      readyQuantity: 20,
-      maintenanceQuantity: 0,
-      supportsStudents: "20 طالباً (طالب / طقم)",
-      status: "READY",
-      notes: "متوفر مع كل طقم شيلد المحركات ومستشعرات المسافة والحرارة والبلوتوث.",
-    },
-    {
-      id: "kit-3",
-      name: "روبوتات VEX IQ System (Gen 2)",
-      track: "الروبوتات التنافسية",
-      totalQuantity: 4,
-      readyQuantity: 4,
-      maintenanceQuantity: 0,
-      supportsStudents: "16 طالباً (4 طلاب / فريق تنافسي)",
-      status: "READY",
-      notes: "شامل حلبة التحدي الرسمية 6x8 والعناصر الميدانية للتدريب على بطولات VEX.",
-    },
-    {
-      id: "kit-4",
-      name: "كروت BBC Micro:bit v2 & Smart Car Kits",
-      track: "المبتكر الصغير والبرمجة",
-      totalQuantity: 18,
-      readyQuantity: 18,
-      maintenanceQuantity: 0,
-      supportsStudents: "18 طالباً",
-      status: "READY",
-      notes: "جاهزة للمسار المبتدئ ومشاريع السيارات الذكية المتتبعة للضوء والمسار.",
-    },
-    {
-      id: "kit-5",
-      name: "طابعات ثلاثية الأبعاد Creality Ender 3 V3",
-      track: "التصنيع الرقمي والنماذج",
-      totalQuantity: 2,
-      readyQuantity: 2,
-      maintenanceQuantity: 0,
-      supportsStudents: "تخدم كافة مجموعات المسابقات والمشاريع",
-      status: "READY",
-      notes: "متوفر خيوط PLA صديقة للبيئة بألوان متعددة لطباعة قطع الفرق.",
-    },
-  ];
+  useEffect(() => {
+    setReadinessState(readinessStorage.load(branchName, tenantId));
+  }, [branchName, tenantId]);
 
-  // Branch Competitions & Target Arenas
-  const competitionsData = [
-    {
-      id: "comp-wro",
-      name: "أولمبياد الروبوت العالمي (WRO - World Robot Olympiad)",
-      tracks: ["RoboMission (Elementary & Junior)", "Future Innovators"],
-      targetKits: "LEGO SPIKE Prime",
-      registeredTeams: 3,
-      studentsCount: 9,
-      status: "ACTIVE_PREPARATION",
-      notes: "تم تركيب الحلبة الرسمية في معمل 1 وبدء حصص البرمجة والتحدي الزمني.",
-    },
-    {
-      id: "comp-fll",
-      name: "بطولة فيرست ليجو العالمية (FIRST LEGO League - FLL)",
-      tracks: ["FLL Challenge (عمر 9-16 سنة)", "FLL Explore (عمر 6-9 سنوات)"],
-      targetKits: "SPIKE Prime + طقم الابتكار",
-      registeredTeams: 2,
-      studentsCount: 8,
-      status: "ACTIVE_PREPARATION",
-      notes: "الفرق تعمل حالياً على حل المشروع المبتكر وتصميم ذراع المهمات.",
-    },
-    {
-      id: "comp-vex",
-      name: "بطولة فيكس للروبوتات (VEX IQ Challenge)",
-      tracks: ["Full Volume Challenge", "Teamwork Championship"],
-      targetKits: "VEX IQ Gen 2",
-      registeredTeams: 1,
-      studentsCount: 4,
-      status: "ENROLLED",
-      notes: "فريق النجوم المتقدم؛ يجري التدريب على التحكم اليدوي والبرمجة المستقلة.",
-    },
-    {
-      id: "comp-ai",
-      name: "الأولمبياد الوطني للذكاء الاصطناعي والبرمجة",
-      tracks: ["Computer Vision Challenge", "Python Problem Solving"],
-      targetKits: "قاعة حواسيب AI Lab",
-      registeredTeams: 2,
-      studentsCount: 6,
-      status: "ACTIVE_PREPARATION",
-      notes: "الطلاب في مرحلة تدريب نماذج تصنيف الصور وحل الخوارزميات.",
-    },
-  ];
+  const [activeSection, setActiveSection] = useState<SectionKey>("ALL");
+
+  // Modals state
+  const [roomModalOpen, setRoomModalOpen] = useState(false);
+  const [editingRoom, setEditingRoom] = useState<ReadinessRoom | null>(null);
+
+  const [kitModalOpen, setKitModalOpen] = useState(false);
+  const [editingKit, setEditingKit] = useState<ReadinessKit | null>(null);
+
+  const [compModalOpen, setCompModalOpen] = useState(false);
+  const [editingComp, setEditingComp] = useState<ReadinessCompetition | null>(null);
+
+  const [inspectingKit, setInspectingKit] = useState<KitItem | null>(null);
+
+  // Sync active groups count with actual offerings
+  const syncedRooms = useMemo(() => {
+    return readinessState.rooms.map((room) => {
+      const activeGroups = offerings.filter(
+        (o) =>
+          o.classroom.includes(room.name) ||
+          room.name.includes(o.classroom) ||
+          (room.id === "room-1" && o.classroom.includes("1")) ||
+          (room.id === "room-2" && o.classroom.includes("2")) ||
+          (room.id === "room-3" && o.classroom.includes("3"))
+      ).length;
+      return {
+        ...room,
+        activeGroupsCount: Math.max(room.activeGroupsCount || 0, activeGroups),
+      };
+    });
+  }, [readinessState.rooms, offerings]);
+
+  // Handlers for Rooms
+  const handleSaveRoom = (room: ReadinessRoom) => {
+    const updated = readinessStorage.saveRoom(branchName, room, tenantId);
+    setReadinessState(updated);
+    toast.success(editingRoom ? "تم تحديث بيانات القاعة بنجاح" : "تمت إضافة القاعة بنجاح");
+    setEditingRoom(null);
+  };
+
+  const handleDeleteRoom = (roomId: string) => {
+    const updated = readinessStorage.deleteRoom(branchName, roomId, tenantId);
+    setReadinessState(updated);
+    toast.success("تم حذف القاعة من الفرع");
+  };
+
+  // Handlers for Kits
+  const handleSaveKit = (kit: ReadinessKit) => {
+    const updated = readinessStorage.saveKit(branchName, kit, tenantId);
+    setReadinessState(updated);
+    toast.success(editingKit ? "تم تحديث بيانات الحقيبة والعتاد" : "تمت إضافة الحقيبة التدريبية بنجاح");
+    setEditingKit(null);
+  };
+
+  const handleDeleteKit = (kitId: string) => {
+    const updated = readinessStorage.deleteKit(branchName, kitId, tenantId);
+    setReadinessState(updated);
+    toast.success("تم حذف الحقيبة التدريبية");
+  };
+
+  // Handlers for Competitions
+  const handleSaveComp = (comp: ReadinessCompetition) => {
+    const updated = readinessStorage.saveCompetition(branchName, comp, tenantId);
+    setReadinessState(updated);
+    toast.success(editingComp ? "تم تحديث بيانات البطولة بنجاح" : "تم تسجيل البطولة بنجاح");
+    setEditingComp(null);
+  };
+
+  const handleDeleteComp = (compId: string) => {
+    const updated = readinessStorage.deleteCompetition(branchName, compId, tenantId);
+    setReadinessState(updated);
+    toast.success("تم حذف البطولة من الفرع");
+  };
+
+  // Handlers for Checklist
+  const handleToggleChecklist = (itemId: string) => {
+    const updated = readinessStorage.toggleChecklistItem(branchName, itemId, tenantId);
+    setReadinessState(updated);
+  };
+
+  const handleAddChecklistItem = (
+    title: string,
+    category: ReadinessCheckItem["category"],
+    role: string
+  ) => {
+    const updated = readinessStorage.addChecklistItem(branchName, title, category, role, tenantId);
+    setReadinessState(updated);
+    toast.success("تمت إضافة معيار الفحص بنجاح");
+  };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-      {/* Hero Readiness Card */}
-      <div
-        style={{
-          background: "linear-gradient(135deg, #042f2e 0%, #0d9488 100%)",
-          borderRadius: "16px",
-          padding: "24px 28px",
-          color: "#ffffff",
-          boxShadow: "0 10px 25px -5px rgba(13, 148, 136, 0.3)",
-          position: "relative",
-          overflow: "hidden",
+      {/* Hero Readiness Ribbon */}
+      <ReadinessHeroRibbon
+        branchName={branchName}
+        state={{ ...readinessState, rooms: syncedRooms }}
+        coursesCount={courses.length}
+        onOpenCreateGroupModal={onOpenCreateGroupModal}
+        onOpenAddRoom={() => {
+          setEditingRoom(null);
+          setRoomModalOpen(true);
         }}
-      >
-        <div style={{ position: "relative", zIndex: 1, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
-          <div>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", background: "rgba(255, 255, 255, 0.15)", backdropFilter: "blur(4px)", padding: "4px 12px", borderRadius: "20px", fontSize: "0.8rem", fontWeight: 600, marginBottom: "8px" }}>
-              <MapPin size={14} />
-              <span>جاهزية فرع الأكاديمية: {branchName || "مدينة نصر"}</span>
-            </div>
-            <h2 style={{ margin: "0 0 6px", fontSize: "1.45rem", fontWeight: 800, color: "#ffffff" }}>
-              تجهيزات الفرع والجاهزية التشغيلية (Branch Readiness)
-            </h2>
-            <p style={{ margin: 0, fontSize: "0.88rem", color: "#ccfbf1", maxWidth: "680px", lineHeight: 1.6 }}>
-              مساحة مدير الفرع لمراجعة القاعات، العتاد، الكيتس المتوفرة، والكورسات المعتمدة قبل إنشاء المجموعات لتفادي أي نقص أو تعارض في المواعيد أو الحقائب التدريبية.
-            </p>
-          </div>
-
-          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-            <button
-              type="button"
-              onClick={onOpenCreateGroupModal}
-              style={{
-                background: "#ffffff",
-                color: "#0f766e",
-                border: 0,
-                borderRadius: "10px",
-                padding: "10px 18px",
-                fontSize: "0.88rem",
-                fontWeight: 700,
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                transition: "all 0.15s ease",
-              }}
-            >
-              <Plus size={16} />
-              <span>إنشاء مجموعة جديدة (جروب)</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Live Metrics Ribbon */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "14px", marginTop: "22px", position: "relative", zIndex: 1 }}>
-          <div style={{ background: "rgba(255, 255, 255, 0.1)", backdropFilter: "blur(6px)", borderRadius: "10px", padding: "12px 14px", border: "1px solid rgba(255, 255, 255, 0.15)" }}>
-            <span style={{ fontSize: "0.75rem", color: "#99f6e4", display: "block" }}>القاعات والمعامل المجهزة</span>
-            <strong style={{ fontSize: "1.3rem", color: "#ffffff", fontWeight: 800 }}>{roomsData.length} معامل</strong>
-            <span style={{ fontSize: "0.72rem", color: "#ccfbf1", display: "block", marginTop: "2px" }}>سعة 37 مقعد نشط</span>
-          </div>
-          <div style={{ background: "rgba(255, 255, 255, 0.1)", backdropFilter: "blur(6px)", borderRadius: "10px", padding: "12px 14px", border: "1px solid rgba(255, 255, 255, 0.15)" }}>
-            <span style={{ fontSize: "0.75rem", color: "#99f6e4", display: "block" }}>إجمالي الكيتس والحقائب</span>
-            <strong style={{ fontSize: "1.3rem", color: "#ffffff", fontWeight: 800 }}>58 طقم تدريبي</strong>
-            <span style={{ fontSize: "0.72rem", color: "#ccfbf1", display: "block", marginTop: "2px" }}>جاهزية العتاد 96%</span>
-          </div>
-          <div style={{ background: "rgba(255, 255, 255, 0.1)", backdropFilter: "blur(6px)", borderRadius: "10px", padding: "12px 14px", border: "1px solid rgba(255, 255, 255, 0.15)" }}>
-            <span style={{ fontSize: "0.75rem", color: "#99f6e4", display: "block" }}>الكورسات المعتمدة بالفرع</span>
-            <strong style={{ fontSize: "1.3rem", color: "#ffffff", fontWeight: 800 }}>{courses.length || 8} كورسات</strong>
-            <span style={{ fontSize: "0.72rem", color: "#ccfbf1", display: "block", marginTop: "2px" }}>جاهزة للإطلاق والتسجيل</span>
-          </div>
-          <div style={{ background: "rgba(255, 255, 255, 0.1)", backdropFilter: "blur(6px)", borderRadius: "10px", padding: "12px 14px", border: "1px solid rgba(255, 255, 255, 0.15)" }}>
-            <span style={{ fontSize: "0.75rem", color: "#99f6e4", display: "block" }}>مسابقات الأكاديمية والفرق</span>
-            <strong style={{ fontSize: "1.3rem", color: "#ffffff", fontWeight: 800 }}>4 بطولات</strong>
-            <span style={{ fontSize: "0.72rem", color: "#ccfbf1", display: "block", marginTop: "2px" }}>8 فرق تستعد للمنافسة</span>
-          </div>
-        </div>
-      </div>
+        onOpenAddKit={() => {
+          setEditingKit(null);
+          setKitModalOpen(true);
+        }}
+      />
 
       {/* Sections Filter Tabs */}
-      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", borderBottom: "1px solid #e2e8f0", paddingBottom: "10px" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "8px",
+          flexWrap: "wrap",
+          borderBottom: "1px solid #e2e8f0",
+          paddingBottom: "10px",
+        }}
+      >
         <button
           type="button"
           onClick={() => setActiveSection("ALL")}
@@ -278,11 +191,13 @@ export function BranchReadinessTab({
             display: "inline-flex",
             alignItems: "center",
             gap: "6px",
+            transition: "all 0.15s ease",
           }}
         >
           <Layers size={15} />
           <span>كل تجهيزات الفرع</span>
         </button>
+
         <button
           type="button"
           onClick={() => setActiveSection("ROOMS")}
@@ -298,11 +213,13 @@ export function BranchReadinessTab({
             display: "inline-flex",
             alignItems: "center",
             gap: "6px",
+            transition: "all 0.15s ease",
           }}
         >
           <Building2 size={15} />
-          <span>القاعات والمعامل ({roomsData.length})</span>
+          <span>القاعات والمعامل ({syncedRooms.length})</span>
         </button>
+
         <button
           type="button"
           onClick={() => setActiveSection("KITS")}
@@ -318,11 +235,13 @@ export function BranchReadinessTab({
             display: "inline-flex",
             alignItems: "center",
             gap: "6px",
+            transition: "all 0.15s ease",
           }}
         >
           <Box size={15} />
-          <span>الحقائب وأطقم التدريب ({kitsData.length})</span>
+          <span>الحقائب والعتاد التدريبي ({readinessState.kits.length})</span>
         </button>
+
         <button
           type="button"
           onClick={() => setActiveSection("COURSES")}
@@ -338,11 +257,13 @@ export function BranchReadinessTab({
             display: "inline-flex",
             alignItems: "center",
             gap: "6px",
+            transition: "all 0.15s ease",
           }}
         >
           <GraduationCap size={15} />
           <span>الكورسات المعتمدة ({courses.length})</span>
         </button>
+
         <button
           type="button"
           onClick={() => setActiveSection("COMPETITIONS")}
@@ -358,213 +279,89 @@ export function BranchReadinessTab({
             display: "inline-flex",
             alignItems: "center",
             gap: "6px",
+            transition: "all 0.15s ease",
           }}
         >
           <Trophy size={15} />
-          <span>المسابقات والتراكات ({competitionsData.length})</span>
+          <span>بطولات الفرع ({readinessState.competitions.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSection("CHECKLIST")}
+          style={{
+            padding: "8px 16px",
+            borderRadius: "20px",
+            fontSize: "0.84rem",
+            fontWeight: 700,
+            border: 0,
+            cursor: "pointer",
+            background: activeSection === "CHECKLIST" ? "#0d9488" : "#f1f5f9",
+            color: activeSection === "CHECKLIST" ? "#ffffff" : "#475569",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            transition: "all 0.15s ease",
+          }}
+        >
+          <CheckCircle2 size={15} />
+          <span>قائمة الفحص اليومية ({readinessState.checklist.length})</span>
         </button>
       </div>
 
       {/* Section 1: Rooms & Labs */}
       {(activeSection === "ALL" || activeSection === "ROOMS") && (
-        <section style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#f0fdfa", color: "#0d9488", display: "grid", placeItems: "center" }}>
-                <Building2 size={18} />
-              </div>
-              <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#0f172a" }}>
-                القاعات والمعامل المتاحة بالفرع
-              </h3>
-            </div>
-            <span style={{ fontSize: "0.78rem", color: "#64748b" }}>
-              يتم ربط كل مجموعة بقاعة محددة لمنع تعارض مواعيد الحصص
-            </span>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(310px, 1fr))", gap: "16px" }}>
-            {roomsData.map(room => (
-              <div
-                key={room.id}
-                style={{
-                  background: "#ffffff",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "12px",
-                  padding: "16px 18px",
-                  boxShadow: "0 2px 6px rgba(0, 0, 0, 0.03)",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  gap: "14px",
-                }}
-              >
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
-                    <div>
-                      <strong style={{ fontSize: "0.98rem", color: "#0f172a", display: "block" }}>{room.name}</strong>
-                      <span style={{ fontSize: "0.76rem", color: "#0d9488", fontWeight: 600 }}>{room.type}</span>
-                    </div>
-                    <span style={{ fontSize: "0.72rem", fontWeight: 700, background: "#ecfdf5", color: "#065f46", padding: "3px 8px", borderRadius: "8px", border: "1px solid #a7f3d0" }}>
-                      جاهز ومتاح ✓
-                    </span>
-                  </div>
-
-                  <div style={{ display: "flex", gap: "16px", fontSize: "0.82rem", color: "#334155", background: "#f8fafc", padding: "8px 12px", borderRadius: "8px", marginBottom: "12px" }}>
-                    <div>السعة القصوى: <strong style={{ color: "#0f172a" }}>{room.capacity} طالباً</strong></div>
-                    <div>المجموعات النشطة: <strong style={{ color: "#0d9488" }}>{room.activeGroupsCount} مجموعات</strong></div>
-                  </div>
-
-                  <div>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#64748b", display: "block", marginBottom: "6px" }}>التجهيزات والعتاد بالقاعة:</span>
-                    <ul style={{ margin: 0, paddingRight: "18px", fontSize: "0.78rem", color: "#475569", lineHeight: 1.6 }}>
-                      {room.equipment.map((eq, i) => (
-                        <li key={i}>{eq}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #f1f5f9", paddingTop: "10px" }}>
-                  <span style={{ fontSize: "0.72rem", color: "#64748b" }}>{room.notes}</span>
-                  <button
-                    type="button"
-                    onClick={() => onOpenCreateGroupModal()}
-                    style={{
-                      background: "#f0fdfa",
-                      color: "#0d9488",
-                      border: "1px solid #ccfbf1",
-                      borderRadius: "6px",
-                      padding: "4px 10px",
-                      fontSize: "0.78rem",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    حجز لهذه القاعة +
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        <ReadinessRoomsSection
+          rooms={syncedRooms}
+          onOpenAddRoom={() => {
+            setEditingRoom(null);
+            setRoomModalOpen(true);
+          }}
+          onEditRoom={(room) => {
+            setEditingRoom(room);
+            setRoomModalOpen(true);
+          }}
+          onDeleteRoom={handleDeleteRoom}
+        />
       )}
 
-      {/* Section 2: Educational Kits & Hardware */}
+      {/* Section 2: Hardware Kits */}
       {(activeSection === "ALL" || activeSection === "KITS") && (
-        <section style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#f0fdfa", color: "#0d9488", display: "grid", placeItems: "center" }}>
-                <Box size={18} />
-              </div>
-              <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#0f172a" }}>
-                الحقائب والأطقم التعليمية المعتمدة بالفرع (Kits Inventory)
-              </h3>
-            </div>
-            <button
-              type="button"
-              onClick={() => toast.success("طلب توريد كيتس جديدة مسجل لدى الإدارة")}
-              style={{ background: "#f8fafc", color: "#475569", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "5px 12px", fontSize: "0.8rem", cursor: "pointer" }}
-            >
-              + إضافة كيتس جديدة
-            </button>
-          </div>
-
-          <div style={{ overflowX: "auto", background: "#ffffff", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem", textAlign: "right" }}>
-              <thead>
-                <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-                  <th style={{ padding: "12px 16px", color: "#475569" }}>اسم الكيت / العتاد التعليمي</th>
-                  <th style={{ padding: "12px 16px", color: "#475569" }}>المسار والمسابقات</th>
-                  <th style={{ padding: "12px 16px", color: "#475569" }}>الكمية الإجمالية</th>
-                  <th style={{ padding: "12px 16px", color: "#475569" }}>الجاهز للاستخدام</th>
-                  <th style={{ padding: "12px 16px", color: "#475569" }}>الطاقة الاستيعابية</th>
-                  <th style={{ padding: "12px 16px", color: "#475569" }}>حالة الفحص</th>
-                  <th style={{ padding: "12px 16px", color: "#475569" }}>ملاحظات الجاهزية</th>
-                  <th style={{ padding: "12px 16px", color: "#475569" }}>العمليات والجرد</th>
-                </tr>
-              </thead>
-              <tbody>
-                {kitsData.map(kit => (
-                  <tr key={kit.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                    <td style={{ padding: "12px 16px", fontWeight: 700, color: "#0f172a" }}>
-                      {kit.name}
-                    </td>
-                    <td style={{ padding: "12px 16px", color: "#0d9488", fontWeight: 600 }}>
-                      {kit.track}
-                    </td>
-                    <td style={{ padding: "12px 16px", fontWeight: 700, color: "#0f172a" }}>
-                      {kit.totalQuantity} أطقم
-                    </td>
-                    <td style={{ padding: "12px 16px", color: "#15803d", fontWeight: 700 }}>
-                      {kit.readyQuantity} أطقم
-                      {kit.maintenanceQuantity > 0 && (
-                        <span style={{ fontSize: "0.72rem", color: "#b91c1c", marginRight: "4px" }}>
-                          ({kit.maintenanceQuantity} فحص)
-                        </span>
-                      )}
-                    </td>
-                    <td style={{ padding: "12px 16px", color: "#475569" }}>
-                      {kit.supportsStudents}
-                    </td>
-                    <td style={{ padding: "12px 16px" }}>
-                      <span style={{ fontSize: "0.72rem", fontWeight: 700, background: "#ecfdf5", color: "#065f46", padding: "2px 8px", borderRadius: "10px" }}>
-                        معتمد 100% ✓
-                      </span>
-                    </td>
-                    <td style={{ padding: "12px 16px", color: "#64748b", fontSize: "0.78rem" }}>
-                      {kit.notes}
-                    </td>
-                    <td style={{ padding: "12px 16px" }}>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedKit(kit)}
-                        style={{
-                          background: "#0d9488",
-                          color: "#ffffff",
-                          border: "none",
-                          borderRadius: "8px",
-                          padding: "6px 12px",
-                          fontSize: "0.78rem",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "5px",
-                          boxShadow: "0 1px 2px rgba(13, 148, 136, 0.2)",
-                        }}
-                      >
-                        <Cpu size={13} />
-                        <span>تفاصيل وجرد العتاد 👁️</span>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <ReadinessKitsSection
+          kits={readinessState.kits}
+          onOpenAddKit={() => {
+            setEditingKit(null);
+            setKitModalOpen(true);
+          }}
+          onEditKit={(kit) => {
+            setEditingKit(kit);
+            setKitModalOpen(true);
+          }}
+          onDeleteKit={handleDeleteKit}
+          onInspectKit={(kitItem) => setInspectingKit(kitItem)}
+        />
       )}
 
-      {/* Section 3: Active Courses Ready for New Cohorts */}
+      {/* Section 3: Approved Courses */}
       {(activeSection === "ALL" || activeSection === "COURSES") && (
         <section style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#f0fdfa", color: "#0d9488", display: "grid", placeItems: "center" }}>
-                <GraduationCap size={18} />
-              </div>
-              <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#0f172a" }}>
-                الكورسات المعتمدة بالفرع والجاهزة لإطلاق مجموعات جديدة
-              </h3>
-            </div>
-            <span style={{ fontSize: "0.78rem", color: "#64748b" }}>
-              اختر أي كورس لإطلاق مجموعة جديدة فوراً مع تعيين المدرب والقاعة
+            <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#0f172a" }}>
+              الكورسات والمناهج المعتمدة بالفرع ({courses.length})
+            </h3>
+            <span style={{ fontSize: "0.82rem", color: "#64748b" }}>
+              قوالب جاهزة لإنشاء مجموعات فورية
             </span>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "14px" }}>
-            {courses.map(course => (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: "14px",
+            }}
+          >
+            {courses.map((course) => (
               <div
                 key={course.id}
                 style={{
@@ -572,27 +369,35 @@ export function BranchReadinessTab({
                   border: "1px solid #e2e8f0",
                   borderRadius: "12px",
                   padding: "16px",
+                  boxShadow: "0 2px 6px rgba(15, 23, 42, 0.04)",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "space-between",
                   gap: "12px",
-                  boxShadow: "0 2px 5px rgba(0,0,0,0.02)",
                 }}
               >
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
-                    <strong style={{ fontSize: "0.95rem", color: "#0f172a" }}>{course.name}</strong>
-                    <span style={{ fontSize: "0.72rem", background: "#f1f5f9", color: "#475569", padding: "2px 8px", borderRadius: "6px" }}>
-                      {course.ageGroup} سنة
+                    <span
+                      style={{
+                        fontSize: "0.72rem",
+                        fontWeight: 700,
+                        background: "#f0fdfa",
+                        color: "#0f766e",
+                        padding: "2px 8px",
+                        borderRadius: "6px",
+                      }}
+                    >
+                      {course.track}
                     </span>
+                    <span style={{ fontSize: "0.75rem", color: "#64748b" }}>{course.level}</span>
                   </div>
-                  <p style={{ margin: "0 0 10px", fontSize: "0.78rem", color: "#64748b", lineHeight: 1.5 }}>
-                    {course.description || "منهج عملي مكثف يركز على التطبيق التفاعلي وبناء المشاريع الحقيقية."}
+                  <h4 style={{ margin: "4px 0", fontSize: "0.98rem", fontWeight: 700, color: "#0f172a" }}>
+                    {course.name}
+                  </h4>
+                  <p style={{ margin: 0, fontSize: "0.78rem", color: "#64748b", lineHeight: 1.5 }}>
+                    {course.description}
                   </p>
-                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", fontSize: "0.76rem", color: "#334155" }}>
-                    <div>الحصص: <strong>{course.totalSessions} حصة</strong></div>
-                    <div>السعر: <strong>{new Intl.NumberFormat("ar-EG").format(course.basePricePiasters / 100)} ج.م</strong></div>
-                  </div>
                 </div>
 
                 <button
@@ -609,7 +414,7 @@ export function BranchReadinessTab({
                     color: "#ffffff",
                     border: 0,
                     borderRadius: "8px",
-                    padding: "7px 12px",
+                    padding: "8px 14px",
                     fontSize: "0.82rem",
                     fontWeight: 700,
                     cursor: "pointer",
@@ -620,7 +425,7 @@ export function BranchReadinessTab({
                   }}
                 >
                   <Plus size={14} />
-                  <span>إنشاء مجموعة جديدة لهذا الكورس</span>
+                  <span>إنشاء مجموعة لهذا الكورس</span>
                 </button>
               </div>
             ))}
@@ -628,95 +433,68 @@ export function BranchReadinessTab({
         </section>
       )}
 
-      {/* Section 4: Competitions & Target Arenas */}
+      {/* Section 4: Competitions & Arenas */}
       {(activeSection === "ALL" || activeSection === "COMPETITIONS") && (
-        <section style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "#fef9c3", color: "#ca8a04", display: "grid", placeItems: "center" }}>
-                <Trophy size={18} />
-              </div>
-              <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 700, color: "#0f172a" }}>
-                مسابقات الأكاديمية والفرق التنافسية بالفرع
-              </h3>
-            </div>
-            <span style={{ fontSize: "0.78rem", color: "#64748b" }}>
-              تجهيز الفرق وتخصيص حصص إضافية للتدريب على الحلبات
-            </span>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(310px, 1fr))", gap: "16px" }}>
-            {competitionsData.map(comp => (
-              <div
-                key={comp.id}
-                style={{
-                  background: "#ffffff",
-                  border: "1px solid #fef08a",
-                  borderRadius: "12px",
-                  padding: "16px 18px",
-                  boxShadow: "0 2px 6px rgba(234, 179, 8, 0.08)",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  gap: "14px",
-                }}
-              >
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
-                    <strong style={{ fontSize: "0.95rem", color: "#0f172a" }}>{comp.name}</strong>
-                    <span style={{ fontSize: "0.72rem", fontWeight: 700, background: "#fef08a", color: "#854d0e", padding: "2px 8px", borderRadius: "8px" }}>
-                      مستعدة للمنافسة 🏆
-                    </span>
-                  </div>
-
-                  <div style={{ fontSize: "0.78rem", color: "#475569", marginBottom: "8px" }}>
-                    <strong>التراكات المعتمدة: </strong>
-                    <span>{comp.tracks.join(" · ")}</span>
-                  </div>
-
-                  <div style={{ display: "flex", gap: "12px", fontSize: "0.8rem", color: "#334155", background: "#fefce8", padding: "8px 12px", borderRadius: "8px", marginBottom: "10px" }}>
-                    <div>الفرق المسجلة: <strong style={{ color: "#854d0e" }}>{comp.registeredTeams} فرق</strong></div>
-                    <div>عدد الطلاب: <strong style={{ color: "#854d0e" }}>{comp.studentsCount} طلاب</strong></div>
-                    <div>الكيت: <strong>{comp.targetKits}</strong></div>
-                  </div>
-
-                  <p style={{ margin: 0, fontSize: "0.76rem", color: "#64748b", lineHeight: 1.5 }}>
-                    {comp.notes}
-                  </p>
-                </div>
-
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #fef9c3", paddingTop: "10px" }}>
-                  <span style={{ fontSize: "0.72rem", color: "#854d0e", fontWeight: 600 }}>حلبة التدريب مجهزة في المعمل</span>
-                  <button
-                    type="button"
-                    onClick={() => onOpenCreateGroupModal()}
-                    style={{
-                      background: "#ca8a04",
-                      color: "#ffffff",
-                      border: 0,
-                      borderRadius: "6px",
-                      padding: "4px 10px",
-                      fontSize: "0.78rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    إنشاء مجموعة تنافسية +
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        <ReadinessCompetitionsSection
+          competitions={readinessState.competitions}
+          onOpenAddCompetition={() => {
+            setEditingComp(null);
+            setCompModalOpen(true);
+          }}
+          onEditCompetition={(comp) => {
+            setEditingComp(comp);
+            setCompModalOpen(true);
+          }}
+          onDeleteCompetition={handleDeleteComp}
+        />
       )}
 
-      {/* Hardware & Kits Inventory Operations Hub Modal */}
-      {selectedKit && (
+      {/* Section 5: Daily Operational Checklist */}
+      {(activeSection === "ALL" || activeSection === "CHECKLIST") && (
+        <ReadinessChecklistSection
+          checklist={readinessState.checklist}
+          onToggleItem={handleToggleChecklist}
+          onAddItem={handleAddChecklistItem}
+        />
+      )}
+
+      {/* Modals */}
+      <RoomModal
+        isOpen={roomModalOpen}
+        onClose={() => {
+          setRoomModalOpen(false);
+          setEditingRoom(null);
+        }}
+        onSave={handleSaveRoom}
+        initialRoom={editingRoom}
+      />
+
+      <KitModal
+        isOpen={kitModalOpen}
+        onClose={() => {
+          setKitModalOpen(false);
+          setEditingKit(null);
+        }}
+        onSave={handleSaveKit}
+        initialKit={editingKit}
+      />
+
+      <CompetitionModal
+        isOpen={compModalOpen}
+        onClose={() => {
+          setCompModalOpen(false);
+          setEditingComp(null);
+        }}
+        onSave={handleSaveComp}
+        initialComp={editingComp}
+      />
+
+      {inspectingKit && (
         <KitInventoryDetailsModal
-          isOpen={Boolean(selectedKit)}
-          kit={selectedKit}
+          isOpen={Boolean(inspectingKit)}
+          kit={inspectingKit}
           branchName={branchName}
-          onClose={() => setSelectedKit(null)}
+          onClose={() => setInspectingKit(null)}
         />
       )}
     </div>
