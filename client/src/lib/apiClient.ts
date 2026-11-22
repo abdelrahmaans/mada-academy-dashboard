@@ -550,6 +550,7 @@ export type EvaluationStatusSummary = { branchId: string; counts: Record<Session
 export type EvaluationReviewRecord = {
   id: string; sessionId: string; studentId: string; studentName: string; courseName: string;
   instructorName: string | null; score: number | null; notes: string | null; submittedAt: string | null; sessionDate: string; canDecide: boolean;
+  branchId?: string; branchName?: string | null; tenantId?: string;
 };
 export type EvaluationReviewQueueResponse = { items: EvaluationReviewRecord[]; total: number };
 export type ConsumerStudentRecord = { id: string; name: string; branchId: string; branchName: string | null; relationship: string };
@@ -1463,9 +1464,9 @@ export const apiClient = {
   submitSessionEvaluations: (sessionId: string, studentIds: string[]) => request<{ sessionId: string; submitted: number; status: string }>(`/scheduling/sessions/${sessionId}/evaluations/submit`, { method: "POST", body: JSON.stringify({ studentIds }) }),
   getGroupLeaderboard: (groupId: string) => request<GroupLeaderboardResponse>(`/scheduling/groups/${groupId}/leaderboard`),
   getConsumerGroupLeaderboard: (groupId: string) => request<GroupLeaderboardResponse>(`/consumer/groups/${groupId}/leaderboard`),
-  listEvaluationReviews: () =>
-    request<EvaluationReviewQueueResponse>("/scheduling/evaluation-reviews").catch(() => {
-      const items = evaluationReviewStorage.getReviews();
+  listEvaluationReviews: (branchId?: string) =>
+    request<EvaluationReviewQueueResponse>(`/scheduling/evaluation-reviews${branchId ? `?branchId=${encodeURIComponent(branchId)}` : ""}`).catch(() => {
+      const items = evaluationReviewStorage.getReviews(undefined, branchId);
       return { items, total: items.length };
     }),
   evaluationStatusSummary: () => request<EvaluationStatusSummary>("/scheduling/evaluation-status-summary"),
@@ -1906,6 +1907,8 @@ export type SubscriptionFreezeRequest = {
   studentName: string;
   courseName: string;
   branchName: string;
+  branchId?: string;
+  tenantId?: string;
   startDate: string;
   endDate: string;
   reason: "MEDICAL" | "TRAVEL" | "EXAMS" | "FAMILY" | "OTHER";
@@ -1937,46 +1940,7 @@ export type CreateFreezeRequestInput = {
 
 const FREEZE_STORAGE_KEY = "mada_subscription_freezes_v1";
 
-const DEFAULT_FREEZES: SubscriptionFreezeRequest[] = [
-  {
-    id: "FRZ-2026-001",
-    studentId: "MAD-0248",
-    studentName: "ياسين محمد علي",
-    courseName: "روبوتكس مستوى 2",
-    branchName: "مدينة نصر",
-    startDate: "2026-10-20",
-    endDate: "2026-11-03",
-    reason: "EXAMS",
-    reasonText: "فترة امتحانات منتصف الفصل الدراسي الأول",
-    status: "PENDING",
-    submittedByRole: "R08_PARENT",
-    submittedByName: "محمد علي (ولي الأمر)",
-    createdAt: "2026-10-17T09:30:00Z",
-    affectedSessionsCount: 2,
-    makeUpCreditsAwarded: 2,
-  },
-  {
-    id: "FRZ-2026-002",
-    studentId: "MAD-0247",
-    studentName: "ليلى أحمد محمود",
-    courseName: "برمجة للمبتدئين",
-    branchName: "المعادي",
-    startDate: "2026-10-10",
-    endDate: "2026-10-24",
-    reason: "MEDICAL",
-    reasonText: "إجازة مرضية وإجراء عملية جراحية بسيطة",
-    status: "APPROVED",
-    submittedByRole: "R05_SECRETARY",
-    submittedByName: "هبة محمود (استقبال المعادي)",
-    createdAt: "2026-10-09T14:15:00Z",
-    decidedAt: "2026-10-09T16:00:00Z",
-    decidedByName: "أحمد محمود (مدير الفرع)",
-    decisionNote: "معتمد طبقًا للتقرير الطبي المرفق. تم تمديد الاشتراك أسبوعين وإضافة حصتي تعويض.",
-    affectedSessionsCount: 2,
-    extendedNewEndDate: "2026-11-14",
-    makeUpCreditsAwarded: 2,
-  },
-];
+const DEFAULT_FREEZES: SubscriptionFreezeRequest[] = [];
 
 function findEntityOrThrow<T extends { id: string }>(items: T[], id: string, entityName: string): T {
   const found = items.find(item => item.id === id);
@@ -1985,23 +1949,23 @@ function findEntityOrThrow<T extends { id: string }>(items: T[], id: string, ent
 }
 
 export const freezeStorage = {
-  getRequests: (): SubscriptionFreezeRequest[] => {
+  getRequests: (tenantId?: string, branchId?: string): SubscriptionFreezeRequest[] => {
     try {
-      const raw = localStorage.getItem(FREEZE_STORAGE_KEY);
-      if (!raw) {
-        localStorage.setItem(FREEZE_STORAGE_KEY, JSON.stringify(DEFAULT_FREEZES));
-        return DEFAULT_FREEZES;
-      }
-      return JSON.parse(raw);
+      const key = tenantId ? `mada_freezes_${tenantId}_${branchId || "all"}` : FREEZE_STORAGE_KEY;
+      const raw = localStorage.getItem(key);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
-      return DEFAULT_FREEZES;
+      return [];
     }
   },
-  saveRequests: (items: SubscriptionFreezeRequest[]) => {
-    localStorage.setItem(FREEZE_STORAGE_KEY, JSON.stringify(items));
+  saveRequests: (items: SubscriptionFreezeRequest[], tenantId?: string, branchId?: string) => {
+    const key = tenantId ? `mada_freezes_${tenantId}_${branchId || "all"}` : FREEZE_STORAGE_KEY;
+    localStorage.setItem(key, JSON.stringify(items));
   },
-  createRequest: (input: CreateFreezeRequestInput): SubscriptionFreezeRequest => {
-    const list = freezeStorage.getRequests();
+  createRequest: (input: CreateFreezeRequestInput, tenantId?: string, branchId?: string): SubscriptionFreezeRequest => {
+    const list = freezeStorage.getRequests(tenantId, branchId);
     const start = new Date(input.startDate);
     const end = new Date(input.endDate);
     const diffDays = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
@@ -2013,6 +1977,8 @@ export const freezeStorage = {
       studentName: input.studentName,
       courseName: input.courseName,
       branchName: input.branchName || "الفرع الرئيسي",
+      branchId: branchId,
+      tenantId: tenantId,
       startDate: input.startDate,
       endDate: input.endDate,
       reason: input.reason,
@@ -2025,11 +1991,11 @@ export const freezeStorage = {
       makeUpCreditsAwarded: affected,
     };
     const updated = [newReq, ...list];
-    freezeStorage.saveRequests(updated);
+    freezeStorage.saveRequests(updated, tenantId, branchId);
     return newReq;
   },
-  decideRequest: (id: string, decision: "APPROVED" | "REJECTED", decidedByName: string, note?: string): SubscriptionFreezeRequest => {
-    const list = freezeStorage.getRequests();
+  decideRequest: (id: string, decision: "APPROVED" | "REJECTED", decidedByName: string, note?: string, tenantId?: string, branchId?: string): SubscriptionFreezeRequest => {
+    const list = freezeStorage.getRequests(tenantId, branchId);
     const updated = list.map(item => {
       if (item.id !== id) return item;
       const end = new Date(item.endDate);
@@ -2046,57 +2012,28 @@ export const freezeStorage = {
         extendedNewEndDate: decision === "APPROVED" ? extended : undefined,
       };
     });
-    freezeStorage.saveRequests(updated);
+    freezeStorage.saveRequests(updated, tenantId, branchId);
     return findEntityOrThrow(updated, id, "Freeze request");
   },
 };
 
 const EVALUATION_REVIEW_STORAGE_KEY = "mada_evaluation_reviews_v1";
 
-const DEFAULT_EVALUATION_REVIEWS: EvaluationReviewRecord[] = [
-  {
-    id: "EVR-2026-001",
-    sessionId: "ses-demo-101",
-    studentId: "c7f99999-0000-0000-0000-000000000001",
-    studentName: "آدم شريف حسن",
-    courseName: "روبوتكس مستوى 2",
-    instructorName: "م. كريم عادل",
-    score: 82,
-    notes: "طلب استفسار من ولي الأمر: يرجى توضيح معيار تقييم الجزء العملي للمشروع.",
-    submittedAt: "2026-11-12T14:30:00.000Z",
-    sessionDate: "2026-11-12",
-    canDecide: true,
-  },
-  {
-    id: "EVR-2026-002",
-    sessionId: "ses-demo-102",
-    studentId: "c7f99999-0000-0000-0000-000000000002",
-    studentName: "ليلى أحمد محمود",
-    courseName: "برمجة بايثون للصغار",
-    instructorName: "م. سارة خالد",
-    score: 75,
-    notes: "طلب مراجعة من ولي الأمر حول درجة الواجب المنزلي والتطبيق التفاعلي.",
-    submittedAt: "2026-11-13T09:15:00.000Z",
-    sessionDate: "2026-11-13",
-    canDecide: true,
-  },
-];
-
 export const evaluationReviewStorage = {
-  getReviews: (): EvaluationReviewRecord[] => {
+  getReviews: (tenantId?: string, branchId?: string): EvaluationReviewRecord[] => {
     try {
-      const raw = localStorage.getItem(EVALUATION_REVIEW_STORAGE_KEY);
-      if (!raw) {
-        localStorage.setItem(EVALUATION_REVIEW_STORAGE_KEY, JSON.stringify(DEFAULT_EVALUATION_REVIEWS));
-        return DEFAULT_EVALUATION_REVIEWS;
-      }
-      return JSON.parse(raw);
+      const key = tenantId ? `mada_evaluations_${tenantId}_${branchId || "all"}` : EVALUATION_REVIEW_STORAGE_KEY;
+      const raw = localStorage.getItem(key);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
-      return DEFAULT_EVALUATION_REVIEWS;
+      return [];
     }
   },
-  saveReviews: (items: EvaluationReviewRecord[]) => {
-    localStorage.setItem(EVALUATION_REVIEW_STORAGE_KEY, JSON.stringify(items));
+  saveReviews: (items: EvaluationReviewRecord[], tenantId?: string, branchId?: string) => {
+    const key = tenantId ? `mada_evaluations_${tenantId}_${branchId || "all"}` : EVALUATION_REVIEW_STORAGE_KEY;
+    localStorage.setItem(key, JSON.stringify(items));
   },
   createReview: (input: {
     sessionId: string;
@@ -2107,8 +2044,11 @@ export const evaluationReviewStorage = {
     score?: number | null;
     notes: string;
     sessionDate?: string;
-  }): EvaluationReviewRecord => {
-    const list = evaluationReviewStorage.getReviews();
+    branchId?: string;
+    branchName?: string;
+    tenantId?: string;
+  }, tenantId?: string, branchId?: string): EvaluationReviewRecord => {
+    const list = evaluationReviewStorage.getReviews(tenantId, branchId);
     const newRecord: EvaluationReviewRecord = {
       id: `EVR-2026-${String(list.length + 1).padStart(3, "0")}`,
       sessionId: input.sessionId,
@@ -2121,21 +2061,26 @@ export const evaluationReviewStorage = {
       submittedAt: new Date().toISOString(),
       sessionDate: input.sessionDate || new Date().toISOString().split("T")[0],
       canDecide: true,
+      branchId: input.branchId || branchId,
+      branchName: input.branchName || "الفرع الرئيسي",
+      tenantId: input.tenantId || tenantId,
     };
     const updated = [newRecord, ...list];
-    evaluationReviewStorage.saveReviews(updated);
+    evaluationReviewStorage.saveReviews(updated, tenantId, branchId);
     return newRecord;
   },
   decideReview: (
     id: string,
     _decision: "PUBLISH" | "REQUEST_CHANGES",
     _decidedByName: string,
-    _note?: string
+    _note?: string,
+    tenantId?: string,
+    branchId?: string
   ): EvaluationReviewRecord => {
-    const list = evaluationReviewStorage.getReviews();
+    const list = evaluationReviewStorage.getReviews(tenantId, branchId);
     const match = list.find((item) => item.id === id);
     const updated = list.filter((item) => item.id !== id);
-    evaluationReviewStorage.saveReviews(updated);
+    evaluationReviewStorage.saveReviews(updated, tenantId, branchId);
     return match || list[0];
   },
 };

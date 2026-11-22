@@ -83,10 +83,23 @@ export default function Approvals() {
   const [, navigate] = useLocation();
   const { me } = useAuth();
   const tenantId = me?.academy?.id || me?.tenantId || "default";
+  const userBranches = me?.branches || [];
+  const isOwner = me?.role === "R01_ACADEMY_OWNER" || me?.role?.startsWith("R01");
+  const [selectedBranchId, setSelectedBranchId] = useState<string>("ALL");
+
   const branch =
     me?.branches?.find((item) => item.id === me.branchId)?.name ??
     me?.branches?.[0]?.name ??
-    "الفرع المصرح";
+    "الفرع الرئيسي";
+
+  const activeBranchName = useMemo(() => {
+    if (selectedBranchId !== "ALL") {
+      const match = userBranches.find((b) => b.id === selectedBranchId);
+      if (match) return match.name;
+    }
+    return branch;
+  }, [selectedBranchId, userBranches, branch]);
+
   const [liveMode, setLiveMode] = useState(() => apiClient.hasSession());
   const [loading, setLoading] = useState(() => apiClient.hasSession());
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -111,7 +124,14 @@ export default function Approvals() {
     selected?.kind === "substitute" ? Boolean(selected.proposedInstructorId) : selected?.kind !== "discount" || (selected.discountValue ?? 0) <= BRANCH_MANAGER_DISCOUNT_LIMIT;
 
   useEffect(() => {
-    const localRequests = approvalsStorage.load(branch, tenantId);
+    try {
+      localStorage.removeItem("mada_evaluation_reviews_v1");
+      localStorage.removeItem("mada_subscription_freezes_v1");
+    } catch {
+      // ignore
+    }
+
+    const localRequests = approvalsStorage.load(activeBranchName, tenantId);
     if (!apiClient.hasSession()) {
       setLiveMode(false);
       setLoading(false);
@@ -122,13 +142,14 @@ export default function Approvals() {
     setLiveMode(true);
     setLoading(true);
     setLoadError(null);
+    const targetBranchScope = (selectedBranchId !== "ALL" ? selectedBranchId : me?.branchId) || undefined;
     Promise.allSettled([
       apiClient.listApprovals(),
       apiClient.listNotifications(),
       apiClient.invoiceCorrections(),
       apiClient.financeExpenses({ status: "ALL" }),
       apiClient.freezeRequests(),
-      apiClient.listEvaluationReviews(),
+      apiClient.listEvaluationReviews(targetBranchScope),
     ]).then(([approvalResult, notificationResult, correctionResult, expenseResult, freezeResult, evaluationResult]) => {
       if (approvalResult.status === "rejected") {
         setRequests(localRequests);
@@ -149,10 +170,10 @@ export default function Approvals() {
         ? expenseResult.value.items.map(expenseFromApi)
         : [];
       const freezes = freezeResult.status === "fulfilled"
-        ? freezeResult.value.map(freezeFromStorage)
+        ? freezeResult.value.map(item => freezeFromStorage(item, activeBranchName))
         : [];
       const evaluations = evaluationResult.status === "fulfilled"
-        ? evaluationResult.value.items.map(evaluationReviewFromApi)
+        ? evaluationResult.value.items.map(item => evaluationReviewFromApi(item, activeBranchName))
         : [];
 
       const serverItems = [...supported.map(approvalFromApi), ...corrections, ...expenses, ...freezes, ...evaluations];
@@ -169,20 +190,52 @@ export default function Approvals() {
     }).finally(() => {
       setLoading(false);
     });
-  }, [me?.role, reloadKey, branch, tenantId]);
+  }, [me?.role, reloadKey, activeBranchName, selectedBranchId, branch, tenantId, me?.branchId]);
 
   const handleCreateRequest = (data: Parameters<typeof approvalsStorage.createRequest>[1]) => {
-    const created = approvalsStorage.createRequest(branch, data, tenantId);
+    const targetBranch = selectedBranchId !== "ALL" ? activeBranchName : branch;
+    const targetBranchId = (selectedBranchId !== "ALL" ? selectedBranchId : me?.branchId) || undefined;
+    const created = approvalsStorage.createRequest(
+      targetBranch,
+      {
+        ...data,
+        tenantId,
+        branchId: targetBranchId,
+      },
+      tenantId
+    );
     setRequests((current) => [created, ...current]);
     toast.success("تم إرسال طلب المراجعة بنجاح", {
-      description: `رقم الطلب: ${created.id} وهو متاح الآن في قائمة المراجعة.`,
+      description: `رقم الطلب: ${created.id} وهو متاح الآن في قائمة المراجعة لفرع ${targetBranch}.`,
     });
   };
 
-  const branchRequests = useMemo(
-    () => liveMode ? requests : requests.filter(item => !item.branch || item.branch === branch || item.branch === "الفرع المصرح"),
-    [requests, branch, liveMode]
-  );
+  const branchRequests = useMemo(() => {
+    return requests.filter((item) => {
+      // 1. Must belong to the current academy / tenant
+      if (item.tenantId && item.tenantId !== tenantId) return false;
+
+      // 2. If Academy Owner selected "كل الفروع"
+      if (selectedBranchId === "ALL" && (isOwner || !me?.branchId)) {
+        return true;
+      }
+
+      // 3. Match by branch ID if present
+      const targetBranchId = selectedBranchId !== "ALL" ? selectedBranchId : me?.branchId;
+      if (targetBranchId && item.branchId) {
+        return item.branchId === targetBranchId;
+      }
+
+      // 4. Match by branch name
+      const targetBranchName = selectedBranchId !== "ALL" ? activeBranchName : branch;
+      return (
+        !item.branch ||
+        item.branch === targetBranchName ||
+        item.branch === "كل الفروع" ||
+        item.branch === "الفرع المصرح"
+      );
+    });
+  }, [requests, tenantId, selectedBranchId, isOwner, me?.branchId, activeBranchName, branch]);
   const visibleRequests = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("ar");
     return branchRequests
@@ -420,7 +473,7 @@ export default function Approvals() {
       scopeLevel={roleDef.scopeLevel}
       scopeLabel={roleDef.defaultScopeLabel}
       tenantName={me?.academy?.name}
-      branchName={branchContext}
+      branchName={selectedBranchId !== "ALL" ? activeBranchName : branchContext}
       demo={!liveMode}
       mobileOpen={mobileNavOpen}
       onCloseMobile={() => setMobileNavOpen(false)}
@@ -435,15 +488,55 @@ export default function Approvals() {
             >
               <Menu size={21} />
             </button>
-            <div
-              className="branch-select assigned-branch"
-              aria-label={liveMode ? "النطاق المصرح به" : `النطاق: فرع ${branch}`}
-            >
-              <span className="branch-icon">
-                <MapPin size={17} />
-              </span>
-              <span>{liveMode ? "النطاق المصرح به" : `فرع ${branch}`}</span>
-            </div>
+            {isOwner && userBranches.length > 0 ? (
+              <div
+                className="branch-select"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "4px 10px",
+                  borderRadius: "8px",
+                  backgroundColor: "var(--background-secondary, rgba(13, 148, 136, 0.08))",
+                  border: "1px solid rgba(13, 148, 136, 0.2)",
+                }}
+              >
+                <span className="branch-icon" style={{ color: "#0d9488", display: "flex", alignItems: "center" }}>
+                  <MapPin size={17} />
+                </span>
+                <select
+                  aria-label="تحديد الفرع للموافقات"
+                  value={selectedBranchId}
+                  onChange={(e) => setSelectedBranchId(e.target.value)}
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    color: "inherit",
+                    fontWeight: 600,
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    outline: "none",
+                  }}
+                >
+                  <option value="ALL">كل الفروع ({userBranches.length})</option>
+                  {userBranches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div
+                className="branch-select assigned-branch"
+                aria-label={`النطاق: فرع ${branch}`}
+              >
+                <span className="branch-icon">
+                  <MapPin size={17} />
+                </span>
+                <span>{`فرع ${branch}`}</span>
+              </div>
+            )}
             <label className="top-search">
               <Search size={18} />
               <input
@@ -883,7 +976,7 @@ export default function Approvals() {
       <CreateApprovalModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        branchName={branch}
+        branchName={selectedBranchId !== "ALL" ? activeBranchName : branch}
         defaultRequestedBy={me?.user?.displayName || "السكرتارية / المحاسبة"}
         onSubmit={handleCreateRequest}
       />

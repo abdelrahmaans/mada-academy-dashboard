@@ -18,90 +18,7 @@ export type ApprovalSort = "priority" | "oldest" | "newest";
 
 export const BRANCH_MANAGER_DISCOUNT_LIMIT = 15;
 
-export const INITIAL_REQUESTS: ApprovalItem[] = [
-  {
-    id: "APR-085",
-    kind: "expense",
-    title: "مصروف مستلزمات يحتاج تأكيدًا",
-    summary: "طلب تأكيد مصروف تشغيلي مسجل من المحاسبة",
-    branch: "مدينة نصر",
-    requestedBy: "أحمد محمود · المحاسبة",
-    submittedAt: "اليوم · 11:10 ص",
-    submittedAtSort: "2026-09-26T11:10:00",
-    expenseDescription: "مستلزمات معمل الروبوتكس",
-    expenseAmount: 3850,
-    expenseCategory: "مواد ومستلزمات",
-    status: "pending",
-  },
-  {
-    id: "APR-084",
-    kind: "discount",
-    title: "خصم إخوة يحتاج اعتمادًا",
-    summary: "خصم إضافي على تسجيل الأخ الثاني",
-    branch: "مدينة نصر",
-    requestedBy: "هبة محمود · السكرتارية",
-    submittedAt: "اليوم · 10:24 ص",
-    submittedAtSort: "2026-09-26T10:24:00",
-    student: "آدم شريف حسن",
-    course: "ذكاء اصطناعي للصغار",
-    invoice: "MAD-NSR-2026-0914",
-    discountType: "خصم إخوة",
-    discountValue: 15,
-    originalAmount: 3600,
-    finalAmount: 3060,
-    status: "pending",
-  },
-  {
-    id: "APR-083",
-    kind: "substitute",
-    title: "طلب مدرب بديل لحصة اليوم",
-    summary: "تغطية الحصة بسبب غياب المدرب الأساسي",
-    branch: "مدينة نصر",
-    requestedBy: "مريم حسن · رئيس المدربين",
-    submittedAt: "اليوم · 09:05 ص",
-    submittedAtSort: "2026-09-26T09:05:00",
-    course: "روبوتكس مستوى 2",
-    instructor: "عمر سامح",
-    substitute: "يوسف عماد",
-    sessionDate: "السبت 26 سبتمبر",
-    sessionTime: "12:00 – 1:30 م",
-    status: "pending",
-  },
-  {
-    id: "APR-082",
-    kind: "discount",
-    title: "خصم حملة موسمية",
-    summary: "طلب تعديل قيمة خصم الحملة المسجل",
-    branch: "المعادي",
-    requestedBy: "سارة خالد · المحاسبة",
-    submittedAt: "أمس · 04:18 م",
-    submittedAtSort: "2026-09-25T16:18:00",
-    student: "ليلى أحمد محمود",
-    course: "برمجة للمبتدئين",
-    invoice: "MAD-MAD-2026-0905",
-    discountType: "خصم حملة",
-    discountValue: 10,
-    originalAmount: 2800,
-    finalAmount: 2520,
-    status: "pending",
-  },
-  {
-    id: "APR-081",
-    kind: "substitute",
-    title: "طلب مدرب بديل لحصة قادمة",
-    summary: "تبديل مؤقت بسبب تعارض في الجدول",
-    branch: "مدينة نصر",
-    requestedBy: "مريم حسن · رئيس المدربين",
-    submittedAt: "أمس · 01:40 م",
-    submittedAtSort: "2026-09-25T13:40:00",
-    course: "دوائر إلكترونية",
-    instructor: "سارة خالد",
-    substitute: "هبة محمود",
-    sessionDate: "الأحد 27 سبتمبر",
-    sessionTime: "02:00 – 03:30 م",
-    status: "pending",
-  },
-];
+export const INITIAL_REQUESTS: ApprovalItem[] = [];
 
 export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
@@ -165,7 +82,9 @@ export function approvalFromApi(record: ApprovalRequestRecord): ApprovalItem {
       (record.courseName
         ? `${record.courseName} · جلسة ${record.sessionNumber ?? ""}`
         : "طلب تشغيلي مسجل على الخادم"),
-    branch: record.branchName ?? record.branchId ?? "كل الفروع",
+    branch: record.branchName ?? "الفرع الرئيسي",
+    branchId: record.branchId ?? undefined,
+    tenantId: record.tenantId,
     requestedBy: record.instructorName ?? record.submittedByRole,
     submittedAt: new Date(record.createdAt).toLocaleString("ar-EG", {
       dateStyle: "medium",
@@ -217,7 +136,9 @@ export function correctionFromApi(record: InvoiceCorrection): ApprovalItem {
     kind: "correction",
     title: "تصحيح فاتورة يحتاج اعتمادًا",
     summary: record.reason,
-    branch: record.branchId,
+    branch: record.branchId ?? "الفرع الرئيسي",
+    branchId: record.branchId,
+    tenantId: record.tenantId,
     requestedBy: "المحاسبة",
     submittedAt: new Date(record.createdAt).toLocaleString("ar-EG", {
       dateStyle: "medium",
@@ -248,7 +169,9 @@ export function expenseFromApi(record: FinanceExpense): ApprovalItem {
     kind: "expense",
     title: "مصروف يحتاج اعتمادًا",
     summary: record.description,
-    branch: record.branchName ?? record.branchId,
+    branch: record.branchName ?? "الفرع الرئيسي",
+    branchId: record.branchId,
+    tenantId: record.tenantId,
     requestedBy: "مقدم الطلب",
     submittedAt: new Date(record.createdAt).toLocaleString("ar-EG", {
       dateStyle: "medium",
@@ -273,7 +196,7 @@ export function expenseFromApi(record: FinanceExpense): ApprovalItem {
   };
 }
 
-export function freezeFromStorage(record: SubscriptionFreezeRequest): ApprovalItem {
+export function freezeFromStorage(record: SubscriptionFreezeRequest, fallbackBranchName?: string): ApprovalItem {
   const reasonAr =
     record.reason === "MEDICAL"
       ? "عذر مرضي"
@@ -290,7 +213,9 @@ export function freezeFromStorage(record: SubscriptionFreezeRequest): ApprovalIt
     kind: "freeze",
     title: `طلب تجميد اشتراك · ${record.studentName}`,
     summary: `${record.reasonText} (${reasonAr})`,
-    branch: record.branchName || "مدينة نصر",
+    branch: record.branchName || fallbackBranchName || "الفرع الرئيسي",
+    branchId: record.branchId,
+    tenantId: record.tenantId,
     requestedBy: `${record.submittedByName} · ${
       record.submittedByRole === "R08_PARENT" ? "ولي الأمر" : "السكرتارية"
     }`,
@@ -318,13 +243,15 @@ export function freezeFromStorage(record: SubscriptionFreezeRequest): ApprovalIt
   };
 }
 
-export function evaluationReviewFromApi(record: EvaluationReviewRecord): ApprovalItem {
+export function evaluationReviewFromApi(record: EvaluationReviewRecord, fallbackBranchName?: string): ApprovalItem {
   return {
     id: record.id,
     kind: "evaluation",
     title: `طلب مراجعة تقييم · ${record.studentName}`,
     summary: record.notes || `تقييم جلسة ${record.courseName} (درجة: ${record.score ?? "غير محدد"})`,
-    branch: "كل الفروع",
+    branch: record.branchName || fallbackBranchName || "الفرع الرئيسي",
+    branchId: record.branchId,
+    tenantId: record.tenantId,
     requestedBy: record.instructorName ? `${record.instructorName} · المدرب` : "ولي الأمر / المدرب",
     submittedAt: record.submittedAt
       ? new Date(record.submittedAt).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" })

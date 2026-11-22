@@ -22,6 +22,8 @@ export type ApprovalItem = {
   title: string;
   summary: string;
   branch: string;
+  branchId?: string;
+  tenantId?: string;
   requestedBy: string;
   submittedAt: string;
   submittedAtSort: string;
