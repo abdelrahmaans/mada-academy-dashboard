@@ -34,7 +34,11 @@ public sealed class AuthService(MadaDbContext db, JwtTokenService tokens, OtpCha
     public async Task<PasswordLoginResult> LoginWithPasswordAsync(PasswordLoginRequest request, CancellationToken cancellationToken)
     {
         var phone = OtpChallengeStore.Normalize(request.Phone);
-        var user = await db.UserAccounts.SingleOrDefaultAsync(x => x.Phone == phone && x.AccountType == request.AccountType, cancellationToken);
+        var rawPhone = request.Phone.Trim();
+        var altPhone = rawPhone.StartsWith("+") ? rawPhone[1..] : "+" + rawPhone;
+        var user = await db.UserAccounts.SingleOrDefaultAsync(
+            x => (x.Phone == phone || x.Phone == rawPhone || x.Phone == altPhone) && x.AccountType == request.AccountType,
+            cancellationToken);
         if (user is null || user.Status != "ACTIVE") return new PasswordLoginResult(null);
 
         var now = DateTimeOffset.UtcNow;

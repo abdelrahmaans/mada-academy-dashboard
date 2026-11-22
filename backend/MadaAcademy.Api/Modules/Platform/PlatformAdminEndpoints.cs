@@ -797,9 +797,19 @@ public static class PlatformAdminEndpoints
 
         var ownerMembership = await db.Memberships
             .Include(m => m.UserAccount)
-            .Where(m => m.TenantId == tenantId && m.RoleCode == "R01_ACADEMY_OWNER" && m.Status == "ACTIVE")
+            .Where(m => m.TenantId == tenantId && (m.RoleCode == "R01_ACADEMY_OWNER" || m.RoleCode == "R01" || m.RoleCode.StartsWith("R01")))
             .OrderBy(m => m.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
+
+        if (ownerMembership?.UserAccount is null)
+        {
+            ownerMembership = await db.Memberships
+                .Include(m => m.UserAccount)
+                .Where(m => m.TenantId == tenantId && (m.RoleCode.Contains("OWNER") || m.ScopeLevel == "TENANT"))
+                .OrderBy(m => m.CreatedAt)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
         if (ownerMembership?.UserAccount is null)
             return Results.NotFound(new { error = new { code = "OWNER_NOT_FOUND", message = "Active academy owner was not found." } });
 
@@ -809,7 +819,8 @@ public static class PlatformAdminEndpoints
         owner.MustChangePassword = true;
         owner.FailedPasswordAttempts = 0;
         owner.PasswordLockedUntil = null;
-        if (owner.Status == "INVITED") owner.Status = "ACTIVE";
+        owner.Status = "ACTIVE";
+        ownerMembership.Status = "ACTIVE";
 
         var sessions = await db.RefreshSessions
             .Where(s => s.UserAccountId == owner.Id && s.RevokedAt == null)

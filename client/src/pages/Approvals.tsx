@@ -148,8 +148,8 @@ export default function Approvals() {
       apiClient.listNotifications(),
       apiClient.invoiceCorrections(),
       apiClient.financeExpenses({ status: "ALL" }),
-      apiClient.freezeRequests(),
-      apiClient.listEvaluationReviews(targetBranchScope),
+      apiClient.freezeRequests(targetBranchScope, tenantId),
+      apiClient.listEvaluationReviews(targetBranchScope, tenantId),
     ]).then(([approvalResult, notificationResult, correctionResult, expenseResult, freezeResult, evaluationResult]) => {
       if (approvalResult.status === "rejected") {
         setRequests(localRequests);

@@ -30,7 +30,13 @@ export const approvalsStorage = {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          return parsed as ApprovalItem[];
+          return parsed.filter(item => {
+            if (tenantId && item.tenantId && item.tenantId !== tenantId) return false;
+            // Purge legacy hardcoded demo requests
+            if (item.id === "EVR-2026-001" || item.id === "EVR-2026-002") return false;
+            if (item.kind === "evaluation" && (item.student === "آدم شريف حسن" || item.student === "ليلى أحمد محمود")) return false;
+            return true;
+          }) as ApprovalItem[];
         }
       }
     } catch {

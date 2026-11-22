@@ -3,6 +3,7 @@ import type { PlatformAcademy, AcademyBranch, BootstrapAcademyResponse } from ".
 const STORAGE_KEY = "mada_custom_academies";
 const BRANCHES_KEY_PREFIX = "mada_branches_";
 const OWNERS_KEY = "mada_custom_academy_owners";
+const ACCOUNTS_KEY = "mada_stored_accounts_v1";
 
 export interface StoredAcademyOwner {
   id: string;
@@ -14,6 +15,44 @@ export interface StoredAcademyOwner {
   password?: string;
   role: string;
 }
+
+export interface StoredUserAccount {
+  id: string;
+  tenantId?: string;
+  branchId?: string | null;
+  academyName?: string;
+  displayName: string;
+  email?: string | null;
+  phone: string;
+  password?: string;
+  role: string;
+  accountType?: "staff" | "parent" | "student";
+}
+
+/**
+ * Standardize Egyptian & international phone numbers for robust matching
+ * (e.g. 01012345678 -> +201012345678)
+ */
+export function normalizePhoneNumber(phone: string): string {
+  let cleaned = (phone || "").trim().replace(/[\s\-\(\)\.]/g, "");
+  if (cleaned.startsWith("00")) cleaned = "+" + cleaned.slice(2);
+  if (cleaned.startsWith("20") && !cleaned.startsWith("+20")) cleaned = "+" + cleaned;
+  if (cleaned.startsWith("0") && cleaned.length === 11) cleaned = "+20" + cleaned.slice(1);
+  return cleaned;
+}
+
+const DEFAULT_DEMO_ACCOUNTS: StoredUserAccount[] = [
+  { id: "10000000-0000-0000-0000-000000000001", tenantId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", phone: "+201000000001", displayName: "أ. عبد الرحمن شريف", role: "R00_PLATFORM_ADMIN", password: "Mada@2026", accountType: "staff" },
+  { id: "10000000-0000-0000-0000-000000000002", tenantId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", phone: "+201000000002", displayName: "د. أحمد البشبيشي", role: "R01_ACADEMY_OWNER", password: "Mada@2026", accountType: "staff" },
+  { id: "10000000-0000-0000-0000-000000000003", tenantId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", phone: "+201000000003", displayName: "م. كريم الشناوي", role: "R02_BRANCH_MANAGER", password: "Mada@2026", accountType: "staff" },
+  { id: "10000000-0000-0000-0000-000000000004", tenantId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", phone: "+201000000004", displayName: "م. مريم حسن", role: "R03_HEAD_INSTRUCTORS", password: "Mada@2026", accountType: "staff" },
+  { id: "10000000-0000-0000-0000-000000000005", tenantId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", phone: "+201000000005", displayName: "أ. هبة محمود", role: "R05_SECRETARY", password: "Mada@2026", accountType: "staff" },
+  { id: "10000000-0000-0000-0000-000000000006", tenantId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", phone: "+201000000006", displayName: "أ. أحمد ممدوح", role: "R06_ACCOUNTANT", password: "Mada@2026", accountType: "staff" },
+  { id: "10000000-0000-0000-0000-000000000007", tenantId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", phone: "+201000000007", displayName: "أ. سلمى عادل", role: "R07_MEDIA_MANAGER", password: "Mada@2026", accountType: "staff" },
+  { id: "10000000-0000-0000-0000-000000000010", tenantId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", phone: "+201000000010", displayName: "ك. عمر سامح", role: "R04_INSTRUCTOR", password: "Mada@2026", accountType: "staff" },
+  { id: "10000000-0000-0000-0000-000000000011", tenantId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", phone: "+201000000011", displayName: "م. أحمد كمال", role: "R08_PARENT", password: "Mada@2026", accountType: "parent" },
+  { id: "10000000-0000-0000-0000-000000000012", tenantId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", phone: "+201000000012", displayName: "لينة عمر", role: "R09_STUDENT", password: "Mada@2026", accountType: "student" },
+];
 
 function safeGetItem(key: string): string | null {
   try {
@@ -248,17 +287,141 @@ export function getStoredOwners(): StoredAcademyOwner[] {
 
 export function saveStoredOwner(owner: StoredAcademyOwner): void {
   const current = getStoredOwners();
-  const index = current.findIndex((o) => o.phone === owner.phone || o.id === owner.id);
+  const normalizedPhone = normalizePhoneNumber(owner.phone);
+  const normalizedOwner = { ...owner, phone: normalizedPhone };
+  const index = current.findIndex(
+    (o) => normalizePhoneNumber(o.phone) === normalizedPhone || o.id === owner.id
+  );
   if (index >= 0) {
-    current[index] = { ...current[index], ...owner };
+    current[index] = { ...current[index], ...normalizedOwner };
   } else {
-    current.push(owner);
+    current.push(normalizedOwner);
   }
   safeSetItem(OWNERS_KEY, JSON.stringify(current));
+
+  // Also sync to global stored accounts
+  saveStoredAccount({
+    id: owner.id,
+    tenantId: owner.tenantId,
+    academyName: owner.academyName,
+    displayName: owner.displayName,
+    email: owner.email,
+    phone: normalizedPhone,
+    password: owner.password,
+    role: owner.role || "R01_ACADEMY_OWNER",
+    accountType: "staff",
+  });
 }
 
 export function findStoredOwnerByPhone(phone: string): StoredAcademyOwner | null {
-  const normalized = phone.replace(/\s+/g, "");
+  const target = normalizePhoneNumber(phone);
   const owners = getStoredOwners();
-  return owners.find((o) => o.phone.replace(/\s+/g, "") === normalized) || null;
+  return owners.find((o) => normalizePhoneNumber(o.phone) === target) || null;
+}
+
+export function findStoredOwnerByTenantId(tenantId: string): StoredAcademyOwner | null {
+  const owners = getStoredOwners();
+  return owners.find((o) => o.tenantId === tenantId) || null;
+}
+
+export function updateStoredOwnerPassword(tenantId: string, newPassword: string): StoredAcademyOwner | null {
+  const owners = getStoredOwners();
+  const owner = owners.find((o) => o.tenantId === tenantId);
+  if (owner) {
+    owner.password = newPassword;
+    saveStoredOwner(owner);
+    return owner;
+  }
+  return null;
+}
+
+/**
+ * Universal Stored Accounts (Staff, Owners, Managers, etc.) across recycles
+ */
+export function getStoredAccounts(): StoredUserAccount[] {
+  const raw = safeGetItem(ACCOUNTS_KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveStoredAccount(account: StoredUserAccount): void {
+  const current = getStoredAccounts();
+  const normalizedPhone = normalizePhoneNumber(account.phone);
+  const normalizedAccount: StoredUserAccount = { ...account, phone: normalizedPhone };
+  const index = current.findIndex(
+    (a) => normalizePhoneNumber(a.phone) === normalizedPhone || a.id === account.id
+  );
+  if (index >= 0) {
+    current[index] = { ...current[index], ...normalizedAccount };
+  } else {
+    current.push(normalizedAccount);
+  }
+  safeSetItem(ACCOUNTS_KEY, JSON.stringify(current));
+}
+
+export function findStoredAccountByPhone(phone: string, accountType?: string): StoredUserAccount | null {
+  const target = normalizePhoneNumber(phone);
+  const accounts = getStoredAccounts();
+
+  // 1. Check custom saved accounts
+  const match = accounts.find(
+    (a) =>
+      normalizePhoneNumber(a.phone) === target &&
+      (!accountType || !a.accountType || a.accountType === accountType)
+  );
+  if (match) return match;
+
+  // 2. Check stored academy owners
+  const owner = findStoredOwnerByPhone(phone);
+  if (owner && (!accountType || accountType === "staff")) {
+    return {
+      id: owner.id,
+      tenantId: owner.tenantId,
+      academyName: owner.academyName,
+      displayName: owner.displayName,
+      email: owner.email,
+      phone: normalizePhoneNumber(owner.phone),
+      password: owner.password,
+      role: owner.role || "R01_ACADEMY_OWNER",
+      accountType: "staff",
+    };
+  }
+
+  // 3. Check default demo accounts
+  const demo = DEFAULT_DEMO_ACCOUNTS.find(
+    (d) =>
+      normalizePhoneNumber(d.phone) === target &&
+      (!accountType || !d.accountType || d.accountType === accountType)
+  );
+  if (demo) return demo;
+
+  return null;
+}
+
+export function updateStoredAccountPassword(phoneOrTenantIdOrId: string, newPassword: string): void {
+  const accounts = getStoredAccounts();
+  const targetPhone = normalizePhoneNumber(phoneOrTenantIdOrId);
+  let updated = false;
+
+  for (const acc of accounts) {
+    if (
+      normalizePhoneNumber(acc.phone) === targetPhone ||
+      acc.tenantId === phoneOrTenantIdOrId ||
+      acc.id === phoneOrTenantIdOrId
+    ) {
+      acc.password = newPassword;
+      updated = true;
+    }
+  }
+  if (updated) {
+    safeSetItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+  }
+
+  // Also update stored owner if matching
+  updateStoredOwnerPassword(phoneOrTenantIdOrId, newPassword);
 }
