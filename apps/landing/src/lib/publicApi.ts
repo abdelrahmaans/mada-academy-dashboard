@@ -1,7 +1,11 @@
 const API_BASE = (import.meta.env.VITE_API_URL || "https://academy-dashboard.runasp.net/api/v1").replace(/\/$/, "");
-const rawDashboard = import.meta.env.VITE_DASHBOARD_URL || "https://mada-dashboard-abdelrahmans5s-projects.vercel.app";
+const rawDashboard = import.meta.env.VITE_DASHBOARD_URL || "https://mada-software.vercel.app/login";
 export const DASHBOARD_URL = rawDashboard.includes("/login") ? rawDashboard : `${rawDashboard.replace(/\/$/, "")}/login`;
-export const DASHBOARD_LIVE_DEMO = import.meta.env.VITE_DASHBOARD_LIVE_DEMO || `${rawDashboard.replace(/\/$/, "")}/workspace`;
+export const DASHBOARD_LIVE_DEMO = import.meta.env.VITE_DASHBOARD_LIVE_DEMO || rawDashboard.replace(/\/login$/, "/workspace");
+export const CONTACT_EMAIL = "mada.academy.co@gmail.com";
+export const CONTACT_PHONE = "+20 10 39851379";
+export const CONTACT_PHONE_LINK = "tel:+201039851379";
+export const CONTACT_WHATSAPP = "https://wa.me/201039851379";
 
 type PublicLeadInput = {
   kind: "demo" | "registration";

@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import {
   type Language,
   TRANSLATIONS,
   ARABIC_TO_ENGLISH_PHRASES,
+  SORTED_ARABIC_PHRASES,
 } from "@/lib/translations";
 
 interface LanguageContextType {
@@ -20,6 +21,68 @@ const LanguageContext = createContext<LanguageContextType>({
   toggleLang: () => {},
   t: (key, fallback) => fallback || key,
 });
+
+const originalTextMap = new WeakMap<Node, string>();
+
+function translateNode(node: Node, lang: Language) {
+  if (node.nodeType === Node.TEXT_NODE) {
+    const text = node.nodeValue;
+    if (!text || !text.trim()) return;
+
+    if (lang === "en") {
+      let current = originalTextMap.get(node) || text;
+      if (!originalTextMap.has(node)) {
+        originalTextMap.set(node, text);
+      }
+
+      let modified = current;
+      for (const [ar, en] of SORTED_ARABIC_PHRASES) {
+        if (modified.includes(ar)) {
+          modified = modified.split(ar).join(en);
+        }
+      }
+      if (modified !== node.nodeValue) {
+        node.nodeValue = modified;
+      }
+    } else {
+      const original = originalTextMap.get(node);
+      if (original !== undefined && node.nodeValue !== original) {
+        node.nodeValue = original;
+      }
+    }
+  } else if (node.nodeType === Node.ELEMENT_NODE) {
+    const el = node as Element;
+    const tagName = el.tagName.toLowerCase();
+    if (tagName === "script" || tagName === "style" || tagName === "code" || tagName === "pre") {
+      return;
+    }
+
+    if (tagName === "input" || tagName === "textarea") {
+      const input = el as HTMLInputElement;
+      if (input.placeholder) {
+        if (lang === "en") {
+          const orig = input.getAttribute("data-orig-placeholder") || input.placeholder;
+          if (!input.hasAttribute("data-orig-placeholder")) {
+            input.setAttribute("data-orig-placeholder", orig);
+          }
+          let modified = orig;
+          for (const [ar, en] of SORTED_ARABIC_PHRASES) {
+            if (modified.includes(ar)) modified = modified.split(ar).join(en);
+          }
+          input.placeholder = modified;
+        } else {
+          const orig = input.getAttribute("data-orig-placeholder");
+          if (orig) input.placeholder = orig;
+        }
+      }
+      return;
+    }
+
+    for (let i = 0; i < el.childNodes.length; i++) {
+      translateNode(el.childNodes[i], lang);
+    }
+  }
+}
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Language>(() => {
@@ -50,8 +113,34 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       document.documentElement.dir = dir;
       document.body.classList.toggle("lang-ar", lang === "ar");
       document.body.classList.toggle("lang-en", lang === "en");
+
+      const root = document.getElementById("root");
+      if (root) {
+        translateNode(root, lang);
+      }
     }
   }, [lang, dir]);
+
+  // Observer for dynamic UI changes when in English mode
+  useEffect(() => {
+    if (typeof document === "undefined" || lang !== "en") return;
+    const root = document.getElementById("root");
+    if (!root) return;
+
+    let timeoutId: any = null;
+    const observer = new MutationObserver(() => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        translateNode(root, "en");
+      }, 50);
+    });
+
+    observer.observe(root, { childList: true, subtree: true, characterData: true });
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      observer.disconnect();
+    };
+  }, [lang]);
 
   const t = useCallback(
     (key: string, fallback?: string): string => {
@@ -65,7 +154,6 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         if (ARABIC_TO_ENGLISH_PHRASES[key]) {
           return ARABIC_TO_ENGLISH_PHRASES[key];
         }
-        // Try trimmed lookup
         const trimmed = key.trim();
         if (ARABIC_TO_ENGLISH_PHRASES[trimmed]) {
           return ARABIC_TO_ENGLISH_PHRASES[trimmed];
