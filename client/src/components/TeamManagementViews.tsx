@@ -286,8 +286,8 @@ export function TeamManagementViews({
                   <td colSpan={6}>
                     <div className="team-empty">
                       <Search size={20} />
-                      <strong>مفيش نتائج مطابقة</strong>
-                      <span>جرّب تغيير كلمة البحث أو الفلاتر.</span>
+                      <strong>لا توجد نتائج مطابقة</strong>
+                      <span>جرّب تغيير كلمة البحث أو خيارات التصفية.</span>
                       <button
                         className="text-link"
                         onClick={() => {
@@ -296,7 +296,7 @@ export function TeamManagementViews({
                           setStatusFilter("all");
                         }}
                       >
-                        مسح الفلاتر
+                        إعادة تعيين الفلاتر
                       </button>
                     </div>
                   </td>
