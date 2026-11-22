@@ -431,3 +431,28 @@ export const ARABIC_TO_ENGLISH_PHRASES: Record<string, string> = {
 export const SORTED_ARABIC_PHRASES: Array<[string, string]> = Object.entries(
   ARABIC_TO_ENGLISH_PHRASES
 ).sort((a, b) => b[0].length - a[0].length);
+
+/**
+ * Universal English to Arabic phrase dictionary for dynamic string reverse translation.
+ */
+export const ENGLISH_TO_ARABIC_PHRASES: Record<string, string> = {};
+
+for (const [ar, en] of Object.entries(ARABIC_TO_ENGLISH_PHRASES)) {
+  if (en && ar && en !== ar) {
+    ENGLISH_TO_ARABIC_PHRASES[en] = ar;
+  }
+}
+
+for (const [key, enVal] of Object.entries(TRANSLATIONS.en)) {
+  const arVal = TRANSLATIONS.ar[key];
+  if (enVal && arVal && enVal !== arVal && !ENGLISH_TO_ARABIC_PHRASES[enVal]) {
+    ENGLISH_TO_ARABIC_PHRASES[enVal] = arVal;
+  }
+}
+
+/**
+ * Pre-sorted list of English phrases (longest first) for reverse translation.
+ */
+export const SORTED_ENGLISH_PHRASES: Array<[string, string]> = Object.entries(
+  ENGLISH_TO_ARABIC_PHRASES
+).sort((a, b) => b[0].length - a[0].length);

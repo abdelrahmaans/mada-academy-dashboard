@@ -120,11 +120,20 @@ html {
 }
 
 .app-shell {
-  direction: rtl;
   min-height: 100vh;
   display: grid;
   grid-template-columns: 248px minmax(0, 1fr);
   background: var(--mada-ui-page);
+}
+
+[dir="rtl"] .app-shell,
+body.lang-ar .app-shell {
+  direction: rtl;
+}
+
+[dir="ltr"] .app-shell,
+body.lang-en .app-shell {
+  direction: ltr !important;
 }
 .sidebar {
   position: sticky;

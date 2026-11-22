@@ -9,12 +9,9 @@
 
   html {
     scroll-behavior: smooth;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    direction: ltr;
   }
 
   body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     background-color: #F8FAFC;
     color: #14243A;
     margin: 0;
@@ -23,7 +20,15 @@
   }
 
   html[dir='rtl'], html[dir='rtl'] body {
+    direction: rtl;
+    text-align: right;
     font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+  }
+
+  html[dir='ltr'], html[dir='ltr'] body {
+    direction: ltr;
+    text-align: left;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 
   button, a, input, select, textarea { font: inherit; }

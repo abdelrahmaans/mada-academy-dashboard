@@ -52,7 +52,7 @@ export default function Login() {
   return <main className="auth-login-page" dir={dir}>
     <section className="auth-login-aside">
       <div className="auth-login-brand">
-        <span><ShieldCheck size={20} /></span>
+        <img src="/mada-logo.svg" alt="مدى" style={{ width: 34, height: 34, borderRadius: 10, objectFit: "contain" }} />
         <strong>{lang === "en" ? "Mada" : "مدى"}</strong>
         <small>Academy Operating System</small>
       </div>

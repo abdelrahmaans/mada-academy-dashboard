@@ -1,6 +1,8 @@
 /* Shared production surface styling. Pages keep their semantic class names; this file supplies the missing layout layer. */
 :where(.family-portal,.student-portal,.app-shell,.marketing-desk-shell,.finance-desk-shell,.r04-live-shell,.r03-live-shell,.r03-program-shell) { min-height:100vh; background:#f6f8fb; color:#182230; }
-:where(.family-portal,.student-portal) { display:grid; grid-template-columns:260px minmax(0,1fr); direction:rtl; }
+:where(.family-portal,.student-portal) { display:grid; grid-template-columns:260px minmax(0,1fr); }
+[dir="rtl"] :where(.family-portal,.student-portal) { direction:rtl; }
+[dir="ltr"] :where(.family-portal,.student-portal) { direction:ltr !important; }
 :where(.family-portal-sidebar,.student-portal-sidebar) { position:sticky; top:0; height:100vh; padding:24px 18px; background:#10283a; color:#fff; display:flex; flex-direction:column; gap:18px; z-index:10; }
 :where(.family-portal-main,.student-portal-main) { min-width:0; min-height:100vh; }
 :where(.family-portal-content,.student-content) { width:100%; max-width:100%; margin:0; padding:24px 34px 48px; box-sizing:border-box; }
