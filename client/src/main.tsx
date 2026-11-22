@@ -17,13 +17,29 @@ if (analyticsEndpoint && analyticsWebsiteId) {
 }
 
 // Auto-recover if a new build was deployed to Vercel and old chunks are missing
-window.addEventListener("vite:preloadError", (event) => {
-  event.preventDefault();
+function handleStaleChunk() {
   const key = "mada_chunk_reload";
   const lastReload = Number(sessionStorage.getItem(key) || 0);
   if (Date.now() - lastReload > 8000) {
     sessionStorage.setItem(key, String(Date.now()));
     window.location.reload();
+  }
+}
+
+window.addEventListener("vite:preloadError", (event) => {
+  event.preventDefault();
+  handleStaleChunk();
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  const message = String(event.reason?.message || event.reason || "");
+  if (
+    message.includes("Failed to fetch dynamically imported module") ||
+    message.includes("error loading dynamically imported module") ||
+    message.includes("Importing a module script failed")
+  ) {
+    event.preventDefault();
+    handleStaleChunk();
   }
 });
 
