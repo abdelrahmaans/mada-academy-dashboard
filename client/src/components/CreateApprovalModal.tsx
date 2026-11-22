@@ -9,6 +9,8 @@ import {
   CalendarDays,
   Snowflake,
   RotateCcw,
+  Star,
+  MapPin,
 } from "lucide-react";
 import type { ApprovalKind } from "./ApprovalCard";
 
@@ -16,12 +18,15 @@ interface CreateApprovalModalProps {
   isOpen: boolean;
   onClose: () => void;
   branchName: string;
+  branches?: Array<{ id: string; name: string }>;
   defaultRequestedBy?: string;
   onSubmit: (data: {
     kind: ApprovalKind;
     title: string;
     summary: string;
     requestedBy: string;
+    branchId?: string;
+    branchName?: string;
     student?: string;
     course?: string;
     invoice?: string;
@@ -39,6 +44,8 @@ interface CreateApprovalModalProps {
     correctionCurrentAmount?: number;
     correctionProposedAmount?: number;
     correctionInvoice?: string;
+    evaluationScore?: number;
+    evaluationNotes?: string;
   }) => void;
 }
 
@@ -46,9 +53,14 @@ export function CreateApprovalModal({
   isOpen,
   onClose,
   branchName,
+  branches = [],
   defaultRequestedBy = "السكرتارية / المحاسبة",
   onSubmit,
 }: CreateApprovalModalProps) {
+  const [targetBranchId, setTargetBranchId] = useState<string>(() => {
+    const found = branches.find((b) => b.name === branchName);
+    return found ? found.id : branches[0]?.id || "";
+  });
   const [kind, setKind] = useState<ApprovalKind>("substitute");
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
@@ -73,7 +85,14 @@ export function CreateApprovalModal({
   const [expenseAmount, setExpenseAmount] = useState(1500);
   const [expenseCategory, setExpenseCategory] = useState("مستلزمات تدريب ومعامل");
 
+  // Evaluation fields
+  const [evaluationScore, setEvaluationScore] = useState<number>(85);
+  const [evaluationNotes, setEvaluationNotes] = useState("");
+
   if (!isOpen) return null;
+
+  const currentBranchName =
+    branches.find((b) => b.id === targetBranchId)?.name || branchName || "الفرع الرئيسي";
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,6 +108,8 @@ export function CreateApprovalModal({
         ? `طلب تجميد اشتراك · ${student || "طالب"}`
         : kind === "session"
         ? `طلب حصة تعويضية · ${course || "مجموعة"}`
+        : kind === "evaluation"
+        ? `طلب مراجعة تقييم · ${student || "طالب"}`
         : `طلب تصحيح فاتورة · ${invoice || "فاتورة"}`);
 
     const computedSummary =
@@ -103,6 +124,8 @@ export function CreateApprovalModal({
         ? `طلب تجميد مؤقت لاشتراك الطالب ${student}`
         : kind === "session"
         ? `حصة إضافية أو تعويضية للمجموعة`
+        : kind === "evaluation"
+        ? evaluationNotes || `مراجعة نتيجة تقييم الطالب في ${course || "المادة"} (الدرجة: ${evaluationScore})`
         : `تعديل قيمة الفاتورة المسجلة`);
 
     onSubmit({
@@ -110,6 +133,8 @@ export function CreateApprovalModal({
       title: computedTitle,
       summary: computedSummary,
       requestedBy: requestedBy.trim() || defaultRequestedBy,
+      branchId: targetBranchId || undefined,
+      branchName: currentBranchName,
       student: student.trim() || undefined,
       course: course.trim() || undefined,
       invoice: invoice.trim() || undefined,
@@ -124,6 +149,8 @@ export function CreateApprovalModal({
       expenseCategory,
       sessionDate,
       sessionTime,
+      evaluationScore: kind === "evaluation" ? Number(evaluationScore) : undefined,
+      evaluationNotes: kind === "evaluation" ? evaluationNotes.trim() || undefined : undefined,
     });
 
     onClose();
@@ -212,18 +239,50 @@ export function CreateApprovalModal({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} style={{ padding: "20px 24px", overflowY: "auto", display: "grid", gap: "16px" }}>
+          {/* Branch Selection (if multiple branches available) */}
+          {branches.length > 0 && (
+            <div>
+              <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
+                فرع الأكاديمية المستهدف:
+              </label>
+              <div style={{ position: "relative" }}>
+                <select
+                  value={targetBranchId}
+                  onChange={(e) => setTargetBranchId(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: "10px",
+                    border: "1px solid #cbd5e1",
+                    fontSize: "0.88rem",
+                    backgroundColor: "#f8fafc",
+                    color: "#0f172a",
+                    fontWeight: 600,
+                  }}
+                >
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
           {/* Request Kind Selection */}
           <div>
             <label style={{ display: "block", fontSize: "0.84rem", fontWeight: 700, color: "#334155", marginBottom: "8px" }}>
               نوع الطلب المطلوب مراجعته:
             </label>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px" }}>
               {[
                 { id: "substitute" as const, label: "مدرب بديل", icon: UserCheck },
+                { id: "evaluation" as const, label: "مراجعة تقييم", icon: Star },
+                { id: "freeze" as const, label: "تجميد اشتراك", icon: Snowflake },
+                { id: "session" as const, label: "حصة تعويضية", icon: CalendarDays },
                 { id: "discount" as const, label: "خصم مالي", icon: FileText },
                 { id: "expense" as const, label: "مصروف تشغيلي", icon: Wallet },
-                { id: "session" as const, label: "حصة تعويضية", icon: CalendarDays },
-                { id: "freeze" as const, label: "تجميد اشتراك", icon: Snowflake },
                 { id: "correction" as const, label: "تصحيح فاتورة", icon: RotateCcw },
               ].map((tab) => {
                 const Icon = tab.icon;
@@ -425,6 +484,76 @@ export function CreateApprovalModal({
                   <option value="ضيافة وفعاليات">ضيافة وفعاليات</option>
                   <option value="أدوات مكتبية ومطبوعات">أدوات مكتبية ومطبوعات</option>
                 </select>
+              </div>
+            </div>
+          )}
+
+          {kind === "evaluation" && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#475569", marginBottom: "4px" }}>
+                  اسم الطالب
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="مثال: يوسف أحمد"
+                  value={student}
+                  onChange={(e) => setStudent(e.target.value)}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "0.88rem" }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#475569", marginBottom: "4px" }}>
+                  الكورس / المادة
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="مثال: روبوتكس مستوى 1"
+                  value={course}
+                  onChange={(e) => setCourse(e.target.value)}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "0.88rem" }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#475569", marginBottom: "4px" }}>
+                  اسم المدرب
+                </label>
+                <input
+                  type="text"
+                  placeholder="المدرب القائم بالتقييم"
+                  value={instructor}
+                  onChange={(e) => setInstructor(e.target.value)}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "0.88rem" }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#475569", marginBottom: "4px" }}>
+                  الدرجة / التقييم المستحق
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  required
+                  value={evaluationScore}
+                  onChange={(e) => setEvaluationScore(Number(e.target.value))}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "0.88rem" }}
+                />
+              </div>
+              <div style={{ gridColumn: "span 2" }}>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 700, color: "#475569", marginBottom: "4px" }}>
+                  سبب طلب المراجعة أو استفسار ولي الأمر
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="اكتب تفاصيل طلب المراجعة أو استفسار ولي الأمر حول التقييم..."
+                  value={evaluationNotes}
+                  onChange={(e) => setEvaluationNotes(e.target.value)}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "0.88rem", resize: "vertical" }}
+                />
               </div>
             </div>
           )}

@@ -2205,6 +2205,34 @@ const EVALUATION_REVIEW_STORAGE_KEY = "mada_evaluation_reviews_v1";
 export const evaluationReviewStorage = {
   getReviews: (tenantId?: string, branchId?: string): EvaluationReviewRecord[] => {
     try {
+      if (branchId === "ALL" && tenantId) {
+        const prefix = `mada_evaluations_${tenantId}_`;
+        const all: EvaluationReviewRecord[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith(prefix)) {
+            const rawItem = localStorage.getItem(k);
+            if (rawItem) {
+              try {
+                const parsed = JSON.parse(rawItem);
+                if (Array.isArray(parsed)) all.push(...parsed);
+              } catch {
+                // ignore
+              }
+            }
+          }
+        }
+        const seen = new Set<string>();
+        return all.filter(item => {
+          if (!item || !item.id || seen.has(item.id)) return false;
+          seen.add(item.id);
+          if (tenantId && item.tenantId && item.tenantId !== tenantId) return false;
+          if (item.sessionId === "ses-demo-101" || item.sessionId === "ses-demo-102") return false;
+          if (item.id === "EVR-2026-001" || item.id === "EVR-2026-002") return false;
+          return true;
+        });
+      }
+
       const key = tenantId ? `mada_evaluations_${tenantId}_${branchId || "all"}` : EVALUATION_REVIEW_STORAGE_KEY;
       const raw = localStorage.getItem(key);
       if (!raw) return [];

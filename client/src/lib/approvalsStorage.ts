@@ -19,10 +19,49 @@ function getSafeLocalStorage() {
   return null;
 }
 
+export function filterValidRequests(items: ApprovalItem[], tenantId?: string): ApprovalItem[] {
+  const seen = new Set<string>();
+  return items.filter(item => {
+    if (!item || !item.id) return false;
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    if (tenantId && item.tenantId && item.tenantId !== tenantId) return false;
+    // Purge legacy hardcoded demo requests
+    if (item.id === "EVR-2026-001" || item.id === "EVR-2026-002") return false;
+    if (item.kind === "evaluation" && (item.student === "آدم شريف حسن" || item.student === "ليلى أحمد محمود")) return false;
+    return true;
+  });
+}
+
 export const approvalsStorage = {
   load(branchId: string, tenantId?: string): ApprovalItem[] {
     const storage = getSafeLocalStorage();
     if (!storage) return [];
+
+    const t = tenantId || "default";
+
+    // If "ALL" branches requested, aggregate across all branch keys for this tenant
+    if (branchId === "ALL" || !branchId) {
+      const allItems: ApprovalItem[] = [];
+      const prefix = `${STORAGE_PREFIX}${t}_`;
+      try {
+        for (let i = 0; i < storage.length; i++) {
+          const key = storage.key(i);
+          if (key && key.startsWith(prefix)) {
+            const raw = storage.getItem(key);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) {
+                allItems.push(...parsed);
+              }
+            }
+          }
+        }
+      } catch {
+        // ignore
+      }
+      return filterValidRequests(allItems, tenantId);
+    }
 
     const key = getStorageKey(branchId, tenantId);
     try {
@@ -30,13 +69,7 @@ export const approvalsStorage = {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          return parsed.filter(item => {
-            if (tenantId && item.tenantId && item.tenantId !== tenantId) return false;
-            // Purge legacy hardcoded demo requests
-            if (item.id === "EVR-2026-001" || item.id === "EVR-2026-002") return false;
-            if (item.kind === "evaluation" && (item.student === "آدم شريف حسن" || item.student === "ليلى أحمد محمود")) return false;
-            return true;
-          }) as ApprovalItem[];
+          return filterValidRequests(parsed, tenantId);
         }
       }
     } catch {
@@ -51,7 +84,7 @@ export const approvalsStorage = {
 
     const key = getStorageKey(branchId, tenantId);
     try {
-      storage.setItem(key, JSON.stringify(items));
+      storage.setItem(key, JSON.stringify(filterValidRequests(items, tenantId)));
     } catch {
       // ignore
     }
