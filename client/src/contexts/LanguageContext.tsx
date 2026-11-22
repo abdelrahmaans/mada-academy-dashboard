@@ -17,8 +17,8 @@ interface LanguageContextType {
 }
 
 const LanguageContext = createContext<LanguageContextType>({
-  lang: "ar",
-  dir: "rtl",
+  lang: "en",
+  dir: "ltr",
   setLang: () => {},
   toggleLang: () => {},
   t: (key, fallback) => fallback || key,
@@ -119,9 +119,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Language>(() => {
     try {
       const stored = localStorage.getItem("mada_lang") as Language;
-      return stored === "en" ? "en" : "ar";
+      return stored === "ar" ? "ar" : "en";
     } catch {
-      return "ar";
+      return "en";
     }
   });
 
