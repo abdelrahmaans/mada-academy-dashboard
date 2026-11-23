@@ -24,12 +24,48 @@ type PublicLeadInput = {
 };
 
 export async function submitPublicLead(input: PublicLeadInput) {
-  // Sync to local platform storage for immediate preview & real-time responsiveness
+  // Demo requests must use the anonymous endpoint owned by Platform Admin. It
+  // stores the complete request as LANDING_DEMO and is visible in R00 leads.
+  const isDemoRequest = input.kind === "demo";
+  const endpoint = isDemoRequest ? "/public/demo-requests" : "/public/leads";
+  const body = isDemoRequest
+    ? {
+        name: input.name,
+        email: input.email,
+        phone: input.phone,
+        academyName: input.academyName || input.company,
+        branchCount: input.branchCount || input.teamSize,
+        operationalNeed: input.operationalNeed || input.trainingNeed,
+        notes: input.goal,
+      }
+    : input;
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${endpoint}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error("تعذر الاتصال بالنظام. يرجى المحاولة مرة أخرى.");
+  }
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null) as { data?: unknown; detail?: string; title?: string; error?: { message?: string } } | null;
+    throw new Error(payload?.detail || payload?.error?.message || payload?.title || "تعذر إرسال الطلب. حاول مرة أخرى.");
+  }
+
+  const payload = await response.json().catch(() => null) as { data?: { id?: string; leadId?: string } } | null;
+  const leadId = payload?.data?.id || payload?.data?.leadId;
+
+  // Keep the local copy only as a same-browser preview aid, and only after the
+  // server has confirmed persistence. It is never used as a success fallback.
   try {
     const raw = localStorage.getItem("mada_platform_demo_leads");
     const existing = raw ? JSON.parse(raw) : [];
     const newLead = {
-      id: `LEAD-2026-${String(existing.length + 1).padStart(3, "0")}`,
+      id: leadId || `LEAD-2026-${String(existing.length + 1).padStart(3, "0")}`,
       name: input.name,
       email: input.email,
       phone: input.phone,
@@ -42,18 +78,8 @@ export async function submitPublicLead(input: PublicLeadInput) {
     };
     localStorage.setItem("mada_platform_demo_leads", JSON.stringify([newLead, ...existing]));
   } catch {
-    // Ignore storage errors in restricted contexts
+    // Ignore storage errors in restricted contexts; the server is authoritative.
   }
 
-  const response = await fetch(`${API_BASE}/public/leads`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(input),
-  }).catch(() => null);
-
-  if (response && !response.ok) {
-    const payload = await response.json().catch(() => null) as { data?: unknown; detail?: string; title?: string; error?: { message?: string } } | null;
-    throw new Error(payload?.detail || payload?.error?.message || payload?.title || "تعذر إرسال الطلب. حاول مرة أخرى.");
-  }
-  return { success: true };
+  return { success: true, leadId };
 }
