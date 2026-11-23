@@ -52,6 +52,7 @@ import {
   statusLabels,
   saveStoredStudentExtras,
 } from "./StudentsTypes";
+import { getStoredBranches } from "@/lib/customAcademiesStorage";
 import { AddStudentModal, StudentDetailsModal } from "./StudentsModals";
 import { StudentDataHubModal } from "@/components/students/StudentDataHubModal";
 
@@ -99,9 +100,33 @@ function StudentPage() {
   const [parentName, setParentName] = useState("");
   const [parentPhone, setParentPhone] = useState("");
   const [source, setSource] = useState<StudentSource>("walk_in");
-  const [newBranch, setNewBranch] = useState("مدينة نصر");
+  const [newBranch, setNewBranch] = useState("الفرع الرئيسي");
   const [page, setPage] = useState(1);
   const [inboundLeads, setInboundLeads] = useState<LeadRecord[]>([]);
+
+  const userBranches = useMemo(() => {
+    const rawBranches = (me?.branches && me.branches.length > 0)
+      ? me.branches
+      : (me?.tenantId ? getStoredBranches(me.tenantId) : []);
+    if (rawBranches.length > 0) {
+      return rawBranches.map((b) => ({
+        ...b,
+        name: b.name === "Main Branch" ? "الفرع الرئيسي" : b.name === "Heliopolis Branch" ? "فرع مصر الجديدة" : b.name,
+      }));
+    }
+    return [
+      { id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", name: "الفرع الرئيسي", code: "MAIN", status: "ACTIVE" },
+      { id: "cccccccc-cccc-cccc-cccc-cccccccccccc", name: "فرع مصر الجديدة", code: "HELIO", status: "ACTIVE" }
+    ];
+  }, [me?.branches, me?.tenantId]);
+
+  const branchMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const b of userBranches) {
+      map[b.id] = b.name;
+    }
+    return map;
+  }, [userBranches]);
 
   useEffect(() => {
     if (!apiClient.hasSession()) return;
@@ -113,7 +138,7 @@ function StudentPage() {
     ])
       .then(([studentsRes, leadsRes]) => {
         if (cancelled) return;
-        setStudents(studentsRes.items.map(mapLiveStudent));
+        setStudents(studentsRes.items.map(s => mapLiveStudent(s, branchMap)));
         setInboundLeads(leadsRes.items || []);
         setDataMode("live");
         setDataError(null);
@@ -129,7 +154,7 @@ function StudentPage() {
         if (!cancelled) setDataLoading(false);
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [branchMap]);
 
   useEffect(() => {
     setLookupResults(null); setLookupError(null); setLinkPhone("");
@@ -211,7 +236,12 @@ function StudentPage() {
           ? student.parentPhone === "—" || student.parentName.includes("غير مرتبط")
           : student.status === statusFilter;
       const matchesBranch =
-        branchFilter === "كل الفروع" || student.branch === branchFilter;
+        branchFilter === "كل الفروع" ||
+        student.branch === branchFilter ||
+        (branchFilter === "الفرع الرئيسي" && (student.branch === "Main Branch" || student.branch === "الفرع الرئيسي")) ||
+        (branchFilter === "فرع مصر الجديدة" && (student.branch === "Heliopolis Branch" || student.branch === "فرع مصر الجديدة")) ||
+        (branchFilter === "Main Branch" && (student.branch === "Main Branch" || student.branch === "الفرع الرئيسي")) ||
+        (branchFilter === "Heliopolis Branch" && (student.branch === "Heliopolis Branch" || student.branch === "فرع مصر الجديدة"));
       const matchesCourse =
         courseFilter === "all" ||
         student.course === courseFilter ||
@@ -278,7 +308,10 @@ function StudentPage() {
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE
   );
-  const branchOptions = dataMode === "live" ? ["كل الفروع", ...Array.from(new Set(students.map(student => student.branch)))] : branches;
+  const branchOptions = useMemo(() => {
+    const names = userBranches.map(b => b.name);
+    return ["كل الفروع", ...names];
+  }, [userBranches]);
   const pausedCount = students.filter(
     student => student.status === "on_hold"
   ).length;
@@ -293,24 +326,56 @@ function StudentPage() {
     setParentName("");
     setParentPhone("");
     setSource("walk_in");
-    setNewBranch("مدينة نصر");
+    setNewBranch(userBranches[0]?.name || "الفرع الرئيسي");
   };
 
-  const submitStudent = (event: FormEvent<HTMLFormElement>) => {
+  const submitStudent = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!studentName.trim() || !parentName.trim() || !parentPhone.trim()) {
+      toast.error("أكمل البيانات المطلوبة (اسم الطالب، ولي الأمر، والهاتف)");
+      return;
+    }
+
     if (dataMode === "live") {
-      toast("إضافة الطالب تحتاج endpoint التسجيل", { description: "تم ربط القراءة الحية أولًا؛ لن يتم إيهامك بأن الإضافة حُفظت." });
-      return;
+      try {
+        const targetBranch = userBranches.find(b => b.name === newBranch || b.code === newBranch);
+        const branchId = targetBranch?.id || me?.branchId || userBranches[0]?.id;
+
+        const res = await apiClient.createStudent({
+          fullName: studentName.trim(),
+          dateOfBirth: birthDate || undefined,
+          branchId: branchId || undefined,
+        });
+
+        const createdId = res?.data?.id;
+        if (createdId && parentPhone.trim()) {
+          try {
+            await apiClient.createConsumerInvitation(createdId, {
+              phone: parentPhone.trim(),
+              accountType: "parent",
+              relationship: "ولي أمر",
+            });
+          } catch {
+            // non-fatal
+          }
+        }
+
+        const refreshed = await apiClient.listStudents();
+        setStudents(refreshed.items.map(s => mapLiveStudent(s, branchMap)));
+        setAddOpen(false);
+        resetForm();
+        toast.success("تم تسجيل الطالب بنجاح في قاعدة البيانات", {
+          description: `الاسم: ${studentName.trim()} · الفرع: ${newBranch}`,
+        });
+        return;
+      } catch (error) {
+        toast.error("تعذر تسجيل الطالب على الخادم", {
+          description: error instanceof Error ? error.message : "حاول مرة أخرى",
+        });
+        return;
+      }
     }
-    if (
-      !studentName.trim() ||
-      !birthDate ||
-      !parentName.trim() ||
-      !parentPhone.trim()
-    ) {
-      toast.error("أكمل البيانات المطلوبة الأول");
-      return;
-    }
+
     const initials = studentName
       .trim()
       .split(/\s+/)
@@ -320,7 +385,7 @@ function StudentPage() {
     const next: Student = {
       id: `MAD-${String(249 + students.length - initialStudents.length).padStart(4, "0")}`,
       name: studentName.trim(),
-      birthDate,
+      birthDate: birthDate || "2015-01-01",
       gender,
       parentName: parentName.trim(),
       parentPhone: parentPhone.trim(),
@@ -329,7 +394,7 @@ function StudentPage() {
       course: "لم يتم التسجيل في كورس",
       source,
       status: "active",
-      joined: "اليوم، سبتمبر 2026",
+      joined: "اليوم",
       initials,
       color: gender === "female" ? "violet" : "teal",
     };
@@ -341,7 +406,7 @@ function StudentPage() {
     setAddOpen(false);
     resetForm();
     toast.success("اتضاف الطالب بنجاح", {
-      description: "تمت الإضافة في بيانات العرض التجريبية فقط.",
+      description: "تمت الإضافة بنجاح",
     });
   };
 
@@ -1075,7 +1140,7 @@ function StudentPage() {
         source={source}
         setSource={setSource}
         onSubmit={submitStudent}
-        branches={branches}
+        branches={branchOptions.filter(b => b !== "كل الفروع")}
       />
 
       <StudentDetailsModal

@@ -1041,6 +1041,8 @@ export default function FinanceDesk() {
                 externalReference={externalReference}
                 setExternalReference={setExternalReference}
                 roleCode={roleCode}
+                tenantId={financeMe?.tenantId}
+                branchId={financeMe?.branchId || undefined}
               />
             )}
           {(!liveMode || workspaceState === "ready") &&

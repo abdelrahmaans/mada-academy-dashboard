@@ -58,9 +58,12 @@ export interface DailyClosingRecord {
   approvedAt?: string;
 }
 
-const getStoredDailyClosing = (dateKey: string): DailyClosingRecord => {
+const getDailyClosingKey = (dateKey: string, tenantId?: string, branchId?: string | null) =>
+  `mada_daily_closing_${tenantId || "default"}_${branchId || "all"}_${dateKey}`;
+
+const getStoredDailyClosing = (dateKey: string, tenantId?: string, branchId?: string | null): DailyClosingRecord => {
   try {
-    const raw = localStorage.getItem(`mada_daily_closing_${dateKey}`);
+    const raw = localStorage.getItem(getDailyClosingKey(dateKey, tenantId, branchId));
     if (raw) return JSON.parse(raw);
   } catch {}
   return {
@@ -71,13 +74,13 @@ const getStoredDailyClosing = (dateKey: string): DailyClosingRecord => {
     todayCollectedElectronic: 0,
     todayTransactionsCount: 0,
     secretaryNotes: "",
-    accountantNotes: "يرجى مراجعة إيصال رقم #INV-102 حيث توجد فروق بقيمة 150 ج.م بين الكاش الفعلي والمسجل.",
+    accountantNotes: "",
   };
 };
 
-const saveStoredDailyClosing = (record: DailyClosingRecord) => {
+const saveStoredDailyClosing = (record: DailyClosingRecord, tenantId?: string, branchId?: string | null) => {
   try {
-    localStorage.setItem(`mada_daily_closing_${record.date}`, JSON.stringify(record));
+    localStorage.setItem(getDailyClosingKey(record.date, tenantId, branchId), JSON.stringify(record));
   } catch {}
 };
 
@@ -102,6 +105,8 @@ export function Collections({
   externalReference,
   setExternalReference,
   roleCode,
+  tenantId,
+  branchId,
 }: {
   invoices: Invoice[];
   query: string;
@@ -123,13 +128,15 @@ export function Collections({
   externalReference: string;
   setExternalReference: (v: string) => void;
   roleCode: string;
+  tenantId?: string;
+  branchId?: string | null;
 }) {
   const todayIso = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const [closingRecord, setClosingRecord] = useState<DailyClosingRecord>(() => getStoredDailyClosing(todayIso));
+  const [closingRecord, setClosingRecord] = useState<DailyClosingRecord>(() => getStoredDailyClosing(todayIso, tenantId, branchId));
   const closingStatus = closingRecord.status;
   const [showDailyClosing, setShowDailyClosing] = useState(false);
   const [secretaryNotes, setSecretaryNotes] = useState(closingRecord.secretaryNotes || "");
-  const [accountantNotes, setAccountantNotes] = useState(closingRecord.accountantNotes || "يرجى مراجعة إيصال رقم #INV-102 حيث توجد فروق بقيمة 150 ج.م بين الكاش الفعلي والمسجل.");
+  const [accountantNotes, setAccountantNotes] = useState(closingRecord.accountantNotes || "");
   const [editingAccountantNotes, setEditingAccountantNotes] = useState("");
   const [showAccountantRejectInput, setShowAccountantRejectInput] = useState(false);
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
@@ -343,7 +350,7 @@ export function Collections({
       secretaryNotes,
       submittedAt: new Intl.DateTimeFormat("ar-EG", { hour: "2-digit", minute: "2-digit" }).format(new Date()),
     };
-    saveStoredDailyClosing(updated);
+    saveStoredDailyClosing(updated, tenantId, branchId);
     setClosingRecord(updated);
     setShowDailyClosing(false);
     toast.success("تم إرسال محضر تقفيل اليوم للمحاسب للمطابقة والاعتماد");
@@ -359,7 +366,7 @@ export function Collections({
       todayTransactionsCount,
       approvedAt: new Intl.DateTimeFormat("ar-EG", { hour: "2-digit", minute: "2-digit" }).format(new Date()),
     };
-    saveStoredDailyClosing(updated);
+    saveStoredDailyClosing(updated, tenantId, branchId);
     setClosingRecord(updated);
     setShowDailyClosing(false);
     toast.success("تم اعتماد محضر تقفيل اليوم المالي وتوريد العهدة للخزينة بنجاح");
@@ -377,7 +384,7 @@ export function Collections({
       status: "REVISION_REQUESTED",
       accountantNotes: updatedNotes,
     };
-    saveStoredDailyClosing(updated);
+    saveStoredDailyClosing(updated, tenantId, branchId);
     setClosingRecord(updated);
     setShowAccountantRejectInput(false);
     setShowDailyClosing(false);

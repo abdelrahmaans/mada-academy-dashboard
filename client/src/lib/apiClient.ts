@@ -1157,31 +1157,106 @@ export const apiClient = {
           const parts = accessToken.split(".");
           if (parts.length === 3) {
             const data = JSON.parse(safeAtob(parts[1]));
-            if (data.tenantId && data.role === "R01_ACADEMY_OWNER") {
-              const branches = getStoredBranches(data.tenantId);
-              const branch = branches[0] || {
-                id: `br-${data.tenantId}-1`,
+            if (data.tenantId || data.role === "R00_PLATFORM_ADMIN") {
+              const tenantId = data.tenantId || "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+              const branches = getStoredBranches(tenantId);
+              const defaultMainBranch = {
+                id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
                 name: "الفرع الرئيسي",
                 code: "MAIN",
                 status: "ACTIVE",
                 membersCount: 1,
                 studentsCount: 0,
                 createdAt: new Date().toISOString(),
-                tenantId: data.tenantId,
+                tenantId: tenantId,
               };
+              const effectiveBranches = branches.length > 0 ? branches : [defaultMainBranch];
+              const branchId = data.branchId || (data.role === "R01_ACADEMY_OWNER" || data.role === "R00_PLATFORM_ADMIN" || data.role === "R08_PARENT" || data.role === "R09_STUDENT" ? null : effectiveBranches[0].id);
+
+              const roleMeta: Record<string, { label: string; scope: "PLATFORM" | "TENANT" | "BRANCH"; perms: string[] }> = {
+                R00_PLATFORM_ADMIN: {
+                  label: "مدير المنصة",
+                  scope: "PLATFORM",
+                  perms: ["platform.read", "academy.create", "academy.read"],
+                },
+                R01_ACADEMY_OWNER: {
+                  label: "مسؤول الأكاديمية",
+                  scope: "TENANT",
+                  perms: [
+                    "academy.read", "academy.update", "branch.read", "branch.create", "classrooms.manage",
+                    "staff.read", "staff.invite", "roles.read", "roles.manage", "finance.read",
+                    "finance.summary.read", "finance.expenses.read", "finance.expenses.approve", "reports.read",
+                    "students.read", "students.create", "sessions.read", "sessions.create",
+                  ],
+                },
+                R02_BRANCH_MANAGER: {
+                  label: "مدير الفرع",
+                  scope: "BRANCH",
+                  perms: [
+                    "branch.read", "students.read", "students.create", "sessions.read", "sessions.create",
+                    "attendance.read", "attendance.write", "finance.summary.read", "finance.expenses.read",
+                    "finance.expenses.approve", "reports.read",
+                  ],
+                },
+                R03_HEAD_INSTRUCTORS: {
+                  label: "رئيس المدربين",
+                  scope: "BRANCH",
+                  perms: ["branch.read", "sessions.read", "attendance.read", "evaluations.review"],
+                },
+                R04_INSTRUCTOR: {
+                  label: "المدرب",
+                  scope: "BRANCH",
+                  perms: ["students.read", "sessions.read", "sessions.assigned.read", "attendance.read", "attendance.write", "evaluations.write"],
+                },
+                R05_SECRETARY: {
+                  label: "مسؤول الاستقبال",
+                  scope: "BRANCH",
+                  perms: [
+                    "branch.read", "students.read", "students.create", "sessions.read", "staff.read",
+                    "invoices.read", "invoices.create", "payments.create", "payments.evidence.read", "payments.evidence.write",
+                  ],
+                },
+                R06_ACCOUNTANT: {
+                  label: "المحاسب المالي",
+                  scope: "BRANCH",
+                  perms: [
+                    "branch.read", "students.read", "sessions.read", "finance.read", "finance.summary.read",
+                    "invoices.read", "invoices.create", "payments.create", "payments.evidence.read",
+                    "payments.evidence.write", "finance.expenses.read", "finance.expenses.write", "finance.expenses.approve", "reports.read",
+                  ],
+                },
+                R07_MEDIA_MANAGER: {
+                  label: "مسؤول التسويق",
+                  scope: "BRANCH",
+                  perms: ["branch.read", "marketing.read", "marketing.write", "reports.read"],
+                },
+                R08_PARENT: {
+                  label: "ولي أمر",
+                  scope: "TENANT",
+                  perms: ["consumer.students.read", "consumer.sessions.read", "consumer.evaluations.read"],
+                },
+                R09_STUDENT: {
+                  label: "طالب",
+                  scope: "TENANT",
+                  perms: ["consumer.self.read", "consumer.sessions.read", "consumer.evaluations.read"],
+                },
+              };
+
+              const matched = roleMeta[data.role] || {
+                label: data.role,
+                scope: "BRANCH" as const,
+                perms: ["students.read", "sessions.read"],
+              };
+
               return {
                 id: data.sub,
-                accountType: "staff",
+                accountType: data.accountType || "staff",
                 role: data.role,
-                roleLabel: "مسؤول الأكاديمية",
-                tenantId: data.tenantId,
-                branchId: branch.id,
-                scopeLevel: "TENANT",
-                permissions: [
-                  "academy.read", "academy.write", "branch.read", "branch.create",
-                  "sessions.read", "sessions.create", "students.read", "students.create",
-                  "reports.read", "roles.read", "roles.manage"
-                ],
+                roleLabel: matched.label,
+                tenantId: tenantId,
+                branchId: branchId,
+                scopeLevel: matched.scope,
+                permissions: matched.perms,
                 mustChangePassword: false,
                 user: {
                   id: data.sub,
@@ -1191,13 +1266,13 @@ export const apiClient = {
                   mustChangePassword: false,
                 },
                 academy: {
-                  id: data.tenantId,
+                  id: tenantId,
                   name: data.academyName || "أكاديميتي",
-                  slug: `academy-${data.tenantId.slice(0, 8)}`,
+                  slug: `academy-${tenantId.slice(0, 8)}`,
                   planCode: "GROWTH",
                   status: "ACTIVE",
                 },
-                branches: branches.map(b => ({ id: b.id, name: b.name, code: b.code, status: b.status })),
+                branches: effectiveBranches.map(b => ({ id: b.id, name: b.name, code: b.code, status: b.status })),
               };
             }
           }
@@ -1715,6 +1790,21 @@ export const apiClient = {
     return request<AcademyAuditEventsResponse>(`/academy/audit-events${suffix}`);
   },
   listStudents: () => request<StudentListResponse>("/students"),
+  createStudent: (input: { fullName: string; dateOfBirth?: string; branchId?: string; referredByStudentId?: string }) =>
+    request<{ data: StudentRecord }>("/students", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  updateStudent: (studentId: string, input: { fullName: string; dateOfBirth?: string }) =>
+    request<{ data: StudentRecord }>(`/students/${studentId}`, {
+      method: "PUT",
+      body: JSON.stringify(input),
+    }),
+  createStudentEnrollment: (studentId: string, input: { courseOfferingId: string; finalPricePiastres: number }) =>
+    request<{ data: any }>(`/students/${studentId}/enrollments`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
   consumerStudents: () => request<ConsumerStudentsResponse>("/consumer/me/students"),
   consumerSessions: (studentId?: string) => request<ConsumerSessionsResponse>(`/consumer/me/sessions${studentId ? `?studentId=${encodeURIComponent(studentId)}` : ""}`),
   studentConsumerLinks: (studentId: string) => request<ConsumerLinksResponse>(`/students/${studentId}/consumer-links`),
@@ -2555,23 +2645,29 @@ const DEFAULT_PAYROLLS: TrainerPayrollRecord[] = [
 ];
 
 export const shiftStorage = {
-  getHandovers: (): ShiftCashHandover[] => {
+  getHandovers: (tenantId?: string, branchId?: string): ShiftCashHandover[] => {
     try {
-      const raw = localStorage.getItem(SHIFT_STORAGE_KEY);
+      const isDefault = !tenantId || tenantId === "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+      const key = tenantId ? `mada_shifts_${tenantId}_${branchId || "all"}` : SHIFT_STORAGE_KEY;
+      const raw = localStorage.getItem(key);
       if (!raw) {
-        localStorage.setItem(SHIFT_STORAGE_KEY, JSON.stringify(DEFAULT_SHIFTS));
-        return DEFAULT_SHIFTS;
+        if (isDefault) {
+          localStorage.setItem(key, JSON.stringify(DEFAULT_SHIFTS));
+          return DEFAULT_SHIFTS;
+        }
+        return [];
       }
       return JSON.parse(raw);
     } catch {
-      return DEFAULT_SHIFTS;
+      return !tenantId || tenantId === "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" ? DEFAULT_SHIFTS : [];
     }
   },
-  saveHandovers: (items: ShiftCashHandover[]) => {
-    localStorage.setItem(SHIFT_STORAGE_KEY, JSON.stringify(items));
+  saveHandovers: (items: ShiftCashHandover[], tenantId?: string, branchId?: string) => {
+    const key = tenantId ? `mada_shifts_${tenantId}_${branchId || "all"}` : SHIFT_STORAGE_KEY;
+    localStorage.setItem(key, JSON.stringify(items));
   },
-  submitShift: (input: Omit<ShiftCashHandover, "id" | "status" | "createdAt">): ShiftCashHandover => {
-    const list = shiftStorage.getHandovers();
+  submitShift: (input: Omit<ShiftCashHandover, "id" | "status" | "createdAt">, tenantId?: string, branchId?: string): ShiftCashHandover => {
+    const list = shiftStorage.getHandovers(tenantId, branchId);
     const newShift: ShiftCashHandover = {
       ...input,
       id: `SHF-2026-${String(list.length + 101).padStart(3, "0")}`,
@@ -2579,11 +2675,11 @@ export const shiftStorage = {
       createdAt: new Date().toISOString(),
     };
     const updated = [newShift, ...list];
-    shiftStorage.saveHandovers(updated);
+    shiftStorage.saveHandovers(updated, tenantId, branchId);
     return newShift;
   },
-  acceptShift: (id: string, receivedByName: string, discrepancy = 0, notes?: string): ShiftCashHandover => {
-    const list = shiftStorage.getHandovers();
+  acceptShift: (id: string, receivedByName: string, discrepancy = 0, notes?: string, tenantId?: string, branchId?: string): ShiftCashHandover => {
+    const list = shiftStorage.getHandovers(tenantId, branchId);
     const updated = list.map(item => {
       if (item.id !== id) return item;
       return {
@@ -2595,20 +2691,25 @@ export const shiftStorage = {
         notes: notes ? `${item.notes || ""} · ${notes}` : item.notes,
       };
     });
-    shiftStorage.saveHandovers(updated);
+    shiftStorage.saveHandovers(updated, tenantId, branchId);
     return findEntityOrThrow(updated, id, "Handover");
   },
 };
 
 export const payrollStorage = {
-  getPayrolls: (): TrainerPayrollRecord[] => {
+  getPayrolls: (tenantId?: string, branchId?: string): TrainerPayrollRecord[] => {
     try {
-      const raw = localStorage.getItem(PAYROLL_STORAGE_KEY);
+      const isDefault = !tenantId || tenantId === "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+      const key = tenantId ? `mada_payrolls_${tenantId}_${branchId || "all"}` : PAYROLL_STORAGE_KEY;
+      const raw = localStorage.getItem(key);
       if (!raw) {
-        localStorage.setItem(PAYROLL_STORAGE_KEY, JSON.stringify(DEFAULT_PAYROLLS));
-        return DEFAULT_PAYROLLS;
+        if (isDefault) {
+          localStorage.setItem(key, JSON.stringify(DEFAULT_PAYROLLS));
+          return DEFAULT_PAYROLLS;
+        }
+        return [];
       }
-      let list: TrainerPayrollRecord[] = raw ? JSON.parse(raw) : DEFAULT_PAYROLLS;
+      let list: TrainerPayrollRecord[] = raw ? JSON.parse(raw) : (isDefault ? DEFAULT_PAYROLLS : []);
       list = list.map(item => {
         if (!item.sessions || item.sessions.length < item.completedSessionsCount) {
           return {
@@ -2620,20 +2721,21 @@ export const payrollStorage = {
       });
       return list;
     } catch {
-      return DEFAULT_PAYROLLS;
+      return !tenantId || tenantId === "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" ? DEFAULT_PAYROLLS : [];
     }
   },
-  savePayrolls: (items: TrainerPayrollRecord[]) => {
-    localStorage.setItem(PAYROLL_STORAGE_KEY, JSON.stringify(items));
+  savePayrolls: (items: TrainerPayrollRecord[], tenantId?: string, branchId?: string) => {
+    const key = tenantId ? `mada_payrolls_${tenantId}_${branchId || "all"}` : PAYROLL_STORAGE_KEY;
+    localStorage.setItem(key, JSON.stringify(items));
   },
-  approvePayroll: (id: string): TrainerPayrollRecord => {
-    const list = payrollStorage.getPayrolls();
+  approvePayroll: (id: string, tenantId?: string, branchId?: string): TrainerPayrollRecord => {
+    const list = payrollStorage.getPayrolls(tenantId, branchId);
     const updated = list.map(item => item.id === id ? { ...item, status: "APPROVED" as const } : item);
-    payrollStorage.savePayrolls(updated);
+    payrollStorage.savePayrolls(updated, tenantId, branchId);
     return findEntityOrThrow(updated, id, "Payroll");
   },
-  updateAdjustments: (id: string, bonus: number, bonusReason: string, deduction: number, deductionReason: string): TrainerPayrollRecord => {
-    const list = payrollStorage.getPayrolls();
+  updateAdjustments: (id: string, bonus: number, bonusReason: string, deduction: number, deductionReason: string, tenantId?: string, branchId?: string): TrainerPayrollRecord => {
+    const list = payrollStorage.getPayrolls(tenantId, branchId);
     const updated = list.map(item => {
       if (item.id !== id) return item;
       const net = (item.completedSessionsCount * item.ratePerSession) + item.baseSalary + bonus - deduction;
@@ -2646,11 +2748,11 @@ export const payrollStorage = {
         netPayable: Math.max(0, net),
       };
     });
-    payrollStorage.savePayrolls(updated);
+    payrollStorage.savePayrolls(updated, tenantId, branchId);
     return findEntityOrThrow(updated, id, "Payroll");
   },
-  markPaid: (id: string, method: string, reference?: string): TrainerPayrollRecord => {
-    const list = payrollStorage.getPayrolls();
+  markPaid: (id: string, method: string, reference?: string, tenantId?: string, branchId?: string): TrainerPayrollRecord => {
+    const list = payrollStorage.getPayrolls(tenantId, branchId);
     const updated = list.map(item => item.id === id ? {
       ...item,
       status: "PAID" as const,
@@ -2658,7 +2760,7 @@ export const payrollStorage = {
       paymentMethod: method,
       paymentReference: reference,
     } : item);
-    payrollStorage.savePayrolls(updated);
+    payrollStorage.savePayrolls(updated, tenantId, branchId);
     return findEntityOrThrow(updated, id, "Payroll");
   },
 };
@@ -2729,23 +2831,29 @@ const DEFAULT_WAITLIST: WaitlistEntry[] = [
 ];
 
 export const waitlistStorage = {
-  getEntries: (): WaitlistEntry[] => {
+  getEntries: (tenantId?: string, branchId?: string): WaitlistEntry[] => {
     try {
-      const raw = localStorage.getItem(WAITLIST_STORAGE_KEY);
+      const isDefault = !tenantId || tenantId === "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+      const key = tenantId ? `mada_waitlists_${tenantId}_${branchId || "all"}` : WAITLIST_STORAGE_KEY;
+      const raw = localStorage.getItem(key);
       if (!raw) {
-        localStorage.setItem(WAITLIST_STORAGE_KEY, JSON.stringify(DEFAULT_WAITLIST));
-        return DEFAULT_WAITLIST;
+        if (isDefault) {
+          localStorage.setItem(key, JSON.stringify(DEFAULT_WAITLIST));
+          return DEFAULT_WAITLIST;
+        }
+        return [];
       }
       return JSON.parse(raw);
     } catch {
-      return DEFAULT_WAITLIST;
+      return !tenantId || tenantId === "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa" ? DEFAULT_WAITLIST : [];
     }
   },
-  saveEntries: (items: WaitlistEntry[]) => {
-    localStorage.setItem(WAITLIST_STORAGE_KEY, JSON.stringify(items));
+  saveEntries: (items: WaitlistEntry[], tenantId?: string, branchId?: string) => {
+    const key = tenantId ? `mada_waitlists_${tenantId}_${branchId || "all"}` : WAITLIST_STORAGE_KEY;
+    localStorage.setItem(key, JSON.stringify(items));
   },
-  addEntry: (input: Omit<WaitlistEntry, "id" | "status" | "priorityRank" | "addedAt">): WaitlistEntry => {
-    const list = waitlistStorage.getEntries();
+  addEntry: (input: Omit<WaitlistEntry, "id" | "status" | "priorityRank" | "addedAt">, tenantId?: string, branchId?: string): WaitlistEntry => {
+    const list = waitlistStorage.getEntries(tenantId, branchId);
     const groupEntries = list.filter(e => e.groupId === input.groupId && e.status === "WAITING");
     const newEntry: WaitlistEntry = {
       ...input,
@@ -2755,42 +2863,42 @@ export const waitlistStorage = {
       addedAt: new Date().toISOString(),
     };
     const updated = [newEntry, ...list];
-    waitlistStorage.saveEntries(updated);
+    waitlistStorage.saveEntries(updated, tenantId, branchId);
     return newEntry;
   },
-  notifyEntry: (id: string): WaitlistEntry => {
-    const list = waitlistStorage.getEntries();
+  notifyEntry: (id: string, tenantId?: string, branchId?: string): WaitlistEntry => {
+    const list = waitlistStorage.getEntries(tenantId, branchId);
     const updated = list.map(item => item.id === id ? {
       ...item,
       status: "NOTIFIED" as const,
       notifiedAt: new Date().toISOString(),
     } : item);
-    waitlistStorage.saveEntries(updated);
+    waitlistStorage.saveEntries(updated, tenantId, branchId);
     return findEntityOrThrow(updated, id, "Waitlist entry");
   },
-  enrollEntry: (id: string): WaitlistEntry => {
-    const list = waitlistStorage.getEntries();
+  enrollEntry: (id: string, tenantId?: string, branchId?: string): WaitlistEntry => {
+    const list = waitlistStorage.getEntries(tenantId, branchId);
     const updated = list.map(item => item.id === id ? {
       ...item,
       status: "ENROLLED" as const,
       enrolledAt: new Date().toISOString(),
     } : item);
-    waitlistStorage.saveEntries(updated);
+    waitlistStorage.saveEntries(updated, tenantId, branchId);
     return findEntityOrThrow(updated, id, "Waitlist entry");
   },
-  cancelEntry: (id: string): WaitlistEntry => {
-    const list = waitlistStorage.getEntries();
+  cancelEntry: (id: string, tenantId?: string, branchId?: string): WaitlistEntry => {
+    const list = waitlistStorage.getEntries(tenantId, branchId);
     const updated = list.map(item => item.id === id ? {
       ...item,
       status: "CANCELLED" as const,
     } : item);
-    waitlistStorage.saveEntries(updated);
+    waitlistStorage.saveEntries(updated, tenantId, branchId);
     return findEntityOrThrow(updated, id, "Waitlist entry");
   },
-  deleteEntry: (id: string) => {
-    const list = waitlistStorage.getEntries();
+  deleteEntry: (id: string, tenantId?: string, branchId?: string) => {
+    const list = waitlistStorage.getEntries(tenantId, branchId);
     const updated = list.filter(item => item.id !== id);
-    waitlistStorage.saveEntries(updated);
+    waitlistStorage.saveEntries(updated, tenantId, branchId);
   },
 };
 
