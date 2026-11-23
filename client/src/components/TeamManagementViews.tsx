@@ -8,10 +8,15 @@ import {
   CheckCircle2,
   ChevronLeft,
   Clock3,
+  Copy,
+  ExternalLink,
   Eye,
   EyeOff,
   GraduationCap,
   KeyRound,
+  MapPin,
+  MessageCircle,
+  Phone,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -280,75 +285,97 @@ export function TeamManagementViews({
                           style={{ display: "flex", gap: "6px", alignItems: "center" }}
                           onClick={(e) => e.stopPropagation()}
                         >
+                          {/* WhatsApp */}
+                          {member.phone && (
+                            <button
+                              type="button"
+                              style={{
+                                width: "28px",
+                                height: "28px",
+                                borderRadius: "6px",
+                                background: "#ecfdf5",
+                                color: "#059669",
+                                border: "1px solid #a7f3d0",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                cursor: "pointer",
+                              }}
+                              title={`مراسلة عبر واتساب (${member.phone})`}
+                              onClick={() => {
+                                const phoneDigits = member.phone.replace(/\D/g, "");
+                                const formattedPhone = phoneDigits.startsWith("0") ? `20${phoneDigits.slice(1)}` : phoneDigits;
+                                window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(`السلام عليكم أ. ${member.name}، نتواصل معك من إدارة فرع ${member.branch}.`)}`, "_blank");
+                              }}
+                            >
+                              <MessageCircle size={14} />
+                            </button>
+                          )}
+
+                          {/* Quick Password Reset */}
+                          {onResetPassword && (
+                            <button
+                              type="button"
+                              style={{
+                                width: "28px",
+                                height: "28px",
+                                borderRadius: "6px",
+                                background: "#fffbeb",
+                                color: "#b45309",
+                                border: "1px solid #fde68a",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                cursor: "pointer",
+                              }}
+                              title="تعيين كلمة سر مؤقتة"
+                              onClick={() => onResetPassword(member)}
+                            >
+                              <KeyRound size={13} />
+                            </button>
+                          )}
+
+                          {/* View Profile & Tasks */}
                           <button
                             type="button"
                             className="team-row-action"
                             style={{
+                              padding: "4px 10px",
+                              borderRadius: "6px",
                               background: "#f0fdfa",
                               color: "#0f766e",
                               borderColor: "#ccfbf1",
                               fontWeight: 700,
+                              fontSize: "11px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
                             }}
                             onClick={() => setSelectedMember(member)}
                           >
-                            عرض المهام
+                            <span>عرض الملف</span>
+                            <ExternalLink size={12} />
                           </button>
-                          <button
-                            type="button"
-                            className="team-row-action"
-                            style={{
-                              background: member.status === "active" ? "#fef2f2" : "#f0fdf4",
-                              color: member.status === "active" ? "#b91c1c" : "#15803d",
-                              borderColor: member.status === "active" ? "#fecaca" : "#bbf7d0",
-                            }}
-                            onClick={() => {
-                              toggleStatus(member);
-                              if (selectedMember && selectedMember.id === member.id) {
-                                setSelectedMember({
-                                  ...selectedMember,
-                                  status: member.status === "active" ? "on_leave" : "active",
-                                });
-                              }
-                            }}
-                          >
-                            {member.status === "active" ? "إيقاف الحساب" : "تفعيل الحساب"}
-                          </button>
-                          {onResetPassword && (
-                            <button
-                              type="button"
-                              className="team-row-action"
-                              style={{
-                                background: "#fffbeb",
-                                color: "#b45309",
-                                borderColor: "#fde68a",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                              }}
-                              onClick={() => onResetPassword(member)}
-                              title="إعادة تعيين كلمة مرور مؤقتة للعضو"
-                            >
-                              <KeyRound size={12} />
-                              <span>كلمة سر</span>
-                            </button>
-                          )}
+                          {/* Delete Action if allowed */}
                           {onDeleteMember && (
                             <button
                               type="button"
-                              className="team-row-action"
                               style={{
+                                width: "28px",
+                                height: "28px",
+                                borderRadius: "6px",
                                 background: "#fff1f2",
                                 color: "#e11d48",
-                                borderColor: "#fecdd3",
+                                border: "1px solid #fecdd3",
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: "4px",
+                                justifyContent: "center",
+                                cursor: "pointer",
                               }}
                               onClick={() => onDeleteMember(member)}
                               title="مسح حساب العضو من الفرع"
                             >
-                              <Trash2 size={12} />
-                              <span>مسح</span>
+                              <Trash2 size={13} />
                             </button>
                           )}
                         </div>
@@ -906,237 +933,451 @@ export function TeamManagementViews({
           aria-modal="true"
         >
           <section
-            className="dialog-card"
-            style={{ maxWidth: "520px", borderRadius: "18px" }}
+            className="dialog-card member-profile-dialog"
+            style={{
+              width: "min(580px, calc(100vw - 28px))",
+              maxWidth: "580px",
+              padding: "24px",
+              borderRadius: "20px",
+              background: "#ffffff",
+              border: "1px solid #e2e8f0",
+              boxShadow: "0 25px 65px -12px rgba(15, 23, 42, 0.35)",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="dialog-heading">
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span className="panel-icon panel-icon-teal" style={{ width: "38px", height: "38px" }}>
-                  <UserCog size={20} />
-                </span>
+            {/* Header */}
+            <div className="member-profile-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div
+                  style={{
+                    width: "48px",
+                    height: "48px",
+                    borderRadius: "14px",
+                    background: "linear-gradient(135deg, #0d9488, #0f766e)",
+                    color: "#ffffff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: 800,
+                    fontSize: "18px",
+                    boxShadow: "0 4px 12px rgba(13, 148, 136, 0.25)",
+                    flexShrink: 0,
+                  }}
+                >
+                  {selectedMember.name.slice(0, 2)}
+                </div>
                 <div>
-                  <h2 style={{ fontSize: "16px", fontWeight: 800, margin: 0 }}>
+                  <h2 style={{ fontSize: "18px", fontWeight: 800, margin: 0, color: "#0f172a" }}>
                     ملف العضو: {selectedMember.name}
                   </h2>
-                  <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#64748b" }}>
-                    {ROLE_BY_CODE[selectedMember.role].name} · {selectedMember.branch}
-                  </p>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px", flexWrap: "wrap" }}>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        background: "#f0fdfa",
+                        color: "#0f766e",
+                        border: "1px solid #ccfbf1",
+                        padding: "2px 8px",
+                        borderRadius: "6px",
+                      }}
+                    >
+                      <UserCog size={13} />
+                      {ROLE_BY_CODE[selectedMember.role].name}
+                    </span>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        fontSize: "11px",
+                        fontWeight: 600,
+                        background: "#f1f5f9",
+                        color: "#475569",
+                        padding: "2px 8px",
+                        borderRadius: "6px",
+                      }}
+                    >
+                      <MapPin size={12} />
+                      {selectedMember.branch}
+                    </span>
+                  </div>
                 </div>
               </div>
+
               <button
                 type="button"
                 className="icon-button dialog-close"
                 onClick={() => setSelectedMember(null)}
                 aria-label="إغلاق النافذة"
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "10px",
+                  background: "#f1f5f9",
+                  border: "1px solid #e2e8f0",
+                  color: "#64748b",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
               >
                 <X size={16} />
               </button>
             </div>
 
-            <div style={{ padding: "16px 20px", display: "grid", gap: "14px" }}>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "10px",
-                  padding: "12px",
-                  background: "#f8fafc",
-                  borderRadius: "12px",
-                  border: "1px solid #e2e8f0",
-                }}
-              >
-                <div>
-                  <small style={{ color: "#64748b", fontSize: "11px", display: "block" }}>
-                    حالة الحساب:
-                  </small>
-                  <span
-                    className={`team-status status-${selectedMember.status}`}
-                    style={{ marginTop: "4px", display: "inline-flex" }}
-                  >
-                    <i />
-                    {STATUS_LABELS[selectedMember.status]}
-                  </span>
-                </div>
-                <div>
-                  <small style={{ color: "#64748b", fontSize: "11px", display: "block" }}>
-                    رقم الهاتف:
-                  </small>
-                  <strong style={{ fontSize: "13px", color: "#0f172a", direction: "ltr", display: "inline-block", marginTop: "4px" }}>
-                    {selectedMember.phone}
-                  </strong>
-                </div>
-                <div>
-                  <small style={{ color: "#64748b", fontSize: "11px", display: "block" }}>
-                    تاريخ الانضمام:
-                  </small>
-                  <span style={{ fontSize: "12px", color: "#334155" }}>
-                    {selectedMember.joined}
-                  </span>
-                </div>
-                <div>
-                  <small style={{ color: "#64748b", fontSize: "11px", display: "block" }}>
-                    كود المعرف:
-                  </small>
-                  <span
-                    title={selectedMember.id}
+            {/* Quick Contact & Communication Bar */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "10px 14px",
+                background: "#f8fafc",
+                borderRadius: "12px",
+                border: "1px solid #e2e8f0",
+                marginTop: "16px",
+                marginBottom: "16px",
+                flexWrap: "wrap",
+                gap: "10px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <small style={{ color: "#64748b", fontSize: "11px", fontWeight: 700 }}>كود المعرف:</small>
+                <span
+                  title="انقر لنسخ كود المعرف"
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    color: "#0f766e",
+                    background: "#f0fdfa",
+                    padding: "3px 8px",
+                    borderRadius: "6px",
+                    border: "1px solid #ccfbf1",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                  onClick={() => {
+                    navigator.clipboard?.writeText(selectedMember.id);
+                    toast.success("تم نسخ كود المعرف بنجاح");
+                  }}
+                >
+                  <Copy size={11} />
+                  <span>{selectedMember.id.startsWith("USR-") ? selectedMember.id : `عضو #${selectedMember.id.slice(-4).toUpperCase()}`}</span>
+                </span>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                {selectedMember.phone && (
+                  <button
+                    type="button"
                     style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      padding: "5px 12px",
+                      borderRadius: "8px",
+                      background: "#ecfdf5",
+                      color: "#059669",
+                      border: "1px solid #a7f3d0",
                       fontSize: "12px",
-                      fontWeight: 600,
-                      color: "#0f766e",
-                      background: "#f0fdfa",
-                      padding: "2px 8px",
-                      borderRadius: "6px",
-                      border: "1px solid #ccfbf1",
-                      display: "inline-block",
+                      fontWeight: 700,
                       cursor: "pointer",
                     }}
                     onClick={() => {
-                      navigator.clipboard?.writeText(selectedMember.id);
-                      toast.success("تم نسخ كود المعرف");
+                      const phoneDigits = selectedMember.phone.replace(/\D/g, "");
+                      const formattedPhone = phoneDigits.startsWith("0") ? `20${phoneDigits.slice(1)}` : phoneDigits;
+                      window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(`السلام عليكم أ. ${selectedMember.name}، نتواصل معك بخصوص مهام فرع ${selectedMember.branch}.`)}`, "_blank");
                     }}
                   >
-                    {selectedMember.id.startsWith("USR-") ? selectedMember.id : `عضو #${selectedMember.id.slice(-4)}`}
-                  </span>
-                </div>
-              </div>
+                    <MessageCircle size={14} />
+                    <span>واتساب</span>
+                  </button>
+                )}
 
-              <div>
-                <h4 style={{ fontSize: "13px", fontWeight: 700, color: "#0f766e", margin: "0 0 8px", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <BookOpen size={15} />
-                  المهام والمجموعات المسندة (ماسك إيه حالياً):
-                </h4>
-                <div style={{ display: "grid", gap: "6px" }}>
-                  {(selectedMember.assignedWork && selectedMember.assignedWork.length > 0
-                    ? selectedMember.assignedWork
-                    : [
-                        "مسؤول عن الحصص والمجموعات المعتمدة داخل الفرع",
-                        "متابعة الطلاب وتسجيل الحضور والتقييمات",
-                      ]
-                  ).map((task, idx) => (
-                    <div
-                      key={idx}
-                      style={{
-                        display: "flex",
-                        alignItems: "flex-start",
-                        gap: "8px",
-                        padding: "8px 12px",
-                        background: "#f0fdfa",
-                        border: "1px solid #ccfbf1",
-                        borderRadius: "8px",
-                        fontSize: "12.5px",
-                        color: "#115e59",
-                      }}
-                    >
-                      <CheckCircle2 size={15} style={{ color: "#0d9488", flexShrink: 0, marginTop: "2px" }} />
-                      <span>{task}</span>
-                    </div>
-                  ))}
-                </div>
+                {selectedMember.phone && (
+                  <a
+                    href={`tel:${selectedMember.phone}`}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      padding: "5px 12px",
+                      borderRadius: "8px",
+                      background: "#eff6ff",
+                      color: "#2563eb",
+                      border: "1px solid #bfdbfe",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      textDecoration: "none",
+                    }}
+                  >
+                    <Phone size={14} />
+                    <span>اتصال</span>
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {/* Grid of 4 Key Parameters */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, 1fr)",
+                gap: "10px",
+                marginBottom: "16px",
+              }}
+            >
+              <div
+                style={{
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "12px",
+                  padding: "10px 14px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                }}
+              >
+                <small style={{ color: "#64748b", fontSize: "11px", fontWeight: 700 }}>حالة الحساب والوصول:</small>
+                <span
+                  className={`team-status status-${selectedMember.status}`}
+                  style={{ width: "fit-content", marginTop: "2px" }}
+                >
+                  <i />
+                  {STATUS_LABELS[selectedMember.status]}
+                </span>
               </div>
 
               <div
                 style={{
-                  padding: "12px 14px",
-                  borderRadius: "10px",
-                  background: selectedMember.status === "active" ? "#fffbeb" : "#f0fdf4",
-                  border: selectedMember.status === "active" ? "1px solid #fef3c7" : "1px solid #bbf7d0",
-                  fontSize: "12px",
-                  color: selectedMember.status === "active" ? "#b45309" : "#15803d",
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "12px",
+                  padding: "10px 14px",
                   display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: "10px",
+                  flexDirection: "column",
+                  gap: "4px",
                 }}
               >
-                <span>
+                <small style={{ color: "#64748b", fontSize: "11px", fontWeight: 700 }}>رقم الهاتف المسجل:</small>
+                <strong style={{ fontSize: "13px", color: "#0f172a", direction: "ltr", textAlign: "right" }}>
+                  {selectedMember.phone}
+                </strong>
+              </div>
+
+              <div
+                style={{
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "12px",
+                  padding: "10px 14px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                }}
+              >
+                <small style={{ color: "#64748b", fontSize: "11px", fontWeight: 700 }}>تاريخ الاعتماد والانضمام:</small>
+                <strong style={{ fontSize: "13px", color: "#0f172a" }}>
+                  {selectedMember.joined}
+                </strong>
+              </div>
+
+              <div
+                style={{
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "12px",
+                  padding: "10px 14px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                }}
+              >
+                <small style={{ color: "#64748b", fontSize: "11px", fontWeight: 700 }}>نطاق التعيين:</small>
+                <strong style={{ fontSize: "13px", color: "#0f172a" }}>
+                  {selectedMember.branch}
+                </strong>
+              </div>
+            </div>
+
+            {/* Assigned Academic Tasks & Responsibilities */}
+            <div style={{ marginBottom: "16px" }}>
+              <h4
+                style={{
+                  fontSize: "13px",
+                  fontWeight: 800,
+                  color: "#0f766e",
+                  margin: "0 0 8px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <BookOpen size={15} />
+                <span>المسؤوليات التشغيلية والحصص النشطة:</span>
+              </h4>
+              <div style={{ display: "grid", gap: "6px" }}>
+                {(selectedMember.assignedWork && selectedMember.assignedWork.length > 0
+                  ? selectedMember.assignedWork
+                  : [
+                      "مسؤول عن الحصص والمجموعات المعتمدة داخل الفرع",
+                      "متابعة الطلاب وتسجيل الحضور والتقييمات الأسبوعية",
+                      "إشراف وتنسيق مع الإدارة الأكاديمية",
+                    ]
+                ).map((task, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "8px 12px",
+                      background: "#f0fdfa",
+                      border: "1px solid #ccfbf1",
+                      borderRadius: "10px",
+                      fontSize: "12.5px",
+                      color: "#115e59",
+                      fontWeight: 600,
+                    }}
+                  >
+                    <CheckCircle2 size={15} style={{ color: "#0d9488", flexShrink: 0 }} />
+                    <span>{task}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Account Access Controls Card (Clean, Structured & Solid) */}
+            <div
+              style={{
+                padding: "14px",
+                borderRadius: "14px",
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+                marginBottom: "16px",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "12px", fontWeight: 700, color: "#334155" }}>
                   {selectedMember.status === "active"
-                    ? "الحساب نشط حالياً وله وصول للفرع."
-                    : "الحساب موقوف / مجمد مؤقتاً ولا يمكنه تسجيل الدخول."}
+                    ? "✓ الحساب نشط حالياً ويمتلك صلاحيات الوصول للفرع."
+                    : "⚠️ الحساب موقوف / مجمد مؤقتاً ولا يمكنه تسجيل الدخول."}
                 </span>
-                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              </div>
+
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                {/* Reset Password */}
+                {onResetPassword && (
                   <button
                     type="button"
                     style={{
                       padding: "6px 14px",
                       borderRadius: "8px",
-                      border: "none",
+                      border: "1px solid #fde68a",
                       fontWeight: 700,
                       fontSize: "12px",
                       cursor: "pointer",
-                      background: selectedMember.status === "active" ? "#dc2626" : "#0d9488",
-                      color: "#ffffff",
-                      whiteSpace: "nowrap",
+                      background: "#fffbeb",
+                      color: "#b45309",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      transition: "all 0.15s ease",
+                    }}
+                    onClick={() => onResetPassword(selectedMember)}
+                  >
+                    <KeyRound size={13} />
+                    <span>تعيين كلمة سر مؤقتة</span>
+                  </button>
+                )}
+
+                {/* Freeze / Unfreeze */}
+                <button
+                  type="button"
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: "8px",
+                    border: "none",
+                    fontWeight: 700,
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    background: selectedMember.status === "active" ? "#dc2626" : "#0d9488",
+                    color: "#ffffff",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    transition: "all 0.15s ease",
+                  }}
+                  onClick={() => {
+                    toggleStatus(selectedMember);
+                    setSelectedMember({
+                      ...selectedMember,
+                      status: selectedMember.status === "active" ? "on_leave" : "active",
+                    });
+                  }}
+                >
+                  <span>{selectedMember.status === "active" ? "إيقاف الحساب مؤقتاً" : "إعادة تفعيل الحساب"}</span>
+                </button>
+
+                {/* Delete Account */}
+                {onDeleteMember && (
+                  <button
+                    type="button"
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: "8px",
+                      border: "1px solid #fecdd3",
+                      fontWeight: 700,
+                      fontSize: "12px",
+                      cursor: "pointer",
+                      background: "#fff1f2",
+                      color: "#e11d48",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "5px",
+                      marginInlineStart: "auto",
+                      transition: "all 0.15s ease",
                     }}
                     onClick={() => {
-                      toggleStatus(selectedMember);
-                      setSelectedMember({
-                        ...selectedMember,
-                        status: selectedMember.status === "active" ? "on_leave" : "active",
-                      });
+                      const target = selectedMember;
+                      setSelectedMember(null);
+                      onDeleteMember(target);
                     }}
                   >
-                    {selectedMember.status === "active" ? "إيقاف الحساب الآن" : "إعادة تفعيل الحساب"}
+                    <Trash2 size={13} />
+                    <span>مسح الحساب</span>
                   </button>
-                  {onResetPassword && (
-                    <button
-                      type="button"
-                      style={{
-                        padding: "6px 14px",
-                        borderRadius: "8px",
-                        border: "1px solid #fde68a",
-                        fontWeight: 700,
-                        fontSize: "12px",
-                        cursor: "pointer",
-                        background: "#fffbeb",
-                        color: "#b45309",
-                        whiteSpace: "nowrap",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "5px",
-                      }}
-                      onClick={() => onResetPassword(selectedMember)}
-                    >
-                      <KeyRound size={13} />
-                      <span>تعيين كلمة سر مؤقتة</span>
-                    </button>
-                  )}
-                  {onDeleteMember && (
-                    <button
-                      type="button"
-                      style={{
-                        padding: "6px 14px",
-                        borderRadius: "8px",
-                        border: "1px solid #fecdd3",
-                        fontWeight: 700,
-                        fontSize: "12px",
-                        cursor: "pointer",
-                        background: "#fff1f2",
-                        color: "#e11d48",
-                        whiteSpace: "nowrap",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "5px",
-                      }}
-                      onClick={() => {
-                        const target = selectedMember;
-                        setSelectedMember(null);
-                        onDeleteMember(target);
-                      }}
-                    >
-                      <Trash2 size={13} />
-                      <span>مسح الحساب</span>
-                    </button>
-                  )}
-                </div>
+                )}
               </div>
             </div>
 
-            <div className="dialog-actions" style={{ padding: "12px 20px" }}>
+            {/* Actions Footer */}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
               <button
                 type="button"
                 className="button button-secondary"
                 onClick={() => setSelectedMember(null)}
+                style={{
+                  padding: "8px 20px",
+                  borderRadius: "10px",
+                  fontWeight: 700,
+                  fontSize: "13px",
+                  background: "#f1f5f9",
+                  border: "1px solid #cbd5e1",
+                  color: "#334155",
+                  cursor: "pointer",
+                }}
               >
                 إغلاق
               </button>
