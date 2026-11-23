@@ -1710,6 +1710,364 @@ body.lang-en .app-shell {
   width: min(440px, 100%);
   padding: 23px;
 }
+.schedule-details-dialog {
+  width: min(720px, calc(100vw - 28px)) !important;
+  max-width: 720px !important;
+  max-height: calc(100vh - 40px) !important;
+  overflow-y: auto !important;
+  padding: 24px !important;
+  background: #ffffff !important;
+  border-radius: 20px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 25px 65px -12px rgba(15, 23, 42, 0.35) !important;
+}
+
+.schedule-detail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.schedule-detail-heading h2 {
+  margin: 0 !important;
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+}
+
+.schedule-detail-subtitle {
+  margin: 4px 0 14px !important;
+  color: #64748b !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+
+.schedule-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.schedule-status-badge i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.schedule-status-badge.status-completed {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+.schedule-status-badge.status-completed i {
+  background: #10b981;
+}
+
+.schedule-status-badge.status-in_progress {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+.schedule-status-badge.status-in_progress i {
+  background: #3b82f6;
+}
+
+.schedule-status-badge.status-scheduled {
+  background: #f0fdfa;
+  color: #0f766e;
+  border: 1px solid #99f6e4;
+}
+.schedule-status-badge.status-scheduled i {
+  background: #14b8a6;
+}
+
+.schedule-status-badge.status-cancelled {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+.schedule-status-badge.status-cancelled i {
+  background: #ef4444;
+}
+
+.schedule-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 600px) {
+  .schedule-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.schedule-detail-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+
+.schedule-detail-grid small {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.schedule-detail-grid strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+/* Enrolled Students Section */
+.schedule-students-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 18px;
+}
+
+.schedule-students-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.schedule-students-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.schedule-students-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.schedule-students-count-badge {
+  font-size: 11px;
+  font-weight: 800;
+  background: #f0fdfa;
+  color: #0f766e;
+  border: 1px solid #ccfbf1;
+  padding: 3px 8px;
+  border-radius: 9999px;
+}
+
+.schedule-students-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: #334155;
+  width: 200px;
+}
+
+.schedule-students-search input {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  font-size: 12px !important;
+  padding: 0 !important;
+  width: 100% !important;
+}
+
+.schedule-students-capacity-bar {
+  margin-bottom: 12px;
+}
+
+.schedule-capacity-progress {
+  width: 100%;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.schedule-capacity-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0d9488, #14b8a6);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.schedule-students-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-inline-end: 2px;
+}
+
+.schedule-student-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  padding: 8px 12px;
+  transition: all 0.15s ease;
+}
+
+.schedule-student-row:hover {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+.schedule-student-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.schedule-student-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.schedule-student-avatar.teal {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+.schedule-student-avatar.violet {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.schedule-student-names {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.schedule-student-names strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.schedule-student-names small {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.schedule-student-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.schedule-attendance-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.schedule-attendance-badge.present {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+.schedule-attendance-badge.absent {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+.schedule-attendance-badge.late {
+  background: #faf5ff;
+  color: #7e22ce;
+  border: 1px solid #e9d5ff;
+}
+.schedule-attendance-badge.unmarked {
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.schedule-student-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.schedule-student-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.schedule-student-profile-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0f766e;
+  background: #f0fdfa;
+  border: 1px solid #ccfbf1;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.schedule-student-profile-link:hover {
+  background: #ccfbf1;
+}
+
 .dialog-top {
   display: flex;
   align-items: center;
