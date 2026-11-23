@@ -25,6 +25,10 @@ import {
   Users,
   Wallet,
   X,
+  Phone,
+  MessageCircle,
+  CreditCard,
+  ExternalLink,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -851,7 +855,7 @@ function StudentPage() {
                     <th>الفرع</th>
                     <th>الحالة</th>
                     <th>تاريخ التسجيل</th>
-                    <th aria-label="التفاصيل" />
+                    <th style={{ minWidth: "210px", textAlign: "center" }}>الإجراءات السريعة والملف</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -865,7 +869,8 @@ function StudentPage() {
                         <td data-label="الطالب">
                           <button
                             className="student-identity"
-                            onClick={() => setDetailsStudent(student)}
+                            onClick={() => setLocation(`/students/${student.id}`)}
+                            title={`فتح الملف الشامل للطالب ${student.name}`}
                           >
                             <span
                               className={`student-avatar avatar-${student.color}`}
@@ -1005,39 +1010,115 @@ function StudentPage() {
                         <td data-label="تاريخ التسجيل">
                           <span className="joined-date">{student.joined}</span>
                         </td>
-                        <td data-label="التفاصيل">
+                        <td data-label="الإجراءات والملف">
                           <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                            {/* WhatsApp quick button */}
+                            {student.parentPhone && student.parentPhone !== "—" && (
+                              <button
+                                type="button"
+                                style={{
+                                  width: "28px",
+                                  height: "28px",
+                                  borderRadius: "6px",
+                                  background: "#ecfdf5",
+                                  color: "#059669",
+                                  border: "1px solid #a7f3d0",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  cursor: "pointer",
+                                }}
+                                title={`مراسلة ولي الأمر عبر واتساب (${student.parentPhone})`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const phoneDigits = student.parentPhone.replace(/\D/g, "");
+                                  const formattedPhone = phoneDigits.startsWith("0") ? `20${phoneDigits.slice(1)}` : phoneDigits;
+                                  window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(`السلام عليكم أستاذ ${student.parentName}، نتواصل معكم من أكاديمية مدى بخصوص الطالب ${student.name}.`)}`, "_blank");
+                                }}
+                              >
+                                <MessageCircle size={14} />
+                              </button>
+                            )}
+
+                            {/* Quick Call */}
+                            {student.parentPhone && student.parentPhone !== "—" && (
+                              <a
+                                href={`tel:${student.parentPhone}`}
+                                style={{
+                                  width: "28px",
+                                  height: "28px",
+                                  borderRadius: "6px",
+                                  background: "#eff6ff",
+                                  color: "#2563eb",
+                                  border: "1px solid #bfdbfe",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  textDecoration: "none",
+                                }}
+                                title={`اتصال هاتفي (${student.parentPhone})`}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Phone size={14} />
+                              </a>
+                            )}
+
+                            {/* Quick Installment / Finance button */}
                             <button
                               type="button"
-                              className="button button-ghost"
                               style={{
-                                padding: "3px 8px",
+                                width: "28px",
+                                height: "28px",
+                                borderRadius: "6px",
+                                background: "#fef3c7",
+                                color: "#b45309",
+                                border: "1px solid #fde68a",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                cursor: "pointer",
+                              }}
+                              title="سداد قسط / السجل المالي"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setLocation(`/students/${student.id}?tab=FINANCE`);
+                              }}
+                            >
+                              <CreditCard size={14} />
+                            </button>
+
+                            {/* Prominent Dedicated Profile Page link */}
+                            <button
+                              type="button"
+                              style={{
+                                padding: "4px 10px",
                                 fontSize: "11px",
                                 fontWeight: 700,
                                 color: "#0f766e",
-                                border: "1px solid #ccfbf1",
+                                border: "1px solid #99f6e4",
                                 background: "#f0fdfa",
-                                borderRadius: "8px",
+                                borderRadius: "6px",
                                 cursor: "pointer",
                                 display: "inline-flex",
                                 alignItems: "center",
-                                gap: "3px",
+                                gap: "4px",
+                                transition: "all 0.15s ease",
                               }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setHubStudent(student);
-                              }}
-                              title="فتح هاب بيانات الطالب 360° (Data Hub)"
+                              onClick={() => setLocation(`/students/${student.id}`)}
+                              title={`عرض الملف الأكاديمي والمالي الشامل للطالب ${student.name}`}
                             >
-                              <Sparkles size={11} />
-                              <span>Hub</span>
+                              <span>الملف الشامل</span>
+                              <ExternalLink size={12} />
                             </button>
+
+                            {/* Quick popup modal trigger for quick edit/peek */}
                             <button
                               className="student-row-more"
-                              aria-label={`عرض ملف ${student.name}`}
+                              aria-label={`معاينة سريعة لملف ${student.name}`}
+                              title="معاينة سريعة"
                               onClick={() => setDetailsStudent(student)}
                             >
-                              <ChevronLeft size={17} />
+                              <ChevronLeft size={16} />
                             </button>
                           </div>
                         </td>

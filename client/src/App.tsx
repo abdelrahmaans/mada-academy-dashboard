@@ -34,6 +34,7 @@ function lazyWithRetry<T extends ComponentType<any>>(
 
 const Home = lazyWithRetry(() => import("./pages/Home"));
 const Students = lazyWithRetry(() => import("./pages/Students"));
+const StudentProfile = lazyWithRetry(() => import("./pages/StudentProfile"));
 const Classes = lazyWithRetry(() => import("./pages/Classes"));
 const Schedule = lazyWithRetry(() => import("./pages/Schedule"));
 const SecretaryDesk = lazyWithRetry(() => import("./pages/SecretaryDesk"));
@@ -133,6 +134,7 @@ const APP_ROUTES = [
   ["/academy/audit-trail", ProtectedAcademyAuditTrail],
   ["/", SmartRoleHome],
   ["/students", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R05_SECRETARY"]} anyOfPermissions={["students.read", "students.create", "academy.read"]}><Students /></Guard>],
+  ["/students/:id", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS", "R04_INSTRUCTOR", "R05_SECRETARY", "R06_ACCOUNTANT"]} anyOfPermissions={["students.read", "students.create", "sessions.assigned.read", "academy.read"]}><StudentProfile /></Guard>],
   ["/classes", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS", "R05_SECRETARY"]} anyOfPermissions={["sessions.read", "branch.read"]}><Classes /></Guard>],
   ["/schedule", () => <Guard roles={["R01_ACADEMY_OWNER", "R02_BRANCH_MANAGER", "R03_HEAD_INSTRUCTORS", "R04_INSTRUCTOR", "R05_SECRETARY"]} anyOfPermissions={["sessions.read", "sessions.assigned.read", "academy.read"]}><Schedule /></Guard>],
   ["/secretary", () => <Guard roles={["R05_SECRETARY"]}><Redirect to="/secretary-desk" /></Guard>],
