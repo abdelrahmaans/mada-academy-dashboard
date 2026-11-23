@@ -35,6 +35,7 @@ public static class PlatformAdminEndpoints
         api.MapPost("/academies/{tenantId:guid}/payments", RecordSubscriptionPaymentAsync);
         api.MapGet("/demo-leads", GetPlatformDemoLeadsAsync);
         api.MapPatch("/demo-leads/{leadId:guid}/status", UpdatePlatformDemoLeadStatusAsync);
+        api.MapDelete("/demo-leads/{leadId:guid}", DeletePlatformDemoLeadAsync);
         api.MapPost("/demo-leads/{leadId:guid}/convert", ConvertPlatformDemoLeadAsync);
         api.MapGet("/support-tickets", GetPlatformTicketsAsync);
         api.MapPatch("/support-tickets/{ticketId:guid}", UpdatePlatformTicketAsync);
@@ -981,6 +982,31 @@ public static class PlatformAdminEndpoints
         return Results.Ok(new { data = MapDemoLead(lead) });
     }
 
+    private static async Task<IResult> DeletePlatformDemoLeadAsync(Guid leadId, DeleteDemoLeadRequest request, MadaDbContext db, ClaimsPrincipal principal, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Trim().Length < 4)
+            return Results.ValidationProblem(new Dictionary<string, string[]> { ["reason"] = ["A deletion reason of at least four characters is required."] });
+
+        var lead = await db.Leads.SingleOrDefaultAsync(l => l.Id == leadId && l.Channel == "LANDING_DEMO", cancellationToken);
+        if (lead is null)
+            return Results.NotFound(new { error = new { code = "DEMO_LEAD_NOT_FOUND", message = "Demo lead was not found." } });
+        if (!string.Equals(lead.Status, "REJECTED", StringComparison.OrdinalIgnoreCase))
+            return Results.Conflict(new { error = new { code = "DEMO_LEAD_MUST_BE_REJECTED", message = "Only rejected demo leads can be permanently deleted." } });
+
+        db.AuditEvents.Add(new AuditEvent
+        {
+            ActorUserId = ActorId(principal),
+            TenantId = lead.TenantId == Guid.Empty ? null : lead.TenantId,
+            Action = "PLATFORM_DEMO_LEAD_DELETED",
+            TargetType = "LEAD",
+            TargetId = lead.Id.ToString(),
+            Reason = request.Reason.Trim()
+        });
+        db.Leads.Remove(lead);
+        await db.SaveChangesAsync(cancellationToken);
+        return Results.NoContent();
+    }
+
     private static async Task<IResult> ConvertPlatformDemoLeadAsync(
         Guid leadId,
         ConvertDemoLeadRequest request,
@@ -1148,6 +1174,7 @@ public static class PlatformAdminEndpoints
     private sealed record ExtendTrialRequest(int DaysToAdd, string? Reason);
     private sealed record RecordSubscriptionPaymentRequest(decimal Amount, string? Method, string? ReferenceNumber, string? Notes, string? RecordedByName);
     private sealed record UpdateDemoLeadStatusRequest(string Status);
+    private sealed record DeleteDemoLeadRequest(string? Reason);
     private sealed record ConvertDemoLeadRequest(string Name, string? Slug, string? PlanCode, string BranchName, string BranchCode, string OwnerName, string OwnerPhone, string OwnerEmail, string OwnerPassword);
     private sealed record PublicDemoRequestInput(string Name, string? Email, string Phone, string AcademyName, string? BranchCount, string? OperationalNeed, string? Notes);
     private sealed record TenantStatusRequest(string Status, string? Reason);

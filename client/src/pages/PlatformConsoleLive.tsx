@@ -137,7 +137,7 @@ export default function PlatformConsoleLive() {
   const [leads, setLeads] = useState<PlatformDemoLead[]>([]);
   const [payments, setPayments] = useState<PlatformPaymentRecord[]>([]);
   const [paymentsRevenue, setPaymentsRevenue] = useState(0);
-  const [leadFilter, setLeadFilter] = useState<"ALL" | "NEW" | "CONTACTED" | "DEMO_SCHEDULED" | "CONVERTED">("ALL");
+  const [leadFilter, setLeadFilter] = useState<"ALL" | "NEW" | "CONTACTED" | "DEMO_SCHEDULED" | "CONVERTED" | "REJECTED">("ALL");
   const [leadSearch, setLeadSearch] = useState("");
 
   // Emergency Super Access (View-As Impersonation) State
@@ -161,6 +161,24 @@ export default function PlatformConsoleLive() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "تعذر تحديث حالة طلب المعاينة.");
     }
+  };
+
+  const handleDeleteLead = (lead: PlatformDemoLead) => {
+    setReasonModal({
+      title: `⚠️ حذف Lead مرفوض: ${lead.academyName}`,
+      description: "سيتم حذف سجل الطلب نهائياً من قاعدة البيانات بعد توثيق سبب الحذف في Audit Log. لا يمكن التراجع عن هذا الإجراء.",
+      confirmLabel: "تأكيد حذف الـLead نهائياً",
+      isDestructive: true,
+      onConfirm: async (reason: string) => {
+        try {
+          await apiClient.deletePlatformDemoLead(lead.id, reason);
+          setLeads((prev) => prev.filter((item) => item.id !== lead.id));
+          toast.success("تم حذف الـLead المرفوض وتوثيق العملية");
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "تعذر حذف الـLead.");
+        }
+      },
+    });
   };
 
   const handleWhatsAppLeadChat = (lead: PlatformDemoLead) => {
@@ -1200,6 +1218,7 @@ export default function PlatformConsoleLive() {
               handleLeadStatusChange={handleLeadStatusChange}
               handleWhatsAppLeadChat={handleWhatsAppLeadChat}
               handleOpenConvertModal={handleOpenConvertModal}
+              handleDeleteLead={handleDeleteLead}
             />
           )}
 

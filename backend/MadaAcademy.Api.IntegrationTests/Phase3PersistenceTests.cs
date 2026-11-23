@@ -138,6 +138,37 @@ public sealed class Phase3PersistenceTests
     }
 
     [Fact]
+    public async Task PlatformDemoLead_DeleteRequiresRejectedStatusAndReason()
+    {
+        using var factory = new TestApiFactory(useInMemory: true);
+        var platformAdmin = await TestData.CreateAccountAsync(factory, "R00_PLATFORM_ADMIN");
+        using var anonClient = factory.CreateClient();
+        var createResponse = await anonClient.PostAsJsonAsync("/api/v1/public/demo-requests", new
+        {
+            name = "اختبار حذف Lead",
+            email = "delete-lead@example.test",
+            phone = "+201000000001",
+            academyName = "أكاديمية اختبار الحذف",
+            branchCount = "1",
+            operationalNeed = "اختبار دورة الحالة والحذف"
+        });
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        using var created = await JsonDocument.ParseAsync(await createResponse.Content.ReadAsStreamAsync());
+        var leadId = created.RootElement.GetProperty("data").GetProperty("id").GetString()!;
+
+        using var adminClient = factory.CreateClient();
+        TestData.Authenticate(adminClient, await TestData.LoginAsync(adminClient, platformAdmin));
+        Assert.Equal(HttpStatusCode.Conflict, (await adminClient.DeleteAsJsonAsync($"/api/v1/platform/demo-leads/{leadId}", new { reason = "اختبار" })).StatusCode);
+
+        Assert.Equal(HttpStatusCode.OK, (await adminClient.PatchAsJsonAsync($"/api/v1/platform/demo-leads/{leadId}/status", new { status = "REJECTED" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await adminClient.DeleteAsJsonAsync($"/api/v1/platform/demo-leads/{leadId}", new { reason = "بيانات اختبارية" })).StatusCode);
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MadaDbContext>();
+        Assert.DoesNotContain(db.Leads, lead => lead.Id == Guid.Parse(leadId));
+        Assert.Contains(db.AuditEvents, audit => audit.Action == "PLATFORM_DEMO_LEAD_DELETED" && audit.TargetId == leadId);
+    }
+
+    [Fact]
     public async Task PlatformPaymentsTrialAndOwnerReset_PersistAcrossRequests()
     {
         using var factory = new TestApiFactory(useInMemory: true);
@@ -658,4 +689,3 @@ public sealed class Phase3PersistenceTests
         Assert.Equal(200000, reportDoc!.RootElement.GetProperty("data").GetProperty("totalCollectedPiastres").GetInt64());
     }
 }
-

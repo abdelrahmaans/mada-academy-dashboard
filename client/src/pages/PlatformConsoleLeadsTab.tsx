@@ -1,5 +1,5 @@
 import React from "react";
-import { Building2, MessageCircle, Search, Sparkles } from "lucide-react";
+import { Building2, MessageCircle, Search, Sparkles, Trash2 } from "lucide-react";
 import type { PlatformDemoLead } from "@/lib/apiClient";
 import { fmtDate } from "./PlatformConsoleTypes";
 
@@ -7,11 +7,12 @@ export interface PlatformConsoleLeadsTabProps {
   filteredLeads: PlatformDemoLead[];
   leadSearch: string;
   setLeadSearch: (val: string) => void;
-  leadFilter: "ALL" | "NEW" | "CONTACTED" | "DEMO_SCHEDULED" | "CONVERTED";
-  setLeadFilter: (val: "ALL" | "NEW" | "CONTACTED" | "DEMO_SCHEDULED" | "CONVERTED") => void;
+  leadFilter: "ALL" | "NEW" | "CONTACTED" | "DEMO_SCHEDULED" | "CONVERTED" | "REJECTED";
+  setLeadFilter: (val: "ALL" | "NEW" | "CONTACTED" | "DEMO_SCHEDULED" | "CONVERTED" | "REJECTED") => void;
   handleLeadStatusChange: (id: string, status: PlatformDemoLead["status"]) => void;
   handleWhatsAppLeadChat: (lead: PlatformDemoLead) => void;
   handleOpenConvertModal: (lead: PlatformDemoLead) => void;
+  handleDeleteLead: (lead: PlatformDemoLead) => void;
 }
 
 export function PlatformConsoleLeadsTab({
@@ -23,6 +24,7 @@ export function PlatformConsoleLeadsTab({
   handleLeadStatusChange,
   handleWhatsAppLeadChat,
   handleOpenConvertModal,
+  handleDeleteLead,
 }: PlatformConsoleLeadsTabProps) {
   return (
     <section className="pc-live-card">
@@ -69,6 +71,7 @@ export function PlatformConsoleLeadsTab({
             { id: "CONTACTED", label: "تم التواصل" },
             { id: "DEMO_SCHEDULED", label: "موعد ديمو 📅" },
             { id: "CONVERTED", label: "تم التحويل لعميل ✅" },
+            { id: "REJECTED", label: "مرفوض" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -235,6 +238,27 @@ export function PlatformConsoleLeadsTab({
                       <Building2 size={14} />
                       {lead.status === "CONVERTED" ? "مُفعّل كعميل ✅" : "تحويل إلى أكاديمية 🚀"}
                     </button>
+                    {lead.status === "REJECTED" && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteLead(lead)}
+                        style={{
+                          color: "#b91c1c",
+                          border: "1px solid #fecaca",
+                          background: "#fef2f2",
+                          padding: "6px 10px",
+                          borderRadius: "8px",
+                          fontWeight: 700,
+                          fontSize: "12px",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                        title="حذف نهائي بعد الرفض مع توثيق السبب"
+                      >
+                        <Trash2 size={14} /> حذف
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

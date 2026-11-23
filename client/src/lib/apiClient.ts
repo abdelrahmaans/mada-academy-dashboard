@@ -1416,6 +1416,11 @@ export const apiClient = {
       method: "PATCH",
       body: JSON.stringify({ status }),
     }),
+  deletePlatformDemoLead: (id: string, reason: string) =>
+    request<void>(`/platform/demo-leads/${id}`, {
+      method: "DELETE",
+      body: JSON.stringify({ reason }),
+    }),
   convertPlatformDemoLead: (
     id: string,
     input: {
