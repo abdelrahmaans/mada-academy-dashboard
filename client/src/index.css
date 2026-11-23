@@ -1681,23 +1681,34 @@ body.lang-en .app-shell {
   display: grid;
   place-items: center;
   padding: 20px;
-  background: rgb(15 23 42 / 45%);
+  background: rgb(15 23 42 / 60%);
   backdrop-filter: blur(4px);
   animation: fade-in 0.16s ease-out;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-.student-dialog {
-  width: min(440px, 100%);
+.dialog,
+.dialog-card,
+.modal-card,
+.student-dialog,
+.dialog-backdrop [role="dialog"],
+.dialog-overlay [role="dialog"],
+.modal-backdrop [role="dialog"] {
+  width: min(540px, 100%);
   max-height: calc(100vh - 40px);
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 23px;
-  background: #fff;
-  border: 1px solid rgb(255 255 255 / 75%);
-  border-radius: 20px;
-  box-shadow: 0 24px 70px rgb(15 23 42 / 23%);
+  padding: 24px;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 20px !important;
+  box-shadow: 0 25px 65px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(15, 23, 42, 0.05) !important;
   animation: dialog-in 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.student-dialog {
+  width: min(440px, 100%);
+  padding: 23px;
 }
 .dialog-top {
   display: flex;

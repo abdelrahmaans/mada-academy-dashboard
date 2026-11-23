@@ -167,63 +167,91 @@ export default function HomeLive({ me }: { me: AuthMe }) {
         onClick={() => setSelectedSessionForDetails(null)}
       >
         <div
-          className="dialog"
+          className="dialog-card session-details-modal"
           role="dialog"
           aria-modal="true"
           onClick={(e) => e.stopPropagation()}
-          style={{ maxWidth: "500px", width: "100%", padding: "24px", direction: "rtl" }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-            <div>
-              <span style={{ fontSize: "12px", color: "#0d9488", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "5px" }}>
+          {/* Header */}
+          <div className="session-modal-header">
+            <div className="session-modal-header-info">
+              <span className="session-modal-badge">
                 <CalendarDays size={14} /> تفاصيل الجلسة التدريبية
               </span>
-              <h3 style={{ margin: "4px 0 0", fontSize: "18px", fontWeight: 800 }}>
+              <h3 className="session-modal-title">
                 الجلسة رقم {selectedSessionForDetails.sessionNumber}
               </h3>
             </div>
             <button
               type="button"
-              className="button button-secondary"
+              className="session-modal-close"
               onClick={() => setSelectedSessionForDetails(null)}
-              style={{ padding: "6px" }}
               aria-label="إغلاق"
             >
-              <X size={16} />
+              <X size={18} />
             </button>
           </div>
 
-          <div style={{ display: "grid", gap: "12px", background: "#f8fafc", padding: "16px", borderRadius: "12px", marginBottom: "20px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
-              <span style={{ color: "#64748b" }}>توقيت الانعقاد:</span>
-              <strong style={{ color: "#0f172a" }}>{formatSessionTime(selectedSessionForDetails.startAt)}</strong>
+          {/* Grid of Solid Info Cards */}
+          <div className="session-modal-grid">
+            <div className="session-modal-item">
+              <span className="session-modal-item-label">
+                <Clock size={13} /> توقيت الانعقاد:
+              </span>
+              <strong className="session-modal-item-value">
+                {formatSessionTime(selectedSessionForDetails.startAt)}
+              </strong>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
-              <span style={{ color: "#64748b" }}>حالة الجلسة:</span>
-              <span className="r02-live-session-status">
+
+            <div className="session-modal-item">
+              <span className="session-modal-item-label">
+                <Activity size={13} /> حالة الجلسة:
+              </span>
+              <span className="session-modal-status-badge">
+                <span className="session-status-dot" />
                 {sessionStatusLabel(selectedSessionForDetails.status)}
               </span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px" }}>
-              <span style={{ color: "#64748b" }}>الفرع المخصص:</span>
-              <strong style={{ color: "#0f172a" }}>{branchName}</strong>
+
+            <div className="session-modal-item">
+              <span className="session-modal-item-label">
+                <MapPin size={13} /> الفرع المخصص:
+              </span>
+              <strong className="session-modal-item-value">{branchName}</strong>
+            </div>
+
+            <div className="session-modal-item">
+              <span className="session-modal-item-label">
+                <BookOpen size={13} /> طبيعة التدريب:
+              </span>
+              <strong className="session-modal-item-value">جلسة حضورية تفاعلية</strong>
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+          {/* Solid Helper Callout */}
+          <div className="session-modal-callout">
+            <CalendarDays size={16} />
+            <p>
+              هذه الجلسة مسجلة في جدول الحصص الأكاديمي للفرع. يمكنك الانتقال المباشر لاستعراض قائمة الحضور ورصد درجات التقييم.
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="session-modal-actions">
             <button
               type="button"
-              className="button button-primary"
+              className="session-modal-primary-btn"
               onClick={() => {
                 setSelectedSessionForDetails(null);
                 navigate("/schedule");
               }}
             >
-              <CalendarDays size={15} /> الانتقال إلى جدول الحصص
+              <CalendarDays size={16} />
+              <span>الانتقال إلى جدول الحصص</span>
             </button>
             <button
               type="button"
-              className="button button-secondary"
+              className="session-modal-secondary-btn"
               onClick={() => setSelectedSessionForDetails(null)}
             >
               إغلاق

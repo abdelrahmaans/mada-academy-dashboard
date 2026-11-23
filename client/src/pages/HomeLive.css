@@ -15,3 +15,197 @@
   .r02-home-live-shell .mobile-scrim,
   .reports-live-shell .mobile-scrim { position: fixed; inset: 0; z-index: 29; background: rgb(15 23 42 / 45%); border: 0; }
 }
+
+/* ========================================================
+   Session Details Solid Modal (مودال تفاصيل الجلسة الصلب والمميز)
+   ======================================================== */
+.session-details-modal {
+  width: 100% !important;
+  max-width: 500px !important;
+  background: #ffffff !important;
+  border-radius: 20px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 25px 65px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(15, 23, 42, 0.05) !important;
+  padding: 24px !important;
+  direction: rtl;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 18px !important;
+}
+
+.session-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.session-modal-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.session-modal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0fdfa;
+  color: #0f766e;
+  border: 1px solid #ccfbf1;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  width: fit-content;
+}
+
+.session-modal-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.session-modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.session-modal-close:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+
+.session-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 480px) {
+  .session-modal-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.session-modal-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.session-modal-item-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.session-modal-item-value {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.session-modal-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 8px;
+  width: fit-content;
+}
+
+.session-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+}
+
+.session-modal-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: #0f766e;
+}
+
+.session-modal-callout p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  font-weight: 600;
+}
+
+.session-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.session-modal-primary-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  background: #0f766e !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  border-radius: 10px !important;
+  padding: 9px 18px !important;
+  border: none !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.25) !important;
+  transition: all 0.15s ease !important;
+}
+
+.session-modal-primary-btn:hover {
+  background: #0d655f !important;
+  transform: translateY(-1px) !important;
+}
+
+.session-modal-secondary-btn {
+  background: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+  border-radius: 10px !important;
+  padding: 9px 18px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.session-modal-secondary-btn:hover {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
