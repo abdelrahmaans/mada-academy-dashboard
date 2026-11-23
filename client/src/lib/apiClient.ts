@@ -807,10 +807,11 @@ const isLocalHost = typeof window !== "undefined" && (
   window.location.port === "3000" ||
   window.location.port === "5173"
 );
-const API_BASE = (
+const REMOTE_API_BASE = (import.meta.env.VITE_API_URL || "https://academy-dashboard.runasp.net/api/v1").replace(/\/$/, "");
+let API_BASE = (
   isLocalHost
     ? "http://localhost:5000/api/v1"
-    : (import.meta.env.VITE_API_URL || "https://academy-dashboard.runasp.net/api/v1")
+    : REMOTE_API_BASE
 ).replace(/\/$/, "");
 const ACCESS_KEY = "mada.accessToken";
 const REFRESH_KEY = "mada.refreshToken";
@@ -856,11 +857,31 @@ export function clearTokens() {
 export async function refreshAccessToken(): Promise<boolean> {
   const refreshToken = safeStorage.getItem(REFRESH_KEY);
   if (!refreshToken) return false;
-  const response = await fetch(`${API_BASE}/auth/refresh`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ refreshToken }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/auth/refresh`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
+  } catch {
+    if (API_BASE !== REMOTE_API_BASE) {
+      try {
+        response = await fetch(`${REMOTE_API_BASE}/auth/refresh`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ refreshToken }),
+        });
+        API_BASE = REMOTE_API_BASE;
+      } catch {
+        clearTokens();
+        return false;
+      }
+    } else {
+      clearTokens();
+      return false;
+    }
+  }
   if (!response.ok) {
     clearTokens();
     return false;
@@ -880,13 +901,28 @@ async function request<T>(path: string, init: RequestInit = {}, retry = true): P
   try {
     response = await fetch(`${API_BASE}${path}`, { ...init, headers });
   } catch (cause) {
-    if (retry && API_BASE.startsWith("https://") && (method === "GET" || path === "/auth/login")) {
-      await new Promise(resolve => setTimeout(resolve, 1200));
-      return request<T>(path, init, false);
+    if (API_BASE !== REMOTE_API_BASE) {
+      try {
+        response = await fetch(`${REMOTE_API_BASE}${path}`, { ...init, headers });
+        API_BASE = REMOTE_API_BASE;
+      } catch (remoteCause) {
+        if (retry && (method === "GET" || path === "/auth/login")) {
+          await new Promise(resolve => setTimeout(resolve, 1200));
+          return request<T>(path, init, false);
+        }
+        const error = new ApiRequestError(remoteCause instanceof Error ? remoteCause.message : "Network request failed", 0);
+        emitApiError({ error, path, method });
+        throw error;
+      }
+    } else {
+      if (retry && API_BASE.startsWith("https://") && (method === "GET" || path === "/auth/login")) {
+        await new Promise(resolve => setTimeout(resolve, 1200));
+        return request<T>(path, init, false);
+      }
+      const error = new ApiRequestError(cause instanceof Error ? cause.message : "Network request failed", 0);
+      emitApiError({ error, path, method });
+      throw error;
     }
-    const error = new ApiRequestError(cause instanceof Error ? cause.message : "Network request failed", 0);
-    emitApiError({ error, path, method });
-    throw error;
   }
   if (response.status === 401 && retry && await refreshAccessToken()) return request<T>(path, init, false);
   if (!response.ok) {
@@ -988,6 +1024,27 @@ export interface CertificateVerification {
   issuedAt: string;
 }
 
+function safeBtoa(str: string): string {
+  try {
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p1) => String.fromCharCode(parseInt(p1, 16))));
+  } catch {
+    return btoa(str.replace(/[^\x00-\x7F]/g, ""));
+  }
+}
+
+function safeAtob(str: string): string {
+  try {
+    const binary = atob(str);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return new TextDecoder().decode(bytes);
+  } catch {
+    return atob(str);
+  }
+}
+
 export const apiClient = {
   baseUrl: API_BASE,
   getToken: () => accessToken,
@@ -1013,8 +1070,8 @@ export const apiClient = {
           password === "Mada@2026" ||
           password === "Mada#2026";
         if (isMatch) {
-          const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-          const payload = btoa(
+          const header = safeBtoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+          const payload = safeBtoa(
             JSON.stringify({
               sub: storedAccount.id,
               phone: storedAccount.phone,
@@ -1099,7 +1156,7 @@ export const apiClient = {
         try {
           const parts = accessToken.split(".");
           if (parts.length === 3) {
-            const data = JSON.parse(atob(parts[1]));
+            const data = JSON.parse(safeAtob(parts[1]));
             if (data.tenantId && data.role === "R01_ACADEMY_OWNER") {
               const branches = getStoredBranches(data.tenantId);
               const branch = branches[0] || {
@@ -2148,6 +2205,34 @@ const EVALUATION_REVIEW_STORAGE_KEY = "mada_evaluation_reviews_v1";
 export const evaluationReviewStorage = {
   getReviews: (tenantId?: string, branchId?: string): EvaluationReviewRecord[] => {
     try {
+      if (branchId === "ALL" && tenantId) {
+        const prefix = `mada_evaluations_${tenantId}_`;
+        const all: EvaluationReviewRecord[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith(prefix)) {
+            const rawItem = localStorage.getItem(k);
+            if (rawItem) {
+              try {
+                const parsed = JSON.parse(rawItem);
+                if (Array.isArray(parsed)) all.push(...parsed);
+              } catch {
+                // ignore
+              }
+            }
+          }
+        }
+        const seen = new Set<string>();
+        return all.filter(item => {
+          if (!item || !item.id || seen.has(item.id)) return false;
+          seen.add(item.id);
+          if (tenantId && item.tenantId && item.tenantId !== tenantId) return false;
+          if (item.sessionId === "ses-demo-101" || item.sessionId === "ses-demo-102") return false;
+          if (item.id === "EVR-2026-001" || item.id === "EVR-2026-002") return false;
+          return true;
+        });
+      }
+
       const key = tenantId ? `mada_evaluations_${tenantId}_${branchId || "all"}` : EVALUATION_REVIEW_STORAGE_KEY;
       const raw = localStorage.getItem(key);
       if (!raw) return [];

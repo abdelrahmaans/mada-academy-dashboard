@@ -58,6 +58,7 @@ export const ROLE_DEFINITIONS: Record<RoleCode, RoleDefinition> = {
     backPath: "/executive-dashboard",
     navigation: [
       { path: "/executive-dashboard", label: "لوحة القيادة", purpose: "academy rollup and branch comparison", permission: "academy.read" },
+      { path: "/approvals", label: "قائمة الموافقات والطلبات", purpose: "review queue and branch approvals", permission: "academy.read" },
       { path: "/academy-owner/pnl-retention", label: "الأرباح والتحليلات", purpose: "multi-unit pnl and student retention analytics", permission: "reports.read" },
       { path: "/academy/branches", label: "إدارة الفروع", purpose: "branch lifecycle and manager delegation", anyOfPermissions: ["branch.read", "branch.create"] },
       { path: "/academy/roles", label: "فريق العمل والصلاحيات", purpose: "members, roles, permissions", anyOfPermissions: ["roles.read", "roles.manage"] },

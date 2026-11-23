@@ -125,14 +125,16 @@ export type Copy = (typeof messages)[Locale];
 
 export function useI18n() {
   const [locale, setLocale] = useState<Locale>(() => {
-    if (typeof window === "undefined") return "en";
-    return window.localStorage.getItem("mada-locale") === "ar" ? "ar" : "en";
+    if (typeof window === "undefined") return "ar";
+    return window.localStorage.getItem("mada-locale") === "en" ? "en" : "ar";
   });
   const copy = useMemo(() => messages[locale], [locale]);
   const toggleLocale = useCallback(() => setLocale((current) => (current === "en" ? "ar" : "en")), []);
   useEffect(() => {
     document.documentElement.lang = locale;
     document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
+    document.body.classList.toggle("lang-ar", locale === "ar");
+    document.body.classList.toggle("lang-en", locale === "en");
     document.title = locale === "ar" ? "مدى — تشغيل الأكاديميات بوضوح" : "Mada — Academy operations, made clear";
     document.querySelector('meta[name="description"]')?.setAttribute("content", locale === "ar" ? "مدى هو نظام تشغيل واضح لإدارة الأكاديميات وفروعها وفرقها." : "Mada is a clear operating system for academies, branches, and teams.");
     window.localStorage.setItem("mada-locale", locale);

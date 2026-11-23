@@ -104,25 +104,12 @@ const ROLE_AVATAR_ICONS: Record<RoleCode, ComponentType<LucideProps>> = {
 function BrandLockup() {
   return (
     <div className="brand-lockup" aria-label="مدى">
-      <span className="brand-symbol" aria-hidden="true">
-        <svg viewBox="0 0 40 40" fill="none">
-          <path
-            d="M4 12.5 12.5 8l8.2 4.5v9.4l-8.2 4.6L4 21.9v-9.4Z"
-            fill="currentColor"
-            opacity=".98"
-          />
-          <path
-            d="m19.3 12.5 8.2-4.5 8.5 4.5v9.4l-8.5 4.6-8.2-4.6v-9.4Z"
-            fill="currentColor"
-            opacity=".72"
-          />
-          <path
-            d="m11.5 24.1 8.3-4.6 8.2 4.6v8.2l-8.2 4.4-8.3-4.4v-8.2Z"
-            fill="currentColor"
-            opacity=".48"
-          />
-        </svg>
-      </span>
+      <img
+        src="/mada-logo.svg"
+        alt="مدى"
+        className="brand-symbol-img"
+        style={{ width: 34, height: 34, borderRadius: 10, objectFit: "contain", flexShrink: 0 }}
+      />
       <span className="brand-word">مدى</span>
     </div>
   );
@@ -162,7 +149,7 @@ export default function RoleSidebar({
     [effectiveRoleCode, me?.permissions]
   );
   const AvatarIcon = ROLE_AVATAR_ICONS[effectiveRoleCode] ?? GraduationCap;
-  const { lang, t } = useLanguage();
+  const { lang, dir, t } = useLanguage();
 
   const resolvedTenantName = me?.academy?.name ?? tenantName ?? (lang === "en" ? "Mada Academy" : "أكاديمية مدى");
   const resolvedRoleLabel = t(me?.roleLabel ?? roleLabel ?? roleDef.label);
@@ -306,7 +293,7 @@ export default function RoleSidebar({
   return (
     <aside
       className={`sidebar ${mobileOpen ? "sidebar-open" : ""}`}
-      dir="rtl"
+      dir={dir}
       aria-label={`شريط تنقل ${resolvedRoleLabel}`}
     >
       <div className="sidebar-top">

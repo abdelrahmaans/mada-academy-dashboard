@@ -49,6 +49,13 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   },
 ];
 
+function normalizeBranchLabel(name?: string | null, fallback?: string): string {
+  if (!name) return fallback || "الفرع الرئيسي";
+  if (name === "Main Branch") return "الفرع الرئيسي";
+  if (name === "Heliopolis Branch") return "فرع مصر الجديدة";
+  return name;
+}
+
 export function approvalFromApi(record: ApprovalRequestRecord): ApprovalItem {
   const isSubstitution = record.requestType === "INSTRUCTOR_SUBSTITUTION";
   const typeName =
@@ -82,7 +89,7 @@ export function approvalFromApi(record: ApprovalRequestRecord): ApprovalItem {
       (record.courseName
         ? `${record.courseName} · جلسة ${record.sessionNumber ?? ""}`
         : "طلب تشغيلي مسجل على الخادم"),
-    branch: record.branchName ?? "الفرع الرئيسي",
+    branch: normalizeBranchLabel(record.branchName, "الفرع الرئيسي"),
     branchId: record.branchId ?? undefined,
     tenantId: record.tenantId,
     requestedBy: record.instructorName ?? record.submittedByRole,
@@ -169,7 +176,7 @@ export function expenseFromApi(record: FinanceExpense): ApprovalItem {
     kind: "expense",
     title: "مصروف يحتاج اعتمادًا",
     summary: record.description,
-    branch: record.branchName ?? "الفرع الرئيسي",
+    branch: normalizeBranchLabel(record.branchName, "الفرع الرئيسي"),
     branchId: record.branchId,
     tenantId: record.tenantId,
     requestedBy: "مقدم الطلب",
@@ -213,7 +220,7 @@ export function freezeFromStorage(record: SubscriptionFreezeRequest, fallbackBra
     kind: "freeze",
     title: `طلب تجميد اشتراك · ${record.studentName}`,
     summary: `${record.reasonText} (${reasonAr})`,
-    branch: record.branchName || fallbackBranchName || "الفرع الرئيسي",
+    branch: normalizeBranchLabel(record.branchName, fallbackBranchName || "الفرع الرئيسي"),
     branchId: record.branchId,
     tenantId: record.tenantId,
     requestedBy: `${record.submittedByName} · ${
@@ -249,7 +256,7 @@ export function evaluationReviewFromApi(record: EvaluationReviewRecord, fallback
     kind: "evaluation",
     title: `طلب مراجعة تقييم · ${record.studentName}`,
     summary: record.notes || `تقييم جلسة ${record.courseName} (درجة: ${record.score ?? "غير محدد"})`,
-    branch: record.branchName || fallbackBranchName || "الفرع الرئيسي",
+    branch: normalizeBranchLabel(record.branchName, fallbackBranchName || "الفرع الرئيسي"),
     branchId: record.branchId,
     tenantId: record.tenantId,
     requestedBy: record.instructorName ? `${record.instructorName} · المدرب` : "ولي الأمر / المدرب",

@@ -104,7 +104,7 @@ export default function Approvals() {
   const [loading, setLoading] = useState(() => apiClient.hasSession());
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [requests, setRequests] = useState<ApprovalItem[]>(() => {
-    return approvalsStorage.load(branch, tenantId);
+    return approvalsStorage.load(selectedBranchId === "ALL" ? "ALL" : activeBranchName, tenantId);
   });
   const [loadError, setLoadError] = useState<string | null>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -131,7 +131,7 @@ export default function Approvals() {
       // ignore
     }
 
-    const localRequests = approvalsStorage.load(activeBranchName, tenantId);
+    const localRequests = approvalsStorage.load(selectedBranchId === "ALL" ? "ALL" : activeBranchName, tenantId);
     if (!apiClient.hasSession()) {
       setLiveMode(false);
       setLoading(false);
@@ -176,7 +176,12 @@ export default function Approvals() {
         ? evaluationResult.value.items.map(item => evaluationReviewFromApi(item, activeBranchName))
         : [];
 
-      const serverItems = [...supported.map(approvalFromApi), ...corrections, ...expenses, ...freezes, ...evaluations];
+      const rawServerItems = [...supported.map(approvalFromApi), ...corrections, ...expenses, ...freezes, ...evaluations];
+      const serverItems = rawServerItems.filter(item => {
+        if (item.id === "EVR-2026-001" || item.id === "EVR-2026-002") return false;
+        if (item.kind === "evaluation" && (item.student === "آدم شريف حسن" || item.student === "ليلى أحمد محمود")) return false;
+        return true;
+      });
       const serverIds = new Set(serverItems.map((i) => i.id));
       const uniqueLocal = localRequests.filter((i) => !serverIds.has(i.id));
 
@@ -192,9 +197,9 @@ export default function Approvals() {
     });
   }, [me?.role, reloadKey, activeBranchName, selectedBranchId, branch, tenantId, me?.branchId]);
 
-  const handleCreateRequest = (data: Parameters<typeof approvalsStorage.createRequest>[1]) => {
-    const targetBranch = selectedBranchId !== "ALL" ? activeBranchName : branch;
-    const targetBranchId = (selectedBranchId !== "ALL" ? selectedBranchId : me?.branchId) || undefined;
+  const handleCreateRequest = (data: Parameters<typeof approvalsStorage.createRequest>[1] & { branchId?: string; branchName?: string; evaluationScore?: number; evaluationNotes?: string }) => {
+    const targetBranchId = data.branchId || (selectedBranchId !== "ALL" ? selectedBranchId : me?.branchId) || undefined;
+    const targetBranch = data.branchName || (targetBranchId ? userBranches.find(b => b.id === targetBranchId)?.name : undefined) || (selectedBranchId !== "ALL" ? activeBranchName : branch);
     const created = approvalsStorage.createRequest(
       targetBranch,
       {
@@ -213,7 +218,7 @@ export default function Approvals() {
   const branchRequests = useMemo(() => {
     return requests.filter((item) => {
       // 1. Must belong to the current academy / tenant
-      if (item.tenantId && item.tenantId !== tenantId) return false;
+      if (item.tenantId && tenantId && item.tenantId !== tenantId) return false;
 
       // 2. If Academy Owner selected "كل الفروع"
       if (selectedBranchId === "ALL" && (isOwner || !me?.branchId)) {
@@ -226,14 +231,17 @@ export default function Approvals() {
         return item.branchId === targetBranchId;
       }
 
-      // 4. Match by branch name
+      // 4. Match by branch name (handling English/Arabic aliases)
       const targetBranchName = selectedBranchId !== "ALL" ? activeBranchName : branch;
-      return (
-        !item.branch ||
-        item.branch === targetBranchName ||
-        item.branch === "كل الفروع" ||
-        item.branch === "الفرع المصرح"
-      );
+      const matchDirect = item.branch === targetBranchName;
+      const matchMainAlias =
+        (targetBranchName === "الفرع الرئيسي" && (item.branch === "Main Branch" || item.branch === "الفرع الرئيسي")) ||
+        (targetBranchName === "Main Branch" && (item.branch === "Main Branch" || item.branch === "الفرع الرئيسي"));
+      const matchHelioAlias =
+        (targetBranchName === "فرع مصر الجديدة" && (item.branch === "Heliopolis Branch" || item.branch === "فرع مصر الجديدة")) ||
+        (targetBranchName === "Heliopolis Branch" && (item.branch === "Heliopolis Branch" || item.branch === "فرع مصر الجديدة"));
+
+      return matchDirect || matchMainAlias || matchHelioAlias;
     });
   }, [requests, tenantId, selectedBranchId, isOwner, me?.branchId, activeBranchName, branch]);
   const visibleRequests = useMemo(() => {
@@ -977,6 +985,7 @@ export default function Approvals() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         branchName={selectedBranchId !== "ALL" ? activeBranchName : branch}
+        branches={userBranches}
         defaultRequestedBy={me?.user?.displayName || "السكرتارية / المحاسبة"}
         onSubmit={handleCreateRequest}
       />

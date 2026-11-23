@@ -18,6 +18,7 @@ import {
   type RoleScopeLevel,
 } from "@/contexts/RoleScopeContext";
 import { getRoleDefinition } from "@/lib/roleNavigation";
+import { useLanguage } from "@/contexts/LanguageContext";
 import RoleSidebar from "./RoleSidebar";
 import "./RoleDashboardShell.css";
 import "./RoleFoundation.css";
@@ -72,6 +73,7 @@ export default function RoleDashboardShell({
   const [internalMobileNavOpen, setInternalMobileNavOpen] = useState(false);
   const isMobileNavOpen = mobileOpen !== undefined ? mobileOpen : internalMobileNavOpen;
   const roleDefinition = getRoleDefinition(roleCode);
+  const { dir } = useLanguage();
 
   const { me, reload } = useAuth();
   const [mustChangePassword, setMustChangePassword] = useState(() => {
@@ -183,7 +185,7 @@ export default function RoleDashboardShell({
         <div
           {...props}
           className={resolvedClasses}
-          dir="rtl"
+          dir={dir}
           aria-label={`مساحة ${roleLabel} — ${scopeLabel}`}
           data-demo={demo ? "true" : "false"}
           data-role-code={roleCode}
