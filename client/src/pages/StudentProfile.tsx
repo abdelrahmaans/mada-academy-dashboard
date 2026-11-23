@@ -60,8 +60,11 @@ import {
   StudentCertificatePrintModal,
   type CertificateData,
 } from "@/components/certificates/StudentCertificatePrintModal";
-import RoleSidebar from "@/components/RoleSidebar";
-import FloatingLanguageToggle from "@/components/FloatingLanguageToggle";
+import RoleDashboardShell from "@/components/RoleDashboardShell";
+import RoleDateBadge from "@/components/RoleDateBadge";
+import { getRoleDefinition } from "@/lib/roleNavigation";
+import type { RoleCode } from "@/contexts/RoleScopeContext";
+import { Menu } from "lucide-react";
 import "./StudentProfile.css";
 
 type TabKey = "OVERVIEW" | "FINANCE" | "COMPETITIONS" | "SKILLS" | "FAMILY";
@@ -70,6 +73,12 @@ export default function StudentProfile() {
   const params = useParams<{ id: string }>();
   const [location, navigate] = useLocation();
   const { me } = useAuth();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  const userRoleCode = me?.role ? (me.role.replace(/_.*$/, "") as RoleCode) : undefined;
+  const activeRoleCode: RoleCode = userRoleCode || "R02";
+  const roleDef = getRoleDefinition(activeRoleCode);
+  const branchContext = me?.branchId ? me.branches?.find(b => b.id === me.branchId)?.name : undefined;
 
   const studentId = params?.id || "";
 
@@ -420,23 +429,41 @@ export default function StudentProfile() {
 
   if (loading && !student) {
     return (
-      <div className="layout-shell">
-        <RoleSidebar />
-        <main className="content-area" dir="rtl">
-          <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
+      <RoleDashboardShell
+        className="app-shell student-profile-shell"
+        roleCode={activeRoleCode}
+        roleLabel={me?.roleLabel || roleDef.label}
+        scopeLevel={roleDef.scopeLevel}
+        scopeLabel={roleDef.defaultScopeLabel}
+        tenantName={me?.academy?.name}
+        branchName={branchContext}
+        mobileOpen={mobileNavOpen}
+        onCloseMobile={() => setMobileNavOpen(false)}
+      >
+        <main className="main-panel">
+          <div style={{ padding: "60px 40px", textAlign: "center", color: "#64748b" }}>
             جارٍ تحميل ملف الطالب الموحد…
           </div>
         </main>
-      </div>
+      </RoleDashboardShell>
     );
   }
 
   if (!student) {
     return (
-      <div className="layout-shell">
-        <RoleSidebar />
-        <main className="content-area" dir="rtl">
-          <div style={{ padding: "40px", textAlign: "center" }}>
+      <RoleDashboardShell
+        className="app-shell student-profile-shell"
+        roleCode={activeRoleCode}
+        roleLabel={me?.roleLabel || roleDef.label}
+        scopeLevel={roleDef.scopeLevel}
+        scopeLabel={roleDef.defaultScopeLabel}
+        tenantName={me?.academy?.name}
+        branchName={branchContext}
+        mobileOpen={mobileNavOpen}
+        onCloseMobile={() => setMobileNavOpen(false)}
+      >
+        <main className="main-panel">
+          <div style={{ padding: "60px 40px", textAlign: "center" }}>
             <h2>لم يتم العثور على الطالب</h2>
             <p>قد يكون الطالب غير موجود أو لا يقع ضمن نطاق صلاحيات حسابك.</p>
             <button className="primary-action-btn btn-teal-theme" onClick={() => navigate("/students")}>
@@ -444,16 +471,58 @@ export default function StudentProfile() {
             </button>
           </div>
         </main>
-      </div>
+      </RoleDashboardShell>
     );
   }
 
   return (
-    <div className="layout-shell">
-      <RoleSidebar />
+    <RoleDashboardShell
+      className="app-shell student-profile-shell"
+      roleCode={activeRoleCode}
+      roleLabel={me?.roleLabel || roleDef.label}
+      scopeLevel={roleDef.scopeLevel}
+      scopeLabel={roleDef.defaultScopeLabel}
+      tenantName={me?.academy?.name}
+      branchName={branchContext}
+      mobileOpen={mobileNavOpen}
+      onCloseMobile={() => setMobileNavOpen(false)}
+    >
+      <main className="main-panel">
+        <header className="topbar">
+          <div className="topbar-right">
+            <button
+              className="icon-button mobile-menu-button"
+              aria-label="فتح القائمة"
+              onClick={() => setMobileNavOpen(true)}
+            >
+              <Menu size={21} />
+            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontWeight: 800, fontSize: "15px", color: "#0f172a" }}>
+                الملف الشامل للطالب · {student.name}
+              </span>
+              <span
+                style={{
+                  fontSize: "12px",
+                  color: "#0d9488",
+                  background: "#f0fdfa",
+                  padding: "2px 8px",
+                  borderRadius: "6px",
+                  border: "1px solid #ccfbf1",
+                  fontWeight: 700,
+                }}
+              >
+                {student.id.includes("-") ? `طالب #${student.id.slice(-4).toUpperCase()}` : student.id}
+              </span>
+            </div>
+          </div>
+          <div className="topbar-left">
+            <RoleDateBadge />
+          </div>
+        </header>
 
-      <main className="content-area" dir="rtl">
-        <div className="student-profile-page">
+        <div className="workspace student-profile-workspace">
+          <div className="student-profile-page">
           {/* Top Navigation & Breadcrumbs */}
           <div className="student-profile-nav">
             <div className="student-profile-breadcrumbs">
@@ -1414,9 +1483,8 @@ export default function StudentProfile() {
             </div>
           </div>
         )}
+        </div>
       </main>
-
-      <FloatingLanguageToggle />
-    </div>
+    </RoleDashboardShell>
   );
 }
