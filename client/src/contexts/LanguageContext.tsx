@@ -100,8 +100,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     setLangState(newLang);
     try {
       localStorage.setItem("mada_lang", newLang);
+      if (typeof window !== "undefined" && newLang !== lang) {
+        window.location.reload();
+      }
     } catch {}
-  }, []);
+  }, [lang]);
 
   const toggleLang = useCallback(() => {
     setLang(lang === "ar" ? "en" : "ar");
@@ -111,11 +114,15 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     if (typeof document !== "undefined") {
       document.documentElement.lang = lang;
       document.documentElement.dir = dir;
+      document.body.lang = lang;
+      document.body.dir = dir;
       document.body.classList.toggle("lang-ar", lang === "ar");
       document.body.classList.toggle("lang-en", lang === "en");
 
       const root = document.getElementById("root");
       if (root) {
+        root.setAttribute("lang", lang);
+        root.setAttribute("dir", dir);
         translateNode(root, lang);
       }
     }
