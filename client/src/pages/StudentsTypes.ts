@@ -66,9 +66,23 @@ export const branches = ["كل الفروع", "مدينة نصر", "المعاد
 export const PAGE_SIZE = 6;
 
 export const LIVE_BRANCH_LABELS: Record<string, string> = {
-  "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb": "مدينة نصر",
-  "cccccccc-cccc-cccc-cccc-cccccccccccc": "مصر الجديدة",
+  "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb": "الفرع الرئيسي",
+  "cccccccc-cccc-cccc-cccc-cccccccccccc": "فرع مصر الجديدة",
 };
+
+export function resolveBranchLabel(branchId?: string, customMap?: Record<string, string>): string {
+  if (!branchId) return "الفرع الرئيسي";
+  if (branchId === "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb") return "الفرع الرئيسي";
+  if (branchId === "cccccccc-cccc-cccc-cccc-cccccccccccc") return "فرع مصر الجديدة";
+  if (customMap && customMap[branchId]) {
+    const mapped = customMap[branchId];
+    if (mapped === "Main Branch") return "الفرع الرئيسي";
+    if (mapped === "Heliopolis Branch") return "فرع مصر الجديدة";
+    return mapped;
+  }
+  if (LIVE_BRANCH_LABELS[branchId]) return LIVE_BRANCH_LABELS[branchId];
+  return `فرع ${branchId.slice(0, 8)}`;
+}
 
 export function getStoredStudentExtras(studentId: string): {
   completedCourses: string[];
@@ -94,7 +108,7 @@ export function saveStoredStudentExtras(
   }
 }
 
-export function mapLiveStudent(record: StudentRecord): Student {
+export function mapLiveStudent(record: StudentRecord, branchMap?: Record<string, string>): Student {
   const status: StudentStatus =
     record.status === "ACTIVE"
       ? "active"
@@ -127,8 +141,7 @@ export function mapLiveStudent(record: StudentRecord): Student {
     parentName: record.parentName?.trim() || "غير مرتبط بولي أمر بعد",
     parentPhone: record.parentPhone?.trim() || "—",
     relation,
-    branch:
-      LIVE_BRANCH_LABELS[record.branchId] ?? `فرع ${record.branchId.slice(0, 8)}`,
+    branch: resolveBranchLabel(record.branchId, branchMap),
     course:
       record.activeEnrollmentCount > 0
         ? "دبلومة البرمجة والذكاء الاصطناعي"

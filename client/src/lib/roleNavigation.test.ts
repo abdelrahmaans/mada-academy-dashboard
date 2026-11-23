@@ -44,6 +44,7 @@ describe("role navigation scopes", () => {
   it("exposes explicit R01 routes for academy-wide internal views", () => {
     expect(ROLE_DEFINITIONS.R01.navigation.map(item => item.path)).toEqual([
       "/executive-dashboard",
+      "/approvals",
       "/academy-owner/pnl-retention",
       "/academy/branches",
       "/academy/roles",

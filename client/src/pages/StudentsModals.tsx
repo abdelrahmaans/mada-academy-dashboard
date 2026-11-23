@@ -188,8 +188,8 @@ export function AddStudentModal({
                 value={newBranch}
                 onChange={(event) => setNewBranch(event.target.value)}
               >
-                {branches.slice(1).map((branch) => (
-                  <option key={branch}>{branch}</option>
+                {(branches[0] === "كل الفروع" ? branches.slice(1) : branches).map((branch) => (
+                  <option key={branch} value={branch}>{branch}</option>
                 ))}
               </select>
             </label>
